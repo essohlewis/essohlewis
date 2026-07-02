@@ -1,0 +1,18 @@
+# Redirige toutes les requêtes vers le front controller (Apache).
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Fichiers/dossiers existants servis directement.
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Sinon → index.php
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# Durcissement : ne pas exposer .env, .git, etc.
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
