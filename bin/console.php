@@ -43,6 +43,25 @@ $command = $argv[1] ?? 'help';
 
 switch ($command) {
     case 'migrate':
+        $db = Config::get('db');
+
+        // 1) Crée la base si elle n'existe pas (connexion SANS sélection de base).
+        try {
+            $serverDsn = sprintf('mysql:host=%s;port=%d;charset=%s', $db['host'], $db['port'], $db['charset']);
+            $server = new PDO($serverDsn, $db['user'], $db['pass'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+            $server->exec(sprintf(
+                'CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci',
+                str_replace('`', '', $db['name'])
+            ));
+            echo "✔ Base « {$db['name']} » prête (créée si nécessaire).\n";
+        } catch (PDOException $e) {
+            fwrite(STDERR, "❌ Connexion MySQL impossible : " . $e->getMessage() . "\n");
+            fwrite(STDERR, "   Vérifiez DB_HOST/DB_USER/DB_PASS dans votre fichier .env.\n");
+            fwrite(STDERR, "   (XAMPP par défaut : DB_USER=root et DB_PASS vide.)\n");
+            exit(1);
+        }
+
+        // 2) Applique le schéma puis les données de départ (base sélectionnée).
         $pdo = Database::connection();
         foreach (['database/schema.sql', 'database/seeds.sql'] as $file) {
             $sql = file_get_contents($basePath . '/' . $file);
