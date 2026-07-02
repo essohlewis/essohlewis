@@ -10,9 +10,8 @@ une commission. Phase 1 (MVP) : foot, Côte d'Ivoire.
 |---|---|---|---|
 | [`backend/`](backend/) | API + logique métier | Laravel 13 / PHP 8.4 / Sanctum | ✅ MVP fonctionnel, testé |
 | [`frontend/`](frontend/) | Web app (classement, profil, wallet, abonnement) | React 18 / Vite | ✅ Fonctionnel |
+| [`mobile/`](mobile/) | App mobile (mêmes écrans, même API) | Expo SDK 57 / React Native | ✅ Fonctionnel |
 | [`docs/`](docs/) | Architecture technique | — | ✅ |
-
-Mobile (Expo) : prévu en Phase 2.
 
 ## Démarrage rapide
 
