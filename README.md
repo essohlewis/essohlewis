@@ -65,6 +65,25 @@ l'enregistrer dans la fabrique.
 
 ## 🚀 Démarrage
 
+### Option A — Docker (une seule commande, recommandé)
+
+Prérequis : Docker + Docker Compose.
+
+```bash
+docker compose up --build
+#   puis ouvrir http://localhost:8080
+```
+
+Le service `app` attend MySQL, applique automatiquement le schéma et les données
+de départ (si la base est vide), puis sert l'application. Un service `worker`
+rejoue périodiquement la garantie de remboursement. MySQL est exposé sur le port
+hôte `3307` pour un client SQL. Les identifiants et clés de développement sont
+définis dans `docker-compose.yml` (à régénérer en production).
+
+Arrêt : `docker compose down` (ajouter `-v` pour effacer aussi la base).
+
+### Option B — Installation locale
+
 Prérequis : PHP 8.2+, MySQL 8+, extensions `pdo_mysql`, `curl`, `openssl`.
 
 ```bash
