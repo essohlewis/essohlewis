@@ -142,12 +142,12 @@
 
         wizard.querySelectorAll('.op-type').forEach((btn) => btn.addEventListener('click', () => {
             select('.op-type', btn);
-            if (btn.dataset.type === 'credit') {
-                state.type = 'credit';
-                forfait.classList.add('hidden');
-            } else {
+            if (btn.dataset.type === 'forfait') {
                 state.type = null; // attend le choix du sous-type de forfait
                 forfait.classList.remove('hidden');
+            } else {
+                state.type = btn.dataset.type; // credit ou transfer
+                forfait.classList.add('hidden');
             }
             refreshNext();
         }));
@@ -218,11 +218,12 @@
 
         steps.type.querySelectorAll('.rc-type').forEach((btn) => btn.addEventListener('click', () => {
             ring(steps.type.querySelectorAll('.rc-type'), btn);
-            if (btn.dataset.type === 'credit') {
-                state.type = 'credit'; forfaitSub.classList.add('hidden');
-            } else {
+            if (btn.dataset.type === 'forfait') {
                 state.type = null; forfaitSub.classList.remove('hidden');
                 ring(steps.type.querySelectorAll('.rc-cat'), null);
+            } else {
+                // credit ou transfer : opération à montant direct
+                state.type = btn.dataset.type; forfaitSub.classList.add('hidden');
             }
             refreshTypeNext();
         }));
@@ -231,6 +232,8 @@
         }));
         typeNext.addEventListener('click', () => {
             if (!state.operator) { alert('Choisissez d\'abord un réseau (en haut).'); return; }
+            // Règle métier : le transfert vers son propre numéro est interdit.
+            if (meBtn) meBtn.style.display = state.type === 'transfer' ? 'none' : '';
             show('number');
             phoneInput.focus();
         });
@@ -266,7 +269,7 @@
             if (!data.msisdn) { steps.number.querySelector('.rc-err').textContent = 'Numéro invalide.'; return; }
             state.phone = phoneInput.value.trim();
             state.msisdn = data.msisdn;
-            if (state.type === 'credit') { show('amount'); }
+            if (state.type === 'credit' || state.type === 'transfer') { show('amount'); }
             else { await openPlans(); show('plans'); }
         });
 
@@ -335,7 +338,8 @@
         // ---- Étape CONFIRMATION ----
         function row(k, v) { return '<div class="flex justify-between p-3"><dt class="text-slate-500">' + k + '</dt><dd class="font-medium">' + v + '</dd></div>'; }
         function buildSummary() {
-            const typeLabel = state.type === 'credit' ? 'Crédit (transfert direct)'
+            const typeLabel = state.type === 'credit' ? 'Crédit (recharge)'
+                : state.type === 'transfer' ? 'Transfert de crédit'
                 : (state.planLabel || state.type);
             document.getElementById('rc-summary').innerHTML =
                 row('Réseau', (state.operator || '').toUpperCase()) +
@@ -344,10 +348,11 @@
                 row('Montant', state.amount.toLocaleString('fr-FR') + ' F CFA');
         }
         document.getElementById('rc-submit').addEventListener('click', async () => {
+            const isDirect = state.type === 'credit' || state.type === 'transfer';
             const body = {
                 phone: state.phone, operator: state.operator, type: state.type,
-                amount: state.type === 'credit' ? state.amount : null,
-                plan_id: state.type === 'credit' ? null : state.planId,
+                amount: isDirect ? state.amount : null,
+                plan_id: isDirect ? null : state.planId,
             };
             if (!navigator.onLine) {
                 queue.push({ url: '/recharge', body });
@@ -366,8 +371,8 @@
         if (flow.dataset.phone) { phoneInput.value = flow.dataset.phone; }
         if (parseInt(flow.dataset.amount, 10) > 0) { state.amount = parseInt(flow.dataset.amount, 10); }
         show('type');
-        if (state.type === 'credit') {
-            ring(steps.type.querySelectorAll('.rc-type'), [...steps.type.querySelectorAll('.rc-type')].find((x) => x.dataset.type === 'credit'));
+        if (state.type === 'credit' || state.type === 'transfer') {
+            ring(steps.type.querySelectorAll('.rc-type'), [...steps.type.querySelectorAll('.rc-type')].find((x) => x.dataset.type === state.type));
             refreshTypeNext();
         } else if (state.type) {
             const forfaitBtn = [...steps.type.querySelectorAll('.rc-type')].find((x) => x.dataset.type === 'forfait');

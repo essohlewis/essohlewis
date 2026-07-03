@@ -14,9 +14,11 @@
                 <select name="relation" class="mt-1 w-full border rounded-lg px-3 py-2">
                     <option value="moi">Moi-même</option>
                     <option value="famille">Famille</option>
+                    <option value="parents">Parents</option>
                     <option value="conjoint">Conjoint(e)</option>
                     <option value="enfants">Enfants</option>
                     <option value="amis">Amis</option>
+                    <option value="entreprise">Entreprise</option>
                     <option value="autre">Autre</option>
                 </select>
             </div>

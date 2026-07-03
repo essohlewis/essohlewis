@@ -71,10 +71,13 @@ remboursée automatiquement si non confirmée dans le délai.
 ## Phase 5 — Fonctionnalités différenciantes
 **Objectif :** l'innovation produit.
 
-- [x] Favoris (Moi, Famille, Conjoint, Enfants, Amis) + accès rapide recharge
-- [x] Historique dédié + « Refaire cette opération » + recherche
+- [x] Favoris (Moi, Famille, Parents, Conjoint, Enfants, Amis, Entreprise)
+- [x] Historique dédié + « Refaire » + recherche + export CSV/Excel + impression PDF
 - [x] Comparateur de forfaits inter-opérateurs (coût/Go, meilleur prix, filtres)
 - [x] Mode sombre (bascule persistante, sur toute l'application)
+- [x] Transfert de crédit (opération dédiée, « Moi-même » désactivé)
+- [x] Tableau de bord analytique (stats + graphiques SVG + recommandations)
+- [x] Centre de notifications (cloche + génération auto sur transactions/remboursements)
 - [x] Cagnotte / recharge collective (lien partageable public)
 - [x] Recharge programmée récurrente (mensuelle / hebdomadaire) : CRUD,
       worker `scheduled:run` (réservation + exécution, anti double-débit),

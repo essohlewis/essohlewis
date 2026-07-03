@@ -55,15 +55,19 @@ $networks = [
 
         <!-- Étape 2 : type d'opération -->
         <div id="op-step-2" class="mt-5 hidden">
-            <div class="text-sm font-medium text-slate-500 mb-2">2. Type d'opération</div>
-            <div class="grid grid-cols-2 gap-3">
-                <button type="button" class="op-type rounded-xl border-2 border-slate-200 py-4 px-3 text-left hover:border-slate-300" data-type="credit">
-                    <div class="font-semibold">Crédit</div>
-                    <div class="text-xs text-slate-500">Transfert direct</div>
+            <div class="text-sm font-medium text-slate-500 mb-2">2. Que voulez-vous faire ?</div>
+            <div class="grid grid-cols-3 gap-3">
+                <button type="button" class="op-type rounded-xl border-2 border-slate-200 py-4 px-2 text-center transition duration-150 hover:-translate-y-1 hover:border-teal-400 hover:shadow-md" data-type="credit">
+                    <div class="text-2xl">📱</div>
+                    <div class="font-semibold text-sm mt-1">Acheter crédit</div>
                 </button>
-                <button type="button" class="op-type rounded-xl border-2 border-slate-200 py-4 px-3 text-left hover:border-slate-300" data-type="forfait">
-                    <div class="font-semibold">Forfait</div>
-                    <div class="text-xs text-slate-500">Internet, appels, SMS</div>
+                <button type="button" class="op-type rounded-xl border-2 border-slate-200 py-4 px-2 text-center transition duration-150 hover:-translate-y-1 hover:border-teal-400 hover:shadow-md" data-type="forfait">
+                    <div class="text-2xl">🌐</div>
+                    <div class="font-semibold text-sm mt-1">Acheter forfait</div>
+                </button>
+                <button type="button" class="op-type rounded-xl border-2 border-slate-200 py-4 px-2 text-center transition duration-150 hover:-translate-y-1 hover:border-teal-400 hover:shadow-md" data-type="transfer">
+                    <div class="text-2xl">💸</div>
+                    <div class="font-semibold text-sm mt-1">Transférer</div>
                 </button>
             </div>
 
@@ -85,6 +89,92 @@ $networks = [
             </a>
         </div>
     </div>
+
+    <?php
+    // ── Analytique ────────────────────────────────────────────
+    $typeLabel = static fn (?string $t): string => match ($t) {
+        'credit' => 'Crédit', 'internet' => 'Forfait internet', 'voice' => 'Forfait appels',
+        'sms' => 'Forfait SMS', 'transfer' => 'Transfert', default => '—',
+    };
+    $maxDaily = max(1, ...array_map(static fn ($d) => $d['value'], $stats['daily']));
+    $opColor  = ['orange' => '#FF7900', 'mtn' => '#FFCC00', 'moov' => '#004B9F'];
+    $opTotal  = array_sum(array_map(static fn ($o) => (int) $o['c'], $stats['by_operator'])) ?: 1;
+    ?>
+
+    <!-- Statistiques -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <?php
+        $tiles = [
+            ['Transactions', number_format((int) $stats['total_tx'], 0, ',', ' '), '📊'],
+            ['Dépenses du mois', money((int) $stats['month_spend']), '📅'],
+            ['Réseau préféré', $stats['top_operator'] ? strtoupper($stats['top_operator']) : '—', '📶'],
+            ['Opération favorite', $typeLabel($stats['top_type']), '⭐'],
+        ];
+        foreach ($tiles as [$label, $value, $icon]): ?>
+            <div class="bg-white rounded-xl shadow-sm p-4">
+                <div class="text-lg"><?= $icon ?></div>
+                <div class="text-xs text-slate-500 mt-1"><?= e($label) ?></div>
+                <div class="text-lg font-bold text-slate-900 truncate"><?= e($value) ?></div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-4">
+        <!-- Graphique : dépenses des 7 derniers jours -->
+        <div class="bg-white rounded-xl shadow-sm p-4">
+            <h2 class="font-semibold text-slate-900 mb-3">Dépenses (7 jours)</h2>
+            <svg viewBox="0 0 280 130" class="w-full" role="img" aria-label="Dépenses des 7 derniers jours">
+                <?php foreach ($stats['daily'] as $i => $d):
+                    $h = (int) round(($d['value'] / $maxDaily) * 90);
+                    $x = 10 + $i * 38; $y = 100 - $h; ?>
+                    <rect x="<?= $x ?>" y="<?= $y ?>" width="24" height="<?= max($h, 2) ?>" rx="3" fill="#0d9488"></rect>
+                    <text x="<?= $x + 12 ?>" y="115" text-anchor="middle" font-size="8" fill="#94a3b8"><?= e($d['label']) ?></text>
+                    <?php if ($d['value'] > 0): ?>
+                        <text x="<?= $x + 12 ?>" y="<?= $y - 3 ?>" text-anchor="middle" font-size="7" fill="#64748b"><?= (int) round($d['value'] / 1000) ?>k</text>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            </svg>
+        </div>
+
+        <!-- Répartition par réseau -->
+        <div class="bg-white rounded-xl shadow-sm p-4">
+            <h2 class="font-semibold text-slate-900 mb-3">Répartition par réseau</h2>
+            <?php if (!$stats['by_operator']): ?>
+                <p class="text-sm text-slate-400">Aucune donnée.</p>
+            <?php else: foreach ($stats['by_operator'] as $o):
+                $pct = (int) round(((int) $o['c'] / $opTotal) * 100); ?>
+                <div class="mb-2">
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="font-medium"><?= e(strtoupper($o['operator_code'])) ?></span>
+                        <span class="text-slate-500"><?= $pct ?>% · <?= money((int) $o['s']) ?></span>
+                    </div>
+                    <div class="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full" style="width: <?= $pct ?>%; background: <?= e($opColor[$o['operator_code']] ?? '#0d9488') ?>"></div>
+                    </div>
+                </div>
+            <?php endforeach; endif; ?>
+        </div>
+    </div>
+
+    <!-- Recommandations -->
+    <?php if (!empty($stats['reco'])): ?>
+    <div>
+        <h2 class="font-semibold text-slate-900 mb-2">Recommandé pour vous</h2>
+        <div class="grid sm:grid-cols-3 gap-3">
+            <?php foreach ($stats['reco'] as $rec):
+                $isDirect = in_array($rec['type'], ['credit', 'transfer'], true);
+                $href = '/recharge?operator=' . urlencode($rec['operator_code']) . '&type=' . urlencode($rec['type'])
+                    . ($isDirect ? '&amount=' . (int) $rec['amount'] : ''); ?>
+                <a href="<?= e($href) ?>" class="bg-white rounded-xl shadow-sm p-4 hover:shadow transition block">
+                    <div class="text-xs text-teal-700 font-medium">Vous en achetez souvent</div>
+                    <div class="font-semibold mt-1"><?= e($typeLabel($rec['type'])) ?> · <?= e(strtoupper($rec['operator_code'])) ?></div>
+                    <?php if ($isDirect): ?><div class="text-sm text-slate-500"><?= money((int) $rec['amount']) ?></div><?php endif; ?>
+                    <div class="mt-2 text-xs bg-teal-700 text-white inline-block rounded px-2 py-1">↻ Souscrire à nouveau</div>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <div>
         <h2 class="font-semibold text-slate-900 mb-2">Recharges récentes</h2>

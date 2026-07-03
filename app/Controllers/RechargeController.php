@@ -41,7 +41,7 @@ final class RechargeController extends Controller
         return $this->view('recharge.form', [
             'title'        => 'Nouvelle recharge',
             'preOperator'  => in_array($operator, ['orange', 'moov', 'mtn'], true) ? $operator : null,
-            'preType'      => in_array($type, ['credit', 'internet', 'voice', 'sms'], true) ? $type : null,
+            'preType'      => in_array($type, ['credit', 'internet', 'voice', 'sms', 'transfer'], true) ? $type : null,
             'prePhone'     => $prePhone,
             'preAmount'    => $preAmount > 0 ? $preAmount : null,
             'myNumber'     => $myNumber,
@@ -103,7 +103,7 @@ final class RechargeController extends Controller
         $data = Validator::make($request->only(['phone', 'operator', 'amount', 'type', 'plan_id']))->validate([
             'phone'    => 'required|phone_ci',
             'operator' => 'required|in:orange,moov,mtn',
-            'type'     => 'required|in:credit,internet,voice,sms',
+            'type'     => 'required|in:credit,internet,voice,sms,transfer',
         ]);
 
         $detected = $this->detector->detect($data['phone']);

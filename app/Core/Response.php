@@ -41,6 +41,16 @@ final class Response
         return $this;
     }
 
+    /** Réponse de téléchargement de fichier (CSV, etc.). */
+    public function download(string $content, string $filename, string $contentType = 'application/octet-stream'): self
+    {
+        $this->status = 200;
+        $this->body = $content;
+        $this->headers['Content-Type'] = $contentType;
+        $this->headers['Content-Disposition'] = 'attachment; filename="' . $filename . '"';
+        return $this;
+    }
+
     public function redirect(string $url, int $status = 302): self
     {
         $this->status = $status;

@@ -68,6 +68,16 @@ final class RechargeService
                 'operator' => $operatorCode, 'msisdn' => $msisdn, 'amount' => $amount,
             ], $userId);
 
+            // Notification transactionnelle.
+            $verb = $type === 'transfer' ? 'Transfert' : ($type === 'credit' ? 'Recharge' : 'Forfait');
+            \Transouscris\Models\Notification::push(
+                $userId,
+                'transaction',
+                "$verb de " . number_format($amount, 0, ',', ' ') . ' F vers ' . $msisdn,
+                'Opération enregistrée (' . strtoupper($operatorCode) . ').',
+                '/recharge/' . $recharge->id . '/receipt'
+            );
+
             return $recharge;
         });
     }

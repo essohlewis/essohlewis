@@ -57,7 +57,12 @@ return function (Router $r): void {
 
         // Historique & comparateur
         $r->get('/historique', 'HistoryController@index');
+        $r->get('/historique/export.csv', 'HistoryController@exportCsv');
         $r->get('/comparateur', 'ComparatorController@index');
+
+        // Notifications
+        $r->get('/notifications', 'NotificationController@index');
+        $r->post('/notifications/lire', 'NotificationController@markAllRead', [CsrfMiddleware::class]);
 
         // Cagnottes (création)
         $r->post('/cagnotte', 'PotController@create', [CsrfMiddleware::class]);

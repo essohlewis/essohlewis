@@ -136,7 +136,7 @@ CREATE TABLE recharges (
     plan_id                BIGINT UNSIGNED NULL,
     operator_code          VARCHAR(20) NOT NULL,
     msisdn                 VARCHAR(20) NOT NULL,
-    type                   ENUM('credit','internet','voice','sms') NOT NULL DEFAULT 'credit',
+    type                   ENUM('credit','internet','voice','sms','transfer') NOT NULL DEFAULT 'credit',
     amount                 BIGINT NOT NULL,
     status                 ENUM('pending','dispatched','success','failed','refunded') NOT NULL DEFAULT 'pending',
     ledger_transaction_id  BIGINT UNSIGNED NULL,
@@ -193,7 +193,7 @@ CREATE TABLE favorites (
     id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     user_id       BIGINT UNSIGNED NOT NULL,
     label         VARCHAR(80) NOT NULL,                   -- ex: "Maman", "Moi"
-    relation      ENUM('moi','famille','conjoint','enfants','amis','autre') NOT NULL DEFAULT 'autre',
+    relation      ENUM('moi','famille','parents','conjoint','enfants','amis','entreprise','autre') NOT NULL DEFAULT 'autre',
     msisdn        VARCHAR(20) NOT NULL,
     operator_code VARCHAR(20) NULL,
     created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -201,6 +201,21 @@ CREATE TABLE favorites (
     UNIQUE KEY uq_favorite (user_id, msisdn),
     KEY idx_favorite_user (user_id),
     CONSTRAINT fk_favorite_user FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ── Notifications ────────────────────────────────────────────────────────
+CREATE TABLE notifications (
+    id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id    BIGINT UNSIGNED NOT NULL,
+    type       ENUM('transaction','promo','expiration','nouveaute','echec','systeme') NOT NULL DEFAULT 'systeme',
+    title      VARCHAR(140) NOT NULL,
+    body       VARCHAR(255) NULL,
+    link       VARCHAR(190) NULL,
+    is_read    TINYINT(1) NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_notif_user (user_id, is_read, created_at),
+    CONSTRAINT fk_notif_user FOREIGN KEY (user_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ── Cagnottes (recharge collective) ──────────────────────────────────────

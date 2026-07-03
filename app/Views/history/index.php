@@ -17,9 +17,13 @@ $typeLabel = static fn (string $t): string => match ($t) {
 };
 ?>
 <div class="space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-wrap items-center justify-between gap-2">
         <h1 class="text-xl font-bold">Historique des transactions</h1>
-        <input id="hist-search" placeholder="Rechercher un numéro…" class="border rounded-lg px-3 py-1.5 text-sm">
+        <div class="flex items-center gap-2">
+            <input id="hist-search" placeholder="Rechercher un numéro…" class="border rounded-lg px-3 py-1.5 text-sm">
+            <a href="/historique/export.csv" class="text-sm bg-emerald-600 text-white rounded-lg px-3 py-1.5">⬇ CSV / Excel</a>
+            <button onclick="window.print()" class="text-sm bg-slate-800 text-white rounded-lg px-3 py-1.5">🖨 PDF</button>
+        </div>
     </div>
 
     <div class="bg-white rounded-xl shadow-sm overflow-x-auto">

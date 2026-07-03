@@ -36,16 +36,21 @@ $networks = [
         <!-- Étape TYPE -->
         <section class="rc-step" data-step="type">
             <h2 class="text-lg font-bold mb-3">Type d'opération</h2>
-            <div class="grid grid-cols-2 gap-3">
-                <button type="button" class="rc-type rounded-xl border-2 border-slate-200 p-4 text-left hover:border-slate-300" data-type="credit">
-                    <div class="text-2xl">💸</div>
-                    <div class="font-semibold mt-1">Crédit</div>
-                    <div class="text-xs text-slate-500">Transfert direct</div>
+            <div class="grid grid-cols-3 gap-3">
+                <button type="button" class="rc-type rounded-xl border-2 border-slate-200 p-4 text-center transition hover:-translate-y-0.5 hover:border-teal-400 hover:shadow" data-type="credit">
+                    <div class="text-2xl">📱</div>
+                    <div class="font-semibold mt-1 text-sm">Crédit</div>
+                    <div class="text-[11px] text-slate-500">Recharge</div>
                 </button>
-                <button type="button" class="rc-type rounded-xl border-2 border-slate-200 p-4 text-left hover:border-slate-300" data-type="forfait">
-                    <div class="text-2xl">📦</div>
-                    <div class="font-semibold mt-1">Forfait</div>
-                    <div class="text-xs text-slate-500">Internet, appels, SMS</div>
+                <button type="button" class="rc-type rounded-xl border-2 border-slate-200 p-4 text-center transition hover:-translate-y-0.5 hover:border-teal-400 hover:shadow" data-type="forfait">
+                    <div class="text-2xl">🌐</div>
+                    <div class="font-semibold mt-1 text-sm">Forfait</div>
+                    <div class="text-[11px] text-slate-500">Net/Appels/SMS</div>
+                </button>
+                <button type="button" class="rc-type rounded-xl border-2 border-slate-200 p-4 text-center transition hover:-translate-y-0.5 hover:border-teal-400 hover:shadow" data-type="transfer">
+                    <div class="text-2xl">💸</div>
+                    <div class="font-semibold mt-1 text-sm">Transfert</div>
+                    <div class="text-[11px] text-slate-500">Vers un tiers</div>
                 </button>
             </div>
             <div id="rc-forfait-sub" class="hidden mt-3">

@@ -34,7 +34,7 @@ final class FavoriteController extends Controller
         $user = $this->requireUser();
         $data = Validator::make($request->only(['label', 'relation', 'phone']))->validate([
             'label'    => 'required|string|max:80',
-            'relation' => 'required|in:moi,famille,conjoint,enfants,amis,autre',
+            'relation' => 'required|in:moi,famille,parents,conjoint,enfants,amis,entreprise,autre',
             'phone'    => 'required|phone_ci',
         ]);
 

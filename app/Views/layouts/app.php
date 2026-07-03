@@ -23,6 +23,12 @@
                 <?php if (!empty($auth) && $auth->isAdmin()): ?>
                     <a href="/admin" class="hover:underline">Admin</a>
                 <?php endif; ?>
+                <a href="/notifications" class="relative hover:opacity-80 text-base" title="Notifications">
+                    🔔
+                    <?php if (!empty($notifCount) && $notifCount > 0): ?>
+                        <span class="absolute -top-2 -right-2 bg-rose-500 text-white text-[10px] leading-none rounded-full px-1.5 py-0.5"><?= (int) $notifCount > 9 ? '9+' : (int) $notifCount ?></span>
+                    <?php endif; ?>
+                </a>
                 <button type="button" id="theme-toggle" title="Mode clair / sombre" class="hover:opacity-80 text-base">🌓</button>
                 <form method="post" action="/logout" class="inline">
                     <?= csrf_field() ?>

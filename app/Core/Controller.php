@@ -15,10 +15,13 @@ abstract class Controller
 {
     protected function view(string $template, array $data = [], ?string $layout = 'layouts/app'): Response
     {
+        $auth = $this->user();
         $data += [
-            'auth'      => $this->user(),
-            'csrf'      => Csrf::token(),
-            'appName'   => Config::get('app.name'),
+            'auth'       => $auth,
+            'csrf'       => Csrf::token(),
+            'appName'    => Config::get('app.name'),
+            // Compteur de notifications non lues pour la cloche (0 si non connecté).
+            'notifCount' => $auth ? \Transouscris\Models\Notification::unreadCount($auth->id) : 0,
         ];
         return (new Response())->html(View::render($template, $data, $layout));
     }

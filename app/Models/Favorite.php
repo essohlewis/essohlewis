@@ -60,12 +60,14 @@ final class Favorite extends Model
     public function relationIcon(): string
     {
         return match ($this->relation) {
-            'moi'      => '📱',
-            'famille'  => '👪',
-            'conjoint' => '❤️',
-            'enfants'  => '🧒',
-            'amis'     => '🤝',
-            default    => '⭐',
+            'moi'        => '📱',
+            'famille'    => '👪',
+            'parents'    => '👵',
+            'conjoint'   => '❤️',
+            'enfants'    => '🧒',
+            'amis'       => '🤝',
+            'entreprise' => '🏢',
+            default      => '⭐',
         };
     }
 }

@@ -149,6 +149,13 @@ final class PaymentService
                 metadata: ['payment_intent_id' => $intent->id, 'gateway' => $intent->gateway]
             );
             $intent->markPaid($providerTxnId, $ledgerTxnId);
+            \Transouscris\Models\Notification::push(
+                $intent->userId,
+                'transaction',
+                'Portefeuille approvisionné de ' . number_format($intent->amount, 0, ',', ' ') . ' F',
+                'Votre paiement a été confirmé et crédité.',
+                '/wallet'
+            );
             return;
         }
 

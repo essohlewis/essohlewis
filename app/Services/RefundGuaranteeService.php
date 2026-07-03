@@ -59,6 +59,14 @@ final class RefundGuaranteeService
             $this->audit->log('recharge.refund', 'recharge', $recharge->id, [
                 'reason' => 'guarantee_timeout', 'amount' => $recharge->amount,
             ], $recharge->userId);
+
+            \Transouscris\Models\Notification::push(
+                $recharge->userId,
+                'echec',
+                'Remboursement de ' . number_format($recharge->amount, 0, ',', ' ') . ' F',
+                'Recharge non confirmée par l\'opérateur : montant recrédité sur votre portefeuille.',
+                '/wallet'
+            );
         });
     }
 }
