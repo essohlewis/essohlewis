@@ -19,6 +19,13 @@ use Transouscris\Models\OtpCode;
  */
 final class OtpService
 {
+    /**
+     * Dernier code généré, exposé UNIQUEMENT en mode développement
+     * (APP_DEBUG=true) pour permettre les tests sans passerelle SMS.
+     * Reste null en production.
+     */
+    public ?string $debugCode = null;
+
     public function __construct(private SmsService $sms = new SmsService()) {}
 
     /**
@@ -39,6 +46,11 @@ final class OtpService
 
         $appName = Config::get('app.name', 'Transouscris');
         $this->sms->send($phone, "$appName : votre code de vérification est $code. Valable " . ($ttl / 60) . " min. Ne le partagez jamais.");
+
+        // En développement seulement : on expose le code pour faciliter les tests.
+        if (Config::get('app.debug')) {
+            $this->debugCode = $code;
+        }
 
         return true;
     }

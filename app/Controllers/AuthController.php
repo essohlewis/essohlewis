@@ -52,7 +52,14 @@ final class AuthController extends Controller
         }
 
         Session::set('otp_phone', $canonical);
-        return $this->json(['ok' => true, 'message' => 'Code envoyé par SMS.']);
+
+        $response = ['ok' => true, 'message' => 'Code envoyé par SMS.'];
+        // Mode développement uniquement : renvoie le code pour tester sans SMS réel.
+        if (\Transouscris\Core\Config::get('app.debug') && $this->otp->debugCode !== null) {
+            $response['dev_code'] = $this->otp->debugCode;
+            $response['message']  = 'Mode dev : SMS non envoyé, code affiché ci-dessous.';
+        }
+        return $this->json($response);
     }
 
     /** Étape 2 : vérification de l'OTP et connexion (création de compte si besoin). */

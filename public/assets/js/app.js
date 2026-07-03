@@ -76,10 +76,17 @@
             const phone = otpReq.phone.value.trim();
             const { ok, data } = await api('/auth/otp/request', { phone });
             if (ok) {
-                document.getElementById('otp-verify').classList.remove('hidden');
+                const verify = document.getElementById('otp-verify');
+                verify.classList.remove('hidden');
                 otpReq.classList.add('hidden');
-                setMsg('otp-msg', 'Code envoyé par SMS.', true);
-                document.getElementById('otp-verify').dataset.phone = phone;
+                verify.dataset.phone = phone;
+                if (data.dev_code) {
+                    // Mode développement : pré-remplit le code et l'affiche.
+                    verify.code.value = data.dev_code;
+                    setMsg('otp-msg', 'Mode dev — code : ' + data.dev_code + ' (aucun SMS envoyé)', true);
+                } else {
+                    setMsg('otp-msg', data.message || 'Code envoyé par SMS.', true);
+                }
             } else {
                 setMsg('otp-msg', data.error || 'Erreur.');
             }
