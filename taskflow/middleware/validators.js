@@ -76,6 +76,13 @@ const bulkRules = [
   checkValidation
 ];
 
+// Règles pour l'import en masse. Le détail de chaque tâche est nettoyé/validé
+// dans le contrôleur ; ici on borne surtout la taille du lot.
+const importRules = [
+  body('tasks').isArray({ min: 1, max: 1000 }).withMessage('Le fichier doit contenir de 1 à 1000 tâches.'),
+  checkValidation
+];
+
 // Règles pour les sous-tâches (checklist).
 const subtaskRules = [
   body('title').trim().notEmpty().withMessage('Le titre de la sous-tâche est requis.')
@@ -98,6 +105,7 @@ module.exports = {
   taskUpdateRules,
   taskQueryRules,
   bulkRules,
+  importRules,
   subtaskRules,
   subtaskUpdateRules
 };

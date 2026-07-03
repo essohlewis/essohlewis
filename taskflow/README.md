@@ -41,6 +41,10 @@ Cette version 2 se concentre sur la **performance** (temps de réponse, bande pa
 - **Endpoint groupé** `PATCH /api/tasks/bulk` : déplacer/supprimer jusqu'à 200 tâches en **une seule requête HTTP et une seule requête SQL** (au lieu de N allers-retours).
 - **Pool MySQL** : `keep-alive` activé (moins de reconnexions) et taille configurable via `DB_POOL_LIMIT`.
 
+**Nouvelle fonctionnalité : export / import**
+- **Export** de toutes ses tâches en **JSON** ou **CSV** (téléchargement authentifié), pour la sauvegarde et la portabilité des données.
+- **Import** depuis un fichier JSON (tableau brut ou export `{ tasks: [...] }`) : insertion **multi-lignes en une seule requête**, nettoyage/normalisation côté serveur (valeurs invalides ramenées aux défauts, lignes sans titre ignorées).
+
 **Nouvelle fonctionnalité : sous-tâches (checklist)**
 - Chaque tâche peut contenir une **checklist** de sous-tâches cochables, avec un indicateur d'avancement (ex. `2/5`) affiché sur la carte.
 - L'avancement provient d'un **agrégat en une seule requête** (pas de N+1) renvoyé directement par `GET /api/tasks` — aucun surcoût par carte.
@@ -152,6 +156,8 @@ npm test
 | POST    | /api/auth/logout         | Non*     | Révoquer un refresh token              |
 | GET     | /api/tasks?search=&priority=&tag=&sort= | Oui | Lister mes tâches (filtrable)  |
 | GET     | /api/tasks/stats         | Oui      | Statistiques (total, retard, %) — mises en cache |
+| GET     | /api/tasks/export?format=json\|csv | Oui | Exporter ses tâches                |
+| POST    | /api/tasks/import        | Oui      | Importer des tâches (JSON)             |
 | PATCH   | /api/tasks/bulk          | Oui      | Action groupée sur plusieurs tâches    |
 | GET     | /api/tasks/:id           | Oui      | Voir une tâche                          |
 | POST    | /api/tasks               | Oui      | Créer une tâche                         |

@@ -10,6 +10,39 @@ const SORT_OPTIONS = {
   priorite: "FIELD(priority, 'haute', 'moyenne', 'basse')"
 };
 
+const STATUSES = ['a_faire', 'en_cours', 'terminee'];
+const PRIORITIES = ['basse', 'moyenne', 'haute'];
+const EXPORT_COLUMNS = ['title', 'description', 'status', 'priority', 'tag', 'due_date'];
+
+// Vérifie qu'une chaîne est une vraie date calendaire AAAA-MM-JJ (et pas juste
+// au bon format) : "2026-13-99" doit être rejeté avant l'INSERT (MySQL strict).
+function isValidDate(str) {
+  if (typeof str !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(str)) return false;
+  const d = new Date(`${str}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === str;
+}
+
+// Échappement CSV minimal : on entoure de guillemets et on double les guillemets
+// internes dès qu'une valeur contient une virgule, un guillemet ou un saut de ligne.
+function csvCell(value) {
+  if (value === null || value === undefined) return '';
+  const str = String(value);
+  if (/[",\n\r]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
+  return str;
+}
+
+function toCsv(rows) {
+  const header = EXPORT_COLUMNS.join(',');
+  const lines = rows.map((r) =>
+    EXPORT_COLUMNS.map((col) => csvCell(
+      col === 'due_date' && r.due_date
+        ? new Date(r.due_date).toISOString().slice(0, 10)
+        : r[col]
+    )).join(',')
+  );
+  return [header, ...lines].join('\n');
+}
+
 // InnoDB ignore les mots plus courts que innodb_ft_min_token_size (3 par défaut).
 // En dessous de ce seuil, MATCH ... AGAINST ne renvoie rien : on retombe donc
 // sur un LIKE classique pour les recherches très courtes.
@@ -248,6 +281,73 @@ const deleteTask = asyncHandler(async (req, res) => {
   res.json({ message: 'Tâche supprimée.' });
 });
 
+// GET /api/tasks/export?format=json|csv - télécharge toutes les tâches de
+// l'utilisateur (sauvegarde / portabilité des données).
+const exportTasks = asyncHandler(async (req, res) => {
+  const format = req.query.format === 'csv' ? 'csv' : 'json';
+  const [rows] = await pool.query(
+    `SELECT ${EXPORT_COLUMNS.join(', ')} FROM tasks WHERE user_id = ? ORDER BY created_at ASC`,
+    [req.userId]
+  );
+
+  const stamp = new Date().toISOString().slice(0, 10);
+
+  if (format === 'csv') {
+    res.set('Content-Type', 'text/csv; charset=utf-8');
+    res.set('Content-Disposition', `attachment; filename="taskflow_${stamp}.csv"`);
+    return res.send(toCsv(rows));
+  }
+
+  const tasks = rows.map((r) => ({
+    ...r,
+    due_date: r.due_date ? new Date(r.due_date).toISOString().slice(0, 10) : null
+  }));
+  res.set('Content-Disposition', `attachment; filename="taskflow_${stamp}.json"`);
+  res.json({ exported_at: new Date().toISOString(), tasks });
+});
+
+// Normalise une tâche importée : garde un titre non vide, coerce les énumérés
+// invalides vers les valeurs par défaut, valide la date. Renvoie null si
+// la ligne est inexploitable (pas de titre).
+function sanitizeImportedTask(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const title = typeof raw.title === 'string' ? raw.title.trim().slice(0, 200) : '';
+  if (!title) return null;
+
+  const description = typeof raw.description === 'string' ? raw.description.slice(0, 2000) : null;
+  const status = STATUSES.includes(raw.status) ? raw.status : 'a_faire';
+  const priority = PRIORITIES.includes(raw.priority) ? raw.priority : 'moyenne';
+  const tag = typeof raw.tag === 'string' && raw.tag.trim() ? raw.tag.trim().slice(0, 40) : null;
+  const due_date = isValidDate(raw.due_date) ? raw.due_date : null;
+
+  return [title, description, status, priority, due_date, tag];
+}
+
+// POST /api/tasks/import - ajoute en masse des tâches à partir d'un export JSON.
+// Body : { tasks: [ { title, description?, status?, priority?, tag?, due_date? }, ... ] }
+// Insertion multi-lignes (une seule requête) ; les lignes sans titre sont ignorées.
+const importTasks = asyncHandler(async (req, res) => {
+  const list = Array.isArray(req.body.tasks) ? req.body.tasks : [];
+
+  const values = [];
+  for (const raw of list) {
+    const clean = sanitizeImportedTask(raw);
+    if (clean) values.push([req.userId, ...clean]);
+  }
+
+  if (values.length === 0) {
+    return res.status(400).json({ message: 'Aucune tâche valide à importer.' });
+  }
+
+  await pool.query(
+    `INSERT INTO tasks (user_id, title, description, status, priority, due_date, tag) VALUES ?`,
+    [values]
+  );
+
+  statsCache.invalidate(req.userId);
+  res.status(201).json({ imported: values.length, skipped: list.length - values.length });
+});
+
 module.exports = {
   getTasks,
   getStats,
@@ -255,5 +355,7 @@ module.exports = {
   createTask,
   updateTask,
   bulkUpdate,
-  deleteTask
+  deleteTask,
+  exportTasks,
+  importTasks
 };

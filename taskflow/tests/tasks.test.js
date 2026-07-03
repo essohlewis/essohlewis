@@ -177,6 +177,54 @@ describe('Actions groupées PATCH /api/tasks/bulk', () => {
   });
 });
 
+describe('Export / Import /api/tasks', () => {
+  it('exporte les tâches en JSON', async () => {
+    const res = await request(app)
+      .get('/api/tasks/export?format=json')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(Array.isArray(res.body.tasks)).toBe(true);
+    expect(res.headers['content-disposition']).toContain('attachment');
+  });
+
+  it('exporte les tâches en CSV', async () => {
+    const res = await request(app)
+      .get('/api/tasks/export?format=csv')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toContain('text/csv');
+    expect(res.text.split('\n')[0]).toBe('title,description,status,priority,tag,due_date');
+  });
+
+  it('importe des tâches et ignore les lignes sans titre', async () => {
+    const res = await request(app)
+      .post('/api/tasks/import')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        tasks: [
+          { title: 'Importée A', priority: 'haute', status: 'en_cours' },
+          { title: 'Importée B', tag: 'import' },
+          { description: 'sans titre → ignorée' }
+        ]
+      });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.imported).toBe(2);
+    expect(res.body.skipped).toBe(1);
+  });
+
+  it('refuse un import vide', async () => {
+    const res = await request(app)
+      .post('/api/tasks/import')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tasks: [] });
+
+    expect(res.statusCode).toBe(422);
+  });
+});
+
 describe('Sous-tâches /api/tasks/:id/subtasks', () => {
   let parentId;
   let subId;

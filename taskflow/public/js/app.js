@@ -41,6 +41,10 @@ const bulkCount = document.getElementById('bulk-count');
 const bulkStatus = document.getElementById('bulk-status');
 const bulkDelete = document.getElementById('bulk-delete');
 const bulkClear = document.getElementById('bulk-clear');
+const exportJsonBtn = document.getElementById('export-json');
+const exportCsvBtn = document.getElementById('export-csv');
+const importBtn = document.getElementById('import-btn');
+const importFile = document.getElementById('import-file');
 
 // ================= THEME =================
 function applyTheme(theme) {
@@ -126,26 +130,38 @@ function refreshAccessToken() {
   return refreshPromise;
 }
 
-async function apiRequest(path, options = {}, retried = false) {
+// Fetch authentifié bas niveau : ajoute le token, gère le rafraîchissement
+// transparent sur 401 (une fois), et renvoie la Response brute. Utilisé aussi
+// bien pour le JSON que pour les téléchargements binaires (export).
+async function authFetch(path, options = {}, retried = false) {
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {})
     }
   });
 
-  // Token d'accès expiré : on tente un rafraîchissement transparent, une fois.
   if (res.status === 401 && !retried && refreshToken && !path.startsWith('/auth/')) {
     const ok = await refreshAccessToken();
-    if (ok) return apiRequest(path, options, true);
+    if (ok) return authFetch(path, options, true);
     forceLogout();
   }
 
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || 'Une erreur est survenue.');
-  return data;
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message || 'Une erreur est survenue.');
+  }
+  return res;
+}
+
+// Wrapper JSON par-dessus authFetch.
+async function apiRequest(path, options = {}) {
+  const res = await authFetch(path, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+  });
+  return res.json().catch(() => ({}));
 }
 
 // ================= Inscription =================
@@ -590,6 +606,55 @@ bulkDelete.addEventListener('click', async () => {
 bulkClear.addEventListener('click', () => {
   selected.clear();
   renderTasks();
+});
+
+// ================= Export / Import =================
+async function downloadExport(format) {
+  try {
+    const res = await authFetch(`/tasks/export?format=${format}`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `taskflow_${new Date().toISOString().slice(0, 10)}.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast(`Export ${format.toUpperCase()} téléchargé.`);
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+exportJsonBtn.addEventListener('click', () => downloadExport('json'));
+exportCsvBtn.addEventListener('click', () => downloadExport('csv'));
+
+importBtn.addEventListener('click', () => importFile.click());
+
+importFile.addEventListener('change', async () => {
+  const file = importFile.files[0];
+  if (!file) return;
+  try {
+    const parsed = JSON.parse(await file.text());
+    // Accepte aussi bien un tableau brut qu'un export { tasks: [...] }.
+    const tasks = Array.isArray(parsed) ? parsed : parsed.tasks;
+    if (!Array.isArray(tasks) || tasks.length === 0) {
+      throw new Error('Fichier JSON invalide (aucune tâche trouvée).');
+    }
+    const result = await apiRequest('/tasks/import', {
+      method: 'POST',
+      body: JSON.stringify({ tasks })
+    });
+    const skipped = result.skipped ? `, ${result.skipped} ignorée(s)` : '';
+    showToast(`${result.imported} tâche(s) importée(s)${skipped}.`);
+    loadTasks();
+  } catch (err) {
+    const msg = err instanceof SyntaxError ? 'Fichier JSON illisible.' : err.message;
+    showToast(msg, 'error');
+  } finally {
+    importFile.value = ''; // permet de réimporter le même fichier
+  }
 });
 
 // ================= Zones de dépôt (colonnes) =================

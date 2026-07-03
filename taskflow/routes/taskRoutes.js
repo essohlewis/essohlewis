@@ -6,6 +6,7 @@ const {
   taskUpdateRules,
   taskQueryRules,
   bulkRules,
+  importRules,
   subtaskRules,
   subtaskUpdateRules
 } = require('../middleware/validators');
@@ -16,7 +17,9 @@ const {
   createTask,
   updateTask,
   bulkUpdate,
-  deleteTask
+  deleteTask,
+  exportTasks,
+  importTasks
 } = require('../controllers/taskController');
 const {
   listSubtasks,
@@ -31,6 +34,8 @@ router.use(requireAuth);
 // /stats et /bulk doivent être déclarées avant /:id pour ne pas être
 // interprétées comme un identifiant de tâche.
 router.get('/stats', getStats);
+router.get('/export', exportTasks);
+router.post('/import', importRules, importTasks);
 router.patch('/bulk', bulkRules, bulkUpdate);
 
 router.get('/', taskQueryRules, getTasks);
