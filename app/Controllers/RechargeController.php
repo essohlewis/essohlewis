@@ -25,7 +25,15 @@ final class RechargeController extends Controller
 
     public function form(Request $request): Response
     {
-        return $this->view('recharge.form', ['title' => 'Nouvelle recharge']);
+        // Pré-sélection éventuelle transmise par l'assistant du tableau de bord.
+        $operator = (string) $request->query('operator', '');
+        $type     = (string) $request->query('type', '');
+
+        return $this->view('recharge.form', [
+            'title'       => 'Nouvelle recharge',
+            'preOperator' => in_array($operator, ['orange', 'moov', 'mtn'], true) ? $operator : null,
+            'preType'     => in_array($type, ['credit', 'internet', 'voice', 'sms'], true) ? $type : null,
+        ]);
     }
 
     /** Détection d'opérateur (AJAX) au fil de la saisie du numéro. */

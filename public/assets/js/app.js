@@ -106,31 +106,76 @@
         });
     }
 
+    // ── Assistant tableau de bord : réseau → type → Suivant ───
+    const wizard = document.getElementById('op-wizard');
+    if (wizard) {
+        const state = { operator: null, type: null };
+        const step2 = document.getElementById('op-step-2');
+        const step3 = document.getElementById('op-step-3');
+        const forfait = document.getElementById('op-forfait');
+        const nextBtn = document.getElementById('op-next');
+
+        function select(group, chosen, color) {
+            wizard.querySelectorAll(group).forEach((n) => {
+                n.classList.remove('ring-2', 'ring-teal-200');
+                n.style.borderColor = '';
+            });
+            chosen.classList.add('ring-2', 'ring-teal-200');
+            chosen.style.borderColor = color || '#0f766e';
+        }
+
+        function refreshNext() {
+            if (state.operator && state.type) {
+                step3.classList.remove('hidden');
+                nextBtn.href = '/recharge?operator=' + state.operator + '&type=' + state.type;
+            } else {
+                step3.classList.add('hidden');
+            }
+        }
+
+        wizard.querySelectorAll('.op-net').forEach((btn) => btn.addEventListener('click', () => {
+            state.operator = btn.dataset.op;
+            select('.op-net', btn, btn.dataset.color);
+            step2.classList.remove('hidden');
+            refreshNext();
+        }));
+
+        wizard.querySelectorAll('.op-type').forEach((btn) => btn.addEventListener('click', () => {
+            select('.op-type', btn);
+            if (btn.dataset.type === 'credit') {
+                state.type = 'credit';
+                forfait.classList.add('hidden');
+            } else {
+                state.type = null; // attend le choix du sous-type de forfait
+                forfait.classList.remove('hidden');
+            }
+            refreshNext();
+        }));
+
+        wizard.querySelectorAll('.op-sub').forEach((btn) => btn.addEventListener('click', () => {
+            state.type = btn.dataset.type;
+            select('.op-sub', btn);
+            refreshNext();
+        }));
+    }
+
     // ── Recharge : détection opérateur + forfaits + soumission ─
     const rc = document.getElementById('recharge-form');
     if (rc) {
         const opLabel = document.getElementById('rc-operator');
         const opCode = document.getElementById('rc-operator-code');
-        let detectTimer;
-
-        rc.querySelector('#rc-phone').addEventListener('input', (e) => {
-            clearTimeout(detectTimer);
-            detectTimer = setTimeout(async () => {
-                const { data } = await api('/recharge/detect', { phone: e.target.value });
-                if (data.detected) {
-                    opCode.value = data.operator;
-                    opLabel.textContent = 'Opérateur : ' + data.operator.toUpperCase() +
-                        (data.authoritative ? '' : ' (à confirmer)');
-                } else { opLabel.textContent = ''; opCode.value = ''; }
-            }, 350);
-        });
-
         const typeSel = document.getElementById('rc-type');
         const plansWrap = document.getElementById('rc-plans-wrap');
         const amountWrap = document.getElementById('rc-amount-wrap');
         const plansSel = document.getElementById('rc-plans');
+        let detectTimer;
 
-        typeSel.addEventListener('change', async () => {
+        function showOperator() {
+            opLabel.textContent = opCode.value ? 'Réseau : ' + opCode.value.toUpperCase() : '';
+        }
+
+        // Charge les forfaits pour l'opérateur + la catégorie sélectionnés.
+        async function loadPlans() {
             if (typeSel.value === 'credit' || !opCode.value) {
                 plansWrap.classList.add('hidden'); amountWrap.classList.remove('hidden'); plansSel.innerHTML = '';
                 return;
@@ -144,7 +189,30 @@
             } else {
                 plansWrap.classList.add('hidden'); amountWrap.classList.remove('hidden');
             }
+        }
+
+        rc.querySelector('#rc-phone').addEventListener('input', (e) => {
+            clearTimeout(detectTimer);
+            detectTimer = setTimeout(async () => {
+                const { data } = await api('/recharge/detect', { phone: e.target.value });
+                if (data.detected) {
+                    opCode.value = data.operator;
+                    opLabel.textContent = 'Réseau : ' + data.operator.toUpperCase() +
+                        (data.authoritative ? '' : ' (détecté par le numéro)');
+                    loadPlans(); // recharge les forfaits pour l'opérateur détecté
+                } else {
+                    showOperator(); // conserve le réseau choisi via l'assistant
+                }
+            }, 350);
         });
+
+        typeSel.addEventListener('change', loadPlans);
+
+        // Pré-remplissage depuis l'assistant du tableau de bord (query params).
+        showOperator();
+        if (opCode.value && typeSel.value !== 'credit') {
+            loadPlans();
+        }
 
         rc.addEventListener('submit', async (e) => {
             e.preventDefault();
