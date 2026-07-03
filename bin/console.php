@@ -7,7 +7,8 @@ declare(strict_types=1);
  * Console Transouscris — utilitaires en ligne de commande.
  *
  * Usage :
- *   php bin/console.php migrate            Applique schema.sql puis seeds.sql
+ *   php bin/console.php migrate            Crée la base si besoin puis applique schema + seeds
+ *   php bin/console.php migrate:fresh      ⚠️ Réinitialise la base (drop + recrée) — dev
  *   php bin/console.php guarantee:run      Traite les remboursements garantis dus
  *   php bin/console.php scheduled:run      Exécute les recharges programmées dues
  */
@@ -71,6 +72,29 @@ switch ($command) {
         echo "Base de données prête.\n";
         break;
 
+    case 'migrate:fresh':
+        // ⚠️ DESTRUCTIF : supprime puis recrée toute la base (utile en dev pour
+        // repartir d'un schéma + catalogue à jour).
+        $db = Config::get('db');
+        $serverDsn = sprintf('mysql:host=%s;port=%d;charset=%s', $db['host'], $db['port'], $db['charset']);
+        try {
+            $server = new PDO($serverDsn, $db['user'], $db['pass'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+            $name = str_replace('`', '', $db['name']);
+            $server->exec("DROP DATABASE IF EXISTS `$name`");
+            $server->exec("CREATE DATABASE `$name` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+            echo "✔ Base « {$db['name']} » recréée (à vide).\n";
+        } catch (PDOException $e) {
+            fwrite(STDERR, "❌ Connexion MySQL impossible : " . $e->getMessage() . "\n");
+            exit(1);
+        }
+        $pdo = Database::connection();
+        foreach (['database/schema.sql', 'database/seeds.sql'] as $file) {
+            $pdo->exec(file_get_contents($basePath . '/' . $file));
+            echo "✔ Exécuté : $file\n";
+        }
+        echo "Base réinitialisée avec le catalogue à jour.\n";
+        break;
+
     case 'guarantee:run':
         $count = (new RefundGuaranteeService())->processOverdue();
         echo "Garantie : $count recharge(s) remboursée(s).\n";
@@ -82,5 +106,5 @@ switch ($command) {
         break;
 
     default:
-        echo "Commandes : migrate | guarantee:run | scheduled:run\n";
+        echo "Commandes : migrate | migrate:fresh | guarantee:run | scheduled:run\n";
 }

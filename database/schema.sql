@@ -92,8 +92,12 @@ CREATE TABLE plans (
     code          VARCHAR(40) NOT NULL,
     name          VARCHAR(120) NOT NULL,
     category      ENUM('internet','voice','sms','mixte') NOT NULL DEFAULT 'internet',
+    -- Sous-catégorie fine (pour le filtrage) : illimite | jour | semaine |
+    -- quinzaine | mois | nuit | special. NULL pour appels/SMS simples.
+    subcategory   VARCHAR(40) NULL,
     price         BIGINT NOT NULL,                      -- unités mineures
     validity      VARCHAR(40) NULL,
+    data_volume   VARCHAR(40) NULL,                     -- ex: "1 Go", "Illimité"
     description   VARCHAR(255) NULL,
     active        TINYINT(1) NOT NULL DEFAULT 1,
     PRIMARY KEY (id),

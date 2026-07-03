@@ -25,15 +25,34 @@ final class RechargeController extends Controller
 
     public function form(Request $request): Response
     {
+        $user = $this->requireUser();
+
         // Pré-sélection éventuelle transmise par l'assistant du tableau de bord.
         $operator = (string) $request->query('operator', '');
         $type     = (string) $request->query('type', '');
 
+        // Numéro de l'utilisateur au format national (pour le bouton « Moi-même »).
+        $myNumber = $this->detector->normalize($user->phone);
+
         return $this->view('recharge.form', [
-            'title'       => 'Nouvelle recharge',
-            'preOperator' => in_array($operator, ['orange', 'moov', 'mtn'], true) ? $operator : null,
-            'preType'     => in_array($type, ['credit', 'internet', 'voice', 'sms'], true) ? $type : null,
+            'title'        => 'Nouvelle recharge',
+            'preOperator'  => in_array($operator, ['orange', 'moov', 'mtn'], true) ? $operator : null,
+            'preType'      => in_array($type, ['credit', 'internet', 'voice', 'sms'], true) ? $type : null,
+            'myNumber'     => $myNumber,
+            'recentNumbers'=> $this->recentNumbers($user->id),
         ]);
+    }
+
+    /** Numéros récemment rechargés par l'utilisateur (accès rapide). */
+    private function recentNumbers(int $userId): array
+    {
+        $stmt = \Transouscris\Core\Database::connection()->prepare(
+            'SELECT msisdn, MAX(created_at) AS last
+             FROM recharges WHERE user_id = :uid
+             GROUP BY msisdn ORDER BY last DESC LIMIT 5'
+        );
+        $stmt->execute(['uid' => $userId]);
+        return array_map(static fn ($r) => $r['msisdn'], $stmt->fetchAll());
     }
 
     /** Détection d'opérateur (AJAX) au fil de la saisie du numéro. */
@@ -52,15 +71,18 @@ final class RechargeController extends Controller
         ]);
     }
 
-    /** Liste des forfaits d'un opérateur (AJAX). */
+    /** Liste des forfaits d'un opérateur (AJAX), avec sous-catégorie et volume. */
     public function plans(Request $request, string $operator): Response
     {
         $plans = array_map(static fn (Plan $p) => [
-            'id'       => $p->id,
-            'name'     => $p->name,
-            'category' => $p->category,
-            'price'    => $p->price,
-            'validity' => $p->validity,
+            'id'          => $p->id,
+            'name'        => $p->name,
+            'category'    => $p->category,
+            'subcategory' => $p->subcategory,
+            'price'       => $p->price,
+            'validity'    => $p->validity,
+            'data_volume' => $p->dataVolume,
+            'description' => $p->description,
         ], Plan::forOperator($operator));
 
         return $this->json(['plans' => $plans]);

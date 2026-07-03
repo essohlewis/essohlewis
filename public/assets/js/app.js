@@ -159,69 +159,195 @@
         }));
     }
 
-    // ── Recharge : détection opérateur + forfaits + soumission ─
-    const rc = document.getElementById('recharge-form');
-    if (rc) {
-        const opLabel = document.getElementById('rc-operator');
-        const opCode = document.getElementById('rc-operator-code');
-        const typeSel = document.getElementById('rc-type');
-        const plansWrap = document.getElementById('rc-plans-wrap');
-        const amountWrap = document.getElementById('rc-amount-wrap');
-        const plansSel = document.getElementById('rc-plans');
-        let detectTimer;
+    // ── Recharge : parcours guidé (réseau → type → numéro → montant/forfait → confirmation)
+    const flow = document.getElementById('recharge-flow');
+    if (flow) {
+        const SUBCATS = {
+            illimite: 'Illimité', jour: 'Pass jour', semaine: 'Pass semaine',
+            quinzaine: 'Pass 10-15 j', mois: 'Pass mois', nuit: 'Pass nuit', special: 'Offres spéciales',
+        };
+        const state = {
+            operator: flow.dataset.operator || null,
+            type: flow.dataset.type || null,   // credit | internet | voice | sms
+            phone: '', amount: null, planId: null, planLabel: '',
+        };
+        let allPlans = [];       // forfaits chargés pour l'opérateur courant
+        let subFilter = 'all';
+        const history = [];       // pile des étapes pour le bouton Retour
 
-        function showOperator() {
-            opLabel.textContent = opCode.value ? 'Réseau : ' + opCode.value.toUpperCase() : '';
+        const steps = {};
+        flow.querySelectorAll('.rc-step').forEach((s) => { steps[s.dataset.step] = s; });
+        const errNodes = flow.querySelectorAll('.rc-err');
+
+        function ring(nodes, chosen, color) {
+            nodes.forEach((n) => { n.classList.remove('ring-2', 'ring-teal-200'); n.style.borderColor = ''; });
+            if (chosen) { chosen.classList.add('ring-2', 'ring-teal-200'); chosen.style.borderColor = color || '#0f766e'; }
+        }
+        function clearErrors() { errNodes.forEach((n) => (n.textContent = '')); }
+        function show(step, push = true) {
+            clearErrors();
+            Object.values(steps).forEach((s) => s.classList.add('hidden'));
+            steps[step].classList.remove('hidden');
+            if (push) history.push(step);
+        }
+        function back() {
+            history.pop();
+            const prev = history[history.length - 1] || 'type';
+            show(prev, false);
         }
 
-        // Charge les forfaits pour l'opérateur + la catégorie sélectionnés.
-        async function loadPlans() {
-            if (typeSel.value === 'credit' || !opCode.value) {
-                plansWrap.classList.add('hidden'); amountWrap.classList.remove('hidden'); plansSel.innerHTML = '';
-                return;
-            }
-            const { data } = await api('/recharge/plans/' + opCode.value, null, 'GET');
-            const plans = (data.plans || []).filter((p) => p.category === typeSel.value);
-            if (plans.length) {
-                plansSel.innerHTML = plans.map((p) =>
-                    `<option value="${p.id}">${p.name} — ${p.price} F (${p.validity || ''})</option>`).join('');
-                plansWrap.classList.remove('hidden'); amountWrap.classList.add('hidden');
+        // ---- Réseau (sélecteur d'en-tête, modifiable à tout moment) ----
+        const netBtns = flow.querySelectorAll('.rc-net');
+        function highlightNet() {
+            netBtns.forEach((b) => {
+                const on = b.dataset.op === state.operator;
+                b.classList.toggle('ring-2', on); b.classList.toggle('ring-teal-200', on);
+                b.style.borderColor = on ? (b.dataset.color || '#0f766e') : '';
+            });
+        }
+        netBtns.forEach((b) => b.addEventListener('click', () => {
+            state.operator = b.dataset.op; highlightNet();
+            allPlans = []; // forcera un rechargement des forfaits
+        }));
+        highlightNet();
+
+        // ---- Étape TYPE ----
+        const forfaitSub = document.getElementById('rc-forfait-sub');
+        const typeNext = steps.type.querySelector('.rc-next');
+        function refreshTypeNext() { typeNext.classList.toggle('hidden', !state.type); }
+
+        steps.type.querySelectorAll('.rc-type').forEach((btn) => btn.addEventListener('click', () => {
+            ring(steps.type.querySelectorAll('.rc-type'), btn);
+            if (btn.dataset.type === 'credit') {
+                state.type = 'credit'; forfaitSub.classList.add('hidden');
             } else {
-                plansWrap.classList.add('hidden'); amountWrap.classList.remove('hidden');
+                state.type = null; forfaitSub.classList.remove('hidden');
+                ring(steps.type.querySelectorAll('.rc-cat'), null);
             }
-        }
-
-        rc.querySelector('#rc-phone').addEventListener('input', (e) => {
-            clearTimeout(detectTimer);
-            detectTimer = setTimeout(async () => {
-                const { data } = await api('/recharge/detect', { phone: e.target.value });
-                if (data.detected) {
-                    opCode.value = data.operator;
-                    opLabel.textContent = 'Réseau : ' + data.operator.toUpperCase() +
-                        (data.authoritative ? '' : ' (détecté par le numéro)');
-                    loadPlans(); // recharge les forfaits pour l'opérateur détecté
-                } else {
-                    showOperator(); // conserve le réseau choisi via l'assistant
-                }
-            }, 350);
+            refreshTypeNext();
+        }));
+        steps.type.querySelectorAll('.rc-cat').forEach((btn) => btn.addEventListener('click', () => {
+            state.type = btn.dataset.type; ring(steps.type.querySelectorAll('.rc-cat'), btn); refreshTypeNext();
+        }));
+        typeNext.addEventListener('click', () => {
+            if (!state.operator) { alert('Choisissez d\'abord un réseau (en haut).'); return; }
+            show('number');
+            phoneInput.focus();
         });
 
-        typeSel.addEventListener('change', loadPlans);
+        // ---- Étape NUMÉRO ----
+        const phoneInput = document.getElementById('rc-phone');
+        const opHint = document.getElementById('rc-op-hint');
+        const meBtn = document.getElementById('rc-me');
+        let detectTimer;
 
-        // Pré-remplissage depuis l'assistant du tableau de bord (query params).
-        showOperator();
-        if (opCode.value && typeSel.value !== 'credit') {
-            loadPlans();
+        function checkNumber() {
+            clearTimeout(detectTimer);
+            detectTimer = setTimeout(async () => {
+                if (!phoneInput.value.trim()) { opHint.textContent = ''; return; }
+                const { data } = await api('/recharge/detect', { phone: phoneInput.value });
+                if (data.detected && data.operator !== state.operator) {
+                    opHint.innerHTML = '⚠️ Ce numéro semble être <b>' + data.operator.toUpperCase() +
+                        '</b>. Réseau choisi : <b>' + (state.operator || '').toUpperCase() + '</b>.';
+                    opHint.className = 'text-sm mt-2 text-amber-600';
+                } else if (data.detected) {
+                    opHint.textContent = '✓ Numéro ' + data.operator.toUpperCase();
+                    opHint.className = 'text-sm mt-2 text-emerald-600';
+                } else { opHint.textContent = ''; }
+            }, 300);
+        }
+        phoneInput.addEventListener('input', checkNumber);
+        if (meBtn) meBtn.addEventListener('click', () => { phoneInput.value = flow.dataset.my; checkNumber(); });
+        flow.querySelectorAll('.rc-recent').forEach((c) => c.addEventListener('click', () => {
+            phoneInput.value = c.dataset.num; checkNumber();
+        }));
+        steps.number.querySelector('.rc-next').addEventListener('click', async () => {
+            const { data } = await api('/recharge/detect', { phone: phoneInput.value });
+            if (!data.msisdn) { steps.number.querySelector('.rc-err').textContent = 'Numéro invalide.'; return; }
+            state.phone = phoneInput.value.trim();
+            state.msisdn = data.msisdn;
+            if (state.type === 'credit') { show('amount'); }
+            else { await openPlans(); show('plans'); }
+        });
+
+        // ---- Étape MONTANT (crédit) ----
+        const customAmount = document.getElementById('rc-amount-custom');
+        steps.amount.querySelectorAll('.rc-amount').forEach((btn) => btn.addEventListener('click', () => {
+            state.amount = parseInt(btn.dataset.amount, 10);
+            ring(steps.amount.querySelectorAll('.rc-amount'), btn);
+            customAmount.value = '';
+        }));
+        customAmount.addEventListener('input', () => {
+            state.amount = parseInt(customAmount.value, 10) || null;
+            ring(steps.amount.querySelectorAll('.rc-amount'), null);
+        });
+        steps.amount.querySelector('.rc-next').addEventListener('click', () => {
+            if (!state.amount || state.amount < 100) { steps.amount.querySelector('.rc-err').textContent = 'Montant minimum : 100 F.'; return; }
+            buildSummary(); show('confirm');
+        });
+
+        // ---- Étape FORFAITS ----
+        const subcatsEl = document.getElementById('rc-subcats');
+        const planListEl = document.getElementById('rc-plan-list');
+        const plansEmpty = document.getElementById('rc-plans-empty');
+
+        async function openPlans() {
+            if (!allPlans.length || allPlans._op !== state.operator) {
+                const { data } = await api('/recharge/plans/' + state.operator, null, 'GET');
+                allPlans = data.plans || []; allPlans._op = state.operator;
+            }
+            subFilter = 'all';
+            renderSubcats(); renderPlans();
+        }
+        function categoryPlans() { return allPlans.filter((p) => p.category === state.type); }
+        function renderSubcats() {
+            const subs = [...new Set(categoryPlans().map((p) => p.subcategory).filter(Boolean))];
+            const chips = ['<button type="button" class="rc-sub text-xs rounded-full px-3 py-1 border-2 border-teal-600 bg-teal-50" data-sub="all">Tout</button>'];
+            subs.forEach((s) => chips.push('<button type="button" class="rc-sub text-xs rounded-full px-3 py-1 border-2 border-slate-200" data-sub="' + s + '">' + (SUBCATS[s] || s) + '</button>'));
+            subcatsEl.innerHTML = subs.length ? chips.join('') : '';
+            subcatsEl.querySelectorAll('.rc-sub').forEach((b) => b.addEventListener('click', () => {
+                subFilter = b.dataset.sub;
+                subcatsEl.querySelectorAll('.rc-sub').forEach((x) => { x.classList.remove('border-teal-600', 'bg-teal-50'); x.classList.add('border-slate-200'); });
+                b.classList.add('border-teal-600', 'bg-teal-50'); b.classList.remove('border-slate-200');
+                renderPlans();
+            }));
+        }
+        function renderPlans() {
+            const list = categoryPlans().filter((p) => subFilter === 'all' || p.subcategory === subFilter);
+            plansEmpty.classList.toggle('hidden', list.length > 0);
+            planListEl.innerHTML = list.map((p) => `
+                <button type="button" class="rc-plan w-full text-left rounded-xl border-2 border-slate-200 p-3 hover:border-teal-400" data-id="${p.id}">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div class="font-semibold">${p.name}</div>
+                            <div class="text-xs text-slate-500">${p.data_volume ? p.data_volume + ' · ' : ''}${p.validity || ''}${p.description ? ' · ' + p.description : ''}</div>
+                        </div>
+                        <div class="font-bold text-teal-700 whitespace-nowrap ml-2">${p.price.toLocaleString('fr-FR')} F</div>
+                    </div>
+                </button>`).join('');
+            planListEl.querySelectorAll('.rc-plan').forEach((b) => b.addEventListener('click', () => {
+                const plan = list.find((p) => String(p.id) === b.dataset.id);
+                state.planId = plan.id; state.amount = plan.price; state.planLabel = plan.name;
+                buildSummary(); show('confirm');
+            }));
         }
 
-        rc.addEventListener('submit', async (e) => {
-            e.preventDefault();
+        // ---- Étape CONFIRMATION ----
+        function row(k, v) { return '<div class="flex justify-between p-3"><dt class="text-slate-500">' + k + '</dt><dd class="font-medium">' + v + '</dd></div>'; }
+        function buildSummary() {
+            const typeLabel = state.type === 'credit' ? 'Crédit (transfert direct)'
+                : (state.planLabel || state.type);
+            document.getElementById('rc-summary').innerHTML =
+                row('Réseau', (state.operator || '').toUpperCase()) +
+                row('Numéro', state.phone) +
+                row('Opération', typeLabel) +
+                row('Montant', state.amount.toLocaleString('fr-FR') + ' F CFA');
+        }
+        document.getElementById('rc-submit').addEventListener('click', async () => {
             const body = {
-                phone: rc.phone.value.trim(),
-                operator: opCode.value,
-                type: typeSel.value,
-                amount: rc.amount ? rc.amount.value : null,
-                plan_id: plansWrap.classList.contains('hidden') ? null : plansSel.value,
+                phone: state.phone, operator: state.operator, type: state.type,
+                amount: state.type === 'credit' ? state.amount : null,
+                plan_id: state.type === 'credit' ? null : state.planId,
             };
             if (!navigator.onLine) {
                 queue.push({ url: '/recharge', body });
@@ -230,8 +356,24 @@
             }
             const { ok, data } = await api('/recharge', body);
             if (ok && data.redirect) { window.location = data.redirect; }
-            else { setMsg('rc-msg', data.error || 'Recharge impossible.'); }
+            else { steps.confirm.querySelector('.rc-err').textContent = data.error || 'Recharge impossible.'; }
         });
+
+        // ---- Navigation Retour ----
+        flow.querySelectorAll('.rc-back').forEach((b) => b.addEventListener('click', back));
+
+        // ---- Amorçage : applique la pré-sélection venue du tableau de bord ----
+        show('type');
+        if (state.type === 'credit') {
+            ring(steps.type.querySelectorAll('.rc-type'), [...steps.type.querySelectorAll('.rc-type')].find((x) => x.dataset.type === 'credit'));
+            refreshTypeNext();
+        } else if (state.type) {
+            const forfaitBtn = [...steps.type.querySelectorAll('.rc-type')].find((x) => x.dataset.type === 'forfait');
+            ring(steps.type.querySelectorAll('.rc-type'), forfaitBtn);
+            forfaitSub.classList.remove('hidden');
+            ring(steps.type.querySelectorAll('.rc-cat'), [...steps.type.querySelectorAll('.rc-cat')].find((x) => x.dataset.type === state.type));
+            refreshTypeNext();
+        }
     }
 
     // ── Approvisionnement portefeuille ────────────────────────

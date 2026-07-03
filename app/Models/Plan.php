@@ -15,9 +15,11 @@ final class Plan extends Model
     public string $operatorCode = '';
     public string $code = '';
     public string $name = '';
-    public string $category = 'internet'; // internet | voice | sms | mixte
+    public string $category = 'internet';  // internet | voice | sms | mixte
+    public ?string $subcategory = null;    // illimite | jour | semaine | quinzaine | mois | nuit | special
     public int $price = 0;                 // unités mineures
     public ?string $validity = null;       // ex: "30 jours"
+    public ?string $dataVolume = null;     // ex: "1 Go", "Illimité"
     public ?string $description = null;
     public bool $active = true;
 
