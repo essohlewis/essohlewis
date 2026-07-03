@@ -43,6 +43,13 @@ return function (Router $r): void {
         $r->post('/recharge', 'RechargeController@submit', [CsrfMiddleware::class]);
         $r->get('/recharge/{id}/receipt', 'RechargeController@receipt');
 
+        // Recharges programmées (récurrentes)
+        $r->get('/programmees', 'ScheduledRechargeController@index');
+        $r->post('/programmees', 'ScheduledRechargeController@store', [CsrfMiddleware::class]);
+        $r->post('/programmees/{id}/toggle', 'ScheduledRechargeController@toggle', [CsrfMiddleware::class]);
+        $r->post('/programmees/{id}/executer', 'ScheduledRechargeController@runNow', [CsrfMiddleware::class]);
+        $r->delete('/programmees/{id}', 'ScheduledRechargeController@destroy', [CsrfMiddleware::class]);
+
         // Cagnottes (création)
         $r->post('/cagnotte', 'PotController@create', [CsrfMiddleware::class]);
 

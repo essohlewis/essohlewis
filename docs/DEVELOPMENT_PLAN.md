@@ -72,7 +72,10 @@ remboursée automatiquement si non confirmée dans le délai.
 **Objectif :** l'innovation produit.
 
 - [x] Cagnotte / recharge collective (lien partageable public)
-- [ ] Recharge programmée intelligente (seuil bas + mensuelle) — table prête
+- [x] Recharge programmée récurrente (mensuelle / hebdomadaire) : CRUD,
+      worker `scheduled:run` (réservation + exécution, anti double-débit),
+      exécution manuelle. Reste à faire : déclenchement sur seuil bas
+      (nécessite un lookup du solde opérateur)
 - [ ] Cashback + gamification (paliers, badges, défis) — tables prêtes
 - [ ] Assistant conversationnel transactionnel (NLU → intention de recharge)
 - [ ] Fidélité inter-plateformes (points échangeables, ex. SAMSON GYM)

@@ -77,8 +77,8 @@ switch ($command) {
         break;
 
     case 'scheduled:run':
-        // Point d'extension : parcourir scheduled_recharges dues et déclencher.
-        echo "Recharges programmées : à implémenter (voir docs/DEVELOPMENT_PLAN.md, phase 5).\n";
+        $result = (new \Transouscris\Services\ScheduledRechargeService())->runDue();
+        echo "Recharges programmées : {$result['executed']} exécutée(s), {$result['skipped']} sautée(s).\n";
         break;
 
     default:

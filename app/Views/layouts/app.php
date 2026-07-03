@@ -16,6 +16,7 @@
             <a href="/dashboard" class="font-bold text-lg tracking-tight">Transouscris</a>
             <nav class="flex items-center gap-4 text-sm">
                 <a href="/recharge" class="hover:underline">Recharger</a>
+                <a href="/programmees" class="hover:underline">Programmées</a>
                 <a href="/wallet" class="hover:underline">Portefeuille</a>
                 <a href="/agents" class="hover:underline">Agents</a>
                 <?php if (!empty($auth) && $auth->isAdmin()): ?>

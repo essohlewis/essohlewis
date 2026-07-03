@@ -259,4 +259,40 @@
             else { setMsg('pot-msg', data.error || 'Contribution impossible.'); }
         });
     }
+
+    // ── Recharges programmées ─────────────────────────────────
+    const sched = document.getElementById('sched-form');
+    if (sched) {
+        sched.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const { ok, data } = await api('/programmees', {
+                phone: sched.phone.value.trim(),
+                operator: sched.operator.value,
+                amount: sched.amount.value,
+                frequency: sched.frequency.value,
+            });
+            if (ok && data.redirect) { window.location = data.redirect; }
+            else { setMsg('sched-msg', data.error || 'Création impossible.'); }
+        });
+    }
+    const schedList = document.getElementById('sched-list');
+    if (schedList) {
+        schedList.addEventListener('click', async (e) => {
+            const row = e.target.closest('[data-sched]');
+            if (!row) return;
+            const id = row.dataset.sched;
+
+            if (e.target.classList.contains('sched-run')) {
+                const { ok, data } = await api('/programmees/' + id + '/executer', {});
+                notify(ok ? (data.message || 'Recharge exécutée ✔') : (data.error || 'Échec.'));
+            } else if (e.target.classList.contains('sched-toggle')) {
+                const { ok } = await api('/programmees/' + id + '/toggle', {});
+                if (ok) window.location.reload();
+            } else if (e.target.classList.contains('sched-del')) {
+                if (!confirm('Supprimer cette programmation ?')) return;
+                const { ok } = await api('/programmees/' + id, {}, 'DELETE');
+                if (ok) row.remove();
+            }
+        });
+    }
 })();
