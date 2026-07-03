@@ -115,16 +115,22 @@ Cela lance MySQL (avec le schéma déjà importé) et l'application. Ouvre **htt
 npm install
 ```
 
-**3. Créer la base de données**
-```bash
-mysql -u root -p < schema.sql
-```
-
-**4. Configurer les variables d'environnement**
+**3. Configurer les variables d'environnement**
 ```bash
 cp .env.example .env
 ```
 Édite `.env` avec tes identifiants MySQL et un `JWT_SECRET` long et aléatoire.
+
+**4. Créer la base de données**
+
+Le plus simple (utilise les identifiants de `.env`, pas besoin du client `mysql`) :
+```bash
+npm run db:init
+```
+Ou, si tu préfères le client en ligne de commande :
+```bash
+mysql -u root -p < schema.sql
+```
 
 **5. Lancer le serveur**
 ```bash
@@ -132,7 +138,31 @@ npm start        # production
 npm run dev       # développement (redémarrage auto)
 ```
 
-Ouvre **http://localhost:3000**.
+Ouvre **http://localhost:3000**. Au démarrage, la console indique la cible MySQL
+tentée et, en cas d'échec, un conseil précis (identifiants, base absente, serveur arrêté…).
+
+### Dépannage de la connexion MySQL
+
+**`Access denied for user 'root'@'localhost' (using password: YES)`**
+→ Le mot de passe de `.env` (`DB_PASSWORD`) ne correspond pas. Vérifie-le :
+```bash
+mysql -u root -p     # si ça refuse aussi, le problème vient bien du mot de passe
+```
+- root **sans** mot de passe → laisse `DB_PASSWORD=` (vide) dans `.env`.
+- root en `auth_socket` (MySQL 8 sous Linux) → crée un utilisateur dédié :
+  ```sql
+  -- sudo mysql
+  CREATE USER 'taskflow'@'localhost' IDENTIFIED BY 'mon_mot_de_passe';
+  GRANT ALL PRIVILEGES ON taskflow.* TO 'taskflow'@'localhost';
+  FLUSH PRIVILEGES;
+  ```
+  puis renseigne `DB_USER=taskflow` / `DB_PASSWORD=mon_mot_de_passe` dans `.env`.
+
+**`ECONNREFUSED 127.0.0.1:3306`** → MySQL n'est pas démarré, ou `DB_HOST`/`DB_PORT` sont faux.
+
+**`Unknown database 'taskflow'` (ER_BAD_DB_ERROR)** → lance `npm run db:init`.
+
+**Aucune envie de configurer MySQL ?** Utilise Docker (tout est câblé) : `docker compose up --build`.
 
 ### Migration depuis l'ancienne version
 
