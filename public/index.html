@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TaskFlow">
+<meta name="theme-color" content="#1C2130">
+<meta name="description" content="TaskFlow — Gestion de tâches collaborative et intelligente">
+<title>TaskFlow — Gestion de tâches</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' fill='%23C4732B'/><text x='96' y='120' font-size='120' font-weight='bold' text-anchor='middle' fill='white'>◆</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' fill='%23C4732B'/><text x='96' y='120' font-size='120' font-weight='bold' text-anchor='middle' fill='white'>◆</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/mobile.css">
+</head>
+<body>
+
+  <!-- ===== ECRAN AUTHENTIFICATION ===== -->
+  <div id="auth-screen" class="auth-screen">
+    <button id="theme-toggle-auth" class="theme-toggle" title="Changer de thème">◐</button>
+    <div class="auth-panel">
+      <div class="brand">
+        <span class="brand-mark">◆</span>
+        <span class="brand-name">TaskFlow</span>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="tab-btn active" data-tab="login">Connexion</button>
+        <button class="tab-btn" data-tab="register">Inscription</button>
+      </div>
+
+      <form id="login-form" class="auth-form active">
+        <label>Email
+          <input type="email" id="login-email" required placeholder="toi@exemple.com">
+        </label>
+        <label>Mot de passe
+          <input type="password" id="login-password" required placeholder="••••••••">
+        </label>
+        <button type="submit" class="btn-primary">Se connecter</button>
+        <p class="form-error" id="login-error"></p>
+      </form>
+
+      <form id="register-form" class="auth-form">
+        <label>Nom
+          <input type="text" id="register-name" required placeholder="Ton nom">
+        </label>
+        <label>Email
+          <input type="email" id="register-email" required placeholder="toi@exemple.com">
+        </label>
+        <label>Mot de passe
+          <input type="password" id="register-password" required placeholder="6 caractères minimum">
+        </label>
+        <button type="submit" class="btn-primary">Créer mon compte</button>
+        <p class="form-error" id="register-error"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== ECRAN APPLICATION ===== -->
+  <div id="app-screen" class="app-screen hidden">
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-mark">◆</span>
+        <span class="brand-name">TaskFlow</span>
+      </div>
+      <button id="mobile-menu-toggle" class="mobile-menu-toggle" title="Menu">☰</button>
+      <div class="header-right" id="header-right">
+        <div class="notif-wrap">
+          <button id="notif-toggle" class="theme-toggle" title="Rappels d'échéance">
+            🔔<span id="notif-badge" class="notif-badge hidden">0</span>
+          </button>
+          <div id="notif-panel" class="notif-panel hidden">
+            <h4>Rappels d'échéance</h4>
+            <div id="notif-list"></div>
+          </div>
+        </div>
+        <button id="feed-toggle" class="btn-ghost" title="Fil d'actualité">Fil</button>
+        <button id="profile-toggle" class="btn-ghost" title="Mon profil">Profil</button>
+        <button id="shared-toggle" class="btn-ghost" title="Tâches partagées avec moi">Partagées</button>
+        <button id="theme-toggle" class="theme-toggle" title="Changer de thème">◐</button>
+        <span id="user-name" class="user-name"></span>
+        <button id="logout-btn" class="btn-ghost">Déconnexion</button>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <!-- Barre de statistiques -->
+      <section class="stats-bar" id="stats-bar">
+        <div class="stat">
+          <span class="stat-value" id="stat-total">0</span>
+          <span class="stat-label">tâches</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="stat-completion">0%</span>
+          <span class="stat-label">terminées</span>
+        </div>
+        <div class="stat stat-warning" id="stat-late-wrap">
+          <span class="stat-value" id="stat-late">0</span>
+          <span class="stat-label">en retard</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+      </section>
+
+      <section class="composer">
+        <h1>Qu'est-ce qu'on fait aujourd'hui ?</h1>
+        <form id="task-form" class="task-form">
+          <input type="text" id="task-title" placeholder="Titre de la tâche" required maxlength="200">
+          <textarea id="task-description" placeholder="Description (optionnel)" rows="2" maxlength="2000"></textarea>
+          <div class="task-form-row">
+            <select id="task-priority">
+              <option value="basse">Priorité basse</option>
+              <option value="moyenne" selected>Priorité moyenne</option>
+              <option value="haute">Priorité haute</option>
+            </select>
+            <input type="text" id="task-tag" placeholder="Tag (ex: travail)" maxlength="40">
+            <input type="date" id="task-due-date">
+            <button type="submit" class="btn-primary">Ajouter</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Barre de recherche / filtres / tri -->
+      <section class="toolbar">
+        <input type="search" id="search-input" placeholder="Rechercher une tâche…" class="search-input">
+        <select id="filter-priority">
+          <option value="">Toutes priorités</option>
+          <option value="haute">Haute</option>
+          <option value="moyenne">Moyenne</option>
+          <option value="basse">Basse</option>
+        </select>
+        <select id="filter-tag">
+          <option value="">Tous les tags</option>
+        </select>
+        <select id="sort-select">
+          <option value="recent">Plus récentes</option>
+          <option value="ancien">Plus anciennes</option>
+          <option value="echeance">Échéance</option>
+          <option value="priorite">Priorité</option>
+        </select>
+        <div class="toolbar-actions">
+          <button id="export-json" class="btn-ghost" type="button" title="Exporter en JSON">⬇ JSON</button>
+          <button id="export-csv" class="btn-ghost" type="button" title="Exporter en CSV">⬇ CSV</button>
+          <button id="import-btn" class="btn-ghost" type="button" title="Importer un fichier JSON">⬆ Importer</button>
+          <input type="file" id="import-file" accept=".json,application/json" hidden>
+        </div>
+      </section>
+
+      <section class="board">
+        <div class="board-column" data-status="a_faire">
+          <h2>À faire <span class="count" id="count-a_faire">0</span></h2>
+          <div class="task-list" id="list-a_faire"></div>
+        </div>
+        <div class="board-column" data-status="en_cours">
+          <h2>En cours <span class="count" id="count-en_cours">0</span></h2>
+          <div class="task-list" id="list-en_cours"></div>
+        </div>
+        <div class="board-column" data-status="terminee">
+          <h2>Terminées <span class="count" id="count-terminee">0</span></h2>
+          <div class="task-list" id="list-terminee"></div>
+        </div>
+      </section>
+
+      <div class="load-more-wrap">
+        <button id="load-more" class="btn-ghost hidden" type="button">Charger plus de tâches</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- Barre d'actions groupées (apparaît quand des tâches sont sélectionnées) -->
+  <div id="bulk-bar" class="bulk-bar hidden">
+    <span class="bulk-info"><strong id="bulk-count">0</strong> sélectionnée(s)</span>
+    <select id="bulk-status" class="bulk-select">
+      <option value="">Déplacer vers…</option>
+      <option value="a_faire">À faire</option>
+      <option value="en_cours">En cours</option>
+      <option value="terminee">Terminée</option>
+    </select>
+    <button id="bulk-delete" class="btn-danger">Supprimer</button>
+    <button id="bulk-clear" class="btn-ghost">Annuler</button>
+  </div>
+
+  <!-- Conteneur des notifications toast -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Fenêtre d'édition d'une tâche -->
+  <div id="edit-modal" class="confirm-overlay hidden">
+    <div class="confirm-box edit-box">
+      <h3 class="edit-heading">Modifier la tâche</h3>
+      <form id="edit-form" class="edit-form">
+        <label>Titre
+          <input type="text" id="edit-title" maxlength="200" required>
+        </label>
+        <label>Description
+          <textarea id="edit-description" rows="3" maxlength="2000"></textarea>
+        </label>
+        <div class="edit-row">
+          <label>Priorité
+            <select id="edit-priority">
+              <option value="basse">Basse</option>
+              <option value="moyenne">Moyenne</option>
+              <option value="haute">Haute</option>
+            </select>
+          </label>
+          <label>Tag
+            <input type="text" id="edit-tag" maxlength="40">
+          </label>
+          <label>Échéance
+            <input type="date" id="edit-due-date">
+          </label>
+        </div>
+        <div class="share-block">
+          <h4>Partager (lecture seule)</h4>
+          <div class="share-add">
+            <input type="email" id="share-email" placeholder="email@exemple.com">
+            <button type="button" id="share-btn" class="btn-ghost">Partager</button>
+          </div>
+          <ul id="share-list" class="share-list"></ul>
+        </div>
+        <div class="confirm-actions">
+          <button type="button" id="edit-cancel" class="btn-ghost">Annuler</button>
+          <button type="submit" class="btn-primary">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modale profil (le mien = éditable ; autrui = suivre) -->
+  <div id="profile-modal" class="confirm-overlay hidden">
+    <div class="confirm-box edit-box">
+      <div id="profile-content"></div>
+      <div class="confirm-actions">
+        <button type="button" id="profile-close" class="btn-ghost">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale fil d'actualité -->
+  <div id="feed-modal" class="confirm-overlay hidden">
+    <div class="confirm-box edit-box">
+      <h3 class="edit-heading">Fil d'actualité</h3>
+      <div id="feed-list" class="feed-list"></div>
+      <div class="confirm-actions">
+        <button type="button" id="feed-close" class="btn-ghost">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vue « Partagées avec moi » -->
+  <div id="shared-modal" class="confirm-overlay hidden">
+    <div class="confirm-box edit-box">
+      <h3 class="edit-heading">Partagées avec moi</h3>
+      <div id="shared-list" class="shared-list"></div>
+      <div class="confirm-actions">
+        <button type="button" id="shared-close" class="btn-ghost">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Boîte de confirmation personnalisée -->
+  <div id="confirm-modal" class="confirm-overlay hidden">
+    <div class="confirm-box">
+      <p id="confirm-message">Es-tu sûr ?</p>
+      <div class="confirm-actions">
+        <button id="confirm-cancel" class="btn-ghost">Annuler</button>
+        <button id="confirm-ok" class="btn-danger">Supprimer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Template d'une carte tâche -->
+  <template id="task-card-template">
+    <article class="task-card" draggable="true">
+      <div class="task-card-top">
+        <input type="checkbox" class="task-select" title="Sélectionner">
+        <span class="priority-dot"></span>
+        <h3 class="task-title"></h3>
+        <button class="task-edit" title="Modifier">✎</button>
+        <button class="task-delete" title="Supprimer">✕</button>
+      </div>
+      <p class="task-description"></p>
+      <span class="task-tag"></span>
+      <div class="task-meta">
+        <span class="task-due"></span>
+        <select class="task-status-select">
+          <option value="a_faire">À faire</option>
+          <option value="en_cours">En cours</option>
+          <option value="terminee">Terminée</option>
+        </select>
+      </div>
+      <div class="subtasks">
+        <button type="button" class="subtasks-toggle">
+          <span class="subtasks-caret">▸</span> Checklist
+          <span class="subtasks-progress"></span>
+        </button>
+        <div class="subtasks-body hidden">
+          <ul class="subtasks-list"></ul>
+          <form class="subtask-form">
+            <input type="text" class="subtask-input" placeholder="Ajouter une sous-tâche…" maxlength="200">
+          </form>
+        </div>
+      </div>
+      <div class="attachments">
+        <button type="button" class="attachments-toggle">
+          <span class="attachments-caret">▸</span> Pièces jointes
+          <span class="attachments-count"></span>
+        </button>
+        <div class="attachments-body hidden">
+          <ul class="attachments-list"></ul>
+          <label class="attachment-add">
+            <input type="file" class="attachment-input" hidden>
+            <span>＋ Ajouter un fichier</span>
+          </label>
+        </div>
+      </div>
+      <div class="reactions"></div>
+      <div class="comments">
+        <button type="button" class="comments-toggle">
+          <span class="comments-caret">▸</span> Discussion
+          <span class="comments-count"></span>
+        </button>
+        <div class="comments-body hidden">
+          <ul class="comments-list"></ul>
+          <form class="comment-form">
+            <input type="text" class="comment-input" placeholder="Commenter… (@nom pour mentionner)" maxlength="1000">
+          </form>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <!-- Template d'un commentaire -->
+  <template id="comment-item-template">
+    <li class="comment-item">
+      <span class="comment-author"></span>
+      <span class="comment-body"></span>
+      <button type="button" class="comment-delete" title="Supprimer">✕</button>
+    </li>
+  </template>
+
+  <!-- Template d'une ligne de pièce jointe -->
+  <template id="attachment-item-template">
+    <li class="attachment-item">
+      <button type="button" class="attachment-download" title="Télécharger"></button>
+      <span class="attachment-size"></span>
+      <button type="button" class="attachment-delete" title="Supprimer">✕</button>
+    </li>
+  </template>
+
+  <!-- Template d'une ligne de sous-tâche -->
+  <template id="subtask-item-template">
+    <li class="subtask-item">
+      <label>
+        <input type="checkbox" class="subtask-check">
+        <span class="subtask-title"></span>
+      </label>
+      <button type="button" class="subtask-delete" title="Supprimer">✕</button>
+    </li>
+  </template>
+
+  <script src="js/app.js"></script>
+  <script src="js/mobile.js"></script>
+</body>
+</html>
