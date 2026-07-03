@@ -18,6 +18,7 @@ final class PaymentGatewayFactory
         'cinetpay' => CinetPayGateway::class,
         'paydunya' => PayDunyaGateway::class,
         'wave'     => WaveGateway::class,
+        'sandbox'  => SandboxGateway::class,
     ];
 
     /** @var array<string, PaymentGatewayInterface> cache d'instances */
@@ -39,9 +40,16 @@ final class PaymentGatewayFactory
         self::$instances[$name] = $instance;
     }
 
-    /** @return string[] liste des fournisseurs disponibles */
+    /**
+     * @return string[] liste des fournisseurs disponibles. La passerelle de
+     * simulation « sandbox » n'est proposée qu'en développement (APP_DEBUG=true).
+     */
     public static function available(): array
     {
-        return array_keys(self::$registry);
+        $names = array_keys(self::$registry);
+        if (!\Transouscris\Core\Config::get('app.debug')) {
+            $names = array_values(array_filter($names, static fn ($n) => $n !== 'sandbox'));
+        }
+        return $names;
     }
 }

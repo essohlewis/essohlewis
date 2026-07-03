@@ -100,7 +100,17 @@ php -S localhost:8000 -t public
 ```
 
 En mode `APP_DEBUG=true`, les SMS OTP ne sont pas envoyés mais **journalisés**
-(`storage/logs/app.log`) — pratique pour tester la connexion sans crédit SMS.
+(`storage/logs/app.log`) et le code s'affiche sur la page de connexion —
+pratique pour tester la connexion sans crédit SMS.
+
+### 🧪 Tester un paiement en local (sans compte marchand)
+
+En mode `APP_DEBUG=true`, une passerelle de **simulation** apparaît dans le
+sélecteur de moyen de paiement (« Simulateur (dev) »). Sur *Approvisionner le
+portefeuille*, choisissez-la : vous êtes redirigé vers une page interne où
+**Confirmer** crédite réellement le portefeuille via le même circuit de
+re-vérification que les vraies passerelles. Vous pouvez alors enchaîner sur une
+recharge. Cette passerelle est automatiquement masquée en production.
 
 ### Tâches planifiées (cron)
 ```bash

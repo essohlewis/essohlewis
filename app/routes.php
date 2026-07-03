@@ -60,6 +60,11 @@ return function (Router $r): void {
     $r->post('/webhooks/{gateway}', 'PaymentController@webhook', [RateLimitMiddleware::class]);
     $r->get('/payment/return', 'PaymentController@returnPage');
 
+    // ── Simulateur de paiement (DÉVELOPPEMENT — 404 hors APP_DEBUG) ──
+    $r->get('/dev/pay', 'DevPaymentController@show');
+    $r->post('/dev/pay/confirm', 'DevPaymentController@confirm', [CsrfMiddleware::class]);
+    $r->post('/dev/pay/cancel', 'DevPaymentController@cancel', [CsrfMiddleware::class]);
+
     // ── Back-office admin ─────────────────────────────────────
     $r->group(['prefix' => '/admin', 'middleware' => [AuthMiddleware::class, AdminMiddleware::class]], function (Router $r): void {
         $r->get('', 'Admin\AdminController@dashboard');

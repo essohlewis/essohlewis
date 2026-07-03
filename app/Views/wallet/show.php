@@ -17,7 +17,7 @@
                 <label class="text-xs font-medium text-slate-500">Moyen</label>
                 <select name="gateway" class="block border rounded-lg px-3 py-2">
                     <?php foreach ($gateways as $g): ?>
-                        <option value="<?= e($g) ?>"><?= e(ucfirst($g)) ?></option>
+                        <option value="<?= e($g) ?>"><?= e(gateway_label($g)) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>

@@ -75,6 +75,16 @@ final class PaymentIntent extends Model
         return is_array($decoded) ? $decoded : [];
     }
 
+    /** Fusionne et persiste des métadonnées supplémentaires. */
+    public function mergeMetadata(array $extra): void
+    {
+        $merged = array_merge($this->metadataArray(), $extra);
+        $json   = json_encode($merged, JSON_UNESCAPED_UNICODE);
+        self::pdo()->prepare('UPDATE payment_intents SET metadata = :m WHERE id = :id')
+            ->execute(['m' => $json, 'id' => $this->id]);
+        $this->metadata = $json;
+    }
+
     private static function generateReference(string $purpose): string
     {
         $prefix = match ($purpose) {

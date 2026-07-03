@@ -23,7 +23,7 @@
         <div class="flex gap-2">
             <input name="amount" inputmode="numeric" placeholder="Montant" class="flex-1 border rounded-lg px-3 py-2" required>
             <select name="gateway" class="border rounded-lg px-3 py-2">
-                <?php foreach ($gateways as $g): ?><option value="<?= e($g) ?>"><?= e(ucfirst($g)) ?></option><?php endforeach; ?>
+                <?php foreach ($gateways as $g): ?><option value="<?= e($g) ?>"><?= e(gateway_label($g)) ?></option><?php endforeach; ?>
             </select>
         </div>
         <button class="w-full bg-teal-700 text-white rounded-lg py-2 font-semibold">Contribuer</button>

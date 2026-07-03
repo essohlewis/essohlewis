@@ -40,6 +40,21 @@ if (!function_exists('config')) {
     }
 }
 
+if (!function_exists('gateway_label')) {
+    /** Libellé lisible d'une passerelle de paiement. */
+    function gateway_label(string $gateway): string
+    {
+        return match ($gateway) {
+            'cinetpay' => 'CinetPay',
+            'paydunya' => 'PayDunya',
+            'wave'     => 'Wave',
+            'stripe'   => 'Carte bancaire',
+            'sandbox'  => 'Simulateur (dev)',
+            default    => ucfirst($gateway),
+        };
+    }
+}
+
 if (!function_exists('asset')) {
     function asset(string $path): string
     {

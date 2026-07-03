@@ -42,6 +42,8 @@ aucun solde négatif possible sur un compte utilisateur.
 - [x] `PaymentIntent` (pivot idempotent) + initialisation
 - [x] Webhooks : vérification de **signature** puis **re-vérification serveur**
 - [x] Crédit wallet idempotent + contrôle de montant
+- [x] **Passerelle de simulation** (sandbox) pour tester le flux complet en
+      local sans compte marchand (APP_DEBUG uniquement)
 - [ ] Rapprochement/relance des paiements `pending` (cron)
 - [ ] Stripe (carte internationale — support diaspora)
 
