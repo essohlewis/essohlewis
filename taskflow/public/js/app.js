@@ -33,6 +33,17 @@ const taskForm = document.getElementById('task-form');
 const taskCardTemplate = document.getElementById('task-card-template');
 const subtaskItemTemplate = document.getElementById('subtask-item-template');
 const attachmentItemTemplate = document.getElementById('attachment-item-template');
+const commentItemTemplate = document.getElementById('comment-item-template');
+const profileToggle = document.getElementById('profile-toggle');
+const profileModal = document.getElementById('profile-modal');
+const profileContent = document.getElementById('profile-content');
+const profileClose = document.getElementById('profile-close');
+const feedToggle = document.getElementById('feed-toggle');
+const feedModal = document.getElementById('feed-modal');
+const feedList = document.getElementById('feed-list');
+const feedClose = document.getElementById('feed-close');
+
+const REACTION_EMOJIS = ['👍', '❤️', '🎉'];
 const searchInput = document.getElementById('search-input');
 const filterPriority = document.getElementById('filter-priority');
 const filterTag = document.getElementById('filter-tag');
@@ -740,8 +751,160 @@ function buildTaskCard(task) {
 
   wireSubtasks(node, task);
   wireAttachments(node, task);
+  wireReactions(node, task);
+  wireComments(node, task);
 
   return card;
+}
+
+// ================= Utilitaires sociaux =================
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Met en évidence les mentions @nom dans un texte (échappé au préalable).
+function renderMentions(text) {
+  return escapeHtml(text).replace(/(^|\s)@([\p{L}0-9_]+)/gu, '$1<span class="mention">@$2</span>');
+}
+
+function avatarUrl(userId) {
+  return `${API_BASE}/users/${userId}/avatar`;
+}
+
+// Petit badge : avatar si présent, sinon initiale.
+function avatarBadge(userId, name, hasAvatar) {
+  const span = document.createElement('span');
+  span.className = 'avatar';
+  if (hasAvatar) {
+    const img = document.createElement('img');
+    img.src = avatarUrl(userId);
+    img.alt = name || '';
+    span.appendChild(img);
+  } else {
+    span.textContent = (name || '?').charAt(0).toUpperCase();
+  }
+  return span;
+}
+
+// ================= Réactions =================
+function wireReactions(node, task) {
+  const wrap = node.querySelector('.reactions');
+  task.reactions = task.reactions || [];
+  task.my_reactions = task.my_reactions || [];
+
+  function render() {
+    wrap.innerHTML = '';
+    REACTION_EMOJIS.forEach((emoji) => {
+      const found = task.reactions.find((r) => r.emoji === emoji);
+      const count = found ? found.count : 0;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'reaction-btn';
+      if (task.my_reactions.includes(emoji)) btn.classList.add('mine');
+      btn.innerHTML = `${emoji}<span class="reaction-count">${count || ''}</span>`;
+      btn.addEventListener('click', async () => {
+        try {
+          const summary = await apiRequest(`/tasks/${task.id}/reactions`, {
+            method: 'POST',
+            body: JSON.stringify({ emoji })
+          });
+          task.reactions = summary.counts;
+          task.my_reactions = summary.mine;
+          render();
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      });
+      wrap.appendChild(btn);
+    });
+  }
+  render();
+}
+
+// ================= Commentaires (discussion) =================
+function wireComments(node, task) {
+  task.comments_count = task.comments_count || 0;
+
+  const wrap = node.querySelector('.comments');
+  const toggleBtn = wrap.querySelector('.comments-toggle');
+  const caret = wrap.querySelector('.comments-caret');
+  const countEl = wrap.querySelector('.comments-count');
+  const body = wrap.querySelector('.comments-body');
+  const listEl = wrap.querySelector('.comments-list');
+  const form = wrap.querySelector('.comment-form');
+  const input = wrap.querySelector('.comment-input');
+  let loaded = false;
+
+  function renderCount() {
+    countEl.textContent = task.comments_count > 0 ? task.comments_count : '';
+  }
+  renderCount();
+
+  function addRow(c) {
+    const item = commentItemTemplate.content.cloneNode(true);
+    const li = item.querySelector('.comment-item');
+    const author = item.querySelector('.comment-author');
+    author.textContent = c.user_name;
+    author.classList.add('clickable-user');
+    author.addEventListener('click', () => openUserProfile(c.user_id));
+    item.querySelector('.comment-body').innerHTML = renderMentions(c.body);
+
+    const del = item.querySelector('.comment-delete');
+    // Suppression proposée à l'auteur ou au propriétaire de la tâche.
+    if (c.user_id === currentUser?.id || task.user_id === currentUser?.id) {
+      del.addEventListener('click', async () => {
+        try {
+          await apiRequest(`/tasks/${task.id}/comments/${c.id}`, { method: 'DELETE' });
+          li.remove();
+          task.comments_count = Math.max(0, task.comments_count - 1);
+          renderCount();
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      });
+    } else {
+      del.remove();
+    }
+    listEl.appendChild(li);
+  }
+
+  async function loadComments() {
+    try {
+      const items = await apiRequest(`/tasks/${task.id}/comments`);
+      listEl.innerHTML = '';
+      items.forEach(addRow);
+      loaded = true;
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  toggleBtn.addEventListener('click', async () => {
+    const willOpen = body.classList.contains('hidden');
+    body.classList.toggle('hidden', !willOpen);
+    caret.textContent = willOpen ? '▾' : '▸';
+    if (willOpen && !loaded) await loadComments();
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const value = input.value.trim();
+    if (!value) return;
+    try {
+      const created = await apiRequest(`/tasks/${task.id}/comments`, {
+        method: 'POST',
+        body: JSON.stringify({ body: value })
+      });
+      input.value = '';
+      if (loaded) addRow(created);
+      task.comments_count += 1;
+      renderCount();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  });
 }
 
 // ================= Pièces jointes =================
@@ -1095,6 +1258,146 @@ document.querySelectorAll('.task-list').forEach((list) => {
     if (draggedTaskId) updateTaskStatus(draggedTaskId, newStatus);
   });
 });
+
+// ================= Profil =================
+function closeProfile() { profileModal.classList.add('hidden'); }
+
+async function renderProfile(userId) {
+  profileContent.innerHTML = '<p class="notif-empty">Chargement…</p>';
+  profileModal.classList.remove('hidden');
+  try {
+    const p = await apiRequest(`/users/${userId}`);
+    profileContent.innerHTML = '';
+
+    const head = document.createElement('div');
+    head.className = 'profile-head';
+    head.appendChild(avatarBadge(p.id, p.name, p.has_avatar));
+    const idBlock = document.createElement('div');
+    idBlock.innerHTML = `<div class="profile-name"></div><div class="profile-bio"></div>`;
+    idBlock.querySelector('.profile-name').textContent = p.name;
+    idBlock.querySelector('.profile-bio').textContent = p.bio || '';
+    head.appendChild(idBlock);
+    profileContent.appendChild(head);
+
+    const stats = document.createElement('div');
+    stats.className = 'profile-stats';
+    stats.innerHTML = `
+      <span><strong>${p.completed}</strong> terminées</span>
+      <span><strong>${p.followers}</strong> abonnés</span>
+      <span><strong>${p.following}</strong> abonnements</span>`;
+    profileContent.appendChild(stats);
+
+    if (p.is_me) {
+      // Édition de son propre profil.
+      const formEl = document.createElement('form');
+      formEl.className = 'edit-form profile-edit';
+      formEl.innerHTML = `
+        <label>Nom <input type="text" id="profile-name-input" maxlength="100"></label>
+        <label>Bio <textarea id="profile-bio-input" rows="3" maxlength="500"></textarea></label>
+        <label>Avatar <input type="file" id="profile-avatar-input" accept="image/*"></label>
+        <button type="submit" class="btn-primary">Enregistrer le profil</button>`;
+      formEl.querySelector('#profile-name-input').value = p.name;
+      formEl.querySelector('#profile-bio-input').value = p.bio || '';
+      formEl.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          await apiRequest('/users/me', {
+            method: 'PUT',
+            body: JSON.stringify({
+              name: formEl.querySelector('#profile-name-input').value.trim(),
+              bio: formEl.querySelector('#profile-bio-input').value.trim() || null
+            })
+          });
+          const file = formEl.querySelector('#profile-avatar-input').files[0];
+          if (file) {
+            const fd = new FormData();
+            fd.append('avatar', file);
+            await authFetch('/users/me/avatar', { method: 'POST', body: fd });
+          }
+          showToast('Profil mis à jour.');
+          renderProfile(userId);
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      });
+      profileContent.appendChild(formEl);
+    } else {
+      // Bouton suivre / ne plus suivre.
+      const btn = document.createElement('button');
+      btn.className = p.is_following ? 'btn-ghost' : 'btn-primary';
+      btn.textContent = p.is_following ? 'Ne plus suivre' : 'Suivre';
+      btn.addEventListener('click', async () => {
+        try {
+          await apiRequest(`/users/${p.id}/follow`, { method: p.is_following ? 'DELETE' : 'POST' });
+          renderProfile(userId);
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      });
+      profileContent.appendChild(btn);
+    }
+  } catch (err) {
+    profileContent.innerHTML = `<p class="notif-empty">${err.message}</p>`;
+  }
+}
+
+function openUserProfile(userId) {
+  closeEditIfOpen();
+  renderProfile(userId);
+}
+function closeEditIfOpen() {
+  if (!editModal.classList.contains('hidden')) editModal.classList.add('hidden');
+}
+
+profileToggle.addEventListener('click', () => renderProfile(currentUser.id));
+profileClose.addEventListener('click', closeProfile);
+profileModal.addEventListener('click', (e) => { if (e.target === profileModal) closeProfile(); });
+
+// ================= Fil d'actualité =================
+function activityText(a) {
+  if (a.type === 'completed') return `a terminé « ${a.task_title || 'une tâche'} »`;
+  if (a.type === 'created') return `a créé « ${a.task_title || 'une tâche'} »`;
+  if (a.type === 'commented') return `a commenté « ${a.task_title || 'une tâche'} »`;
+  return a.type;
+}
+
+async function openFeed() {
+  feedList.innerHTML = '<p class="notif-empty">Chargement…</p>';
+  feedModal.classList.remove('hidden');
+  try {
+    const items = await apiRequest('/users/feed');
+    feedList.innerHTML = '';
+    if (items.length === 0) {
+      feedList.innerHTML = '<p class="notif-empty">Rien pour l\'instant. Suis des utilisateurs pour voir leur activité.</p>';
+      return;
+    }
+    items.forEach((a) => {
+      const row = document.createElement('div');
+      row.className = 'feed-item';
+      const badge = avatarBadge(a.user_id, a.user_name, a.has_avatar);
+      const text = document.createElement('div');
+      text.className = 'feed-text';
+      const who = document.createElement('span');
+      who.className = 'clickable-user';
+      who.textContent = a.user_name;
+      who.addEventListener('click', () => openUserProfile(a.user_id));
+      text.append(who, document.createTextNode(' ' + activityText(a)));
+      const time = document.createElement('div');
+      time.className = 'feed-time';
+      time.textContent = new Date(a.created_at).toLocaleString('fr-FR');
+      const col = document.createElement('div');
+      col.appendChild(text); col.appendChild(time);
+      row.append(badge, col);
+      feedList.appendChild(row);
+    });
+  } catch (err) {
+    feedList.innerHTML = `<p class="notif-empty">${err.message}</p>`;
+  }
+}
+
+feedToggle.addEventListener('click', openFeed);
+feedClose.addEventListener('click', () => feedModal.classList.add('hidden'));
+feedModal.addEventListener('click', (e) => { if (e.target === feedModal) feedModal.classList.add('hidden'); });
 
 // ================= Démarrage =================
 if (token && currentUser) {

@@ -24,6 +24,17 @@ taskflow/
 └── package.json
 ```
 
+## Nouveautés — fonctionnalités sociales
+
+TaskFlow intègre désormais une couche **réseau social** :
+
+- **Profils** : chaque utilisateur a une **bio** et un **avatar** (upload image), plus des statistiques publiques (tâches terminées, abonnés, abonnements). L'email n'est visible que sur son propre profil.
+- **Suivi + fil d'actualité** : suivre d'autres utilisateurs (follow/unfollow) et consulter un **fil** des activités des personnes suivies (création et complétion de tâches, commentaires).
+- **Commentaires + mentions** : fil de **discussion** sur chaque tâche (accessible au propriétaire et aux personnes avec qui elle est partagée), avec **mentions @nom** mises en évidence.
+- **Réactions** : réagir à une tâche par emoji (👍 ❤️ 🎉), avec compteurs (toggle).
+
+Ces interactions respectent le partage existant : on ne peut commenter/réagir/voir que les tâches qu'on possède **ou** qui nous ont été partagées. Les compteurs (commentaires, réactions) sont renvoyés par `GET /api/tasks` via des **agrégats groupés** (pas de N+1). Endpoints sous `/api/users/*` et `/api/tasks/:id/{comments,reactions}`.
+
 ## Nouveautés v2 — performance
 
 Cette version 2 se concentre sur la **performance** (temps de réponse, bande passante, charge base de données) tout en ajoutant de nouvelles fonctionnalités.
@@ -224,6 +235,16 @@ npm test
 | GET/POST| /api/tasks/:id/attachments | Oui    | Lister / téléverser une pièce jointe   |
 | GET     | /api/tasks/:id/attachments/:aid/download | Oui | Télécharger une pièce jointe |
 | DELETE  | /api/tasks/:id/attachments/:aid | Oui | Supprimer une pièce jointe           |
+| GET/POST| /api/tasks/:id/comments  | Oui      | Lister / ajouter un commentaire         |
+| DELETE  | /api/tasks/:id/comments/:cid | Oui  | Supprimer un commentaire (auteur/proprio) |
+| GET/POST| /api/tasks/:id/reactions | Oui      | Réactions (POST = toggle emoji)         |
+| GET/PUT | /api/users/me            | Oui      | Mon profil / mise à jour (nom, bio)     |
+| POST    | /api/users/me/avatar     | Oui      | Téléverser mon avatar                   |
+| GET     | /api/users/:id           | Oui      | Profil public                           |
+| GET     | /api/users/:id/avatar    | Non      | Avatar (image)                          |
+| POST/DELETE | /api/users/:id/follow | Oui     | Suivre / ne plus suivre                 |
+| GET     | /api/users/:id/followers\|following | Oui | Abonnés / abonnements            |
+| GET     | /api/users/feed          | Oui      | Fil d'actualité                         |
 | GET     | /api/tasks/:id/subtasks  | Oui      | Lister les sous-tâches                   |
 | POST    | /api/tasks/:id/subtasks  | Oui      | Ajouter une sous-tâche                   |
 | PATCH   | /api/tasks/:id/subtasks/:subId | Oui | Cocher / renommer une sous-tâche      |
@@ -271,6 +292,14 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE INDEX idx_refresh_user ON refresh_tokens(user_id);
+```
+
+Pour la couche sociale (profils, suivi, commentaires, réactions), le plus simple
+est de **rejouer `schema.sql`** (toutes les instructions sont idempotentes) via
+`npm run db:init`, ou d'appliquer :
+```sql
+ALTER TABLE users ADD COLUMN bio VARCHAR(500) NULL, ADD COLUMN avatar VARCHAR(255) NULL;
+-- + tables follows / activities / comments / reactions (voir schema.sql)
 ```
 
 ## Pistes d'amélioration futures

@@ -85,6 +85,28 @@ const importRules = [
   checkValidation
 ];
 
+// Mise à jour du profil (nom et/ou bio).
+const profileRules = [
+  body('name').optional().trim().notEmpty().withMessage('Le nom ne peut pas être vide.')
+    .isLength({ max: 100 }).withMessage('Le nom est trop long.'),
+  body('bio').optional({ nullable: true }).isLength({ max: 500 }).withMessage('La bio est trop longue (500 caractères max).'),
+  checkValidation
+];
+
+// Commentaire sur une tâche.
+const commentRules = [
+  body('body').trim().notEmpty().withMessage('Le commentaire est vide.')
+    .isLength({ max: 1000 }).withMessage('Le commentaire est trop long (1000 caractères max).'),
+  checkValidation
+];
+
+// Réaction (emoji) sur une tâche.
+const reactionRules = [
+  body('emoji').trim().notEmpty().withMessage('Emoji requis.')
+    .isLength({ max: 8 }).withMessage('Emoji invalide.'),
+  checkValidation
+];
+
 // Règle pour le partage d'une tâche (par email du destinataire).
 const shareRules = [
   body('email').trim().isEmail().withMessage('Email invalide.').normalizeEmail(),
@@ -115,6 +137,9 @@ module.exports = {
   bulkRules,
   importRules,
   shareRules,
+  profileRules,
+  commentRules,
+  reactionRules,
   subtaskRules,
   subtaskUpdateRules
 };

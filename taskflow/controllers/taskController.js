@@ -2,6 +2,7 @@ const pool = require('../config/db');
 const { AppError } = require('../middleware/errorHandler');
 const asyncHandler = require('../middleware/asyncHandler');
 const statsCache = require('../middleware/statsCache');
+const { logActivity } = require('../utils/activity');
 
 const SORT_OPTIONS = {
   recent: 'created_at DESC',
@@ -133,11 +134,41 @@ const getTasks = asyncHandler(async (req, res) => {
     );
     const attByTask = new Map(atts.map((a) => [a.task_id, Number(a.total)]));
 
+    // Nombre de commentaires par tâche.
+    const [cmts] = await pool.query(
+      `SELECT task_id, COUNT(*) AS total FROM comments WHERE task_id IN (?) GROUP BY task_id`,
+      [ids]
+    );
+    const cmtByTask = new Map(cmts.map((c) => [c.task_id, Number(c.total)]));
+
+    // Réactions (compteurs par emoji) et mes réactions, en deux requêtes.
+    const [rx] = await pool.query(
+      `SELECT task_id, emoji, COUNT(*) AS count FROM reactions WHERE task_id IN (?) GROUP BY task_id, emoji`,
+      [ids]
+    );
+    const rxByTask = new Map();
+    rx.forEach((r) => {
+      if (!rxByTask.has(r.task_id)) rxByTask.set(r.task_id, []);
+      rxByTask.get(r.task_id).push({ emoji: r.emoji, count: Number(r.count) });
+    });
+    const [myRx] = await pool.query(
+      `SELECT task_id, emoji FROM reactions WHERE task_id IN (?) AND user_id = ?`,
+      [ids, req.userId]
+    );
+    const myRxByTask = new Map();
+    myRx.forEach((r) => {
+      if (!myRxByTask.has(r.task_id)) myRxByTask.set(r.task_id, []);
+      myRxByTask.get(r.task_id).push(r.emoji);
+    });
+
     tasks.forEach((t) => {
       const agg = byTask.get(t.id);
       t.subtasks_total = agg ? agg.total : 0;
       t.subtasks_done = agg ? agg.done : 0;
       t.attachments_count = attByTask.get(t.id) || 0;
+      t.comments_count = cmtByTask.get(t.id) || 0;
+      t.reactions = rxByTask.get(t.id) || [];
+      t.my_reactions = myRxByTask.get(t.id) || [];
     });
   }
 
@@ -251,6 +282,7 @@ const createTask = asyncHandler(async (req, res) => {
   );
 
   statsCache.invalidate(req.userId);
+  logActivity(req.userId, 'created', result.insertId, title);
 
   const [rows] = await pool.query('SELECT * FROM tasks WHERE id = ?', [result.insertId]);
   res.status(201).json(rows[0]);
@@ -289,6 +321,11 @@ const updateTask = asyncHandler(async (req, res) => {
   );
 
   statsCache.invalidate(req.userId);
+
+  // Journalise la complétion (transition vers "terminee") pour le fil d'actualité.
+  if (pick('status') === 'terminee' && current.status !== 'terminee') {
+    logActivity(req.userId, 'completed', current.id, pick('title'));
+  }
 
   const [rows] = await pool.query('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
   res.json(rows[0]);

@@ -8,6 +8,8 @@ const {
   bulkRules,
   importRules,
   shareRules,
+  commentRules,
+  reactionRules,
   subtaskRules,
   subtaskUpdateRules
 } = require('../middleware/validators');
@@ -43,6 +45,12 @@ const {
   shareTask,
   unshareTask
 } = require('../controllers/shareController');
+const {
+  listComments,
+  addComment,
+  deleteComment
+} = require('../controllers/commentController');
+const { listReactions, toggleReaction } = require('../controllers/reactionController');
 
 // Toutes les routes ci-dessous nécessitent d'être connecté
 router.use(requireAuth);
@@ -73,6 +81,15 @@ router.delete('/:taskId/subtasks/:subId', deleteSubtask);
 router.get('/:taskId/shares', listShares);
 router.post('/:taskId/shares', shareRules, shareTask);
 router.delete('/:taskId/shares/:userId', unshareTask);
+
+// Commentaires (fil de discussion) rattachés à une tâche.
+router.get('/:taskId/comments', listComments);
+router.post('/:taskId/comments', commentRules, addComment);
+router.delete('/:taskId/comments/:commentId', deleteComment);
+
+// Réactions (emoji) sur une tâche.
+router.get('/:taskId/reactions', listReactions);
+router.post('/:taskId/reactions', reactionRules, toggleReaction);
 
 // Pièces jointes rattachées à une tâche.
 router.get('/:taskId/attachments', listAttachments);

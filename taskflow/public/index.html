@@ -68,6 +68,8 @@
             <div id="notif-list"></div>
           </div>
         </div>
+        <button id="feed-toggle" class="btn-ghost" title="Fil d'actualité">Fil</button>
+        <button id="profile-toggle" class="btn-ghost" title="Mon profil">Profil</button>
         <button id="shared-toggle" class="btn-ghost" title="Tâches partagées avec moi">Partagées</button>
         <button id="theme-toggle" class="theme-toggle" title="Changer de thème">◐</button>
         <span id="user-name" class="user-name"></span>
@@ -218,6 +220,27 @@
     </div>
   </div>
 
+  <!-- Modale profil (le mien = éditable ; autrui = suivre) -->
+  <div id="profile-modal" class="confirm-overlay hidden">
+    <div class="confirm-box edit-box">
+      <div id="profile-content"></div>
+      <div class="confirm-actions">
+        <button type="button" id="profile-close" class="btn-ghost">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale fil d'actualité -->
+  <div id="feed-modal" class="confirm-overlay hidden">
+    <div class="confirm-box edit-box">
+      <h3 class="edit-heading">Fil d'actualité</h3>
+      <div id="feed-list" class="feed-list"></div>
+      <div class="confirm-actions">
+        <button type="button" id="feed-close" class="btn-ghost">Fermer</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Vue « Partagées avec moi » -->
   <div id="shared-modal" class="confirm-overlay hidden">
     <div class="confirm-box edit-box">
@@ -285,7 +308,29 @@
           </label>
         </div>
       </div>
+      <div class="reactions"></div>
+      <div class="comments">
+        <button type="button" class="comments-toggle">
+          <span class="comments-caret">▸</span> Discussion
+          <span class="comments-count"></span>
+        </button>
+        <div class="comments-body hidden">
+          <ul class="comments-list"></ul>
+          <form class="comment-form">
+            <input type="text" class="comment-input" placeholder="Commenter… (@nom pour mentionner)" maxlength="1000">
+          </form>
+        </div>
+      </div>
     </article>
+  </template>
+
+  <!-- Template d'un commentaire -->
+  <template id="comment-item-template">
+    <li class="comment-item">
+      <span class="comment-author"></span>
+      <span class="comment-body"></span>
+      <button type="button" class="comment-delete" title="Supprimer">✕</button>
+    </li>
   </template>
 
   <!-- Template d'une ligne de pièce jointe -->

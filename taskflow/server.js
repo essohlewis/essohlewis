@@ -7,6 +7,7 @@ require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
 const taskRoutes = require('./routes/taskRoutes');
+const userRoutes = require('./routes/userRoutes');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const { errorHandler } = require('./middleware/errorHandler');
 
@@ -31,8 +32,14 @@ app.use('/api', apiLimiter);
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Routes API
+// Avatar servi publiquement (image peu sensible, permet <img src=...>),
+// déclaré avant le routeur /api/users qui exige une authentification.
+const { getAvatar } = require('./controllers/userController');
+app.get('/api/users/:id/avatar', getAvatar);
+
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/users', userRoutes);
 
 // Route de vérification rapide
 app.get('/api/health', (req, res) => {

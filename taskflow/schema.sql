@@ -2,13 +2,61 @@
 CREATE DATABASE IF NOT EXISTS taskflow CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE taskflow;
 
--- Table des utilisateurs
+-- Table des utilisateurs (avec profil social : bio + avatar)
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   email VARCHAR(150) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
+  bio VARCHAR(500) NULL,
+  avatar VARCHAR(255) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ===== Fonctionnalités sociales =====
+
+-- Suivi entre utilisateurs (follower -> following)
+CREATE TABLE IF NOT EXISTS follows (
+  follower_id INT NOT NULL,
+  following_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (follower_id, following_id),
+  FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (following_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Journal d'activité (alimente le fil d'actualité)
+CREATE TABLE IF NOT EXISTS activities (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  type VARCHAR(30) NOT NULL,
+  task_id INT NULL,
+  task_title VARCHAR(200) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Commentaires sur les tâches
+CREATE TABLE IF NOT EXISTS comments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  task_id INT NOT NULL,
+  user_id INT NOT NULL,
+  body VARCHAR(1000) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Réactions (emoji) sur les tâches
+CREATE TABLE IF NOT EXISTS reactions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  task_id INT NOT NULL,
+  user_id INT NOT NULL,
+  emoji VARCHAR(8) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_reaction (task_id, user_id, emoji),
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Table des tâches
@@ -82,6 +130,10 @@ CREATE INDEX idx_subtasks_task ON subtasks(task_id);
 CREATE INDEX idx_refresh_user ON refresh_tokens(user_id);
 CREATE INDEX idx_attachments_task ON attachments(task_id);
 CREATE INDEX idx_task_shares_user ON task_shares(user_id);
+CREATE INDEX idx_follows_following ON follows(following_id);
+CREATE INDEX idx_activities_user ON activities(user_id, created_at);
+CREATE INDEX idx_comments_task ON comments(task_id);
+CREATE INDEX idx_reactions_task ON reactions(task_id);
 
 -- Index FULLTEXT : recherche plein texte réellement indexée (MATCH ... AGAINST),
 -- bien plus rapide que LIKE '%mot%' qui force un balayage complet de la table.
