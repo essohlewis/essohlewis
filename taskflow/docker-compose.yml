@@ -32,7 +32,8 @@ services:
       DB_NAME: taskflow
       PORT: 3000
       JWT_SECRET: change_cette_valeur_en_production
-      JWT_EXPIRES_IN: 7d
+      ACCESS_TOKEN_EXPIRES_IN: 15m
+      REFRESH_TOKEN_EXPIRES_DAYS: 30
     ports:
       - "3000:3000"
 

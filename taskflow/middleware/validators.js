@@ -26,6 +26,11 @@ const loginRules = [
   checkValidation
 ];
 
+const refreshRules = [
+  body('refreshToken').isString().trim().notEmpty().withMessage('Refresh token manquant.'),
+  checkValidation
+];
+
 const taskRules = [
   body('title').trim().notEmpty().withMessage('Le titre est requis.')
     .isLength({ max: 200 }).withMessage('Le titre est trop long (200 caractères max).'),
@@ -88,6 +93,7 @@ const subtaskUpdateRules = [
 module.exports = {
   registerRules,
   loginRules,
+  refreshRules,
   taskRules,
   taskUpdateRules,
   taskQueryRules,

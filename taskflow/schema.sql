@@ -26,6 +26,19 @@ CREATE TABLE IF NOT EXISTS tasks (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Table des refresh tokens : on ne stocke qu'un hash SHA-256 du jeton (jamais
+-- le jeton en clair), avec une date d'expiration. Permet la révocation
+-- (déconnexion) et la rotation à chaque rafraîchissement.
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  token_hash CHAR(64) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_refresh_token_hash (token_hash),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- Table des sous-tâches (checklist rattachée à une tâche)
 CREATE TABLE IF NOT EXISTS subtasks (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -41,6 +54,7 @@ CREATE INDEX idx_tasks_user ON tasks(user_id);
 CREATE INDEX idx_tasks_user_status ON tasks(user_id, status);
 CREATE INDEX idx_tasks_title ON tasks(title);
 CREATE INDEX idx_subtasks_task ON subtasks(task_id);
+CREATE INDEX idx_refresh_user ON refresh_tokens(user_id);
 
 -- Index FULLTEXT : recherche plein texte réellement indexée (MATCH ... AGAINST),
 -- bien plus rapide que LIKE '%mot%' qui force un balayage complet de la table.

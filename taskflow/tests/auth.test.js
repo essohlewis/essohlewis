@@ -66,4 +66,60 @@ describe('POST /api/auth/login', () => {
 
     expect(res.statusCode).toBe(401);
   });
+
+  it('renvoie un refresh token à la connexion', async () => {
+    const res = await request(app).post('/api/auth/login').send({
+      email: testEmail,
+      password: 'password123'
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.refreshToken).toBeDefined();
+  });
+});
+
+describe('POST /api/auth/refresh & /logout', () => {
+  let refreshToken;
+
+  beforeAll(async () => {
+    const res = await request(app).post('/api/auth/login').send({
+      email: testEmail,
+      password: 'password123'
+    });
+    refreshToken = res.body.refreshToken;
+  });
+
+  it('échange un refresh token contre un nouveau token d\'accès', async () => {
+    const res = await request(app).post('/api/auth/refresh').send({ refreshToken });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.token).toBeDefined();
+    expect(res.body.refreshToken).toBeDefined();
+    expect(res.body.refreshToken).not.toBe(refreshToken); // rotation
+    refreshToken = res.body.refreshToken;
+  });
+
+  it('invalide l\'ancien refresh token après rotation', async () => {
+    // On rafraîchit une fois pour obtenir un token courant...
+    const first = await request(app).post('/api/auth/refresh').send({ refreshToken });
+    const used = refreshToken;
+    refreshToken = first.body.refreshToken;
+
+    // ...puis on réutilise l'ancien : il doit être rejeté.
+    const reuse = await request(app).post('/api/auth/refresh').send({ refreshToken: used });
+    expect(reuse.statusCode).toBe(401);
+  });
+
+  it('refuse un refresh token inconnu', async () => {
+    const res = await request(app).post('/api/auth/refresh').send({ refreshToken: 'inexistant' });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('révoque le refresh token à la déconnexion', async () => {
+    const logout = await request(app).post('/api/auth/logout').send({ refreshToken });
+    expect(logout.statusCode).toBe(200);
+
+    const after = await request(app).post('/api/auth/refresh').send({ refreshToken });
+    expect(after.statusCode).toBe(401);
+  });
 });

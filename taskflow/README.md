@@ -28,6 +28,12 @@ taskflow/
 
 Cette version 2 se concentre sur la **performance** (temps de réponse, bande passante, charge base de données) tout en ajoutant de nouvelles fonctionnalités.
 
+**Sécurité : sessions à refresh token**
+- **Token d'accès court** (15 min par défaut) + **refresh token** long (30 j) : si le token d'accès est volé, sa fenêtre d'exploitation est très réduite.
+- **Rotation** du refresh token à chaque rafraîchissement (un jeton ne sert qu'une fois) et **stockage haché** (SHA-256) en base — le jeton en clair n'existe que côté client.
+- **Révocation** possible : `POST /api/auth/logout` invalide le refresh token (déconnexion réelle côté serveur).
+- Côté client, le rafraîchissement est **transparent** : sur un `401`, l'app rejoue automatiquement la requête après avoir renouvelé le token (single-flight pour éviter les rafraîchissements concurrents).
+
 **Backend plus rapide**
 - **Recherche FULLTEXT** : la recherche utilise désormais un index `FULLTEXT` MySQL (`MATCH … AGAINST` en mode booléen avec troncature `mot*`) au lieu de `LIKE '%mot%'`, qui ne pouvait pas s'appuyer sur un index et forçait un balayage complet de la table. Repli automatique sur `LIKE` pour les recherches de moins de 3 caractères (limite `innodb_ft_min_token_size`).
 - **Cache mémoire des statistiques** par utilisateur (TTL 30 s, invalidé à chaque écriture) : l'agrégat de `/api/tasks/stats` n'est plus recalculé à chaque chargement du tableau. En-tête `X-Cache: HIT|MISS` pour observer le comportement.
@@ -140,8 +146,10 @@ npm test
 
 | Méthode | Route                | Protégée | Description                          |
 |---------|------------------------|----------|----------------------------------------|
-| POST    | /api/auth/register      | Non      | Créer un compte                        |
-| POST    | /api/auth/login          | Non      | Se connecter                            |
+| POST    | /api/auth/register      | Non      | Créer un compte (renvoie token + refreshToken) |
+| POST    | /api/auth/login          | Non      | Se connecter (renvoie token + refreshToken) |
+| POST    | /api/auth/refresh        | Non*     | Échanger un refresh token (rotation)   |
+| POST    | /api/auth/logout         | Non*     | Révoquer un refresh token              |
 | GET     | /api/tasks?search=&priority=&tag=&sort= | Oui | Lister mes tâches (filtrable)  |
 | GET     | /api/tasks/stats         | Oui      | Statistiques (total, retard, %) — mises en cache |
 | PATCH   | /api/tasks/bulk          | Oui      | Action groupée sur plusieurs tâches    |
@@ -157,6 +165,11 @@ npm test
 `sort` accepte : `recent` (défaut), `ancien`, `echeance`, `priorite`.
 
 Chaque tâche renvoyée par `GET /api/tasks` inclut `subtasks_total` et `subtasks_done`.
+
+\* `/refresh` et `/logout` ne nécessitent pas de token d'accès, mais un `refreshToken` valide dans le corps :
+```json
+{ "refreshToken": "…" }
+```
 
 **`PATCH /api/tasks/bulk`** — corps attendu :
 ```json
@@ -180,12 +193,22 @@ CREATE TABLE IF NOT EXISTS subtasks (
   FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
 );
 CREATE INDEX idx_subtasks_task ON subtasks(task_id);
+
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  token_hash CHAR(64) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_refresh_token_hash (token_hash),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_refresh_user ON refresh_tokens(user_id);
 ```
 
 ## Pistes d'amélioration futures
 
 - Pagination / défilement infini sur la liste des tâches
-- Refresh token / expiration glissante de session
 - Pièces jointes sur les tâches
 - Notifications par email pour les échéances proches
 - Partage de tâches entre utilisateurs (équipes)

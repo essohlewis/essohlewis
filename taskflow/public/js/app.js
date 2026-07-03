@@ -2,9 +2,12 @@ const API_BASE = '/api';
 
 // ---------- Etat local ----------
 let token = localStorage.getItem('taskflow_token');
+let refreshToken = localStorage.getItem('taskflow_refresh');
 let currentUser = JSON.parse(localStorage.getItem('taskflow_user') || 'null');
 let searchDebounce;
 let draggedTaskId = null;
+// Empêche plusieurs rafraîchissements simultanés (single-flight).
+let refreshPromise = null;
 
 // Modèle local des tâches actuellement affichées. Le garder en mémoire permet
 // des mises à jour "optimistes" : on modifie l'affichage immédiatement, sans
@@ -95,7 +98,35 @@ tabBtns.forEach((btn) => {
 });
 
 // ================= Helpers API =================
-async function apiRequest(path, options = {}) {
+// Rafraîchit le token d'accès à partir du refresh token. Single-flight : si
+// plusieurs requêtes échouent en même temps sur un 401, un seul appel /refresh
+// est effectué et toutes attendent son résultat.
+function refreshAccessToken() {
+  if (!refreshToken) return Promise.resolve(false);
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken })
+        });
+        if (!res.ok) return false;
+        const data = await res.json();
+        token = data.token;
+        refreshToken = data.refreshToken; // rotation : nouveau refresh token
+        localStorage.setItem('taskflow_token', token);
+        localStorage.setItem('taskflow_refresh', refreshToken);
+        return true;
+      } catch {
+        return false;
+      }
+    })().finally(() => { refreshPromise = null; });
+  }
+  return refreshPromise;
+}
+
+async function apiRequest(path, options = {}, retried = false) {
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
@@ -104,6 +135,14 @@ async function apiRequest(path, options = {}) {
       ...(options.headers || {})
     }
   });
+
+  // Token d'accès expiré : on tente un rafraîchissement transparent, une fois.
+  if (res.status === 401 && !retried && refreshToken && !path.startsWith('/auth/')) {
+    const ok = await refreshAccessToken();
+    if (ok) return apiRequest(path, options, true);
+    forceLogout();
+  }
+
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || 'Une erreur est survenue.');
   return data;
@@ -123,7 +162,7 @@ registerForm.addEventListener('submit', async (e) => {
         password: document.getElementById('register-password').value
       })
     });
-    setSession(data.token, data.user);
+    setSession(data.token, data.refreshToken, data.user);
     showToast(`Bienvenue, ${data.user.name} !`);
   } catch (err) {
     errorEl.textContent = err.message;
@@ -143,7 +182,7 @@ loginForm.addEventListener('submit', async (e) => {
         password: document.getElementById('login-password').value
       })
     });
-    setSession(data.token, data.user);
+    setSession(data.token, data.refreshToken, data.user);
     showToast(`Content de te revoir, ${data.user.name} !`);
   } catch (err) {
     errorEl.textContent = err.message;
@@ -151,23 +190,51 @@ loginForm.addEventListener('submit', async (e) => {
 });
 
 // ================= Session =================
-function setSession(newToken, user) {
+function setSession(newToken, newRefreshToken, user) {
   token = newToken;
+  refreshToken = newRefreshToken;
   currentUser = user;
   localStorage.setItem('taskflow_token', token);
+  localStorage.setItem('taskflow_refresh', refreshToken);
   localStorage.setItem('taskflow_user', JSON.stringify(user));
   showApp();
 }
 
-logoutBtn.addEventListener('click', () => {
+function clearSession() {
   token = null;
+  refreshToken = null;
   currentUser = null;
   localStorage.removeItem('taskflow_token');
+  localStorage.removeItem('taskflow_refresh');
   localStorage.removeItem('taskflow_user');
+}
+
+// Bascule vers l'écran d'authentification quand la session ne peut plus être
+// rafraîchie (refresh token expiré ou révoqué).
+function forceLogout() {
+  clearSession();
+  authScreen.classList.remove('hidden');
+  appScreen.classList.add('hidden');
+  showToast('Session expirée, reconnecte-toi.', 'error');
+}
+
+logoutBtn.addEventListener('click', async () => {
+  // Révoque le refresh token côté serveur (déconnexion propre), sans bloquer l'UI.
+  const currentRefresh = refreshToken;
+  clearSession();
   authScreen.classList.remove('hidden');
   appScreen.classList.add('hidden');
   loginForm.reset();
   registerForm.reset();
+  if (currentRefresh) {
+    try {
+      await fetch(`${API_BASE}/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: currentRefresh })
+      });
+    } catch { /* déconnexion locale déjà effectuée */ }
+  }
 });
 
 function showApp() {
