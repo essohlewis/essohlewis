@@ -60,6 +60,9 @@ return function (Router $r): void {
         $r->get('/historique/export.csv', 'HistoryController@exportCsv');
         $r->get('/comparateur', 'ComparatorController@index');
 
+        // Codes utiles opérateurs
+        $r->get('/codes-utiles', 'OperatorController@codes');
+
         // Notifications
         $r->get('/notifications', 'NotificationController@index');
         $r->post('/notifications/lire', 'NotificationController@markAllRead', [CsrfMiddleware::class]);

@@ -55,10 +55,11 @@ $networks = [
             </div>
             <div id="rc-forfait-sub" class="hidden mt-3">
                 <div class="text-sm font-medium text-slate-500 mb-2">Quel type de forfait ?</div>
-                <div class="grid grid-cols-3 gap-2">
+                <div class="grid grid-cols-4 gap-2">
                     <button type="button" class="rc-cat rounded-lg border-2 border-slate-200 py-3 text-sm hover:border-slate-300" data-type="internet">📶 Internet</button>
                     <button type="button" class="rc-cat rounded-lg border-2 border-slate-200 py-3 text-sm hover:border-slate-300" data-type="voice">📞 Appels</button>
                     <button type="button" class="rc-cat rounded-lg border-2 border-slate-200 py-3 text-sm hover:border-slate-300" data-type="sms">✉️ SMS</button>
+                    <button type="button" class="rc-cat rounded-lg border-2 border-slate-200 py-3 text-sm hover:border-slate-300" data-type="mixte">🎁 Mixte</button>
                 </div>
             </div>
             <button type="button" class="rc-next mt-5 hidden w-full bg-teal-700 text-white rounded-lg py-3 font-semibold">Suivant →</button>

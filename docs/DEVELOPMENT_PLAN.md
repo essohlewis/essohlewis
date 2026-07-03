@@ -78,6 +78,9 @@ remboursée automatiquement si non confirmée dans le délai.
 - [x] Transfert de crédit (opération dédiée, « Moi-même » désactivé)
 - [x] Tableau de bord analytique (stats + graphiques SVG + recommandations)
 - [x] Centre de notifications (cloche + génération auto sur transactions/remboursements)
+- [x] Référentiel opérateurs enrichi (codes USSD réels, règles métier) + page « Codes utiles »
+- [x] Catalogue affiné d'après les offres publiques réelles (Moov Folie, passes
+      réseaux sociaux Orange, Free Packs MTN) avec minutes / SMS / bonus / USSD
 - [x] Cagnotte / recharge collective (lien partageable public)
 - [x] Recharge programmée récurrente (mensuelle / hebdomadaire) : CRUD,
       worker `scheduled:run` (réservation + exécution, anti double-débit),

@@ -25,7 +25,7 @@ $networks = [
             ['/favoris', '⭐', 'Favoris'],
             ['/programmees', '🔁', 'Programmées'],
             ['/historique', '🧾', 'Historique'],
-            ['/agents', '🤝', 'Agents'],
+            ['/codes-utiles', '📞', 'Codes USSD'],
         ];
         foreach ($menu as [$href, $icon, $label]): ?>
             <a href="<?= $href ?>" class="bg-white rounded-xl shadow-sm p-3 text-center hover:shadow transition">

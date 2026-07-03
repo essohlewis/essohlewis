@@ -163,8 +163,8 @@
     const flow = document.getElementById('recharge-flow');
     if (flow) {
         const SUBCATS = {
-            illimite: 'Illimité', jour: 'Pass jour', semaine: 'Pass semaine',
-            quinzaine: 'Pass 10-15 j', mois: 'Pass mois', nuit: 'Pass nuit', special: 'Offres spéciales',
+            illimite: 'Illimité', social: 'Réseaux sociaux', jour: 'Pass jour', semaine: 'Pass semaine',
+            quinzaine: 'Pass 10-15 j', mois: 'Pass mois', nuit: 'Pass nuit', special: 'Offres spéciales', mixte: 'Mixte',
         };
         const state = {
             operator: flow.dataset.operator || null,
@@ -318,16 +318,25 @@
         function renderPlans() {
             const list = categoryPlans().filter((p) => subFilter === 'all' || p.subcategory === subFilter);
             plansEmpty.classList.toggle('hidden', list.length > 0);
-            planListEl.innerHTML = list.map((p) => `
-                <button type="button" class="rc-plan w-full text-left rounded-xl border-2 border-slate-200 p-3 hover:border-teal-400" data-id="${p.id}">
-                    <div class="flex justify-between items-center">
-                        <div>
+            const badge = (txt) => `<span class="inline-block text-[11px] bg-slate-100 rounded px-1.5 py-0.5 mr-1 mt-1">${txt}</span>`;
+            planListEl.innerHTML = list.map((p) => {
+                let specs = '';
+                if (p.data_volume) specs += badge('📶 ' + p.data_volume);
+                if (p.minutes) specs += badge('📞 ' + p.minutes + ' min');
+                if (p.sms) specs += badge('✉️ ' + p.sms + ' SMS');
+                if (p.validity) specs += badge('⏱ ' + p.validity);
+                const bonus = p.bonus ? `<span class="inline-block text-[11px] bg-amber-100 text-amber-700 rounded px-1.5 py-0.5 mr-1 mt-1">🎁 ${p.bonus}</span>` : '';
+                return `
+                <button type="button" class="rc-plan w-full text-left rounded-xl border-2 border-slate-200 p-3 hover:border-teal-400 transition" data-id="${p.id}">
+                    <div class="flex justify-between items-start">
+                        <div class="pr-2">
                             <div class="font-semibold">${p.name}</div>
-                            <div class="text-xs text-slate-500">${p.data_volume ? p.data_volume + ' · ' : ''}${p.validity || ''}${p.description ? ' · ' + p.description : ''}</div>
+                            <div>${specs}${bonus}</div>
                         </div>
-                        <div class="font-bold text-teal-700 whitespace-nowrap ml-2">${p.price.toLocaleString('fr-FR')} F</div>
+                        <div class="font-bold text-teal-700 whitespace-nowrap">${p.price.toLocaleString('fr-FR')} F</div>
                     </div>
-                </button>`).join('');
+                </button>`;
+            }).join('');
             planListEl.querySelectorAll('.rc-plan').forEach((b) => b.addEventListener('click', () => {
                 const plan = list.find((p) => String(p.id) === b.dataset.id);
                 state.planId = plan.id; state.amount = plan.price; state.planLabel = plan.name;

@@ -20,6 +20,10 @@ final class Plan extends Model
     public int $price = 0;                 // unités mineures
     public ?string $validity = null;       // ex: "30 jours"
     public ?string $dataVolume = null;     // ex: "1 Go", "Illimité"
+    public ?int $minutes = null;           // minutes d'appel incluses
+    public ?int $smsCount = null;          // SMS inclus
+    public ?string $bonus = null;          // ex: "+100% le mardi"
+    public ?string $ussdCode = null;       // code USSD de souscription
     public ?string $description = null;
     public bool $active = true;
 

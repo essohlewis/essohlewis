@@ -98,6 +98,10 @@ CREATE TABLE plans (
     price         BIGINT NOT NULL,                      -- unités mineures
     validity      VARCHAR(40) NULL,
     data_volume   VARCHAR(40) NULL,                     -- ex: "1 Go", "Illimité"
+    minutes       INT NULL,                             -- minutes d'appel incluses
+    sms_count     INT NULL,                             -- SMS inclus
+    bonus         VARCHAR(120) NULL,                    -- ex: "+100% le mardi"
+    ussd_code     VARCHAR(40) NULL,                     -- code USSD de souscription
     description   VARCHAR(255) NULL,
     active        TINYINT(1) NOT NULL DEFAULT 1,
     PRIMARY KEY (id),
@@ -136,7 +140,7 @@ CREATE TABLE recharges (
     plan_id                BIGINT UNSIGNED NULL,
     operator_code          VARCHAR(20) NOT NULL,
     msisdn                 VARCHAR(20) NOT NULL,
-    type                   ENUM('credit','internet','voice','sms','transfer') NOT NULL DEFAULT 'credit',
+    type                   ENUM('credit','internet','voice','sms','mixte','transfer') NOT NULL DEFAULT 'credit',
     amount                 BIGINT NOT NULL,
     status                 ENUM('pending','dispatched','success','failed','refunded') NOT NULL DEFAULT 'pending',
     ledger_transaction_id  BIGINT UNSIGNED NULL,
