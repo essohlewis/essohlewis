@@ -41,6 +41,10 @@ Cette version 2 se concentre sur la **performance** (temps de réponse, bande pa
 - **Endpoint groupé** `PATCH /api/tasks/bulk` : déplacer/supprimer jusqu'à 200 tâches en **une seule requête HTTP et une seule requête SQL** (au lieu de N allers-retours).
 - **Pool MySQL** : `keep-alive` activé (moins de reconnexions) et taille configurable via `DB_POOL_LIMIT`.
 
+**Nouvelle fonctionnalité : édition complète des tâches**
+- Bouton **✎** sur chaque carte : une fenêtre modale permet de modifier le **titre, la description, la priorité, le tag et l'échéance** (avant, seul le statut était modifiable depuis l'interface).
+- Correction backend : `PUT /api/tasks/:id` distingue désormais « champ absent » (conservé) de « champ à `null` » (effacé) — on peut donc **retirer une échéance** ou vider un tag. Fermeture au clic extérieur / touche `Échap`.
+
 **Nouvelle fonctionnalité : rappels d'échéance**
 - Une **cloche de notifications** (avec badge) signale les tâches **en retard** et celles dont **l'échéance approche** (3 jours par défaut).
 - Alimentée par `GET /api/tasks/reminders?days=N` (requête indexée, non filtrée) ; l'endpoint est prêt pour un futur envoi par email.

@@ -168,6 +168,40 @@
   <!-- Conteneur des notifications toast -->
   <div id="toast-container" class="toast-container"></div>
 
+  <!-- Fenêtre d'édition d'une tâche -->
+  <div id="edit-modal" class="confirm-overlay hidden">
+    <div class="confirm-box edit-box">
+      <h3 class="edit-heading">Modifier la tâche</h3>
+      <form id="edit-form" class="edit-form">
+        <label>Titre
+          <input type="text" id="edit-title" maxlength="200" required>
+        </label>
+        <label>Description
+          <textarea id="edit-description" rows="3" maxlength="2000"></textarea>
+        </label>
+        <div class="edit-row">
+          <label>Priorité
+            <select id="edit-priority">
+              <option value="basse">Basse</option>
+              <option value="moyenne">Moyenne</option>
+              <option value="haute">Haute</option>
+            </select>
+          </label>
+          <label>Tag
+            <input type="text" id="edit-tag" maxlength="40">
+          </label>
+          <label>Échéance
+            <input type="date" id="edit-due-date">
+          </label>
+        </div>
+        <div class="confirm-actions">
+          <button type="button" id="edit-cancel" class="btn-ghost">Annuler</button>
+          <button type="submit" class="btn-primary">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Boîte de confirmation personnalisée -->
   <div id="confirm-modal" class="confirm-overlay hidden">
     <div class="confirm-box">
@@ -186,6 +220,7 @@
         <input type="checkbox" class="task-select" title="Sélectionner">
         <span class="priority-dot"></span>
         <h3 class="task-title"></h3>
+        <button class="task-edit" title="Modifier">✎</button>
         <button class="task-delete" title="Supprimer">✕</button>
       </div>
       <p class="task-description"></p>

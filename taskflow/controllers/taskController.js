@@ -225,8 +225,6 @@ const createTask = asyncHandler(async (req, res) => {
 
 // PUT /api/tasks/:id
 const updateTask = asyncHandler(async (req, res) => {
-  const { title, description, status, priority, due_date, tag } = req.body;
-
   const [existing] = await pool.query(
     'SELECT * FROM tasks WHERE id = ? AND user_id = ?',
     [req.params.id, req.userId]
@@ -237,16 +235,21 @@ const updateTask = asyncHandler(async (req, res) => {
 
   const current = existing[0];
 
+  // On distingue « champ absent du corps » (on conserve la valeur actuelle)
+  // de « champ fourni à null » (on efface le champ). Le `??` ne le permettait
+  // pas : envoyer due_date: null ne vidait jamais l'échéance.
+  const pick = (field) => (field in req.body ? req.body[field] : current[field]);
+
   await pool.query(
     `UPDATE tasks SET title = ?, description = ?, status = ?, priority = ?, due_date = ?, tag = ?
      WHERE id = ? AND user_id = ?`,
     [
-      title ?? current.title,
-      description ?? current.description,
-      status ?? current.status,
-      priority ?? current.priority,
-      due_date ?? current.due_date,
-      tag ?? current.tag,
+      pick('title'),
+      pick('description'),
+      pick('status'),
+      pick('priority'),
+      pick('due_date'),
+      pick('tag'),
       req.params.id,
       req.userId
     ]

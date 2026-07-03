@@ -177,6 +177,49 @@ describe('Actions groupées PATCH /api/tasks/bulk', () => {
   });
 });
 
+describe('Édition complète PUT /api/tasks/:id', () => {
+  let id;
+
+  beforeAll(async () => {
+    const res = await request(app).post('/api/tasks').set('Authorization', `Bearer ${token}`)
+      .send({ title: 'À éditer', description: 'desc', tag: 'x', due_date: '2026-01-01' });
+    id = res.body.id;
+  });
+
+  it('modifie plusieurs champs à la fois', async () => {
+    const res = await request(app)
+      .put(`/api/tasks/${id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ title: 'Titre modifié', description: 'nouvelle desc', priority: 'haute', tag: 'projet' });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.title).toBe('Titre modifié');
+    expect(res.body.priority).toBe('haute');
+    expect(res.body.tag).toBe('projet');
+  });
+
+  it('efface l\'échéance quand due_date est null', async () => {
+    const res = await request(app)
+      .put(`/api/tasks/${id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ due_date: null });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.due_date).toBeNull();
+  });
+
+  it('conserve les champs non fournis', async () => {
+    const res = await request(app)
+      .put(`/api/tasks/${id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ status: 'en_cours' });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.title).toBe('Titre modifié'); // inchangé
+    expect(res.body.status).toBe('en_cours');
+  });
+});
+
 describe('Rappels d\'échéance GET /api/tasks/reminders', () => {
   const today = new Date().toISOString().slice(0, 10);
   const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);

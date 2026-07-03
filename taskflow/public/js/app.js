@@ -49,6 +49,15 @@ const notifToggle = document.getElementById('notif-toggle');
 const notifBadge = document.getElementById('notif-badge');
 const notifPanel = document.getElementById('notif-panel');
 const notifList = document.getElementById('notif-list');
+const editModal = document.getElementById('edit-modal');
+const editForm = document.getElementById('edit-form');
+const editTitle = document.getElementById('edit-title');
+const editDescription = document.getElementById('edit-description');
+const editPriority = document.getElementById('edit-priority');
+const editTag = document.getElementById('edit-tag');
+const editDueDate = document.getElementById('edit-due-date');
+const editCancel = document.getElementById('edit-cancel');
+let editingTaskId = null;
 
 // ================= THEME =================
 function applyTheme(theme) {
@@ -376,6 +385,66 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// ================= Édition d'une tâche =================
+function toDateInput(value) {
+  return value ? new Date(value).toISOString().slice(0, 10) : '';
+}
+
+function openEdit(task) {
+  editingTaskId = task.id;
+  editTitle.value = task.title || '';
+  editDescription.value = task.description || '';
+  editPriority.value = task.priority || 'moyenne';
+  editTag.value = task.tag || '';
+  editDueDate.value = toDateInput(task.due_date);
+  editModal.classList.remove('hidden');
+  editTitle.focus();
+}
+
+function closeEdit() {
+  editModal.classList.add('hidden');
+  editingTaskId = null;
+}
+
+editForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const task = allTasks.find((t) => t.id === editingTaskId);
+  if (!task) return closeEdit();
+
+  // Les champs vides sont envoyés à null pour réellement les effacer côté serveur
+  // (description, tag, échéance).
+  const payload = {
+    title: editTitle.value.trim(),
+    description: editDescription.value.trim() || null,
+    priority: editPriority.value,
+    tag: editTag.value.trim() || null,
+    due_date: editDueDate.value || null
+  };
+
+  try {
+    const updated = await apiRequest(`/tasks/${editingTaskId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    });
+    // On fusionne pour conserver les champs locaux (avancement des sous-tâches).
+    Object.assign(task, updated);
+    closeEdit();
+    showToast('Tâche mise à jour.');
+    renderTasks();
+    loadReminders();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+});
+
+editCancel.addEventListener('click', closeEdit);
+editModal.addEventListener('click', (e) => {
+  if (e.target === editModal) closeEdit(); // clic sur le fond
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !editModal.classList.contains('hidden')) closeEdit();
+});
+
 // ================= Statistiques (calculées localement) =================
 // Plus besoin d'un appel réseau /stats après chaque action : on dérive les
 // compteurs directement du modèle local déjà chargé. Instantané, et le cache
@@ -461,6 +530,8 @@ function buildTaskCard(task) {
   const statusSelect = node.querySelector('.task-status-select');
   statusSelect.value = task.status;
   statusSelect.addEventListener('change', () => updateTaskStatus(task.id, statusSelect.value));
+
+  node.querySelector('.task-edit').addEventListener('click', () => openEdit(task));
 
   node.querySelector('.task-delete').addEventListener('click', async () => {
     const ok = await askConfirm('Supprimer définitivement cette tâche ?');

@@ -263,6 +263,8 @@ input:focus, textarea:focus, select:focus { border-color: var(--amber); }
 .task-title { flex: 1; font-size: 15px; font-weight: 600; margin: 0; font-family: 'Inter', sans-serif; }
 .task-delete { background: none; border: none; color: var(--ink-soft); cursor: pointer; font-size: 13px; padding: 0 2px; }
 .task-delete:hover { color: var(--rose); }
+.task-edit { background: none; border: none; color: var(--ink-soft); cursor: pointer; font-size: 13px; padding: 0 2px; }
+.task-edit:hover { color: var(--amber); }
 
 .task-description { font-size: 13px; color: var(--ink-soft); margin: 8px 0 10px; line-height: 1.4; }
 
@@ -339,7 +341,33 @@ input:focus, textarea:focus, select:focus { border-color: var(--amber); }
   width: 90%;
 }
 .confirm-box p { margin: 0 0 18px; font-size: 14px; color: var(--ink); }
-.confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+
+/* ===== Fenêtre d'édition ===== */
+.edit-box { max-width: 460px; }
+.edit-heading { margin: 0 0 14px; font-size: 16px; color: var(--ink); }
+.edit-form label {
+  display: block;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-bottom: 10px;
+}
+.edit-form input,
+.edit-form textarea,
+.edit-form select {
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 14px;
+  font-family: inherit;
+}
+.edit-form textarea { resize: vertical; }
+.edit-row { display: flex; gap: 10px; }
+.edit-row label { flex: 1; }
 
 /* ===== Sélection multiple ===== */
 .task-select {
