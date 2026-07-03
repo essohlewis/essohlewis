@@ -1,0 +1,66 @@
+name: TaskFlow CI
+
+# Intégration continue de l'application TaskFlow : installe les dépendances,
+# démarre une base MySQL jetable, importe le schéma puis lance les tests Jest.
+# Distinct du workflow "devcard" (main.yml), qui ne concerne que le profil.
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'taskflow/**'
+      - '.github/workflows/taskflow-ci.yml'
+  pull_request:
+    paths:
+      - 'taskflow/**'
+      - '.github/workflows/taskflow-ci.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: taskflow
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: rootpassword
+          MYSQL_DATABASE: taskflow
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: rootpassword
+      DB_NAME: taskflow
+      JWT_SECRET: ci_test_secret_change_me
+      JWT_EXPIRES_IN: 7d
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: taskflow/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Load database schema
+        run: mysql -h 127.0.0.1 -u root -prootpassword < schema.sql
+
+      - name: Run tests
+        run: npm test

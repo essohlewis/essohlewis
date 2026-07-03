@@ -1,0 +1,5 @@
+# Archives générées (livrables, pas du code source)
+*.zip
+
+# Divers
+.DS_Store
