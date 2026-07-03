@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const requireAuth = require('../middleware/auth');
+const { cacheMiddleware } = require('../middleware/cacheMiddleware');
 const {
   taskRules,
   taskUpdateRules,
@@ -58,17 +59,17 @@ router.use(requireAuth);
 
 // /stats et /bulk doivent être déclarées avant /:id pour ne pas être
 // interprétées comme un identifiant de tâche.
-router.get('/stats', getStats);
-router.get('/reminders', getReminders);
-router.get('/tags', getTags);
-router.get('/shared', listSharedWithMe);
-router.get('/export', exportTasks);
+router.get('/stats', cacheMiddleware(3600), getStats);  // Cache 1 heure
+router.get('/reminders', cacheMiddleware(600), getReminders);  // Cache 10 min
+router.get('/tags', cacheMiddleware(1800), getTags);  // Cache 30 min
+router.get('/shared', cacheMiddleware(300), listSharedWithMe);  // Cache 5 min
+router.get('/export', exportTasks);  // Pas de cache (data fraîche)
 router.post('/import', importRules, importTasks);
 router.patch('/bulk', bulkRules, bulkUpdate);
 
-router.get('/', taskQueryRules, getTasks);
-router.get('/:id', getTaskById);
-router.get('/:id/history', getTaskHistory);
+router.get('/', taskQueryRules, cacheMiddleware(300), getTasks);  // Cache 5 min
+router.get('/:id', cacheMiddleware(600), getTaskById);  // Cache 10 min
+router.get('/:id/history', cacheMiddleware(1800), getTaskHistory);  // Cache 30 min
 router.post('/', taskRules, createTask);
 router.put('/:id', taskUpdateRules, updateTask);
 router.delete('/:id', deleteTask);
@@ -85,12 +86,12 @@ router.post('/:taskId/shares', shareRules, shareTask);
 router.delete('/:taskId/shares/:userId', unshareTask);
 
 // Commentaires (fil de discussion) rattachés à une tâche.
-router.get('/:taskId/comments', listComments);
+router.get('/:taskId/comments', cacheMiddleware(600), listComments);  // Cache 10 min
 router.post('/:taskId/comments', commentRules, addComment);
 router.delete('/:taskId/comments/:commentId', deleteComment);
 
 // Réactions (emoji) sur une tâche.
-router.get('/:taskId/reactions', listReactions);
+router.get('/:taskId/reactions', cacheMiddleware(600), listReactions);  // Cache 10 min
 router.post('/:taskId/reactions', reactionRules, toggleReaction);
 
 // Pièces jointes rattachées à une tâche.

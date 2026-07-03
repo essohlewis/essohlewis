@@ -3,6 +3,9 @@ const { AppError } = require('../middleware/errorHandler');
 const asyncHandler = require('../middleware/asyncHandler');
 const statsCache = require('../middleware/statsCache');
 const { logActivity } = require('../utils/activity');
+const logger = require('../utils/logger');
+const redisCache = require('../utils/cache');
+const { invalidateUserCache } = require('../middleware/cacheMiddleware');
 
 async function logTaskAudit(taskId, userId, action, details = null) {
   try {
@@ -206,11 +209,13 @@ const getTasks = asyncHandler(async (req, res) => {
 // GET /api/tasks/stats
 const getStats = asyncHandler(async (req, res) => {
   const { workspaceId } = req.query;
-  const cacheKey = req.userId + '_' + (workspaceId || 'personal');
-  
-  const cached = statsCache.get(cacheKey);
+  const redisCacheKey = `stats:${req.userId}:${workspaceId || 'personal'}`;
+
+  // Essayer le cache Redis en premier
+  const cached = await redisCache.get(redisCacheKey);
   if (cached) {
     res.set('X-Cache', 'HIT');
+    logger.info(`Stats cache HIT for user ${req.userId}`);
     return res.json(cached);
   }
 
@@ -222,7 +227,7 @@ const getStats = asyncHandler(async (req, res) => {
       SUM(status = 'terminee') AS terminee,
       SUM(due_date IS NOT NULL AND due_date < CURDATE() AND status != 'terminee') AS en_retard
     FROM tasks WHERE `;
-  
+
   const params = [];
   if (workspaceId) {
     const [members] = await pool.query(
@@ -253,8 +258,10 @@ const getStats = asyncHandler(async (req, res) => {
     taux_completion: total > 0 ? Math.round((terminee / total) * 100) : 0
   };
 
-  statsCache.set(cacheKey, payload);
+  // Mettre en cache avec TTL de 1 heure
+  await redisCache.set(redisCacheKey, payload, 3600);
   res.set('X-Cache', 'MISS');
+  logger.info(`Stats cache MISS for user ${req.userId}`);
   res.json(payload);
 });
 
@@ -351,11 +358,18 @@ const createTask = asyncHandler(async (req, res) => {
   // Invalider le cache
   if (finalWorkspaceId) {
     const [mRows] = await pool.query('SELECT user_id FROM workspace_members WHERE workspace_id = ?', [finalWorkspaceId]);
-    mRows.forEach((m) => statsCache.invalidate(m.user_id + '_' + finalWorkspaceId));
+    mRows.forEach(async (m) => {
+      await redisCache.del(`stats:${m.user_id}:${finalWorkspaceId}`);
+      await redisCache.deletePattern(`/api/tasks:${m.user_id}:*`);
+    });
+    statsCache.invalidate(req.userId + '_' + finalWorkspaceId);
   } else {
+    await redisCache.del(`stats:${req.userId}:personal`);
+    await redisCache.deletePattern(`/api/tasks:${req.userId}:*`);
     statsCache.invalidate(req.userId + '_personal');
   }
 
+  logger.info(`Task created: "${title}" (user: ${req.userId}, workspace: ${finalWorkspaceId || 'personal'})`);
   logActivity(req.userId, 'created', result.insertId, title);
   await logTaskAudit(result.insertId, req.userId, 'created', { title, status, priority, due_date, tag });
 
@@ -395,16 +409,24 @@ const updateTask = asyncHandler(async (req, res) => {
   // Invalider le cache
   if (task.workspace_id) {
     const [mRows] = await pool.query('SELECT user_id FROM workspace_members WHERE workspace_id = ?', [task.workspace_id]);
-    mRows.forEach((m) => statsCache.invalidate(m.user_id + '_' + task.workspace_id));
+    mRows.forEach(async (m) => {
+      await redisCache.del(`stats:${m.user_id}:${task.workspace_id}`);
+      await redisCache.deletePattern(`/api/tasks:${m.user_id}:*`);
+    });
+    statsCache.invalidate(req.userId + '_' + task.workspace_id);
   } else {
+    await redisCache.del(`stats:${req.userId}:personal`);
+    await redisCache.deletePattern(`/api/tasks:${req.userId}:*`);
     statsCache.invalidate(req.userId + '_personal');
   }
 
   if (Object.keys(changes).length > 0) {
+    logger.info(`Task updated: "${title}" (task_id: ${req.params.id}, changes: ${Object.keys(changes).join(', ')})`);
     await logTaskAudit(req.params.id, req.userId, 'updated', changes);
   }
 
   if (pick('status') === 'terminee' && task.status !== 'terminee') {
+    logger.info(`Task completed: "${title}" (task_id: ${req.params.id})`);
     logActivity(req.userId, 'completed', task.id, title);
   }
 
@@ -452,9 +474,17 @@ const bulkUpdate = asyncHandler(async (req, res) => {
   }
 
   // Invalider tous les caches pour le user et ses espaces
+  await redisCache.del(`stats:${req.userId}:personal`);
+  await redisCache.deletePattern(`/api/tasks:${req.userId}:*`);
   statsCache.invalidate(req.userId + '_personal');
-  joinedWorkspaceIds.forEach((wid) => statsCache.invalidate(req.userId + '_' + wid));
 
+  joinedWorkspaceIds.forEach(async (wid) => {
+    await redisCache.del(`stats:${req.userId}:${wid}`);
+    await redisCache.deletePattern(`/api/tasks:${req.userId}:*`);
+    statsCache.invalidate(req.userId + '_' + wid);
+  });
+
+  logger.info(`Bulk ${action}: ${affectedRows} tasks affected (user: ${req.userId})`);
   res.json({ affected: affectedRows });
 });
 
@@ -470,11 +500,18 @@ const deleteTask = asyncHandler(async (req, res) => {
   // Invalider le cache
   if (task.workspace_id) {
     const [mRows] = await pool.query('SELECT user_id FROM workspace_members WHERE workspace_id = ?', [task.workspace_id]);
-    mRows.forEach((m) => statsCache.invalidate(m.user_id + '_' + task.workspace_id));
+    mRows.forEach(async (m) => {
+      await redisCache.del(`stats:${m.user_id}:${task.workspace_id}`);
+      await redisCache.deletePattern(`/api/tasks:${m.user_id}:*`);
+    });
+    statsCache.invalidate(req.userId + '_' + task.workspace_id);
   } else {
+    await redisCache.del(`stats:${req.userId}:personal`);
+    await redisCache.deletePattern(`/api/tasks:${req.userId}:*`);
     statsCache.invalidate(req.userId + '_personal');
   }
 
+  logger.info(`Task deleted: ${task.title || 'Untitled'} (task_id: ${req.params.id})`);
   res.json({ message: 'Tâche supprimée.' });
 });
 
