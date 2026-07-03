@@ -176,3 +176,75 @@ describe('Actions groupées PATCH /api/tasks/bulk', () => {
     expect(res.body.affected).toBe(3);
   });
 });
+
+describe('Sous-tâches /api/tasks/:id/subtasks', () => {
+  let parentId;
+  let subId;
+
+  beforeAll(async () => {
+    const res = await request(app).post('/api/tasks').set('Authorization', `Bearer ${token}`)
+      .send({ title: 'Tâche avec checklist' });
+    parentId = res.body.id;
+  });
+
+  it('crée une sous-tâche', async () => {
+    const res = await request(app)
+      .post(`/api/tasks/${parentId}/subtasks`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ title: 'Première étape' });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.title).toBe('Première étape');
+    expect(res.body.done).toBe(0);
+    subId = res.body.id;
+  });
+
+  it('refuse une sous-tâche sans titre', async () => {
+    const res = await request(app)
+      .post(`/api/tasks/${parentId}/subtasks`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ title: '' });
+
+    expect(res.statusCode).toBe(422);
+  });
+
+  it('coche une sous-tâche', async () => {
+    const res = await request(app)
+      .patch(`/api/tasks/${parentId}/subtasks/${subId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ done: true });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.done).toBe(1);
+  });
+
+  it('renvoie l\'avancement des sous-tâches dans la liste des tâches', async () => {
+    const res = await request(app)
+      .get('/api/tasks')
+      .set('Authorization', `Bearer ${token}`);
+
+    const parent = res.body.find((t) => t.id === parentId);
+    expect(parent.subtasks_total).toBe(1);
+    expect(parent.subtasks_done).toBe(1);
+  });
+
+  it('supprime une sous-tâche', async () => {
+    const res = await request(app)
+      .delete(`/api/tasks/${parentId}/subtasks/${subId}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('supprime les sous-tâches en cascade avec la tâche parente', async () => {
+    await request(app).post(`/api/tasks/${parentId}/subtasks`)
+      .set('Authorization', `Bearer ${token}`).send({ title: 'À supprimer en cascade' });
+    await request(app).delete(`/api/tasks/${parentId}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    const res = await request(app)
+      .get(`/api/tasks/${parentId}/subtasks`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.statusCode).toBe(404);
+  });
+});

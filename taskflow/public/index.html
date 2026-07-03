@@ -183,7 +183,30 @@
           <option value="terminee">Terminée</option>
         </select>
       </div>
+      <div class="subtasks">
+        <button type="button" class="subtasks-toggle">
+          <span class="subtasks-caret">▸</span> Checklist
+          <span class="subtasks-progress"></span>
+        </button>
+        <div class="subtasks-body hidden">
+          <ul class="subtasks-list"></ul>
+          <form class="subtask-form">
+            <input type="text" class="subtask-input" placeholder="Ajouter une sous-tâche…" maxlength="200">
+          </form>
+        </div>
+      </div>
     </article>
+  </template>
+
+  <!-- Template d'une ligne de sous-tâche -->
+  <template id="subtask-item-template">
+    <li class="subtask-item">
+      <label>
+        <input type="checkbox" class="subtask-check">
+        <span class="subtask-title"></span>
+      </label>
+      <button type="button" class="subtask-delete" title="Supprimer">✕</button>
+    </li>
   </template>
 
   <script src="js/app.js"></script>

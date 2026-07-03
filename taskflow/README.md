@@ -35,6 +35,11 @@ Cette version 2 se concentre sur la **performance** (temps de réponse, bande pa
 - **Endpoint groupé** `PATCH /api/tasks/bulk` : déplacer/supprimer jusqu'à 200 tâches en **une seule requête HTTP et une seule requête SQL** (au lieu de N allers-retours).
 - **Pool MySQL** : `keep-alive` activé (moins de reconnexions) et taille configurable via `DB_POOL_LIMIT`.
 
+**Nouvelle fonctionnalité : sous-tâches (checklist)**
+- Chaque tâche peut contenir une **checklist** de sous-tâches cochables, avec un indicateur d'avancement (ex. `2/5`) affiché sur la carte.
+- L'avancement provient d'un **agrégat en une seule requête** (pas de N+1) renvoyé directement par `GET /api/tasks` — aucun surcoût par carte.
+- La checklist est **chargée à la demande** (au premier dépliage) et se coche en **UI optimiste** (rollback si erreur). Suppression **en cascade** avec la tâche parente.
+
 **Frontend plus réactif**
 - **UI optimiste** : le glisser-déposer et le changement de statut mettent à jour l'affichage instantanément (déplacement local de la carte), puis synchronisent avec le serveur en arrière-plan — avec annulation automatique (rollback) en cas d'échec. Fini le rechargement complet du tableau après chaque action.
 - **Statistiques calculées côté client** à partir du modèle déjà chargé : plus d'appel réseau `/stats` après chaque action.
@@ -144,8 +149,14 @@ npm test
 | POST    | /api/tasks               | Oui      | Créer une tâche                         |
 | PUT     | /api/tasks/:id           | Oui      | Modifier une tâche                      |
 | DELETE  | /api/tasks/:id           | Oui      | Supprimer une tâche                     |
+| GET     | /api/tasks/:id/subtasks  | Oui      | Lister les sous-tâches                   |
+| POST    | /api/tasks/:id/subtasks  | Oui      | Ajouter une sous-tâche                   |
+| PATCH   | /api/tasks/:id/subtasks/:subId | Oui | Cocher / renommer une sous-tâche      |
+| DELETE  | /api/tasks/:id/subtasks/:subId | Oui | Supprimer une sous-tâche              |
 
 `sort` accepte : `recent` (défaut), `ancien`, `echeance`, `priorite`.
+
+Chaque tâche renvoyée par `GET /api/tasks` inclut `subtasks_total` et `subtasks_done`.
 
 **`PATCH /api/tasks/bulk`** — corps attendu :
 ```json
@@ -155,15 +166,26 @@ npm test
 
 ### Migration depuis la v1
 
-Ajoute l'index FULLTEXT nécessaire à la recherche indexée :
+Ajoute l'index FULLTEXT et la table des sous-tâches :
 ```sql
 CREATE FULLTEXT INDEX idx_tasks_fulltext ON tasks(title, description);
+
+CREATE TABLE IF NOT EXISTS subtasks (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  task_id INT NOT NULL,
+  title VARCHAR(200) NOT NULL,
+  done TINYINT(1) NOT NULL DEFAULT 0,
+  position INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_subtasks_task ON subtasks(task_id);
 ```
 
 ## Pistes d'amélioration futures
 
 - Pagination / défilement infini sur la liste des tâches
 - Refresh token / expiration glissante de session
-- Sous-tâches et pièces jointes
+- Pièces jointes sur les tâches
 - Notifications par email pour les échéances proches
 - Partage de tâches entre utilisateurs (équipes)

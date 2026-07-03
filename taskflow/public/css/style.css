@@ -382,6 +382,77 @@ input:focus, textarea:focus, select:focus { border-color: var(--amber); }
   cursor: pointer;
 }
 
+/* ===== Sous-tâches (checklist) ===== */
+.subtasks { margin-top: 8px; border-top: 1px solid var(--line); padding-top: 6px; }
+.subtasks-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-family: inherit;
+}
+.subtasks-caret { font-size: 10px; }
+.subtasks-progress {
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: var(--line);
+  border-radius: 20px;
+  padding: 1px 8px;
+  min-width: 22px;
+  text-align: center;
+}
+.subtasks-progress.complete { color: var(--sage); background: var(--sage-soft); }
+.subtasks-progress:empty { display: none; }
+
+.subtasks-body { margin-top: 6px; }
+.subtasks-list { list-style: none; margin: 0; padding: 0; }
+.subtask-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+}
+.subtask-item label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.subtask-check { accent-color: var(--sage); cursor: pointer; }
+.subtask-item.done .subtask-title { text-decoration: line-through; color: var(--ink-soft); }
+.subtask-delete {
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.subtask-item:hover .subtask-delete { opacity: 1; }
+.subtask-delete:hover { color: var(--rose); }
+.subtask-input {
+  width: 100%;
+  margin-top: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 13px;
+  font-family: inherit;
+}
+
 @media (max-width: 800px) {
   .board { grid-template-columns: 1fr; }
   .app-main { padding: 24px 18px 40px; }

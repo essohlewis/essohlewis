@@ -26,9 +26,21 @@ CREATE TABLE IF NOT EXISTS tasks (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Table des sous-tâches (checklist rattachée à une tâche)
+CREATE TABLE IF NOT EXISTS subtasks (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  task_id INT NOT NULL,
+  title VARCHAR(200) NOT NULL,
+  done TINYINT(1) NOT NULL DEFAULT 0,
+  position INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+);
+
 CREATE INDEX idx_tasks_user ON tasks(user_id);
 CREATE INDEX idx_tasks_user_status ON tasks(user_id, status);
 CREATE INDEX idx_tasks_title ON tasks(title);
+CREATE INDEX idx_subtasks_task ON subtasks(task_id);
 
 -- Index FULLTEXT : recherche plein texte réellement indexée (MATCH ... AGAINST),
 -- bien plus rapide que LIKE '%mot%' qui force un balayage complet de la table.
@@ -38,3 +50,5 @@ CREATE FULLTEXT INDEX idx_tasks_fulltext ON tasks(title, description);
 -- ALTER TABLE tasks ADD COLUMN tag VARCHAR(40) NULL AFTER priority;
 -- CREATE INDEX idx_tasks_user_status ON tasks(user_id, status);
 -- CREATE FULLTEXT INDEX idx_tasks_fulltext ON tasks(title, description);
+-- CREATE TABLE subtasks ( ... voir ci-dessus ... );
+-- CREATE INDEX idx_subtasks_task ON subtasks(task_id);

@@ -24,6 +24,7 @@ const userNameEl = document.getElementById('user-name');
 const logoutBtn = document.getElementById('logout-btn');
 const taskForm = document.getElementById('task-form');
 const taskCardTemplate = document.getElementById('task-card-template');
+const subtaskItemTemplate = document.getElementById('subtask-item-template');
 const searchInput = document.getElementById('search-input');
 const filterPriority = document.getElementById('filter-priority');
 const sortSelect = document.getElementById('sort-select');
@@ -335,7 +336,120 @@ function buildTaskCard(task) {
     draggedTaskId = null;
   });
 
+  wireSubtasks(node, task);
+
   return card;
+}
+
+// ================= Sous-tâches (checklist) =================
+// La checklist est chargée à la demande (au premier dépliage) pour ne pas
+// alourdir le rendu initial du tableau. L'avancement (X/Y) provient déjà de
+// l'agrégat renvoyé par GET /api/tasks, donc affiché sans requête réseau.
+function wireSubtasks(node, task) {
+  task.subtasks_total = task.subtasks_total || 0;
+  task.subtasks_done = task.subtasks_done || 0;
+
+  const wrap = node.querySelector('.subtasks');
+  const toggleBtn = wrap.querySelector('.subtasks-toggle');
+  const caret = wrap.querySelector('.subtasks-caret');
+  const progressEl = wrap.querySelector('.subtasks-progress');
+  const body = wrap.querySelector('.subtasks-body');
+  const listEl = wrap.querySelector('.subtasks-list');
+  const form = wrap.querySelector('.subtask-form');
+  const input = wrap.querySelector('.subtask-input');
+  let loaded = false;
+
+  function renderProgress() {
+    if (task.subtasks_total > 0) {
+      progressEl.textContent = `${task.subtasks_done}/${task.subtasks_total}`;
+      progressEl.classList.toggle('complete', task.subtasks_done === task.subtasks_total);
+    } else {
+      progressEl.textContent = '';
+      progressEl.classList.remove('complete');
+    }
+  }
+  renderProgress();
+
+  function addSubtaskRow(sub) {
+    const item = subtaskItemTemplate.content.cloneNode(true);
+    const li = item.querySelector('.subtask-item');
+    const check = item.querySelector('.subtask-check');
+    check.checked = !!sub.done;
+    li.classList.toggle('done', !!sub.done);
+    item.querySelector('.subtask-title').textContent = sub.title;
+
+    // Bascule "fait" optimiste : on met à jour l'affichage et le compteur
+    // immédiatement, puis on synchronise ; annulation en cas d'échec.
+    check.addEventListener('change', async () => {
+      const desired = check.checked;
+      li.classList.toggle('done', desired);
+      task.subtasks_done += desired ? 1 : -1;
+      renderProgress();
+      try {
+        await apiRequest(`/tasks/${task.id}/subtasks/${sub.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ done: desired })
+        });
+        sub.done = desired ? 1 : 0;
+      } catch (err) {
+        check.checked = !desired;
+        li.classList.toggle('done', !desired);
+        task.subtasks_done += desired ? -1 : 1;
+        renderProgress();
+        showToast(err.message, 'error');
+      }
+    });
+
+    item.querySelector('.subtask-delete').addEventListener('click', async () => {
+      try {
+        await apiRequest(`/tasks/${task.id}/subtasks/${sub.id}`, { method: 'DELETE' });
+        li.remove();
+        task.subtasks_total -= 1;
+        if (sub.done) task.subtasks_done -= 1;
+        renderProgress();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+
+    listEl.appendChild(li);
+  }
+
+  async function loadSubtasks() {
+    try {
+      const subs = await apiRequest(`/tasks/${task.id}/subtasks`);
+      listEl.innerHTML = '';
+      subs.forEach(addSubtaskRow);
+      loaded = true;
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  toggleBtn.addEventListener('click', async () => {
+    const willOpen = body.classList.contains('hidden');
+    body.classList.toggle('hidden', !willOpen);
+    caret.textContent = willOpen ? '▾' : '▸';
+    if (willOpen && !loaded) await loadSubtasks();
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const title = input.value.trim();
+    if (!title) return;
+    try {
+      const created = await apiRequest(`/tasks/${task.id}/subtasks`, {
+        method: 'POST',
+        body: JSON.stringify({ title })
+      });
+      input.value = '';
+      addSubtaskRow(created);
+      task.subtasks_total += 1;
+      renderProgress();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  });
 }
 
 // Mise à jour optimiste du statut : on modifie le modèle local et l'affichage

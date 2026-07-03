@@ -71,11 +71,27 @@ const bulkRules = [
   checkValidation
 ];
 
+// Règles pour les sous-tâches (checklist).
+const subtaskRules = [
+  body('title').trim().notEmpty().withMessage('Le titre de la sous-tâche est requis.')
+    .isLength({ max: 200 }).withMessage('Le titre est trop long (200 caractères max).'),
+  checkValidation
+];
+
+const subtaskUpdateRules = [
+  body('title').optional().trim().notEmpty().withMessage('Le titre ne peut pas être vide.')
+    .isLength({ max: 200 }).withMessage('Le titre est trop long (200 caractères max).'),
+  body('done').optional().isBoolean().withMessage('La valeur "done" doit être un booléen.'),
+  checkValidation
+];
+
 module.exports = {
   registerRules,
   loginRules,
   taskRules,
   taskUpdateRules,
   taskQueryRules,
-  bulkRules
+  bulkRules,
+  subtaskRules,
+  subtaskUpdateRules
 };

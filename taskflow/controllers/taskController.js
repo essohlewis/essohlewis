@@ -70,6 +70,25 @@ const getTasks = asyncHandler(async (req, res) => {
     params
   );
 
+  // Avancement des sous-tâches : une seule requête agrégée pour toutes les
+  // tâches renvoyées (pas de N+1), puis fusion en mémoire.
+  if (tasks.length > 0) {
+    const ids = tasks.map((t) => t.id);
+    const [aggs] = await pool.query(
+      `SELECT task_id, COUNT(*) AS total, SUM(done) AS done
+         FROM subtasks WHERE task_id IN (?) GROUP BY task_id`,
+      [ids]
+    );
+    const byTask = new Map(
+      aggs.map((a) => [a.task_id, { total: Number(a.total), done: Number(a.done) }])
+    );
+    tasks.forEach((t) => {
+      const agg = byTask.get(t.id);
+      t.subtasks_total = agg ? agg.total : 0;
+      t.subtasks_done = agg ? agg.done : 0;
+    });
+  }
+
   res.json(tasks);
 });
 

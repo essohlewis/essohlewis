@@ -5,7 +5,9 @@ const {
   taskRules,
   taskUpdateRules,
   taskQueryRules,
-  bulkRules
+  bulkRules,
+  subtaskRules,
+  subtaskUpdateRules
 } = require('../middleware/validators');
 const {
   getTasks,
@@ -16,6 +18,12 @@ const {
   bulkUpdate,
   deleteTask
 } = require('../controllers/taskController');
+const {
+  listSubtasks,
+  createSubtask,
+  updateSubtask,
+  deleteSubtask
+} = require('../controllers/subtaskController');
 
 // Toutes les routes ci-dessous nécessitent d'être connecté
 router.use(requireAuth);
@@ -30,5 +38,11 @@ router.get('/:id', getTaskById);
 router.post('/', taskRules, createTask);
 router.put('/:id', taskUpdateRules, updateTask);
 router.delete('/:id', deleteTask);
+
+// Sous-tâches (checklist) rattachées à une tâche.
+router.get('/:taskId/subtasks', listSubtasks);
+router.post('/:taskId/subtasks', subtaskRules, createSubtask);
+router.patch('/:taskId/subtasks/:subId', subtaskUpdateRules, updateSubtask);
+router.delete('/:taskId/subtasks/:subId', deleteSubtask);
 
 module.exports = router;
