@@ -374,7 +374,25 @@ const createTask = asyncHandler(async (req, res) => {
   await logTaskAudit(result.insertId, req.userId, 'created', { title, status, priority, due_date, tag });
 
   const [rows] = await pool.query('SELECT * FROM tasks WHERE id = ?', [result.insertId]);
-  res.status(201).json(rows[0]);
+  const newTask = rows[0];
+
+  // Émettre l'événement Socket.io
+  const socketService = req.app?.locals?.socketService;
+  if (socketService) {
+    if (finalWorkspaceId) {
+      socketService.emitToWorkspace(finalWorkspaceId, 'task:created', {
+        task: newTask,
+        userId: req.userId
+      });
+    } else {
+      socketService.emitToUser(req.userId, 'task:created', {
+        task: newTask,
+        userId: req.userId
+      });
+    }
+  }
+
+  res.status(201).json(newTask);
 });
 
 // PUT /api/tasks/:id
@@ -431,7 +449,27 @@ const updateTask = asyncHandler(async (req, res) => {
   }
 
   const [rows] = await pool.query('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
-  res.json(rows[0]);
+  const updatedTask = rows[0];
+
+  // Émettre l'événement Socket.io
+  const socketService = req.app?.locals?.socketService;
+  if (socketService) {
+    if (task.workspace_id) {
+      socketService.emitToWorkspace(task.workspace_id, 'task:updated', {
+        task: updatedTask,
+        changes,
+        userId: req.userId
+      });
+    } else {
+      socketService.emitToUser(req.userId, 'task:updated', {
+        task: updatedTask,
+        changes,
+        userId: req.userId
+      });
+    }
+  }
+
+  res.json(updatedTask);
 });
 
 // PATCH /api/tasks/bulk
@@ -512,6 +550,25 @@ const deleteTask = asyncHandler(async (req, res) => {
   }
 
   logger.info(`Task deleted: ${task.title || 'Untitled'} (task_id: ${req.params.id})`);
+
+  // Émettre l'événement Socket.io
+  const socketService = req.app?.locals?.socketService;
+  if (socketService) {
+    if (task.workspace_id) {
+      socketService.emitToWorkspace(task.workspace_id, 'task:deleted', {
+        taskId: req.params.id,
+        task,
+        userId: req.userId
+      });
+    } else {
+      socketService.emitToUser(req.userId, 'task:deleted', {
+        taskId: req.params.id,
+        task,
+        userId: req.userId
+      });
+    }
+  }
+
   res.json({ message: 'Tâche supprimée.' });
 });
 

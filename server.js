@@ -3,12 +3,15 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const path = require('path');
+const http = require('http');
+const { Server } = require('socket.io');
 require('dotenv').config();
 
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('./swagger.config');
 const logger = require('./utils/logger');
 const { initCache } = require('./utils/cache');
+const SocketService = require('./services/socketService');
 
 const authRoutes = require('./routes/authRoutes');
 const taskRoutes = require('./routes/taskRoutes');
@@ -78,11 +81,27 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 
+// Créer le serveur HTTP et initialiser Socket.io
+const httpServer = http.createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.ALLOWED_ORIGINS || '*',
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
+
+// Initialiser le service Socket.io
+const socketService = new SocketService(io);
+app.locals.socketService = socketService;
+
+logger.info('Socket.io initialized');
+
 // N'écoute pas automatiquement pendant les tests (supertest gère ça lui-même)
 if (require.main === module) {
   initCache().catch(err => logger.error('Cache initialization failed: %s', err.message));
 
-  app.listen(PORT, () => {
+  httpServer.listen(PORT, () => {
     logger.info(`Serveur lancé sur http://localhost:${PORT}`);
   });
 }
