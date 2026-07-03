@@ -5,6 +5,8 @@ const compression = require('compression');
 const path = require('path');
 require('dotenv').config();
 
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpecs = require('./swagger.config');
 const logger = require('./utils/logger');
 const { initCache } = require('./utils/cache');
 
@@ -52,6 +54,19 @@ app.use('/api/notifications', notificationRoutes);
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
+
+// Documentation Swagger/OpenAPI
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'TaskFlow API Documentation',
+  swaggerOptions: {
+    persistAuthorization: true,
+    filter: true,
+    docExpansion: 'list'
+  }
+}));
+
+logger.info('Swagger documentation available at http://localhost:3000/api/docs');
 
 // 404 pour toute route API inconnue
 app.use('/api', (req, res) => {
