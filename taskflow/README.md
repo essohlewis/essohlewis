@@ -41,6 +41,17 @@ Cette version 2 se concentre sur la **performance** (temps de réponse, bande pa
 - **Endpoint groupé** `PATCH /api/tasks/bulk` : déplacer/supprimer jusqu'à 200 tâches en **une seule requête HTTP et une seule requête SQL** (au lieu de N allers-retours).
 - **Pool MySQL** : `keep-alive` activé (moins de reconnexions) et taille configurable via `DB_POOL_LIMIT`.
 
+**Nouvelle fonctionnalité : pièces jointes**
+- Ajout de **fichiers** à une tâche (jusqu'à 5 Mo, configurable via `MAX_UPLOAD_MB`), avec téléchargement et suppression.
+- Stockage sur disque (`uploads/`, hors du dossier public) : les fichiers ne sont **jamais servis en statique**, uniquement via une **route authentifiée** qui vérifie l'appartenance de la tâche. Noms de fichiers aléatoires (anti-collision / anti-path-traversal), nom d'origine conservé en base. Suppression **en cascade** avec la tâche.
+- Le compteur de pièces jointes est renvoyé par `GET /api/tasks` (agrégat, sans N+1).
+
+**Nouvelle fonctionnalité : tags colorés + filtre**
+- Chaque tag reçoit une **couleur déterministe** ; un filtre « Tous les tags » (alimenté par `GET /api/tasks/tags`) permet de n'afficher qu'un tag.
+
+**Nouvelle fonctionnalité : pagination**
+- La liste se charge par pages de 50 (`?limit=&offset=`) avec un bouton **« Charger plus »**. Le bandeau de statistiques est alimenté par `/stats` (exact même en pagination).
+
 **Nouvelle fonctionnalité : édition complète des tâches**
 - Bouton **✎** sur chaque carte : une fenêtre modale permet de modifier le **titre, la description, la priorité, le tag et l'échéance** (avant, seul le statut était modifiable depuis l'interface).
 - Correction backend : `PUT /api/tasks/:id` distingue désormais « champ absent » (conservé) de « champ à `null` » (effacé) — on peut donc **retirer une échéance** ou vider un tag. Fermeture au clic extérieur / touche `Échap`.
@@ -202,6 +213,10 @@ npm test
 | POST    | /api/tasks               | Oui      | Créer une tâche                         |
 | PUT     | /api/tasks/:id           | Oui      | Modifier une tâche                      |
 | DELETE  | /api/tasks/:id           | Oui      | Supprimer une tâche                     |
+| GET     | /api/tasks/tags          | Oui      | Tags distincts (avec compteur)         |
+| GET/POST| /api/tasks/:id/attachments | Oui    | Lister / téléverser une pièce jointe   |
+| GET     | /api/tasks/:id/attachments/:aid/download | Oui | Télécharger une pièce jointe |
+| DELETE  | /api/tasks/:id/attachments/:aid | Oui | Supprimer une pièce jointe           |
 | GET     | /api/tasks/:id/subtasks  | Oui      | Lister les sous-tâches                   |
 | POST    | /api/tasks/:id/subtasks  | Oui      | Ajouter une sous-tâche                   |
 | PATCH   | /api/tasks/:id/subtasks/:subId | Oui | Cocher / renommer une sous-tâche      |

@@ -331,6 +331,63 @@ describe('Export / Import /api/tasks', () => {
   });
 });
 
+describe('Pièces jointes /api/tasks/:id/attachments', () => {
+  let parentId;
+  let attId;
+
+  beforeAll(async () => {
+    const res = await request(app).post('/api/tasks').set('Authorization', `Bearer ${token}`)
+      .send({ title: 'Tâche avec pièce jointe' });
+    parentId = res.body.id;
+  });
+
+  it('téléverse un fichier', async () => {
+    const res = await request(app)
+      .post(`/api/tasks/${parentId}/attachments`)
+      .set('Authorization', `Bearer ${token}`)
+      .attach('file', Buffer.from('contenu de test'), 'note.txt');
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.original_name).toBe('note.txt');
+    attId = res.body.id;
+  });
+
+  it('liste les pièces jointes', async () => {
+    const res = await request(app)
+      .get(`/api/tasks/${parentId}/attachments`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.some((a) => a.id === attId)).toBe(true);
+  });
+
+  it('télécharge la pièce jointe avec son nom d\'origine', async () => {
+    const res = await request(app)
+      .get(`/api/tasks/${parentId}/attachments/${attId}/download`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-disposition']).toContain('note.txt');
+    expect(res.text).toBe('contenu de test');
+  });
+
+  it('inclut attachments_count dans la liste des tâches', async () => {
+    const res = await request(app)
+      .get('/api/tasks')
+      .set('Authorization', `Bearer ${token}`);
+    const parent = res.body.find((t) => t.id === parentId);
+    expect(parent.attachments_count).toBeGreaterThanOrEqual(1);
+  });
+
+  it('supprime la pièce jointe', async () => {
+    const res = await request(app)
+      .delete(`/api/tasks/${parentId}/attachments/${attId}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+  });
+});
+
 describe('Sous-tâches /api/tasks/:id/subtasks', () => {
   let parentId;
   let subId;

@@ -125,10 +125,19 @@ const getTasks = asyncHandler(async (req, res) => {
     const byTask = new Map(
       aggs.map((a) => [a.task_id, { total: Number(a.total), done: Number(a.done) }])
     );
+
+    // Nombre de pièces jointes par tâche (même approche, une seule requête).
+    const [atts] = await pool.query(
+      `SELECT task_id, COUNT(*) AS total FROM attachments WHERE task_id IN (?) GROUP BY task_id`,
+      [ids]
+    );
+    const attByTask = new Map(atts.map((a) => [a.task_id, Number(a.total)]));
+
     tasks.forEach((t) => {
       const agg = byTask.get(t.id);
       t.subtasks_total = agg ? agg.total : 0;
       t.subtasks_done = agg ? agg.done : 0;
+      t.attachments_count = attByTask.get(t.id) || 0;
     });
   }
 

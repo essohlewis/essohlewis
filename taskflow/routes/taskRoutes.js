@@ -29,6 +29,13 @@ const {
   updateSubtask,
   deleteSubtask
 } = require('../controllers/subtaskController');
+const {
+  listAttachments,
+  uploadAttachment,
+  downloadAttachment,
+  deleteAttachment
+} = require('../controllers/attachmentController');
+const { upload } = require('../middleware/upload');
 
 // Toutes les routes ci-dessous nécessitent d'être connecté
 router.use(requireAuth);
@@ -53,5 +60,11 @@ router.get('/:taskId/subtasks', listSubtasks);
 router.post('/:taskId/subtasks', subtaskRules, createSubtask);
 router.patch('/:taskId/subtasks/:subId', subtaskUpdateRules, updateSubtask);
 router.delete('/:taskId/subtasks/:subId', deleteSubtask);
+
+// Pièces jointes rattachées à une tâche.
+router.get('/:taskId/attachments', listAttachments);
+router.post('/:taskId/attachments', upload.single('file'), uploadAttachment);
+router.get('/:taskId/attachments/:id/download', downloadAttachment);
+router.delete('/:taskId/attachments/:id', deleteAttachment);
 
 module.exports = router;

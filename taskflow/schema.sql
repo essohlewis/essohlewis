@@ -39,6 +39,19 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Table des pièces jointes : on stocke les métadonnées en base et le fichier
+-- physique sur disque (dossier uploads/, servi uniquement via une route authentifiée).
+CREATE TABLE IF NOT EXISTS attachments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  task_id INT NOT NULL,
+  filename VARCHAR(255) NOT NULL,
+  original_name VARCHAR(255) NOT NULL,
+  mime VARCHAR(120),
+  size INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+);
+
 -- Table des sous-tâches (checklist rattachée à une tâche)
 CREATE TABLE IF NOT EXISTS subtasks (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -55,6 +68,7 @@ CREATE INDEX idx_tasks_user_status ON tasks(user_id, status);
 CREATE INDEX idx_tasks_title ON tasks(title);
 CREATE INDEX idx_subtasks_task ON subtasks(task_id);
 CREATE INDEX idx_refresh_user ON refresh_tokens(user_id);
+CREATE INDEX idx_attachments_task ON attachments(task_id);
 
 -- Index FULLTEXT : recherche plein texte réellement indexée (MATCH ... AGAINST),
 -- bien plus rapide que LIKE '%mot%' qui force un balayage complet de la table.

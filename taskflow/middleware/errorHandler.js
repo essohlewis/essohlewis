@@ -18,6 +18,13 @@ function errorHandler(err, req, res, next) {
   if (err.code === 'ECONNREFUSED') {
     return res.status(503).json({ message: 'Base de données indisponible pour le moment.' });
   }
+  // Erreurs d'upload (multer) : fichier trop volumineux, etc.
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ message: 'Fichier trop volumineux (5 Mo max).' });
+  }
+  if (err.name === 'MulterError') {
+    return res.status(400).json({ message: 'Téléversement invalide.' });
+  }
 
   const statusCode = err.statusCode || 500;
   const message = statusCode === 500 ? 'Erreur interne du serveur.' : err.message;

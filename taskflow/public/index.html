@@ -252,7 +252,29 @@
           </form>
         </div>
       </div>
+      <div class="attachments">
+        <button type="button" class="attachments-toggle">
+          <span class="attachments-caret">▸</span> Pièces jointes
+          <span class="attachments-count"></span>
+        </button>
+        <div class="attachments-body hidden">
+          <ul class="attachments-list"></ul>
+          <label class="attachment-add">
+            <input type="file" class="attachment-input" hidden>
+            <span>＋ Ajouter un fichier</span>
+          </label>
+        </div>
+      </div>
     </article>
+  </template>
+
+  <!-- Template d'une ligne de pièce jointe -->
+  <template id="attachment-item-template">
+    <li class="attachment-item">
+      <button type="button" class="attachment-download" title="Télécharger"></button>
+      <span class="attachment-size"></span>
+      <button type="button" class="attachment-delete" title="Supprimer">✕</button>
+    </li>
   </template>
 
   <!-- Template d'une ligne de sous-tâche -->

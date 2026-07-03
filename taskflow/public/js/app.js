@@ -32,6 +32,7 @@ const logoutBtn = document.getElementById('logout-btn');
 const taskForm = document.getElementById('task-form');
 const taskCardTemplate = document.getElementById('task-card-template');
 const subtaskItemTemplate = document.getElementById('subtask-item-template');
+const attachmentItemTemplate = document.getElementById('attachment-item-template');
 const searchInput = document.getElementById('search-input');
 const filterPriority = document.getElementById('filter-priority');
 const filterTag = document.getElementById('filter-tag');
@@ -642,8 +643,109 @@ function buildTaskCard(task) {
   });
 
   wireSubtasks(node, task);
+  wireAttachments(node, task);
 
   return card;
+}
+
+// ================= Pièces jointes =================
+function formatSize(bytes) {
+  if (bytes < 1024) return `${bytes} o`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} Ko`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+}
+
+function wireAttachments(node, task) {
+  task.attachments_count = task.attachments_count || 0;
+
+  const wrap = node.querySelector('.attachments');
+  const toggleBtn = wrap.querySelector('.attachments-toggle');
+  const caret = wrap.querySelector('.attachments-caret');
+  const countEl = wrap.querySelector('.attachments-count');
+  const body = wrap.querySelector('.attachments-body');
+  const listEl = wrap.querySelector('.attachments-list');
+  const input = wrap.querySelector('.attachment-input');
+  let loaded = false;
+
+  function renderCount() {
+    countEl.textContent = task.attachments_count > 0 ? task.attachments_count : '';
+  }
+  renderCount();
+
+  function addRow(att) {
+    const item = attachmentItemTemplate.content.cloneNode(true);
+    const li = item.querySelector('.attachment-item');
+    const dl = item.querySelector('.attachment-download');
+    dl.textContent = att.original_name;
+    item.querySelector('.attachment-size').textContent = formatSize(att.size);
+
+    dl.addEventListener('click', async () => {
+      try {
+        const res = await authFetch(`/tasks/${task.id}/attachments/${att.id}/download`);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = att.original_name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+
+    item.querySelector('.attachment-delete').addEventListener('click', async () => {
+      try {
+        await apiRequest(`/tasks/${task.id}/attachments/${att.id}`, { method: 'DELETE' });
+        li.remove();
+        task.attachments_count = Math.max(0, task.attachments_count - 1);
+        renderCount();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+
+    listEl.appendChild(li);
+  }
+
+  async function loadAttachments() {
+    try {
+      const items = await apiRequest(`/tasks/${task.id}/attachments`);
+      listEl.innerHTML = '';
+      items.forEach(addRow);
+      loaded = true;
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  toggleBtn.addEventListener('click', async () => {
+    const willOpen = body.classList.contains('hidden');
+    body.classList.toggle('hidden', !willOpen);
+    caret.textContent = willOpen ? '▾' : '▸';
+    if (willOpen && !loaded) await loadAttachments();
+  });
+
+  input.addEventListener('change', async () => {
+    const file = input.files[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await authFetch(`/tasks/${task.id}/attachments`, { method: 'POST', body: fd });
+      const created = await res.json();
+      if (loaded) addRow(created);
+      task.attachments_count += 1;
+      renderCount();
+      showToast('Fichier ajouté.');
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      input.value = '';
+    }
+  });
 }
 
 // ================= Sous-tâches (checklist) =================

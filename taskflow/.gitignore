@@ -9,6 +9,9 @@ node_modules/
 npm-debug.log*
 *.log
 
+# Fichiers téléversés (pièces jointes)
+uploads/
+
 # Divers
 .DS_Store
 coverage/
