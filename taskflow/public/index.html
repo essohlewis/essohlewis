@@ -59,6 +59,15 @@
         <span class="brand-name">TaskFlow</span>
       </div>
       <div class="header-right">
+        <div class="notif-wrap">
+          <button id="notif-toggle" class="theme-toggle" title="Rappels d'échéance">
+            🔔<span id="notif-badge" class="notif-badge hidden">0</span>
+          </button>
+          <div id="notif-panel" class="notif-panel hidden">
+            <h4>Rappels d'échéance</h4>
+            <div id="notif-list"></div>
+          </div>
+        </div>
         <button id="theme-toggle" class="theme-toggle" title="Changer de thème">◐</button>
         <span id="user-name" class="user-name"></span>
         <button id="logout-btn" class="btn-ghost">Déconnexion</button>

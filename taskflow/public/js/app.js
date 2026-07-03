@@ -45,6 +45,10 @@ const exportJsonBtn = document.getElementById('export-json');
 const exportCsvBtn = document.getElementById('export-csv');
 const importBtn = document.getElementById('import-btn');
 const importFile = document.getElementById('import-file');
+const notifToggle = document.getElementById('notif-toggle');
+const notifBadge = document.getElementById('notif-badge');
+const notifPanel = document.getElementById('notif-panel');
+const notifList = document.getElementById('notif-list');
 
 // ================= THEME =================
 function applyTheme(theme) {
@@ -280,6 +284,7 @@ taskForm.addEventListener('submit', async (e) => {
     // Ajout local immédiat (en tête) plutôt qu'un rechargement complet.
     allTasks.unshift(created);
     renderTasks();
+    loadReminders();
   } catch (err) {
     showToast(err.message, 'error');
   }
@@ -304,10 +309,72 @@ async function loadTasks() {
     allTasks = await apiRequest(`/tasks?${params.toString()}`);
     selected.clear();
     renderTasks();
+    loadReminders();
   } catch (err) {
     showToast(err.message, 'error');
   }
 }
+
+// ================= Rappels d'échéance =================
+// Source d'autorité : l'endpoint /reminders (non filtré). On l'appelle après
+// les opérations qui peuvent changer les échéances/statuts.
+async function loadReminders() {
+  try {
+    const data = await apiRequest('/tasks/reminders?days=3');
+    renderReminders(data);
+  } catch {
+    /* silencieux : les rappels sont secondaires */
+  }
+}
+
+function renderReminders({ total, overdue, soon }) {
+  if (total > 0) {
+    notifBadge.textContent = total;
+    notifBadge.classList.remove('hidden');
+  } else {
+    notifBadge.classList.add('hidden');
+  }
+
+  notifList.innerHTML = '';
+  if (total === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'notif-empty';
+    empty.textContent = 'Aucune échéance imminente. 🎉';
+    notifList.appendChild(empty);
+    return;
+  }
+
+  const section = (label, items, cls) => {
+    if (items.length === 0) return;
+    const h = document.createElement('div');
+    h.className = `notif-group ${cls}`;
+    h.textContent = `${label} (${items.length})`;
+    notifList.appendChild(h);
+    items.forEach((t) => {
+      const row = document.createElement('div');
+      row.className = 'notif-item';
+      const date = new Date(t.due_date).toLocaleDateString('fr-FR');
+      row.innerHTML = `<span class="notif-title"></span><span class="notif-date">${date}</span>`;
+      row.querySelector('.notif-title').textContent = t.title;
+      notifList.appendChild(row);
+    });
+  };
+
+  section('En retard', overdue, 'overdue');
+  section('Bientôt', soon, 'soon');
+}
+
+notifToggle.addEventListener('click', (e) => {
+  e.stopPropagation();
+  notifPanel.classList.toggle('hidden');
+});
+// Fermer le panneau au clic à l'extérieur.
+document.addEventListener('click', (e) => {
+  if (!notifPanel.classList.contains('hidden') &&
+      !notifPanel.contains(e.target) && e.target !== notifToggle) {
+    notifPanel.classList.add('hidden');
+  }
+});
 
 // ================= Statistiques (calculées localement) =================
 // Plus besoin d'un appel réseau /stats après chaque action : on dérive les
@@ -404,6 +471,7 @@ function buildTaskCard(task) {
       allTasks = allTasks.filter((t) => t.id !== task.id);
       selected.delete(task.id);
       renderTasks();
+      loadReminders();
     } catch (err) {
       showToast(err.message, 'error');
     }
@@ -550,6 +618,7 @@ async function updateTaskStatus(taskId, status) {
       method: 'PUT',
       body: JSON.stringify({ status })
     });
+    loadReminders(); // une tâche terminée sort des rappels
   } catch (err) {
     task.status = previousStatus; // rollback
     renderTasks();
@@ -586,6 +655,7 @@ async function runBulk(action, value) {
     }
     selected.clear();
     renderTasks();
+    loadReminders();
   } catch (err) {
     showToast(err.message, 'error');
   }

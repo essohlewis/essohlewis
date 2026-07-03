@@ -41,6 +41,10 @@ Cette version 2 se concentre sur la **performance** (temps de réponse, bande pa
 - **Endpoint groupé** `PATCH /api/tasks/bulk` : déplacer/supprimer jusqu'à 200 tâches en **une seule requête HTTP et une seule requête SQL** (au lieu de N allers-retours).
 - **Pool MySQL** : `keep-alive` activé (moins de reconnexions) et taille configurable via `DB_POOL_LIMIT`.
 
+**Nouvelle fonctionnalité : rappels d'échéance**
+- Une **cloche de notifications** (avec badge) signale les tâches **en retard** et celles dont **l'échéance approche** (3 jours par défaut).
+- Alimentée par `GET /api/tasks/reminders?days=N` (requête indexée, non filtrée) ; l'endpoint est prêt pour un futur envoi par email.
+
 **Nouvelle fonctionnalité : export / import**
 - **Export** de toutes ses tâches en **JSON** ou **CSV** (téléchargement authentifié), pour la sauvegarde et la portabilité des données.
 - **Import** depuis un fichier JSON (tableau brut ou export `{ tasks: [...] }`) : insertion **multi-lignes en une seule requête**, nettoyage/normalisation côté serveur (valeurs invalides ramenées aux défauts, lignes sans titre ignorées).
@@ -156,6 +160,7 @@ npm test
 | POST    | /api/auth/logout         | Non*     | Révoquer un refresh token              |
 | GET     | /api/tasks?search=&priority=&tag=&sort= | Oui | Lister mes tâches (filtrable)  |
 | GET     | /api/tasks/stats         | Oui      | Statistiques (total, retard, %) — mises en cache |
+| GET     | /api/tasks/reminders?days=N | Oui   | Tâches en retard / échéance proche     |
 | GET     | /api/tasks/export?format=json\|csv | Oui | Exporter ses tâches                |
 | POST    | /api/tasks/import        | Oui      | Importer des tâches (JSON)             |
 | PATCH   | /api/tasks/bulk          | Oui      | Action groupée sur plusieurs tâches    |

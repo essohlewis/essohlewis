@@ -177,6 +177,40 @@ describe('Actions groupées PATCH /api/tasks/bulk', () => {
   });
 });
 
+describe('Rappels d\'échéance GET /api/tasks/reminders', () => {
+  const today = new Date().toISOString().slice(0, 10);
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+
+  beforeAll(async () => {
+    await request(app).post('/api/tasks').set('Authorization', `Bearer ${token}`)
+      .send({ title: 'En retard', due_date: yesterday, status: 'a_faire' });
+    await request(app).post('/api/tasks').set('Authorization', `Bearer ${token}`)
+      .send({ title: 'Pour aujourd\'hui', due_date: today, status: 'en_cours' });
+  });
+
+  it('renvoie les tâches en retard et à échéance proche', async () => {
+    const res = await request(app)
+      .get('/api/tasks/reminders')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.total).toBeGreaterThanOrEqual(2);
+    expect(res.body.overdue.some((t) => t.title === 'En retard')).toBe(true);
+    expect(res.body.soon.some((t) => t.title === 'Pour aujourd\'hui')).toBe(true);
+  });
+
+  it('exclut les tâches terminées des rappels', async () => {
+    const created = await request(app).post('/api/tasks').set('Authorization', `Bearer ${token}`)
+      .send({ title: 'Terminée mais en retard', due_date: yesterday, status: 'terminee' });
+
+    const res = await request(app)
+      .get('/api/tasks/reminders')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.body.overdue.some((t) => t.id === created.body.id)).toBe(false);
+  });
+});
+
 describe('Export / Import /api/tasks', () => {
   it('exporte les tâches en JSON', async () => {
     const res = await request(app)

@@ -164,6 +164,29 @@ const getStats = asyncHandler(async (req, res) => {
   res.json(payload);
 });
 
+// GET /api/tasks/reminders?days=3 - tâches non terminées en retard ou dont
+// l'échéance approche (dans les `days` prochains jours). Sert la cloche de
+// notifications ; l'endpoint est prêt pour un futur envoi par email.
+const getReminders = asyncHandler(async (req, res) => {
+  const days = Math.min(Math.max(parseInt(req.query.days, 10) || 3, 0), 30);
+
+  const [rows] = await pool.query(
+    `SELECT id, title, status, due_date,
+            CASE WHEN due_date < CURDATE() THEN 'overdue' ELSE 'soon' END AS reminder
+       FROM tasks
+      WHERE user_id = ?
+        AND status != 'terminee'
+        AND due_date IS NOT NULL
+        AND due_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
+      ORDER BY due_date ASC`,
+    [req.userId, days]
+  );
+
+  const overdue = rows.filter((r) => r.reminder === 'overdue');
+  const soon = rows.filter((r) => r.reminder === 'soon');
+  res.json({ total: rows.length, overdue, soon });
+});
+
 // GET /api/tasks/:id
 const getTaskById = asyncHandler(async (req, res) => {
   const [rows] = await pool.query(
@@ -351,6 +374,7 @@ const importTasks = asyncHandler(async (req, res) => {
 module.exports = {
   getTasks,
   getStats,
+  getReminders,
   getTaskById,
   createTask,
   updateTask,

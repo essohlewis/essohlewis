@@ -13,6 +13,7 @@ const {
 const {
   getTasks,
   getStats,
+  getReminders,
   getTaskById,
   createTask,
   updateTask,
@@ -34,6 +35,7 @@ router.use(requireAuth);
 // /stats et /bulk doivent être déclarées avant /:id pour ne pas être
 // interprétées comme un identifiant de tâche.
 router.get('/stats', getStats);
+router.get('/reminders', getReminders);
 router.get('/export', exportTasks);
 router.post('/import', importRules, importTasks);
 router.patch('/bulk', bulkRules, bulkUpdate);

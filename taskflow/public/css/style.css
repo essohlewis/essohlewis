@@ -382,6 +382,59 @@ input:focus, textarea:focus, select:focus { border-color: var(--amber); }
   cursor: pointer;
 }
 
+/* ===== Notifications d'échéance ===== */
+.notif-wrap { position: relative; }
+.notif-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--rose);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 17px;
+  text-align: center;
+}
+.notif-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 300px;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px;
+  z-index: 950;
+}
+.notif-panel h4 { margin: 0 0 10px; font-size: 14px; color: var(--ink); }
+.notif-empty { font-size: 13px; color: var(--ink-soft); margin: 4px 0; }
+.notif-group {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 10px 0 4px;
+}
+.notif-group.overdue { color: var(--rose); }
+.notif-group.soon { color: var(--amber); }
+.notif-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: 13px;
+  border-top: 1px solid var(--line);
+}
+.notif-title { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notif-date { color: var(--ink-soft); flex-shrink: 0; }
+
 /* ===== Actions de la barre d'outils (export / import) ===== */
 .toolbar-actions { display: flex; gap: 6px; margin-left: auto; }
 .toolbar-actions .btn-ghost { font-size: 13px; padding: 7px 10px; white-space: nowrap; }
