@@ -15,6 +15,10 @@ let refreshPromise = null;
 let allTasks = [];
 // Ensemble des ids sélectionnés (mode multi-sélection / actions groupées).
 const selected = new Set();
+// Pagination : on charge les tâches par pages pour éviter de tout tirer d'un coup.
+const PAGE_SIZE = 50;
+let taskOffset = 0;
+let hasMoreTasks = false;
 
 // ---------- Elements ----------
 const authScreen = document.getElementById('auth-screen');
@@ -58,6 +62,7 @@ const editPriority = document.getElementById('edit-priority');
 const editTag = document.getElementById('edit-tag');
 const editDueDate = document.getElementById('edit-due-date');
 const editCancel = document.getElementById('edit-cancel');
+const loadMoreBtn = document.getElementById('load-more');
 let editingTaskId = null;
 
 // ================= THEME =================
@@ -294,7 +299,9 @@ taskForm.addEventListener('submit', async (e) => {
     // Ajout local immédiat (en tête) plutôt qu'un rechargement complet.
     allTasks.unshift(created);
     renderTasks();
+    loadStats();
     loadReminders();
+    loadTags();
   } catch (err) {
     showToast(err.message, 'error');
   }
@@ -308,24 +315,55 @@ searchInput.addEventListener('input', () => {
 filterPriority.addEventListener('change', loadTasks);
 filterTag.addEventListener('change', loadTasks);
 sortSelect.addEventListener('change', loadTasks);
+loadMoreBtn.addEventListener('click', loadMoreTasks);
 
 // ================= Chargement des tâches =================
-async function loadTasks() {
+// Construit les paramètres de requête communs (filtres/tri) pour une page donnée.
+function taskQueryParams(offset) {
   const params = new URLSearchParams();
   if (searchInput.value.trim()) params.set('search', searchInput.value.trim());
   if (filterPriority.value) params.set('priority', filterPriority.value);
   if (filterTag.value) params.set('tag', filterTag.value);
   if (sortSelect.value) params.set('sort', sortSelect.value);
+  params.set('limit', PAGE_SIZE);
+  params.set('offset', offset);
+  return params;
+}
 
+// (Re)charge la première page : remplace la liste locale.
+async function loadTasks() {
+  taskOffset = 0;
   try {
-    allTasks = await apiRequest(`/tasks?${params.toString()}`);
+    const batch = await apiRequest(`/tasks?${taskQueryParams(0).toString()}`);
+    allTasks = batch;
+    hasMoreTasks = batch.length === PAGE_SIZE;
     selected.clear();
     renderTasks();
+    updateLoadMore();
+    loadStats();
     loadReminders();
     loadTags();
   } catch (err) {
     showToast(err.message, 'error');
   }
+}
+
+// Charge la page suivante et l'ajoute à la liste (bouton « Charger plus »).
+async function loadMoreTasks() {
+  try {
+    const batch = await apiRequest(`/tasks?${taskQueryParams(taskOffset + PAGE_SIZE).toString()}`);
+    taskOffset += PAGE_SIZE;
+    allTasks = allTasks.concat(batch);
+    hasMoreTasks = batch.length === PAGE_SIZE;
+    renderTasks();
+    updateLoadMore();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+function updateLoadMore() {
+  loadMoreBtn.classList.toggle('hidden', !hasMoreTasks);
 }
 
 // ================= Tags (couleurs + filtre) =================
@@ -469,7 +507,9 @@ editForm.addEventListener('submit', async (e) => {
     closeEdit();
     showToast('Tâche mise à jour.');
     renderTasks();
+    loadStats();
     loadReminders();
+    loadTags();
   } catch (err) {
     showToast(err.message, 'error');
   }
@@ -483,20 +523,20 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !editModal.classList.contains('hidden')) closeEdit();
 });
 
-// ================= Statistiques (calculées localement) =================
-// Plus besoin d'un appel réseau /stats après chaque action : on dérive les
-// compteurs directement du modèle local déjà chargé. Instantané, et le cache
-// serveur reste disponible pour l'affichage initial d'autres sessions.
-function updateStats() {
-  const total = allTasks.length;
-  const terminee = allTasks.filter((t) => t.status === 'terminee').length;
-  const late = allTasks.filter(isOverdue).length;
-  const completion = total > 0 ? Math.round((terminee / total) * 100) : 0;
-
-  document.getElementById('stat-total').textContent = total;
-  document.getElementById('stat-completion').textContent = `${completion}%`;
-  document.getElementById('stat-late').textContent = late;
-  document.getElementById('progress-fill').style.width = `${completion}%`;
+// ================= Statistiques =================
+// Source d'autorité : l'endpoint /stats (mis en cache côté serveur, invalidé à
+// chaque écriture). Nécessaire car, avec la pagination, le modèle local ne
+// contient qu'une partie des tâches — un calcul local serait faux.
+async function loadStats() {
+  try {
+    const stats = await apiRequest('/tasks/stats');
+    document.getElementById('stat-total').textContent = stats.total;
+    document.getElementById('stat-completion').textContent = `${stats.taux_completion}%`;
+    document.getElementById('stat-late').textContent = stats.en_retard;
+    document.getElementById('progress-fill').style.width = `${stats.taux_completion}%`;
+  } catch {
+    /* silencieux */
+  }
 }
 
 // ================= Rendu du tableau =================
@@ -520,7 +560,6 @@ function renderTasks() {
     }
   });
 
-  updateStats();
   updateBulkBar();
 }
 
@@ -585,6 +624,7 @@ function buildTaskCard(task) {
       allTasks = allTasks.filter((t) => t.id !== task.id);
       selected.delete(task.id);
       renderTasks();
+      loadStats();
       loadReminders();
     } catch (err) {
       showToast(err.message, 'error');
@@ -732,6 +772,7 @@ async function updateTaskStatus(taskId, status) {
       method: 'PUT',
       body: JSON.stringify({ status })
     });
+    loadStats();
     loadReminders(); // une tâche terminée sort des rappels
   } catch (err) {
     task.status = previousStatus; // rollback
@@ -769,6 +810,7 @@ async function runBulk(action, value) {
     }
     selected.clear();
     renderTasks();
+    loadStats();
     loadReminders();
   } catch (err) {
     showToast(err.message, 'error');

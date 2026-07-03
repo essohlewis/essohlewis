@@ -411,6 +411,10 @@ input:focus, textarea:focus, select:focus { border-color: var(--amber); }
   cursor: pointer;
 }
 
+/* ===== Bouton « Charger plus » ===== */
+.load-more-wrap { display: flex; justify-content: center; margin-top: 20px; }
+#load-more { padding: 10px 20px; }
+
 /* ===== Notifications d'échéance ===== */
 .notif-wrap { position: relative; }
 .notif-badge {

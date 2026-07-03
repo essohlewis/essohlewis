@@ -58,6 +58,8 @@ const taskQueryRules = [
   query('priority').optional().isIn(['basse', 'moyenne', 'haute']),
   query('sort').optional().isIn(['recent', 'ancien', 'echeance', 'priorite']),
   query('search').optional().isLength({ max: 200 }),
+  query('limit').optional().isInt({ min: 1, max: 200 }),
+  query('offset').optional().isInt({ min: 0 }),
   checkValidation
 ];
 

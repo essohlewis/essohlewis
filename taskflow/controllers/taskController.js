@@ -98,8 +98,18 @@ const getTasks = asyncHandler(async (req, res) => {
 
   const orderBy = SORT_OPTIONS[sort] || SORT_OPTIONS.recent;
 
+  // Pagination optionnelle : si `limit` est fourni, on borne le nombre de
+  // résultats (avec `offset`). Sans `limit`, on renvoie tout (rétrocompatible).
+  let limitClause = '';
+  if (req.query.limit !== undefined) {
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 0, 1), 200);
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+    limitClause = ' LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+  }
+
   const [tasks] = await pool.query(
-    `SELECT * FROM tasks WHERE ${conditions.join(' AND ')} ORDER BY ${orderBy}`,
+    `SELECT * FROM tasks WHERE ${conditions.join(' AND ')} ORDER BY ${orderBy}${limitClause}`,
     params
   );
 

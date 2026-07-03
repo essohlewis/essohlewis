@@ -56,6 +56,15 @@ describe('CRUD /api/tasks', () => {
     expect(res.body.length).toBeGreaterThan(0);
   });
 
+  it('pagine les tâches avec limit/offset', async () => {
+    const res = await request(app)
+      .get('/api/tasks?limit=1&offset=0')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.length).toBeLessThanOrEqual(1);
+  });
+
   it('filtre les tâches par priorité', async () => {
     const res = await request(app)
       .get('/api/tasks?priority=haute')
