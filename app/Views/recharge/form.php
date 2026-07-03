@@ -2,7 +2,10 @@
 /** @var string|null $preOperator */
 /** @var string|null $preType */
 /** @var string|null $myNumber */
+/** @var string|null $prePhone */
+/** @var int|null $preAmount */
 /** @var string[] $recentNumbers */
+/** @var \Transouscris\Models\Favorite[] $favorites */
 
 $networks = [
     'orange' => ['name' => 'Orange', 'color' => '#FF7900'],
@@ -14,7 +17,9 @@ $networks = [
      class="max-w-md mx-auto"
      data-my="<?= e($myNumber ?? '') ?>"
      data-operator="<?= e($preOperator ?? '') ?>"
-     data-type="<?= e($preType ?? '') ?>">
+     data-type="<?= e($preType ?? '') ?>"
+     data-phone="<?= e($prePhone ?? '') ?>"
+     data-amount="<?= (int) ($preAmount ?? 0) ?>">
 
     <!-- En-tête : retour + sélecteur de réseau (modifiable) -->
     <div class="flex items-center justify-between mb-4">
@@ -67,6 +72,18 @@ $networks = [
                 <?php endif; ?>
             </div>
 
+            <?php if (!empty($favorites)): ?>
+                <div class="mt-3">
+                    <div class="text-xs text-slate-400 mb-1">Favoris</div>
+                    <div class="flex flex-wrap gap-2">
+                        <?php foreach ($favorites as $f): ?>
+                            <button type="button" class="rc-recent text-xs bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100 rounded-full px-3 py-1"
+                                    data-num="<?= e($f->msisdn) ?>"><?= $f->relationIcon() ?> <?= e($f->label) ?></button>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <?php if (!empty($recentNumbers)): ?>
                 <div class="mt-3">
                     <div class="text-xs text-slate-400 mb-1">Récents</div>
@@ -77,6 +94,10 @@ $networks = [
                     </div>
                 </div>
             <?php endif; ?>
+
+            <div class="mt-3 text-xs">
+                <a href="/favoris" class="text-teal-700 underline">Gérer mes favoris →</a>
+            </div>
 
             <div id="rc-op-hint" class="text-sm mt-2 text-slate-500"></div>
             <button type="button" class="rc-next mt-4 w-full bg-teal-700 text-white rounded-lg py-3 font-semibold">Suivant →</button>

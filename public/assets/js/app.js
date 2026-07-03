@@ -362,7 +362,9 @@
         // ---- Navigation Retour ----
         flow.querySelectorAll('.rc-back').forEach((b) => b.addEventListener('click', back));
 
-        // ---- Amorçage : applique la pré-sélection venue du tableau de bord ----
+        // ---- Amorçage : applique la pré-sélection (tableau de bord, historique, favoris) ----
+        if (flow.dataset.phone) { phoneInput.value = flow.dataset.phone; }
+        if (parseInt(flow.dataset.amount, 10) > 0) { state.amount = parseInt(flow.dataset.amount, 10); }
         show('type');
         if (state.type === 'credit') {
             ring(steps.type.querySelectorAll('.rc-type'), [...steps.type.querySelectorAll('.rc-type')].find((x) => x.dataset.type === 'credit'));
@@ -435,6 +437,70 @@
                 const { ok } = await api('/programmees/' + id, {}, 'DELETE');
                 if (ok) row.remove();
             }
+        });
+    }
+
+    // ── Favoris ───────────────────────────────────────────────
+    const favForm = document.getElementById('fav-form');
+    if (favForm) {
+        favForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const { ok, data } = await api('/favoris', {
+                label: favForm.label.value.trim(),
+                relation: favForm.relation.value,
+                phone: favForm.phone.value.trim(),
+            });
+            if (ok && data.redirect) { window.location = data.redirect; }
+            else { setMsg('fav-msg', data.error || 'Ajout impossible.'); }
+        });
+    }
+    const favList = document.getElementById('fav-list');
+    if (favList) {
+        favList.addEventListener('click', async (e) => {
+            if (!e.target.classList.contains('fav-del')) return;
+            const card = e.target.closest('[data-fav]');
+            if (!confirm('Supprimer ce favori ?')) return;
+            const { ok } = await api('/favoris/' + card.dataset.fav, {}, 'DELETE');
+            if (ok) card.remove();
+        });
+    }
+
+    // ── Historique : recherche par numéro ─────────────────────
+    const histSearch = document.getElementById('hist-search');
+    if (histSearch) {
+        histSearch.addEventListener('input', () => {
+            const q = histSearch.value.trim();
+            document.querySelectorAll('#hist-rows tr[data-num]').forEach((tr) => {
+                tr.style.display = tr.dataset.num.includes(q) ? '' : 'none';
+            });
+        });
+    }
+
+    // ── Comparateur : recherche + filtres ─────────────────────
+    const cmpSearch = document.getElementById('cmp-search');
+    if (cmpSearch) {
+        const cmpOp = document.getElementById('cmp-op');
+        const cmpMax = document.getElementById('cmp-max');
+        function filterCmp() {
+            const q = cmpSearch.value.trim().toLowerCase();
+            const op = cmpOp.value;
+            const max = parseInt(cmpMax.value, 10) || Infinity;
+            document.querySelectorAll('#cmp-rows tr').forEach((tr) => {
+                const okText = !q || (tr.dataset.text || '').includes(q);
+                const okOp = !op || tr.dataset.op === op;
+                const okPrice = parseInt(tr.dataset.price, 10) <= max;
+                tr.style.display = (okText && okOp && okPrice) ? '' : 'none';
+            });
+        }
+        [cmpSearch, cmpOp, cmpMax].forEach((el) => el.addEventListener('input', filterCmp));
+    }
+
+    // ── Bascule mode sombre ───────────────────────────────────
+    const themeToggle = document.getElementById('theme-toggle');
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            const dark = document.documentElement.classList.toggle('dark');
+            try { localStorage.setItem('transouscris_theme', dark ? 'dark' : 'light'); } catch (_) {}
         });
     }
 })();

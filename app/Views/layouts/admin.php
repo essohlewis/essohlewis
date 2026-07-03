@@ -6,7 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($title ?? 'Admin') ?> · Transouscris</title>
     <meta name="csrf-token" content="<?= e($csrf ?? '') ?>">
+    <script>try{if(localStorage.getItem('transouscris_theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/assets/css/theme.css">
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen">
     <div class="flex min-h-screen">

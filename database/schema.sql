@@ -188,6 +188,21 @@ CREATE TABLE otp_codes (
     KEY idx_otp_lookup (phone, purpose, consumed_at, expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ── Favoris (numéros enregistrés) ────────────────────────────────────────
+CREATE TABLE favorites (
+    id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id       BIGINT UNSIGNED NOT NULL,
+    label         VARCHAR(80) NOT NULL,                   -- ex: "Maman", "Moi"
+    relation      ENUM('moi','famille','conjoint','enfants','amis','autre') NOT NULL DEFAULT 'autre',
+    msisdn        VARCHAR(20) NOT NULL,
+    operator_code VARCHAR(20) NULL,
+    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_favorite (user_id, msisdn),
+    KEY idx_favorite_user (user_id),
+    CONSTRAINT fk_favorite_user FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ── Cagnottes (recharge collective) ──────────────────────────────────────
 CREATE TABLE pots (
     id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

@@ -8,7 +8,9 @@
     <title><?= e($title ?? 'Transouscris') ?></title>
     <link rel="manifest" href="/manifest.webmanifest">
     <meta name="csrf-token" content="<?= e($csrf ?? '') ?>">
+    <script>try{if(localStorage.getItem('transouscris_theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/assets/css/theme.css">
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
     <header class="bg-white border-b">

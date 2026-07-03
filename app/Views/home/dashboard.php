@@ -16,6 +16,25 @@ $networks = [
         <a href="/wallet" class="inline-block mt-4 bg-white/20 rounded-lg px-4 py-2 text-sm">Approvisionner</a>
     </div>
 
+    <!-- Menu rapide -->
+    <div class="grid grid-cols-3 sm:grid-cols-6 gap-3">
+        <?php
+        $menu = [
+            ['/recharge', '💸', 'Recharger'],
+            ['/comparateur', '⚖️', 'Comparer'],
+            ['/favoris', '⭐', 'Favoris'],
+            ['/programmees', '🔁', 'Programmées'],
+            ['/historique', '🧾', 'Historique'],
+            ['/agents', '🤝', 'Agents'],
+        ];
+        foreach ($menu as [$href, $icon, $label]): ?>
+            <a href="<?= $href ?>" class="bg-white rounded-xl shadow-sm p-3 text-center hover:shadow transition">
+                <div class="text-2xl"><?= $icon ?></div>
+                <div class="text-xs font-medium mt-1 text-slate-600"><?= e($label) ?></div>
+            </a>
+        <?php endforeach; ?>
+    </div>
+
     <!-- ── Assistant : réseau → type d'opération → Suivant ─────────── -->
     <div id="op-wizard" class="bg-white rounded-2xl shadow p-6">
         <h2 class="font-bold text-lg text-slate-900">Nouvelle opération</h2>

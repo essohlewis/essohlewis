@@ -50,6 +50,15 @@ return function (Router $r): void {
         $r->post('/programmees/{id}/executer', 'ScheduledRechargeController@runNow', [CsrfMiddleware::class]);
         $r->delete('/programmees/{id}', 'ScheduledRechargeController@destroy', [CsrfMiddleware::class]);
 
+        // Favoris
+        $r->get('/favoris', 'FavoriteController@index');
+        $r->post('/favoris', 'FavoriteController@store', [CsrfMiddleware::class]);
+        $r->delete('/favoris/{id}', 'FavoriteController@destroy', [CsrfMiddleware::class]);
+
+        // Historique & comparateur
+        $r->get('/historique', 'HistoryController@index');
+        $r->get('/comparateur', 'ComparatorController@index');
+
         // Cagnottes (création)
         $r->post('/cagnotte', 'PotController@create', [CsrfMiddleware::class]);
 

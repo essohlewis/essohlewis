@@ -34,12 +34,19 @@ final class RechargeController extends Controller
         // Numéro de l'utilisateur au format national (pour le bouton « Moi-même »).
         $myNumber = $this->detector->normalize($user->phone);
 
+        // Pré-remplissage possible depuis l'historique / les favoris.
+        $prePhone  = $this->detector->normalize((string) $request->query('phone', '')) ?? '';
+        $preAmount = (int) $request->query('amount', 0);
+
         return $this->view('recharge.form', [
             'title'        => 'Nouvelle recharge',
             'preOperator'  => in_array($operator, ['orange', 'moov', 'mtn'], true) ? $operator : null,
             'preType'      => in_array($type, ['credit', 'internet', 'voice', 'sms'], true) ? $type : null,
+            'prePhone'     => $prePhone,
+            'preAmount'    => $preAmount > 0 ? $preAmount : null,
             'myNumber'     => $myNumber,
             'recentNumbers'=> $this->recentNumbers($user->id),
+            'favorites'    => \Transouscris\Models\Favorite::forUser($user->id),
         ]);
     }
 
