@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskFlow — Gestion de tâches</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ===== ECRAN AUTHENTIFICATION ===== -->
+  <div id="auth-screen" class="auth-screen">
+    <button id="theme-toggle-auth" class="theme-toggle" title="Changer de thème">◐</button>
+    <div class="auth-panel">
+      <div class="brand">
+        <span class="brand-mark">◆</span>
+        <span class="brand-name">TaskFlow</span>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="tab-btn active" data-tab="login">Connexion</button>
+        <button class="tab-btn" data-tab="register">Inscription</button>
+      </div>
+
+      <form id="login-form" class="auth-form active">
+        <label>Email
+          <input type="email" id="login-email" required placeholder="toi@exemple.com">
+        </label>
+        <label>Mot de passe
+          <input type="password" id="login-password" required placeholder="••••••••">
+        </label>
+        <button type="submit" class="btn-primary">Se connecter</button>
+        <p class="form-error" id="login-error"></p>
+      </form>
+
+      <form id="register-form" class="auth-form">
+        <label>Nom
+          <input type="text" id="register-name" required placeholder="Ton nom">
+        </label>
+        <label>Email
+          <input type="email" id="register-email" required placeholder="toi@exemple.com">
+        </label>
+        <label>Mot de passe
+          <input type="password" id="register-password" required placeholder="6 caractères minimum">
+        </label>
+        <button type="submit" class="btn-primary">Créer mon compte</button>
+        <p class="form-error" id="register-error"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== ECRAN APPLICATION ===== -->
+  <div id="app-screen" class="app-screen hidden">
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-mark">◆</span>
+        <span class="brand-name">TaskFlow</span>
+      </div>
+      <div class="header-right">
+        <button id="theme-toggle" class="theme-toggle" title="Changer de thème">◐</button>
+        <span id="user-name" class="user-name"></span>
+        <button id="logout-btn" class="btn-ghost">Déconnexion</button>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <!-- Barre de statistiques -->
+      <section class="stats-bar" id="stats-bar">
+        <div class="stat">
+          <span class="stat-value" id="stat-total">0</span>
+          <span class="stat-label">tâches</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="stat-completion">0%</span>
+          <span class="stat-label">terminées</span>
+        </div>
+        <div class="stat stat-warning" id="stat-late-wrap">
+          <span class="stat-value" id="stat-late">0</span>
+          <span class="stat-label">en retard</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+      </section>
+
+      <section class="composer">
+        <h1>Qu'est-ce qu'on fait aujourd'hui ?</h1>
+        <form id="task-form" class="task-form">
+          <input type="text" id="task-title" placeholder="Titre de la tâche" required maxlength="200">
+          <textarea id="task-description" placeholder="Description (optionnel)" rows="2" maxlength="2000"></textarea>
+          <div class="task-form-row">
+            <select id="task-priority">
+              <option value="basse">Priorité basse</option>
+              <option value="moyenne" selected>Priorité moyenne</option>
+              <option value="haute">Priorité haute</option>
+            </select>
+            <input type="text" id="task-tag" placeholder="Tag (ex: travail)" maxlength="40">
+            <input type="date" id="task-due-date">
+            <button type="submit" class="btn-primary">Ajouter</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Barre de recherche / filtres / tri -->
+      <section class="toolbar">
+        <input type="search" id="search-input" placeholder="Rechercher une tâche…" class="search-input">
+        <select id="filter-priority">
+          <option value="">Toutes priorités</option>
+          <option value="haute">Haute</option>
+          <option value="moyenne">Moyenne</option>
+          <option value="basse">Basse</option>
+        </select>
+        <select id="sort-select">
+          <option value="recent">Plus récentes</option>
+          <option value="ancien">Plus anciennes</option>
+          <option value="echeance">Échéance</option>
+          <option value="priorite">Priorité</option>
+        </select>
+      </section>
+
+      <section class="board">
+        <div class="board-column" data-status="a_faire">
+          <h2>À faire <span class="count" id="count-a_faire">0</span></h2>
+          <div class="task-list" id="list-a_faire"></div>
+        </div>
+        <div class="board-column" data-status="en_cours">
+          <h2>En cours <span class="count" id="count-en_cours">0</span></h2>
+          <div class="task-list" id="list-en_cours"></div>
+        </div>
+        <div class="board-column" data-status="terminee">
+          <h2>Terminées <span class="count" id="count-terminee">0</span></h2>
+          <div class="task-list" id="list-terminee"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Barre d'actions groupées (apparaît quand des tâches sont sélectionnées) -->
+  <div id="bulk-bar" class="bulk-bar hidden">
+    <span class="bulk-info"><strong id="bulk-count">0</strong> sélectionnée(s)</span>
+    <select id="bulk-status" class="bulk-select">
+      <option value="">Déplacer vers…</option>
+      <option value="a_faire">À faire</option>
+      <option value="en_cours">En cours</option>
+      <option value="terminee">Terminée</option>
+    </select>
+    <button id="bulk-delete" class="btn-danger">Supprimer</button>
+    <button id="bulk-clear" class="btn-ghost">Annuler</button>
+  </div>
+
+  <!-- Conteneur des notifications toast -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Boîte de confirmation personnalisée -->
+  <div id="confirm-modal" class="confirm-overlay hidden">
+    <div class="confirm-box">
+      <p id="confirm-message">Es-tu sûr ?</p>
+      <div class="confirm-actions">
+        <button id="confirm-cancel" class="btn-ghost">Annuler</button>
+        <button id="confirm-ok" class="btn-danger">Supprimer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Template d'une carte tâche -->
+  <template id="task-card-template">
+    <article class="task-card" draggable="true">
+      <div class="task-card-top">
+        <input type="checkbox" class="task-select" title="Sélectionner">
+        <span class="priority-dot"></span>
+        <h3 class="task-title"></h3>
+        <button class="task-delete" title="Supprimer">✕</button>
+      </div>
+      <p class="task-description"></p>
+      <span class="task-tag"></span>
+      <div class="task-meta">
+        <span class="task-due"></span>
+        <select class="task-status-select">
+          <option value="a_faire">À faire</option>
+          <option value="en_cours">En cours</option>
+          <option value="terminee">Terminée</option>
+        </select>
+      </div>
+    </article>
+  </template>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
