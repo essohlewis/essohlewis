@@ -177,6 +177,26 @@ describe('Actions groupées PATCH /api/tasks/bulk', () => {
   });
 });
 
+describe('Tags GET /api/tasks/tags', () => {
+  beforeAll(async () => {
+    await request(app).post('/api/tasks').set('Authorization', `Bearer ${token}`)
+      .send({ title: 'Avec tag alpha', tag: 'alpha' });
+    await request(app).post('/api/tasks').set('Authorization', `Bearer ${token}`)
+      .send({ title: 'Avec tag alpha 2', tag: 'alpha' });
+  });
+
+  it('renvoie les tags distincts avec leur compteur', async () => {
+    const res = await request(app)
+      .get('/api/tasks/tags')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    const alpha = res.body.find((t) => t.tag === 'alpha');
+    expect(alpha).toBeDefined();
+    expect(alpha.count).toBeGreaterThanOrEqual(2);
+  });
+});
+
 describe('Édition complète PUT /api/tasks/:id', () => {
   let id;
 

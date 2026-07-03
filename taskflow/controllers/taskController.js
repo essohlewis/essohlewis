@@ -187,6 +187,20 @@ const getReminders = asyncHandler(async (req, res) => {
   res.json({ total: rows.length, overdue, soon });
 });
 
+// GET /api/tasks/tags - liste des tags distincts de l'utilisateur (avec compteur),
+// pour alimenter le filtre par tag.
+const getTags = asyncHandler(async (req, res) => {
+  const [rows] = await pool.query(
+    `SELECT tag, COUNT(*) AS count
+       FROM tasks
+      WHERE user_id = ? AND tag IS NOT NULL AND tag != ''
+      GROUP BY tag
+      ORDER BY tag ASC`,
+    [req.userId]
+  );
+  res.json(rows.map((r) => ({ tag: r.tag, count: Number(r.count) })));
+});
+
 // GET /api/tasks/:id
 const getTaskById = asyncHandler(async (req, res) => {
   const [rows] = await pool.query(
@@ -378,6 +392,7 @@ module.exports = {
   getTasks,
   getStats,
   getReminders,
+  getTags,
   getTaskById,
   createTask,
   updateTask,

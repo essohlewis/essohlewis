@@ -30,6 +30,7 @@ const taskCardTemplate = document.getElementById('task-card-template');
 const subtaskItemTemplate = document.getElementById('subtask-item-template');
 const searchInput = document.getElementById('search-input');
 const filterPriority = document.getElementById('filter-priority');
+const filterTag = document.getElementById('filter-tag');
 const sortSelect = document.getElementById('sort-select');
 const toastContainer = document.getElementById('toast-container');
 const confirmModal = document.getElementById('confirm-modal');
@@ -305,6 +306,7 @@ searchInput.addEventListener('input', () => {
   searchDebounce = setTimeout(loadTasks, 300); // debounce : évite une requête à chaque frappe
 });
 filterPriority.addEventListener('change', loadTasks);
+filterTag.addEventListener('change', loadTasks);
 sortSelect.addEventListener('change', loadTasks);
 
 // ================= Chargement des tâches =================
@@ -312,6 +314,7 @@ async function loadTasks() {
   const params = new URLSearchParams();
   if (searchInput.value.trim()) params.set('search', searchInput.value.trim());
   if (filterPriority.value) params.set('priority', filterPriority.value);
+  if (filterTag.value) params.set('tag', filterTag.value);
   if (sortSelect.value) params.set('sort', sortSelect.value);
 
   try {
@@ -319,8 +322,43 @@ async function loadTasks() {
     selected.clear();
     renderTasks();
     loadReminders();
+    loadTags();
   } catch (err) {
     showToast(err.message, 'error');
+  }
+}
+
+// ================= Tags (couleurs + filtre) =================
+// Couleur déterministe dérivée du texte du tag : même tag => même teinte,
+// lisible en clair comme en sombre.
+function tagColor(tag) {
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) hash = (hash * 31 + tag.charCodeAt(i)) % 360;
+  return `hsl(${hash}, 55%, 45%)`;
+}
+
+function applyTagColor(el, tag) {
+  if (!tag) return;
+  const color = tagColor(tag);
+  el.style.color = color;
+  el.style.borderColor = color;
+}
+
+async function loadTags() {
+  try {
+    const tags = await apiRequest('/tasks/tags');
+    const current = filterTag.value;
+    filterTag.innerHTML = '<option value="">Tous les tags</option>';
+    tags.forEach(({ tag, count }) => {
+      const opt = document.createElement('option');
+      opt.value = tag;
+      opt.textContent = `${tag} (${count})`;
+      filterTag.appendChild(opt);
+    });
+    // Conserve la sélection courante si le tag existe toujours.
+    filterTag.value = tags.some((t) => t.tag === current) ? current : '';
+  } catch {
+    /* silencieux */
   }
 }
 
@@ -520,7 +558,12 @@ function buildTaskCard(task) {
   }
 
   const tagEl = node.querySelector('.task-tag');
-  tagEl.textContent = task.tag || '';
+  if (task.tag) {
+    tagEl.textContent = task.tag;
+    applyTagColor(tagEl, task.tag);
+  } else {
+    tagEl.textContent = '';
+  }
 
   const dueEl = node.querySelector('.task-due');
   dueEl.textContent = task.due_date

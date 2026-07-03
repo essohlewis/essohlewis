@@ -14,6 +14,7 @@ const {
   getTasks,
   getStats,
   getReminders,
+  getTags,
   getTaskById,
   createTask,
   updateTask,
@@ -36,6 +37,7 @@ router.use(requireAuth);
 // interprétées comme un identifiant de tâche.
 router.get('/stats', getStats);
 router.get('/reminders', getReminders);
+router.get('/tags', getTags);
 router.get('/export', exportTasks);
 router.post('/import', importRules, importTasks);
 router.patch('/bulk', bulkRules, bulkUpdate);

@@ -273,7 +273,8 @@ input:focus, textarea:focus, select:focus { border-color: var(--amber); }
   font-size: 11px;
   font-weight: 600;
   color: var(--sage);
-  background: var(--sage-soft);
+  background: transparent;
+  border: 1px solid var(--sage);
   padding: 2px 8px;
   border-radius: 20px;
   margin-bottom: 10px;
