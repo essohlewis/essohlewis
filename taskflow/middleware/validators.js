@@ -85,6 +85,12 @@ const importRules = [
   checkValidation
 ];
 
+// Règle pour le partage d'une tâche (par email du destinataire).
+const shareRules = [
+  body('email').trim().isEmail().withMessage('Email invalide.').normalizeEmail(),
+  checkValidation
+];
+
 // Règles pour les sous-tâches (checklist).
 const subtaskRules = [
   body('title').trim().notEmpty().withMessage('Le titre de la sous-tâche est requis.')
@@ -108,6 +114,7 @@ module.exports = {
   taskQueryRules,
   bulkRules,
   importRules,
+  shareRules,
   subtaskRules,
   subtaskUpdateRules
 };

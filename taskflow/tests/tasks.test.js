@@ -331,6 +331,78 @@ describe('Export / Import /api/tasks', () => {
   });
 });
 
+describe('Partage /api/tasks/:id/shares', () => {
+  const otherEmail = `share_target_${Date.now()}@example.com`;
+  let otherToken;
+  let sharedTaskId;
+
+  beforeAll(async () => {
+    const reg = await request(app).post('/api/auth/register').send({
+      name: 'Destinataire', email: otherEmail, password: 'password123'
+    });
+    otherToken = reg.body.token;
+
+    const task = await request(app).post('/api/tasks').set('Authorization', `Bearer ${token}`)
+      .send({ title: 'Tâche à partager' });
+    sharedTaskId = task.body.id;
+  });
+
+  afterAll(async () => {
+    await pool.query('DELETE FROM users WHERE email = ?', [otherEmail]);
+  });
+
+  it('partage une tâche avec un autre utilisateur', async () => {
+    const res = await request(app)
+      .post(`/api/tasks/${sharedTaskId}/shares`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ email: otherEmail });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.email).toBe(otherEmail);
+  });
+
+  it('refuse de partager avec un email inconnu', async () => {
+    const res = await request(app)
+      .post(`/api/tasks/${sharedTaskId}/shares`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ email: 'inconnu_xyz@example.com' });
+
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('le destinataire voit la tâche dans /tasks/shared', async () => {
+    const res = await request(app)
+      .get('/api/tasks/shared')
+      .set('Authorization', `Bearer ${otherToken}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.some((t) => t.id === sharedTaskId)).toBe(true);
+  });
+
+  it('liste les destinataires (propriétaire)', async () => {
+    const res = await request(app)
+      .get(`/api/tasks/${sharedTaskId}/shares`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.body.some((s) => s.email === otherEmail)).toBe(true);
+  });
+
+  it('révoque le partage', async () => {
+    const list = await request(app).get(`/api/tasks/${sharedTaskId}/shares`)
+      .set('Authorization', `Bearer ${token}`);
+    const recipientId = list.body[0].user_id;
+
+    const res = await request(app)
+      .delete(`/api/tasks/${sharedTaskId}/shares/${recipientId}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.statusCode).toBe(200);
+
+    const after = await request(app).get('/api/tasks/shared')
+      .set('Authorization', `Bearer ${otherToken}`);
+    expect(after.body.some((t) => t.id === sharedTaskId)).toBe(false);
+  });
+});
+
 describe('Pièces jointes /api/tasks/:id/attachments', () => {
   let parentId;
   let attId;

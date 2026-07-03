@@ -64,6 +64,13 @@ const editTag = document.getElementById('edit-tag');
 const editDueDate = document.getElementById('edit-due-date');
 const editCancel = document.getElementById('edit-cancel');
 const loadMoreBtn = document.getElementById('load-more');
+const shareEmail = document.getElementById('share-email');
+const shareBtn = document.getElementById('share-btn');
+const shareList = document.getElementById('share-list');
+const sharedToggle = document.getElementById('shared-toggle');
+const sharedModal = document.getElementById('shared-modal');
+const sharedList = document.getElementById('shared-list');
+const sharedClose = document.getElementById('shared-close');
 let editingTaskId = null;
 
 // ================= THEME =================
@@ -474,9 +481,98 @@ function openEdit(task) {
   editPriority.value = task.priority || 'moyenne';
   editTag.value = task.tag || '';
   editDueDate.value = toDateInput(task.due_date);
+  shareEmail.value = '';
+  loadShares(task.id);
   editModal.classList.remove('hidden');
   editTitle.focus();
 }
+
+// ---- Partage de la tâche en cours d'édition ----
+async function loadShares(taskId) {
+  shareList.innerHTML = '';
+  try {
+    const shares = await apiRequest(`/tasks/${taskId}/shares`);
+    shares.forEach((s) => {
+      const li = document.createElement('li');
+      li.className = 'share-item';
+      const who = document.createElement('span');
+      who.textContent = `${s.name} (${s.email})`;
+      const rm = document.createElement('button');
+      rm.type = 'button';
+      rm.className = 'share-remove';
+      rm.textContent = '✕';
+      rm.addEventListener('click', async () => {
+        try {
+          await apiRequest(`/tasks/${taskId}/shares/${s.user_id}`, { method: 'DELETE' });
+          loadShares(taskId);
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      });
+      li.append(who, rm);
+      shareList.appendChild(li);
+    });
+  } catch {
+    /* silencieux */
+  }
+}
+
+shareBtn.addEventListener('click', async () => {
+  const email = shareEmail.value.trim();
+  if (!email || !editingTaskId) return;
+  try {
+    await apiRequest(`/tasks/${editingTaskId}/shares`, {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    });
+    shareEmail.value = '';
+    showToast('Tâche partagée.');
+    loadShares(editingTaskId);
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+});
+
+// ---- Vue « Partagées avec moi » ----
+async function openSharedWithMe() {
+  sharedList.innerHTML = '<p class="notif-empty">Chargement…</p>';
+  sharedModal.classList.remove('hidden');
+  try {
+    const tasks = await apiRequest('/tasks/shared');
+    sharedList.innerHTML = '';
+    if (tasks.length === 0) {
+      sharedList.innerHTML = '<p class="notif-empty">Aucune tâche partagée avec toi.</p>';
+      return;
+    }
+    const STATUS_LABELS = { a_faire: 'À faire', en_cours: 'En cours', terminee: 'Terminée' };
+    tasks.forEach((t) => {
+      const row = document.createElement('div');
+      row.className = 'shared-item';
+      const title = document.createElement('div');
+      title.className = 'shared-title';
+      title.textContent = t.title;
+      const meta = document.createElement('div');
+      meta.className = 'shared-meta';
+      meta.textContent = `${STATUS_LABELS[t.status] || t.status} · par ${t.owner_name}`;
+      row.append(title, meta);
+      if (t.description) {
+        const desc = document.createElement('div');
+        desc.className = 'shared-desc';
+        desc.textContent = t.description;
+        row.appendChild(desc);
+      }
+      sharedList.appendChild(row);
+    });
+  } catch (err) {
+    sharedList.innerHTML = `<p class="notif-empty">${err.message}</p>`;
+  }
+}
+
+sharedToggle.addEventListener('click', openSharedWithMe);
+sharedClose.addEventListener('click', () => sharedModal.classList.add('hidden'));
+sharedModal.addEventListener('click', (e) => {
+  if (e.target === sharedModal) sharedModal.classList.add('hidden');
+});
 
 function closeEdit() {
   editModal.classList.add('hidden');

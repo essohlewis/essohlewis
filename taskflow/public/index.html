@@ -68,6 +68,7 @@
             <div id="notif-list"></div>
           </div>
         </div>
+        <button id="shared-toggle" class="btn-ghost" title="Tâches partagées avec moi">Partagées</button>
         <button id="theme-toggle" class="theme-toggle" title="Changer de thème">◐</button>
         <span id="user-name" class="user-name"></span>
         <button id="logout-btn" class="btn-ghost">Déconnexion</button>
@@ -201,11 +202,30 @@
             <input type="date" id="edit-due-date">
           </label>
         </div>
+        <div class="share-block">
+          <h4>Partager (lecture seule)</h4>
+          <div class="share-add">
+            <input type="email" id="share-email" placeholder="email@exemple.com">
+            <button type="button" id="share-btn" class="btn-ghost">Partager</button>
+          </div>
+          <ul id="share-list" class="share-list"></ul>
+        </div>
         <div class="confirm-actions">
           <button type="button" id="edit-cancel" class="btn-ghost">Annuler</button>
           <button type="submit" class="btn-primary">Enregistrer</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Vue « Partagées avec moi » -->
+  <div id="shared-modal" class="confirm-overlay hidden">
+    <div class="confirm-box edit-box">
+      <h3 class="edit-heading">Partagées avec moi</h3>
+      <div id="shared-list" class="shared-list"></div>
+      <div class="confirm-actions">
+        <button type="button" id="shared-close" class="btn-ghost">Fermer</button>
+      </div>
     </div>
   </div>
 

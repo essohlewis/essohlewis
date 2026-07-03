@@ -39,6 +39,18 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Table des partages : une tâche peut être partagée (en lecture) avec d'autres
+-- utilisateurs, identifiés par leur compte. Unicité (tâche, destinataire).
+CREATE TABLE IF NOT EXISTS task_shares (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  task_id INT NOT NULL,
+  user_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_task_share (task_id, user_id),
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- Table des pièces jointes : on stocke les métadonnées en base et le fichier
 -- physique sur disque (dossier uploads/, servi uniquement via une route authentifiée).
 CREATE TABLE IF NOT EXISTS attachments (
@@ -69,6 +81,7 @@ CREATE INDEX idx_tasks_title ON tasks(title);
 CREATE INDEX idx_subtasks_task ON subtasks(task_id);
 CREATE INDEX idx_refresh_user ON refresh_tokens(user_id);
 CREATE INDEX idx_attachments_task ON attachments(task_id);
+CREATE INDEX idx_task_shares_user ON task_shares(user_id);
 
 -- Index FULLTEXT : recherche plein texte réellement indexée (MATCH ... AGAINST),
 -- bien plus rapide que LIKE '%mot%' qui force un balayage complet de la table.

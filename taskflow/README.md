@@ -41,6 +41,11 @@ Cette version 2 se concentre sur la **performance** (temps de réponse, bande pa
 - **Endpoint groupé** `PATCH /api/tasks/bulk` : déplacer/supprimer jusqu'à 200 tâches en **une seule requête HTTP et une seule requête SQL** (au lieu de N allers-retours).
 - **Pool MySQL** : `keep-alive` activé (moins de reconnexions) et taille configurable via `DB_POOL_LIMIT`.
 
+**Nouvelle fonctionnalité : partage de tâches**
+- Depuis la fenêtre d'édition, on peut **partager une tâche (en lecture)** avec un autre utilisateur, par son email, et **révoquer** le partage.
+- Le destinataire retrouve les tâches partagées dans une vue **« Partagées avec moi »** (bouton dans l'en-tête), avec le nom du propriétaire.
+- Sécurité : seul le propriétaire gère les partages ; le modèle de propriété des tâches reste inchangé (le partage est en lecture seule et n'ouvre aucun droit d'écriture). Partages supprimés **en cascade** avec la tâche ou l'utilisateur.
+
 **Nouvelle fonctionnalité : pièces jointes**
 - Ajout de **fichiers** à une tâche (jusqu'à 5 Mo, configurable via `MAX_UPLOAD_MB`), avec téléchargement et suppression.
 - Stockage sur disque (`uploads/`, hors du dossier public) : les fichiers ne sont **jamais servis en statique**, uniquement via une **route authentifiée** qui vérifie l'appartenance de la tâche. Noms de fichiers aléatoires (anti-collision / anti-path-traversal), nom d'origine conservé en base. Suppression **en cascade** avec la tâche.
@@ -214,6 +219,8 @@ npm test
 | PUT     | /api/tasks/:id           | Oui      | Modifier une tâche                      |
 | DELETE  | /api/tasks/:id           | Oui      | Supprimer une tâche                     |
 | GET     | /api/tasks/tags          | Oui      | Tags distincts (avec compteur)         |
+| GET     | /api/tasks/shared        | Oui      | Tâches partagées avec moi              |
+| GET/POST/DELETE | /api/tasks/:id/shares[/:userId] | Oui | Gérer le partage d'une tâche    |
 | GET/POST| /api/tasks/:id/attachments | Oui    | Lister / téléverser une pièce jointe   |
 | GET     | /api/tasks/:id/attachments/:aid/download | Oui | Télécharger une pièce jointe |
 | DELETE  | /api/tasks/:id/attachments/:aid | Oui | Supprimer une pièce jointe           |

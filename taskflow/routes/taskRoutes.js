@@ -7,6 +7,7 @@ const {
   taskQueryRules,
   bulkRules,
   importRules,
+  shareRules,
   subtaskRules,
   subtaskUpdateRules
 } = require('../middleware/validators');
@@ -36,6 +37,12 @@ const {
   deleteAttachment
 } = require('../controllers/attachmentController');
 const { upload } = require('../middleware/upload');
+const {
+  listSharedWithMe,
+  listShares,
+  shareTask,
+  unshareTask
+} = require('../controllers/shareController');
 
 // Toutes les routes ci-dessous nécessitent d'être connecté
 router.use(requireAuth);
@@ -45,6 +52,7 @@ router.use(requireAuth);
 router.get('/stats', getStats);
 router.get('/reminders', getReminders);
 router.get('/tags', getTags);
+router.get('/shared', listSharedWithMe);
 router.get('/export', exportTasks);
 router.post('/import', importRules, importTasks);
 router.patch('/bulk', bulkRules, bulkUpdate);
@@ -60,6 +68,11 @@ router.get('/:taskId/subtasks', listSubtasks);
 router.post('/:taskId/subtasks', subtaskRules, createSubtask);
 router.patch('/:taskId/subtasks/:subId', subtaskUpdateRules, updateSubtask);
 router.delete('/:taskId/subtasks/:subId', deleteSubtask);
+
+// Partage d'une tâche avec d'autres utilisateurs.
+router.get('/:taskId/shares', listShares);
+router.post('/:taskId/shares', shareRules, shareTask);
+router.delete('/:taskId/shares/:userId', unshareTask);
 
 // Pièces jointes rattachées à une tâche.
 router.get('/:taskId/attachments', listAttachments);
