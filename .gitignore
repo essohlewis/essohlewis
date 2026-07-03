@@ -1,0 +1,17 @@
+node_modules/
+package-lock.json
+.env
+.env.local
+.env.*.local
+logs/
+uploads/
+*.log
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.qodo/
+input.css
+tailwind.config.js
