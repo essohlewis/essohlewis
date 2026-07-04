@@ -1070,6 +1070,62 @@ input.invalid, select.invalid, textarea.invalid {
   height: 30px;
 }
 
+/* ===== Suivi du temps (minuteur) ===== */
+.task-timer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+
+.timer-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--sage);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.timer-toggle:hover { border-color: var(--sage); background: var(--sage-soft); }
+.timer-toggle:active { transform: scale(0.92); }
+.timer-toggle:disabled { opacity: 0.5; cursor: default; }
+
+.task-timer.running .timer-toggle {
+  color: var(--rose);
+  border-color: var(--rose);
+  background: var(--rose-soft);
+}
+
+.timer-display {
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  color: var(--ink-soft);
+  letter-spacing: 0.5px;
+}
+
+.task-timer.running .timer-display {
+  color: var(--sage);
+  font-weight: 600;
+  animation: timerPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes timerPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
 .empty-state {
   font-size: 13px;
   color: var(--ink-soft);

@@ -531,3 +531,81 @@ describe('Sous-tâches /api/tasks/:id/subtasks', () => {
     expect(res.statusCode).toBe(404);
   });
 });
+
+describe('Suivi du temps (minuteur) /api/tasks/:id/timer', () => {
+  let timerTaskId;
+
+  beforeAll(async () => {
+    const res = await request(app)
+      .post('/api/tasks')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ title: 'Tâche chronométrée' });
+    timerTaskId = res.body.id;
+  });
+
+  it('exige un token pour démarrer le minuteur', async () => {
+    const res = await request(app).post(`/api/tasks/${timerTaskId}/timer/start`);
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('démarre le minuteur (running = true)', async () => {
+    const res = await request(app)
+      .post(`/api/tasks/${timerTaskId}/timer/start`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.running).toBe(true);
+    expect(res.body.timer_start).toBeTruthy();
+  });
+
+  it('démarrer deux fois est idempotent (ne réinitialise pas)', async () => {
+    const res = await request(app)
+      .post(`/api/tasks/${timerTaskId}/timer/start`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.running).toBe(true);
+  });
+
+  it('expose time_spent et timer_elapsed dans GET /api/tasks', async () => {
+    const res = await request(app)
+      .get('/api/tasks')
+      .set('Authorization', `Bearer ${token}`);
+
+    const t = res.body.find((x) => x.id === timerTaskId);
+    expect(t).toBeDefined();
+    expect(t).toHaveProperty('time_spent');
+    expect(t).toHaveProperty('timer_elapsed');
+  });
+
+  it('arrête le minuteur et cumule le temps (running = false)', async () => {
+    // Laisse tourner ~1,1 s pour cumuler au moins 1 seconde.
+    await new Promise((r) => setTimeout(r, 1100));
+
+    const res = await request(app)
+      .post(`/api/tasks/${timerTaskId}/timer/stop`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.running).toBe(false);
+    expect(res.body.timer_start).toBeNull();
+    expect(res.body.time_spent).toBeGreaterThanOrEqual(1);
+  });
+
+  it('arrêter alors qu\'aucun minuteur ne tourne est sans effet', async () => {
+    const res = await request(app)
+      .post(`/api/tasks/${timerTaskId}/timer/stop`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.running).toBe(false);
+  });
+
+  it('refuse le minuteur sur une tâche inexistante', async () => {
+    const res = await request(app)
+      .post('/api/tasks/99999999/timer/start')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(404);
+  });
+});

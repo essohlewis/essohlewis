@@ -115,6 +115,19 @@ if (require.main === module) {
       await pool.query("ALTER TABLE tasks ADD COLUMN archived_at DATETIME NULL");
     }
 
+    // Migration pour le suivi du temps (minuteur)
+    const [timeSpentColumns] = await pool.query("SHOW COLUMNS FROM tasks LIKE 'time_spent'");
+    if (timeSpentColumns.length === 0) {
+      console.log("ℹ️ La colonne 'time_spent' est manquante dans 'tasks'. Ajout en cours...");
+      await pool.query("ALTER TABLE tasks ADD COLUMN time_spent INT NOT NULL DEFAULT 0");
+    }
+
+    const [timerStartColumns] = await pool.query("SHOW COLUMNS FROM tasks LIKE 'timer_start'");
+    if (timerStartColumns.length === 0) {
+      console.log("ℹ️ La colonne 'timer_start' est manquante dans 'tasks'. Ajout en cours...");
+      await pool.query("ALTER TABLE tasks ADD COLUMN timer_start DATETIME NULL");
+    }
+
     try {
       await pool.query("CREATE INDEX idx_tasks_user_status_active ON tasks(user_id, status, is_archived)");
     } catch (e) { /* index existant */ }

@@ -149,6 +149,24 @@ async function main() {
       console.warn("⚠️ Attention : échec de la migration de la colonne 'archived_at' :", migErr.message);
     }
 
+    // Suivi du temps (minuteur) : colonnes time_spent / timer_start
+    try {
+      const [timeSpentColumns] = await connection.query("SHOW COLUMNS FROM tasks LIKE 'time_spent'");
+      if (timeSpentColumns.length === 0) {
+        console.log("ℹ️ La colonne 'time_spent' est manquante dans 'tasks'. Ajout en cours...");
+        await connection.query("ALTER TABLE tasks ADD COLUMN time_spent INT NOT NULL DEFAULT 0");
+        console.log("✅ Colonne 'time_spent' ajoutée avec succès.");
+      }
+      const [timerStartColumns] = await connection.query("SHOW COLUMNS FROM tasks LIKE 'timer_start'");
+      if (timerStartColumns.length === 0) {
+        console.log("ℹ️ La colonne 'timer_start' est manquante dans 'tasks'. Ajout en cours...");
+        await connection.query("ALTER TABLE tasks ADD COLUMN timer_start DATETIME NULL");
+        console.log("✅ Colonne 'timer_start' ajoutée avec succès.");
+      }
+    } catch (migErr) {
+      console.warn("⚠️ Attention : échec de la migration des colonnes de suivi du temps :", migErr.message);
+    }
+
     try {
       const [wsTenantColumns] = await connection.query("SHOW COLUMNS FROM workspaces LIKE 'tenant_id'");
       if (wsTenantColumns.length === 0) {

@@ -28,7 +28,9 @@ const {
   importTasks,
   getTaskHistory,
   getArchivedTasks,
-  restoreTask
+  restoreTask,
+  startTimer,
+  stopTimer
 } = require('../controllers/taskController');
 const {
   listSubtasks,
@@ -72,6 +74,10 @@ router.patch('/bulk', bulkRules, bulkUpdate);
 
 router.get('/archived/list', getArchivedTasks);
 router.post('/:id/restore', restoreTask);
+
+// Suivi du temps : démarrer / arrêter le minuteur d'une tâche.
+router.post('/:id/timer/start', startTimer);
+router.post('/:id/timer/stop', stopTimer);
 
 router.get('/', taskQueryRules, getTasks);
 router.get('/:id', getTaskById);

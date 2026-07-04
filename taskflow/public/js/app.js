@@ -1741,9 +1741,92 @@ function buildTaskCard(task) {
   wireAttachments(node, task);
   wireReactions(node, task);
   wireComments(node, task);
+  wireTimer(node, task);
 
   return card;
 }
+
+// ================= Suivi du temps (minuteur) =================
+// Formate un nombre de secondes en HH:MM:SS.
+function formatDuration(totalSeconds) {
+  const s = Math.max(0, Math.floor(totalSeconds || 0));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(h)}:${pad(m)}:${pad(sec)}`;
+}
+
+// Prépare l'état d'affichage du minuteur à partir des champs renvoyés par l'API.
+// On travaille en « base + ancre » (indépendant du fuseau) : `_timerBaseSeconds`
+// est le total connu à l'instant `_timerAnchor` ; tant que le minuteur tourne,
+// l'affichage ajoute (maintenant - ancre).
+function initTimerState(task) {
+  const serverElapsed = Number(task.timer_elapsed ?? task.elapsed ?? 0) || 0;
+  const base = Number(task.time_spent) || 0;
+  task._timerBaseSeconds = task.timer_start ? base + serverElapsed : base;
+  task._timerAnchor = Date.now();
+}
+
+function taskTimerSeconds(task) {
+  if (!task.timer_start) return Number(task.time_spent) || 0;
+  const extra = Math.max(0, Math.floor((Date.now() - (task._timerAnchor || Date.now())) / 1000));
+  return (task._timerBaseSeconds || 0) + extra;
+}
+
+function wireTimer(node, task) {
+  const wrap = node.querySelector('.task-timer');
+  if (!wrap) return;
+  const btn = wrap.querySelector('.timer-toggle');
+  const disp = wrap.querySelector('.timer-display');
+
+  function paint() {
+    const running = !!task.timer_start;
+    wrap.classList.toggle('running', running);
+    wrap.dataset.running = running ? '1' : '';
+    wrap.dataset.base = task._timerBaseSeconds || 0;
+    wrap.dataset.anchor = task._timerAnchor || Date.now();
+    btn.textContent = running ? '⏸' : '▶';
+    btn.title = running ? 'Arrêter le minuteur' : 'Démarrer le minuteur';
+    disp.textContent = formatDuration(taskTimerSeconds(task));
+  }
+
+  initTimerState(task);
+  paint();
+
+  btn.addEventListener('click', async () => {
+    const running = !!task.timer_start;
+    btn.disabled = true;
+    try {
+      const updated = await apiRequest(
+        `/tasks/${task.id}/timer/${running ? 'stop' : 'start'}`,
+        { method: 'POST' }
+      );
+      task.time_spent = updated.time_spent;
+      task.timer_start = updated.timer_start;
+      task.timer_elapsed = updated.elapsed;
+      initTimerState(task);
+      paint();
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+// Un seul ticker global met à jour l'affichage de tous les minuteurs en cours,
+// une fois par seconde. Aucun intervalle par carte → pas de fuite à chaque rendu.
+function tickRunningTimers() {
+  document.querySelectorAll('.task-timer[data-running="1"]').forEach((wrap) => {
+    const base = Number(wrap.dataset.base) || 0;
+    const anchor = Number(wrap.dataset.anchor) || Date.now();
+    const secs = base + Math.max(0, Math.floor((Date.now() - anchor) / 1000));
+    const disp = wrap.querySelector('.timer-display');
+    if (disp) disp.textContent = formatDuration(secs);
+  });
+}
+setInterval(tickRunningTimers, 1000);
 
 // ================= Utilitaires sociaux =================
 function escapeHtml(str) {

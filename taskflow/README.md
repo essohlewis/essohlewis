@@ -103,6 +103,26 @@ Cette version 2 se concentre sur la **performance** (temps de réponse, bande pa
 - **Intégration continue GitHub Actions** (`.github/workflows/taskflow-ci.yml`) : démarre un MySQL jetable, importe le schéma et lance la suite Jest à chaque push/PR touchant `taskflow/`.
 - Nouveaux tests d'intégration : recherche plein texte et actions groupées.
 
+## Nouveautés — suivi du temps (minuteur)
+
+Chaque tâche dispose désormais d'un **minuteur intégré** (fonctionnalité de type
+« time tracking » des apps modernes de gestion de tâches) :
+
+- Bouton **▶ / ⏸** sur la carte pour démarrer / arrêter le chrono.
+- Le temps cumulé s'affiche en **HH:MM:SS** et s'incrémente en direct pendant que
+  le minuteur tourne (un unique *ticker* global rafraîchit toutes les cartes,
+  sans fuite mémoire au re-rendu).
+- Le total est **persistant** : on peut arrêter, recharger la page, reprendre.
+- Le calcul de la durée est fait **côté serveur** (`TIMESTAMPDIFF` sur l'horloge
+  MySQL), donc insensible au fuseau horaire ou à l'horloge du navigateur.
+- Démarrage/arrêt **idempotents** ; les actions sont journalisées dans l'audit
+  de la tâche (`timer_started` / `timer_stopped`).
+
+Endpoints : `POST /api/tasks/:id/timer/start` et `POST /api/tasks/:id/timer/stop`
+(accès en écriture requis, comme la modification d'une tâche). Les colonnes
+`time_spent` et `timer_start` de `tasks` sont créées automatiquement au démarrage
+si elles manquent.
+
 ## Nouveautés de cette version
 
 **Sécurité & robustesse**
@@ -258,10 +278,14 @@ npm test
 | POST    | /api/tasks/:id/subtasks  | Oui      | Ajouter une sous-tâche                   |
 | PATCH   | /api/tasks/:id/subtasks/:subId | Oui | Cocher / renommer une sous-tâche      |
 | DELETE  | /api/tasks/:id/subtasks/:subId | Oui | Supprimer une sous-tâche              |
+| POST    | /api/tasks/:id/timer/start | Oui    | Démarrer le minuteur de la tâche       |
+| POST    | /api/tasks/:id/timer/stop  | Oui    | Arrêter le minuteur (cumule le temps)  |
 
 `sort` accepte : `recent` (défaut), `ancien`, `echeance`, `priorite`.
 
-Chaque tâche renvoyée par `GET /api/tasks` inclut `subtasks_total` et `subtasks_done`.
+Chaque tâche renvoyée par `GET /api/tasks` inclut `subtasks_total`, `subtasks_done`,
+ainsi que `time_spent` (secondes cumulées) et `timer_elapsed` (secondes du minuteur
+en cours, 0 si à l'arrêt).
 
 \* `/refresh` et `/logout` ne nécessitent pas de token d'accès, mais un `refreshToken` valide dans le corps :
 ```json

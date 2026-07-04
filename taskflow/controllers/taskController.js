@@ -162,8 +162,14 @@ const getTasks = asyncHandler(async (req, res) => {
     params.push(limit, offset);
   }
 
+  // `timer_elapsed` : secondes déjà écoulées pour un minuteur en cours, calculées
+  // côté serveur (indépendant du fuseau horaire du client) pour un affichage fiable.
   const [tasks] = await pool.query(
-    `SELECT * FROM tasks WHERE ${conditions.join(' AND ')} ORDER BY ${orderBy}${limitClause}`,
+    `SELECT *,
+            CASE WHEN timer_start IS NULL THEN 0
+                 ELSE GREATEST(TIMESTAMPDIFF(SECOND, timer_start, NOW()), 0)
+            END AS timer_elapsed
+       FROM tasks WHERE ${conditions.join(' AND ')} ORDER BY ${orderBy}${limitClause}`,
     params
   );
 
@@ -695,6 +701,74 @@ const getTaskHistory = asyncHandler(async (req, res) => {
   res.json(rows);
 });
 
+// ================= Suivi du temps (minuteur) =================
+// Le schéma prévoit deux colonnes sur `tasks` :
+//   - time_spent  : total de secondes déjà cumulées (minuteur arrêté).
+//   - timer_start : DATETIME du démarrage du minuteur en cours, ou NULL.
+// On ne stocke jamais de durée « en cours » dans time_spent : elle est calculée
+// à la volée à l'arrêt (NOW() - timer_start), ce qui évite toute dérive.
+
+// Renvoie l'état complet du minuteur d'une tâche. `elapsed` (secondes déjà
+// écoulées pour un minuteur en cours) est calculé côté serveur → l'affichage
+// live du client ne dépend pas de son fuseau horaire.
+async function timerState(taskId) {
+  const [[row]] = await pool.query(
+    `SELECT id, time_spent, timer_start,
+            CASE WHEN timer_start IS NULL THEN 0
+                 ELSE GREATEST(TIMESTAMPDIFF(SECOND, timer_start, NOW()), 0)
+            END AS elapsed
+       FROM tasks WHERE id = ?`,
+    [taskId]
+  );
+  return { ...row, running: !!row.timer_start };
+}
+
+// POST /api/tasks/:id/timer/start — démarre le minuteur (idempotent : si un
+// minuteur tourne déjà, on renvoie l'état courant sans le réinitialiser).
+const startTimer = asyncHandler(async (req, res) => {
+  const task = await assertTaskWritable(req.params.id, req.userId);
+  if (!task) throw new AppError('Tâche introuvable ou accès refusé.', 404);
+
+  const [[current]] = await pool.query(
+    'SELECT time_spent, timer_start FROM tasks WHERE id = ?',
+    [req.params.id]
+  );
+
+  if (!current.timer_start) {
+    await pool.query('UPDATE tasks SET timer_start = NOW() WHERE id = ?', [req.params.id]);
+    await logTaskAudit(req.params.id, req.userId, 'timer_started');
+  }
+
+  res.json(await timerState(req.params.id));
+});
+
+// POST /api/tasks/:id/timer/stop — arrête le minuteur, ajoute la durée écoulée
+// à time_spent (idempotent : si aucun minuteur ne tourne, renvoie l'état tel quel).
+const stopTimer = asyncHandler(async (req, res) => {
+  const task = await assertTaskWritable(req.params.id, req.userId);
+  if (!task) throw new AppError('Tâche introuvable ou accès refusé.', 404);
+
+  const [[current]] = await pool.query(
+    'SELECT time_spent, timer_start FROM tasks WHERE id = ?',
+    [req.params.id]
+  );
+
+  if (current.timer_start) {
+    // Calcul de l'écart côté SQL pour rester cohérent avec l'horloge serveur,
+    // borné à 0 par sécurité (horloge qui recule, etc.).
+    await pool.query(
+      `UPDATE tasks
+          SET time_spent = time_spent + GREATEST(TIMESTAMPDIFF(SECOND, timer_start, NOW()), 0),
+              timer_start = NULL
+        WHERE id = ?`,
+      [req.params.id]
+    );
+    await logTaskAudit(req.params.id, req.userId, 'timer_stopped');
+  }
+
+  res.json(await timerState(req.params.id));
+});
+
 module.exports = {
   getTasks,
   getStats,
@@ -709,5 +783,7 @@ module.exports = {
   importTasks,
   getTaskHistory,
   getArchivedTasks,
-  restoreTask
+  restoreTask,
+  startTimer,
+  stopTimer
 };
