@@ -80,26 +80,33 @@ d'accolades. Répertoire vide et sans usage → supprimé.
 
 ---
 
-## Notes / pistes non corrigées (pour éviter des changements spéculatifs)
+## 8. Nettoyage du code mort (2ᵉ passe)
 
-Ces éléments ne cassent pas l'application telle qu'elle tourne (ils ne sont
-jamais chargés), mais méritent une décision :
+Suppression des fichiers inertes qui n'étaient jamais chargés par l'application
+Node mais entretenaient la confusion (et auraient planté s'ils avaient été
+importés, faute de dépendances). Vérifié au préalable : aucun `require` de l'app
+ne pointe vers eux, et aucun code JS/JSON ne référence les fichiers PHP.
 
-- **Modules orphelins d'une pile abandonnée.** `config/pgDb.js` (`pg`),
-  `utils/logger.js` (`winston`), `utils/schemas.js` (`joi`),
-  `middleware/requestLogger.js` et `middleware/joiValidator.js` référencent des
-  dépendances **absentes de `package.json`** (`pg`, `winston`, `joi`). Ils ne
-  sont importés nulle part dans l'app en cours d'exécution : les charger
-  planterait. À supprimer, ou à réintégrer en ajoutant les dépendances.
-- **`utils/cache.js` (Redis).** Le fichier utilise l'API de configuration Redis
-  **v3** (`host`, `port`, `retryStrategy` avec `options.error`/`options.attempt`)
-  alors que `redis` v4 est déclaré. En v4 il faudrait
-  `{ socket: { host, port, reconnectStrategy }, password }`. Ce module n'est pas
-  branché (le cache de stats utilise `middleware/statsCache.js`, en mémoire) ;
-  à corriger seulement si l'on décide d'activer Redis.
-- **Restes de l'implémentation PHP.** `app/Core/*.php`, `app/Middleware/*.php`,
-  `config/db.php`, `router.php`, `.htaccess` proviennent de l'ancienne version
-  PHP, désormais remplacée par Node. Ils sont inertes et peuvent être retirés.
-- **`MIGRATION.md`** mentionne des dépendances (`winston`, `joi`, `socket.io`,
-  `swagger-*`, `uuid`) qui ne sont pas dans `package.json` : la doc a divergé du
-  code réel.
+**Restes de l'ancienne implémentation PHP (remplacée par Node) :**
+- `app/Core/*.php` (JWT, Middleware, Request, Response, Router)
+- `app/Middleware/*.php` (Cors, RateLimiter)
+- `config/db.php`
+- `router.php`
+- `.htaccess`
+
+**Modules JS orphelins référençant des dépendances absentes de `package.json` :**
+- `config/pgDb.js` (`pg`) — l'app utilise MySQL via `config/db.js`
+- `utils/logger.js` (`winston`)
+- `utils/schemas.js` (`joi`)
+- `middleware/requestLogger.js` et `middleware/joiValidator.js`
+- `utils/cache.js` (`redis`, de surcroît configuré avec l'API v3) — le cache de
+  stats en mémoire (`middleware/statsCache.js`) reste le seul mécanisme utilisé.
+
+**Conséquence sur `package.json` :** la dépendance `redis` (dont `utils/cache.js`
+était le seul consommateur) a été retirée. Le projet est désormais **100 % Node**
+et cohérent : toutes les dépendances déclarées sont réellement utilisées, et tous
+les modules présents sont réellement chargeables.
+
+> Note : `MIGRATION.md` mentionne encore des dépendances jamais installées
+> (`winston`, `joi`, `socket.io`, `swagger-*`, `uuid`) — c'est de la
+> documentation d'un plan d'évolution, laissée telle quelle.
