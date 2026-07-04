@@ -71,6 +71,24 @@ if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`🚀 Serveur lancé sur http://localhost:${PORT}`);
   });
+
+  // Rappels d'échéance automatiques : balayage périodique des tâches en retard
+  // ou à échéance proche → notification au propriétaire (persistée + SSE).
+  // Démarré uniquement quand on lance vraiment le serveur (jamais sous Jest).
+  const pool = require('./config/db');
+  const { runDueReminderScan } = require('./utils/dueReminders');
+  const { createAndSendNotification } = require('./controllers/notificationController');
+  const REMINDER_INTERVAL_MS = Number(process.env.DUE_REMINDER_INTERVAL_MS) || 15 * 60 * 1000;
+
+  const scanReminders = () =>
+    runDueReminderScan(pool, createAndSendNotification).catch((err) =>
+      console.error('⚠️ Balayage des rappels d\'échéance échoué :', err.message)
+    );
+
+  // Premier passage peu après le démarrage (laisse le temps aux migrations),
+  // puis à intervalle régulier. unref() : n'empêche pas le process de s'arrêter.
+  setTimeout(scanReminders, 10 * 1000).unref();
+  setInterval(scanReminders, REMINDER_INTERVAL_MS).unref();
 }
 
 // Migration auto-exécutée au démarrage
@@ -133,6 +151,13 @@ if (require.main === module) {
     if (recurrenceColumns.length === 0) {
       console.log("ℹ️ La colonne 'recurrence' est manquante dans 'tasks'. Ajout en cours...");
       await pool.query("ALTER TABLE tasks ADD COLUMN recurrence VARCHAR(10) NULL");
+    }
+
+    // Migration pour les rappels d'échéance automatiques (anti-doublon)
+    const [dueRemindedColumns] = await pool.query("SHOW COLUMNS FROM tasks LIKE 'due_reminded_at'");
+    if (dueRemindedColumns.length === 0) {
+      console.log("ℹ️ La colonne 'due_reminded_at' est manquante dans 'tasks'. Ajout en cours...");
+      await pool.query("ALTER TABLE tasks ADD COLUMN due_reminded_at DATETIME NULL");
     }
 
     try {

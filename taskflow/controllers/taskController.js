@@ -70,6 +70,18 @@ function isValidDate(str) {
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === str;
 }
 
+// Normalise une échéance (chaîne 'AAAA-MM-JJ' ou Date renvoyée par MySQL) en
+// 'AAAA-MM-JJ' selon le calendrier local, pour comparer deux échéances sans être
+// piégé par le fuseau (une colonne DATE est rendue à minuit local par mysql2).
+function dueDateYMD(value) {
+  if (!value) return null;
+  if (typeof value === 'string') return value.slice(0, 10);
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 function csvCell(value) {
   if (value === null || value === undefined) return '';
   const str = String(value);
@@ -450,8 +462,15 @@ const updateTask = asyncHandler(async (req, res) => {
   const tag = pick('tag');
   const recurrence = normalizeRecurrence(pick('recurrence'));
 
+  // Si l'échéance change, on « réarme » le rappel d'échéance (due_reminded_at =
+  // NULL) pour qu'une nouvelle notification puisse repartir sur la nouvelle date.
+  const oldYMD = dueDateYMD(currentTask.due_date);
+  const newYMD = due_date ? String(due_date).slice(0, 10) : null;
+  const dueReminderReset = oldYMD !== newYMD ? 'NULL' : 'due_reminded_at';
+
   await pool.query(
-    `UPDATE tasks SET title = ?, description = ?, status = ?, priority = ?, due_date = ?, tag = ?, recurrence = ?
+    `UPDATE tasks SET title = ?, description = ?, status = ?, priority = ?, due_date = ?, tag = ?, recurrence = ?,
+            due_reminded_at = ${dueReminderReset}
      WHERE id = ?`,
     [title, description || null, status, priority, due_date || null, tag || null, recurrence, req.params.id]
   );

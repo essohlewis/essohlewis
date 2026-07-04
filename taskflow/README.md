@@ -103,6 +103,26 @@ Cette version 2 se concentre sur la **performance** (temps de réponse, bande pa
 - **Intégration continue GitHub Actions** (`.github/workflows/taskflow-ci.yml`) : démarre un MySQL jetable, importe le schéma et lance la suite Jest à chaque push/PR touchant `taskflow/`.
 - Nouveaux tests d'intégration : recherche plein texte et actions groupées.
 
+## Nouveautés — rappels d'échéance automatiques
+
+Le serveur **surveille les échéances** en tâche de fond et prévient
+automatiquement, sans action de l'utilisateur :
+
+- Un balayage périodique (par défaut toutes les 15 min, configurable via
+  `DUE_REMINDER_INTERVAL_MS`) repère les tâches **en retard** ou **à échéance
+  proche** (par défaut ≤ 1 jour, `DUE_REMINDER_DAYS`) qui ne sont ni terminées
+  ni archivées.
+- Chaque tâche concernée génère une **notification** pour son propriétaire,
+  poussée en **temps réel via SSE** et persistée (elle apparaît donc dans la
+  cloche de notifications de l'app, comme les autres).
+- **Anti-doublon** : une tâche n'est rappelée qu'une fois (`due_reminded_at`).
+  Le rappel se **réarme** automatiquement si l'on modifie l'échéance de la tâche.
+- Le scheduler ne démarre que lorsqu'on lance réellement le serveur (jamais sous
+  Jest) et ses timers sont `unref()` (n'empêchent pas l'arrêt du process).
+
+La logique est isolée dans `utils/dueReminders.js` (`runDueReminderScan`), avec
+la fonction de notification injectée → testable sans dépendre du transport SSE.
+
 ## Nouveautés — tâches récurrentes
 
 Une tâche peut désormais **se répéter** automatiquement :

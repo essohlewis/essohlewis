@@ -179,6 +179,18 @@ async function main() {
       console.warn("⚠️ Attention : échec de la migration de la colonne 'recurrence' :", migErr.message);
     }
 
+    // Rappels d'échéance automatiques : colonne due_reminded_at (anti-doublon)
+    try {
+      const [dueRemindedColumns] = await connection.query("SHOW COLUMNS FROM tasks LIKE 'due_reminded_at'");
+      if (dueRemindedColumns.length === 0) {
+        console.log("ℹ️ La colonne 'due_reminded_at' est manquante dans 'tasks'. Ajout en cours...");
+        await connection.query("ALTER TABLE tasks ADD COLUMN due_reminded_at DATETIME NULL");
+        console.log("✅ Colonne 'due_reminded_at' ajoutée avec succès.");
+      }
+    } catch (migErr) {
+      console.warn("⚠️ Attention : échec de la migration de la colonne 'due_reminded_at' :", migErr.message);
+    }
+
     try {
       const [wsTenantColumns] = await connection.query("SHOW COLUMNS FROM workspaces LIKE 'tenant_id'");
       if (wsTenantColumns.length === 0) {
