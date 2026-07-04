@@ -137,17 +137,25 @@ const getTasks = asyncHandler(async (req, res) => {
 
   const orderBy = SORT_OPTIONS[sort] || SORT_OPTIONS.recent;
 
-  let limitClause = '';
+  let limit = 50;
+  let offset = 0;
   if (req.query.limit !== undefined) {
-    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 0, 1), 200);
-    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
-    limitClause = ' LIMIT ? OFFSET ?';
-    params.push(limit, offset);
+    limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 0, 1), 200);
+  }
+  if (req.query.offset !== undefined) {
+    offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
   }
 
+  const countParams = [...params];
+  const [countResult] = await pool.query(
+    `SELECT COUNT(*) AS total FROM tasks WHERE ${conditions.join(' AND ')}`,
+    countParams
+  );
+  const total = Number(countResult[0].total) || 0;
+
   const [tasks] = await pool.query(
-    `SELECT * FROM tasks WHERE ${conditions.join(' AND ')} ORDER BY ${orderBy}${limitClause}`,
-    params
+    `SELECT * FROM tasks WHERE ${conditions.join(' AND ')} ORDER BY ${orderBy} LIMIT ? OFFSET ?`,
+    [...params, limit, offset]
   );
 
   if (tasks.length > 0) {
@@ -203,7 +211,17 @@ const getTasks = asyncHandler(async (req, res) => {
     });
   }
 
-  res.json(tasks);
+  logger.info(`Retrieved ${tasks.length}/${total} tasks for user ${req.userId}`);
+  res.json({
+    tasks,
+    pagination: {
+      total,
+      limit,
+      offset,
+      page: Math.floor(offset / limit) + 1,
+      pages: Math.ceil(total / limit)
+    }
+  });
 });
 
 // GET /api/tasks/stats

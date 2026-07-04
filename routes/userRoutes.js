@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const requireAuth = require('../middleware/auth');
 const { profileRules } = require('../middleware/validators');
-const { upload } = require('../middleware/upload');
+const { upload, handleUploadError } = require('../middleware/upload');
 const {
   getMe,
   updateMe,
@@ -86,8 +86,10 @@ router.put('/me', profileRules, updateMe);
  *     responses:
  *       200:
  *         description: Avatar téléversé
+ *       413:
+ *         description: File size exceeds maximum allowed
  */
-router.post('/me/avatar', upload.single('avatar'), uploadAvatar);
+router.post('/me/avatar', upload.single('avatar'), handleUploadError, uploadAvatar);
 
 /**
  * @swagger

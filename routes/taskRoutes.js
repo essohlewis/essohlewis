@@ -40,7 +40,7 @@ const {
   downloadAttachment,
   deleteAttachment
 } = require('../controllers/attachmentController');
-const { upload } = require('../middleware/upload');
+const { upload, handleUploadError } = require('../middleware/upload');
 const {
   listSharedWithMe,
   listShares,
@@ -447,7 +447,7 @@ router.post('/:taskId/reactions', reactionRules, toggleReaction);
 
 // Pièces jointes rattachées à une tâche.
 router.get('/:taskId/attachments', listAttachments);
-router.post('/:taskId/attachments', upload.single('file'), uploadAttachment);
+router.post('/:taskId/attachments', upload.single('file'), handleUploadError, uploadAttachment);
 router.get('/:taskId/attachments/:id/download', downloadAttachment);
 router.delete('/:taskId/attachments/:id', deleteAttachment);
 

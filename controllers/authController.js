@@ -101,7 +101,19 @@ const refresh = asyncHandler(async (req, res) => {
     // Jeton inconnu, déjà utilisé (rotation) ou expiré : on nettoie si besoin.
     if (record) {
       await pool.query('DELETE FROM refresh_tokens WHERE id = ?', [record.id]);
+      logger.warn(`Expired or already used refresh token deleted for user ${record.user_id}`);
     }
+    throw new AppError('Session expirée, reconnecte-toi.', 401);
+  }
+
+  // Verify user still exists and is active
+  const [userRows] = await pool.query(
+    'SELECT id FROM users WHERE id = ?',
+    [record.user_id]
+  );
+  if (userRows.length === 0) {
+    await pool.query('DELETE FROM refresh_tokens WHERE id = ?', [record.id]);
+    logger.warn(`Refresh token revoked for deleted user ${record.user_id}`);
     throw new AppError('Session expirée, reconnecte-toi.', 401);
   }
 
@@ -111,6 +123,7 @@ const refresh = asyncHandler(async (req, res) => {
   const token = signAccessToken(record.user_id);
   const newRefreshToken = await issueRefreshToken(record.user_id);
 
+  logger.info(`Token refreshed for user ${record.user_id}`);
   res.json({ token, refreshToken: newRefreshToken });
 });
 

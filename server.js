@@ -26,7 +26,23 @@ const app = express();
 // Sécurité : en-têtes HTTP protecteurs (CSP désactivée ici pour ne pas
 // bloquer les polices Google Fonts et le JS inline du frontend statique).
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors());
+
+// Configure CORS with specific origins from environment
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',').map(o => o.trim());
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+      callback(null, true);
+    } else {
+      logger.warn(`CORS request denied from origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+app.use(cors(corsOptions));
 
 // Compression gzip des réponses : réduit fortement la taille des payloads JSON
 // et des fichiers statiques envoyés au navigateur (moins de bande passante,
