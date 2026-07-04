@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>TaskFlow Pro — Gestion de Tâches Multiplateforme</title>
+  
+  <!-- SEO & PWA Meta Tags -->
+  <meta name="description" content="Gérez vos tâches au quotidien, collaborez et observez votre productivité avec TaskFlow Pro, une application SaaS rapide et installable.">
+  <meta name="theme-color" content="#1C2130">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TaskFlow">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="manifest" href="manifest.json">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fraunces:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <script>
+    tailwind = {
+      config: {
+        prefix: 'tw-',
+        corePlugins: { preflight: false },
+        theme: {
+          extend: {
+            colors: {
+              taskInk: '#1C2030',
+              taskAmber: '#C4732B',
+              taskSage: '#6B8F71',
+              taskRose: '#B5544A',
+              taskBlue: '#2563EB'
+            },
+            borderRadius: { task: '8px' }
+          }
+        }
+      }
+    };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- BANNIERE MODE HORS LIGNE -->
+  <div id="offline-banner" class="offline-banner hidden" role="alert">
+    <span>⚠️ Mode hors ligne. Les données sont en lecture seule.</span>
+  </div>
+
+  <!-- ===== ECRAN AUTHENTIFICATION ===== -->
+  <div id="auth-screen" class="auth-screen">
+    <button id="theme-toggle-auth" class="theme-toggle" aria-label="Changer de thème" title="Changer de thème">◐</button>
+    <div class="auth-panel">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">◆</span>
+        <span class="brand-name">TaskFlow</span>
+      </div>
+
+      <div class="auth-tabs" role="tablist">
+        <button class="tab-btn active" data-tab="login" role="tab" aria-selected="true">Connexion</button>
+        <button class="tab-btn" data-tab="register" role="tab" aria-selected="false">Inscription</button>
+      </div>
+
+      <form id="login-form" class="auth-form active">
+        <div class="input-group">
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" required placeholder="toi@exemple.com" autocomplete="email" inputmode="email">
+          <span class="field-error" id="login-email-error"></span>
+        </div>
+        <div class="input-group">
+          <label for="login-password">Mot de passe</label>
+          <input type="password" id="login-password" required placeholder="••••••••" autocomplete="current-password">
+          <span class="field-error" id="login-pw-error"></span>
+        </div>
+        <button type="submit" class="btn-primary">Se connecter</button>
+        <p class="form-error" id="login-error" role="alert"></p>
+      </form>
+
+      <form id="register-form" class="auth-form">
+        <div class="input-group">
+          <label for="register-name">Nom d'utilisateur</label>
+          <input type="text" id="register-name" required placeholder="Ton nom" autocomplete="username">
+          <span class="field-error" id="register-name-error"></span>
+        </div>
+        <div class="input-group">
+          <label for="register-email">Email</label>
+          <input type="email" id="register-email" required placeholder="toi@exemple.com" autocomplete="email" inputmode="email">
+          <span class="field-error" id="register-email-error"></span>
+        </div>
+        <div class="input-group">
+          <label for="register-password">Mot de passe</label>
+          <input type="password" id="register-password" required placeholder="6 caractères minimum" autocomplete="new-password">
+          <span class="field-error" id="register-password-error"></span>
+        </div>
+        <button type="submit" class="btn-primary">Créer mon compte</button>
+        <p class="form-error" id="register-error" role="alert"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== ECRAN APPLICATION GENERAL ===== -->
+  <div id="app-screen" class="app-screen hidden">
+    
+    <!-- BARRE LATÉRALE DE NAVIGATION (SIDEBAR) -->
+    <aside class="app-sidebar" id="app-sidebar" aria-label="Menu principal">
+      <div class="sidebar-brand">
+        <span class="brand-mark">◆</span>
+        <span class="brand-name">TaskFlow</span>
+      </div>
+      
+      <!-- Sélecteur d'espace de travail -->
+      <div class="workspace-area">
+        <div class="workspace-select-wrapper">
+          <select id="workspace-selector" class="workspace-selector" aria-label="Espace de travail actif">
+            <option value="personal">🔒 Tâches personnelles</option>
+            <option value="create">➕ Créer un espace...</option>
+          </select>
+        </div>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-view="dashboard" aria-current="page">
+          <span class="nav-icon">📊</span>
+          <span class="nav-text">Dashboard</span>
+        </button>
+        <button class="nav-item" data-view="universal">
+          <span class="nav-icon">UF</span>
+          <span class="nav-text">Hub universel</span>
+        </button>
+        <button class="nav-item" data-view="board">
+          <span class="nav-icon">📋</span>
+          <span class="nav-text">Mes Tâches</span>
+        </button>
+        <button class="nav-item" data-view="calendar">
+          <span class="nav-icon">📅</span>
+          <span class="nav-text">Calendrier</span>
+        </button>
+        <button class="nav-item" data-view="shared">
+          <span class="nav-icon">🤝</span>
+          <span class="nav-text">Partagées</span>
+        </button>
+        <button class="nav-item" data-view="feed">
+          <span class="nav-icon">📢</span>
+          <span class="nav-text">Activité</span>
+        </button>
+        <button class="nav-item" data-view="profile">
+          <span class="nav-icon">👤</span>
+          <span class="nav-text">Mon Profil</span>
+        </button>
+        <button class="nav-item hidden" id="nav-item-members" data-view="members">
+          <span class="nav-icon">👥</span>
+          <span class="nav-text">Équipe</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="current-user-info">
+          <div class="avatar-small" id="user-avatar-placeholder">TF</div>
+          <span id="user-name" class="user-name"></span>
+        </div>
+        <button id="logout-btn" class="btn-logout" title="Déconnexion">
+          <span class="logout-icon">🚪</span> <span class="logout-text">Déconnexion</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ZONE DE CONTENU PRINCIPALE -->
+    <div class="app-container">
+      
+      <!-- EN-TETE MOBILE ET TABLETTE (TOPBAR) -->
+      <header class="app-header">
+        <button id="menu-toggle" class="menu-toggle" aria-label="Ouvrir le menu" aria-expanded="false">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <div class="mobile-brand">
+          <span class="brand-mark">◆</span>
+          <span class="brand-name">TaskFlow</span>
+        </div>
+        <div class="header-right">
+          <div class="notif-wrap">
+            <button id="notif-toggle" class="theme-toggle notif-bell" aria-label="Notifications" title="Notifications">
+              🔔<span id="notif-badge" class="notif-badge hidden">0</span>
+            </button>
+            <div id="notif-panel" class="notif-panel hidden">
+              <div class="notif-header">
+                <h4>Rappels &amp; Alertes</h4>
+                <button id="notif-mark-all" class="btn-text-only">Tout marquer lu</button>
+              </div>
+              <div id="notif-list" class="notif-list"></div>
+            </div>
+          </div>
+          <button id="theme-toggle" class="theme-toggle" aria-label="Thème sombre" title="Changer de thème">◐</button>
+        </div>
+      </header>
+
+      <!-- CONTENU VARIABLE SELON LA VUE -->
+      <main class="app-main" id="app-main-content">
+
+        <!-- 1. VUE DASHBOARD -->
+        <section id="view-dashboard" class="app-view active">
+          <div class="view-header">
+            <h1>Tableau de Bord</h1>
+            <p class="view-desc">Aperçu rapide de vos indicateurs clés de performance.</p>
+          </div>
+
+          <!-- Widgets de statistiques -->
+          <div class="stats-grid">
+            <div class="stat-card" id="widget-total-tasks">
+              <div class="stat-icon bg-blue">📋</div>
+              <div class="stat-data">
+                <span class="stat-number" id="dash-total">0</span>
+                <span class="stat-label">Tâches totales</span>
+              </div>
+            </div>
+            <div class="stat-card" id="widget-completion">
+              <div class="stat-icon bg-green">✅</div>
+              <div class="stat-data">
+                <span class="stat-number" id="dash-completion">0%</span>
+                <span class="stat-label">Taux de complétion</span>
+              </div>
+            </div>
+            <div class="stat-card" id="widget-late">
+              <div class="stat-icon bg-red">⚠️</div>
+              <div class="stat-data">
+                <span class="stat-number" id="dash-late">0</span>
+                <span class="stat-label">En retard</span>
+              </div>
+            </div>
+            <div class="stat-card" id="widget-active">
+              <div class="stat-icon bg-orange">⚡</div>
+              <div class="stat-data">
+                <span class="stat-number" id="dash-active">0</span>
+                <span class="stat-label">En cours</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Configuration des widgets et raccourcis -->
+          <div class="dashboard-customizer">
+            <button id="config-widgets-btn" class="btn-ghost">⚙️ Configurer les Widgets</button>
+            <div class="widgets-toggle-panel hidden" id="widgets-toggle-panel">
+              <label><input type="checkbox" id="toggle-stat-total" checked> Tâches totales</label>
+              <label><input type="checkbox" id="toggle-stat-completion" checked> Taux de complétion</label>
+              <label><input type="checkbox" id="toggle-stat-late" checked> En retard</label>
+              <label><input type="checkbox" id="toggle-stat-active" checked> En cours</label>
+            </div>
+          </div>
+
+          <!-- Graphiques responsives SVG -->
+          <div class="dashboard-row">
+            <div class="chart-card">
+              <h3>Répartition des tâches par statut</h3>
+              <div class="chart-container">
+                <svg id="svg-donut" class="donut-chart" viewBox="0 0 200 200" aria-label="Donut chart of tasks by status"></svg>
+                <div class="chart-legend" id="donut-legend"></div>
+              </div>
+            </div>
+            <div class="chart-card">
+              <h3>Rendement hebdomadaire</h3>
+              <div class="chart-container">
+                <svg id="svg-bars" class="bars-chart" viewBox="0 0 350 200" aria-label="Bar chart of tasks completed per day"></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Raccourcis vers actions principales -->
+          <div class="dashboard-shortcuts">
+            <h3>Actions rapides</h3>
+            <div class="shortcuts-row">
+              <button class="btn-quick-action" onclick="appRouter.navigate('board'); document.getElementById('task-title').focus();">
+                <span>➕</span> Nouvelle Tâche
+              </button>
+              <button class="btn-quick-action" onclick="exportTasksData('json');">
+                <span>⬇️</span> Exporter en JSON
+              </button>
+              <button class="btn-quick-action" onclick="appRouter.navigate('profile');">
+                <span>👤</span> Éditer mon Profil
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. VUE HUB UNIVERSEL -->
+        <section id="view-universal" class="app-view">
+          <div class="view-header universal-heading">
+            <div>
+              <h1>Hub universel</h1>
+              <p class="view-desc">Des plans prets a lancer pour etudiants, travailleurs, chercheurs d'emploi, developpeurs, designers, architectes, independants et equipes.</p>
+            </div>
+            <button id="universal-generate-plan" class="btn-primary" type="button">Creer les taches</button>
+          </div>
+
+          <div class="universal-shell tw-grid tw-grid-cols-1 xl:tw-grid-cols-[320px_minmax(0,1fr)] tw-gap-5">
+            <aside class="universal-panel tw-rounded-task tw-border tw-p-4">
+              <label for="universal-profile" class="universal-label">Profil ou secteur</label>
+              <select id="universal-profile" class="universal-select">
+                <option value="student">Etudiant / eleve</option>
+                <option value="jobseeker">Recherche d'emploi</option>
+                <option value="developer">Developpeur</option>
+                <option value="designer">Designer</option>
+                <option value="architect">Architecte / construction</option>
+                <option value="worker">Salarie / manager</option>
+                <option value="freelance">Freelance / consultant</option>
+                <option value="entrepreneur">Entrepreneur / commerce</option>
+                <option value="health">Sante / social</option>
+                <option value="creator">Createur de contenu</option>
+              </select>
+
+              <label for="universal-horizon" class="universal-label">Horizon</label>
+              <select id="universal-horizon" class="universal-select">
+                <option value="7">7 jours</option>
+                <option value="14">14 jours</option>
+                <option value="30">30 jours</option>
+              </select>
+
+              <div class="universal-score">
+                <span>Charge actuelle</span>
+                <strong id="universal-load-score">0 taches</strong>
+              </div>
+              <div class="universal-score">
+                <span>Priorite conseillee</span>
+                <strong id="universal-priority-advice">Demarrer</strong>
+              </div>
+
+              <div class="universal-note">
+                <strong>Mode utile</strong>
+                <span>Choisis un profil, ajuste l'horizon, puis transforme le modele en taches dans ton espace actif.</span>
+              </div>
+            </aside>
+
+            <div class="universal-main">
+              <div id="universal-profile-summary" class="universal-summary tw-rounded-task tw-border tw-p-5"></div>
+
+              <div class="universal-grid">
+                <section class="universal-panel">
+                  <div class="universal-section-head">
+                    <h2>Modeles intelligents</h2>
+                    <span id="universal-template-count">0 modeles</span>
+                  </div>
+                  <div id="universal-template-list" class="universal-template-list"></div>
+                </section>
+
+                <section class="universal-panel">
+                  <div class="universal-section-head">
+                    <h2>Plan conseille</h2>
+                    <span id="universal-plan-window">7 jours</span>
+                  </div>
+                  <ol id="universal-plan-preview" class="universal-plan-preview"></ol>
+                </section>
+              </div>
+
+              <section class="universal-panel">
+                <div class="universal-section-head">
+                  <h2>Bibliotheque multi-secteurs</h2>
+                  <span>Actions reutilisables</span>
+                </div>
+                <div id="universal-sector-grid" class="universal-sector-grid"></div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. VUE KANBAN BOARD (MES TACHES) -->
+        <section id="view-board" class="app-view">
+          <!-- Stats bar locale -->
+          <div class="stats-bar" id="stats-bar">
+            <div class="stat">
+              <span class="stat-value" id="stat-total">0</span>
+              <span class="stat-label">tâches</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value" id="stat-completion">0%</span>
+              <span class="stat-label">terminées</span>
+            </div>
+            <div class="stat stat-warning" id="stat-late-wrap">
+              <span class="stat-value" id="stat-late-board">0</span>
+              <span class="stat-label">en retard</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="progress-fill"></div>
+            </div>
+          </div>
+
+          <!-- Formulaire Ajout de tâche -->
+          <section class="composer">
+            <h2>Qu'est-ce qu'on fait aujourd'hui ?</h2>
+            <form id="task-form" class="task-form">
+              <input type="text" id="task-title" placeholder="Titre de la tâche" required maxlength="200">
+              <textarea id="task-description" placeholder="Description (optionnel)" rows="2" maxlength="2000"></textarea>
+              <div class="task-form-row">
+                <select id="task-priority" aria-label="Priorité">
+                  <option value="basse">Priorité basse</option>
+                  <option value="moyenne" selected>Priorité moyenne</option>
+                  <option value="haute">Priorité haute</option>
+                </select>
+                <input type="text" id="task-tag" placeholder="Tag (ex: travail)" maxlength="40">
+                <input type="date" id="task-due-date" aria-label="Date d'échéance">
+                <button type="submit" class="btn-primary">Ajouter</button>
+              </div>
+            </form>
+          </section>
+
+          <!-- Barre d'outils (Recherche / Filtres) -->
+          <section class="toolbar">
+            <input type="search" id="search-input" placeholder="Rechercher une tâche…" class="search-input" aria-label="Rechercher une tâche">
+            <select id="filter-priority" aria-label="Filtrer par priorité">
+              <option value="">Toutes priorités</option>
+              <option value="haute">Haute</option>
+              <option value="moyenne">Moyenne</option>
+              <option value="basse">Basse</option>
+            </select>
+            <select id="filter-tag" aria-label="Filtrer par tag">
+              <option value="">Tous les tags</option>
+            </select>
+            <select id="sort-select" aria-label="Trier par">
+              <option value="recent">Plus récentes</option>
+              <option value="ancien">Plus anciennes</option>
+              <option value="echeance">Échéance</option>
+              <option value="priorite">Priorité</option>
+            </select>
+            <div class="toolbar-actions">
+              <button id="export-json" class="btn-ghost" type="button" title="Exporter en JSON">⬇ JSON</button>
+              <button id="export-csv" class="btn-ghost" type="button" title="Exporter en CSV">⬇ CSV</button>
+              <button id="import-btn" class="btn-ghost" type="button" title="Importer un fichier JSON">⬆ Importer</button>
+              <input type="file" id="import-file" accept=".json,application/json" hidden>
+            </div>
+          </section>
+
+          <!-- Kanban Board -->
+          <section class="board" id="kanban-board">
+            <div class="board-column" data-status="a_faire" id="col-a_faire">
+              <h2>À faire <span class="count" id="count-a_faire">0</span></h2>
+              <div class="task-list" id="list-a_faire"></div>
+            </div>
+            <div class="board-column" data-status="en_cours" id="col-en_cours">
+              <h2>En cours <span class="count" id="count-en_cours">0</span></h2>
+              <div class="task-list" id="list-en_cours"></div>
+            </div>
+            <div class="board-column" data-status="terminee" id="col-terminee">
+              <h2>Terminées <span class="count" id="count-terminee">0</span></h2>
+              <div class="task-list" id="list-terminee"></div>
+            </div>
+          </section>
+
+          <div class="load-more-wrap">
+            <button id="load-more" class="btn-ghost hidden" type="button">Charger plus de tâches</button>
+          </div>
+        </section>
+
+        <!-- 3. VUE CALENDRIER -->
+        <section id="view-calendar" class="app-view">
+          <div class="view-header">
+            <h1>Calendrier</h1>
+            <p class="view-desc">Visualisez et gérez vos échéances mensuelles.</p>
+          </div>
+          
+          <div class="calendar-wrapper card-glass">
+            <div class="calendar-controls">
+              <div class="calendar-nav-left">
+                <button id="calendar-prev-btn" class="btn-icon" aria-label="Mois précédent">◀</button>
+                <h2 id="calendar-month-year" class="calendar-title"></h2>
+                <button id="calendar-next-btn" class="btn-icon" aria-label="Mois suivant">▶</button>
+              </div>
+              <button id="calendar-today-btn" class="btn-ghost btn-sm">Aujourd'hui</button>
+            </div>
+            
+            <div class="calendar-grid-header">
+              <span>Lun</span>
+              <span>Mar</span>
+              <span>Mer</span>
+              <span>Jeu</span>
+              <span>Ven</span>
+              <span>Sam</span>
+              <span>Dim</span>
+            </div>
+            
+            <div id="calendar-grid" class="calendar-grid"></div>
+          </div>
+
+          <!-- Panneau inférieur mobile -->
+          <div id="calendar-mobile-details" class="calendar-mobile-details card-glass hidden">
+            <div class="mobile-details-header">
+              <h3 id="calendar-selected-date-label">Tâches du jour</h3>
+              <button id="calendar-mobile-add-btn" class="btn-primary btn-sm">＋ Ajouter</button>
+            </div>
+            <div id="calendar-selected-tasks-list" class="calendar-selected-tasks-list"></div>
+          </div>
+        </section>
+
+        <!-- 4. VUE PARTAGEES AVEC MOI -->
+        <section id="view-shared" class="app-view">
+          <div class="view-header">
+            <h1>Tâches partagées avec moi</h1>
+            <p class="view-desc">Tâches affectées en lecture seule par d'autres utilisateurs.</p>
+          </div>
+          <div id="shared-list" class="shared-list"></div>
+        </section>
+
+        <!-- 4. VUE FIL SOCIAL / ACTIVITE -->
+        <section id="view-feed" class="app-view">
+          <div class="view-header">
+            <h1>Fil d'Activité Réseau</h1>
+            <p class="view-desc">Suivez les activités des utilisateurs que vous observez.</p>
+          </div>
+          <div id="feed-list" class="feed-list"></div>
+        </section>
+
+        <!-- 5. VUE PROFIL & SOCIAL -->
+        <section id="view-profile" class="app-view">
+          <div class="view-header">
+            <h1>Mon Profil &amp; Social</h1>
+            <p class="view-desc">Gerez votre bio, votre avatar ou recherchez des collaborateurs.</p>
+          </div>
+          <div id="profile-content"></div>
+        </section>
+
+        <!-- 6. VUE MEMBRES DE L'ESPACE DE TRAVAIL (TEAMS) -->
+        <section id="view-members" class="app-view">
+          <div class="view-header">
+            <h1 id="workspace-members-title">Membres de l'équipe</h1>
+            <p class="view-desc">Gérez les collaborateurs ayant accès à cet espace de travail.</p>
+          </div>
+
+          <div class="workspace-members-wrapper">
+            <!-- Inviter un collaborateur -->
+            <div class="card-glass invite-card" id="workspace-invite-block">
+              <h3>Inviter un collaborateur</h3>
+              <form id="workspace-invite-form" class="invite-form">
+                <div class="input-group">
+                  <label for="invite-email">Adresse email du collaborateur</label>
+                  <div class="invite-input-row">
+                    <input type="email" id="invite-email" required placeholder="email@exemple.com" autocomplete="email" inputmode="email">
+                    <button type="submit" class="btn-primary">Inviter</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            <!-- Liste des membres -->
+            <div class="card-glass members-list-card">
+              <h3>Collaborateurs enregistrés</h3>
+              <div id="workspace-members-list" class="workspace-members-list"></div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+
+    </div>
+
+    <!-- BARRE DE NAVIGATION INFÉRIEURE MOBILE -->
+    <nav class="bottom-nav" aria-label="Navigation rapide mobile">
+      <button class="bottom-nav-item active" data-view="dashboard">
+        <span class="bottom-nav-icon">📊</span>
+        <span class="bottom-nav-text">Dashboard</span>
+      </button>
+      <button class="bottom-nav-item" data-view="universal">
+        <span class="bottom-nav-icon">UF</span>
+        <span class="bottom-nav-text">Hub</span>
+      </button>
+      <button class="bottom-nav-item" data-view="board">
+        <span class="bottom-nav-icon">📋</span>
+        <span class="bottom-nav-text">Tâches</span>
+      </button>
+      <button class="bottom-nav-item" id="btn-quick-add" aria-label="Ajouter une tâche" title="Ajouter une tâche">
+        <span class="bottom-nav-add">＋</span>
+      </button>
+      <button class="bottom-nav-item" data-view="calendar">
+        <span class="bottom-nav-icon">📅</span>
+        <span class="bottom-nav-text">Planning</span>
+      </button>
+      <button class="bottom-nav-item" data-view="profile">
+        <span class="bottom-nav-icon">👤</span>
+        <span class="bottom-nav-text">Profil</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- BANNIERE D'INSTALLATION PWA -->
+  <div id="pwa-install-banner" class="pwa-install-banner hidden">
+    <div class="pwa-install-content">
+      <span class="pwa-install-icon">📲</span>
+      <div class="pwa-install-text">
+        <strong>Installer TaskFlow Pro</strong>
+        <span>Ajoutez-le à votre écran d'accueil pour une expérience native.</span>
+      </div>
+    </div>
+    <div class="pwa-install-actions">
+      <button id="pwa-btn-dismiss" class="btn-ghost btn-sm">Plus tard</button>
+      <button id="pwa-btn-install" class="btn-primary btn-sm">Installer</button>
+    </div>
+  </div>
+
+  <!-- BARRE D'ACTIONS GROUPEES -->
+  <div id="bulk-bar" class="bulk-bar hidden">
+    <span class="bulk-info"><strong id="bulk-count">0</strong> sélectionnée(s)</span>
+    <select id="bulk-status" class="bulk-select" aria-label="Action groupée : statut">
+      <option value="">Déplacer vers…</option>
+      <option value="a_faire">À faire</option>
+      <option value="en_cours">En cours</option>
+      <option value="terminee">Terminée</option>
+    </select>
+    <button id="bulk-delete" class="btn-danger">Supprimer</button>
+    <button id="bulk-clear" class="btn-ghost">Annuler</button>
+  </div>
+
+  <!-- CONTENEUR DES TOASTS -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- MODALE CRÉATION ESPACE DE TRAVAIL -->
+  <div id="workspace-modal" class="confirm-overlay hidden">
+    <div class="confirm-box edit-box">
+      <h3 class="edit-heading">Créer un espace de travail</h3>
+      <form id="workspace-form" class="edit-form">
+        <div class="input-group">
+          <label for="workspace-name-input">Nom de l'espace</label>
+          <input type="text" id="workspace-name-input" required placeholder="Ex: Projet Marketing" maxlength="100">
+        </div>
+        <div class="edit-buttons">
+          <button type="button" id="workspace-cancel" class="btn-ghost">Annuler</button>
+          <button type="submit" class="btn-primary">Créer l'espace</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODALE D'ÉDITION D'UNE TÂCHE -->
+  <div id="edit-modal" class="confirm-overlay hidden">
+    <div class="confirm-box edit-box">
+      <h3 class="edit-heading">Modifier la tâche</h3>
+      <form id="edit-form" class="edit-form">
+        <div class="input-group">
+          <label for="edit-title">Titre</label>
+          <input type="text" id="edit-title" maxlength="200" required>
+        </div>
+        <div class="input-group">
+          <label for="edit-description">Description</label>
+          <textarea id="edit-description" rows="3" maxlength="2000"></textarea>
+        </div>
+        <div class="edit-row">
+          <div class="input-group">
+            <label for="edit-priority">Priorité</label>
+            <select id="edit-priority">
+              <option value="basse">Basse</option>
+              <option value="moyenne">Moyenne</option>
+              <option value="haute">Haute</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label for="edit-tag">Tag</label>
+            <input type="text" id="edit-tag" maxlength="40">
+          </div>
+          <div class="input-group">
+            <label for="edit-due-date">Échéance</label>
+            <input type="date" id="edit-due-date">
+          </div>
+        </div>
+
+        <div class="share-block">
+          <h4>Partager (lecture seule)</h4>
+          <div class="share-add">
+            <input type="email" id="share-email" placeholder="email@exemple.com" autocomplete="email" inputmode="email">
+            <button type="button" id="share-btn" class="btn-ghost">Partager</button>
+          </div>
+          <ul id="share-list" class="share-list"></ul>
+        </div>
+
+        <!-- Section Historique d'audit intégrée directement à la modale de modification -->
+        <div class="audit-block">
+          <h4>Historique des modifications</h4>
+          <ul id="task-audit-list" class="audit-list">
+            <li class="audit-empty-state">Chargement de l'historique...</li>
+          </ul>
+        </div>
+
+        <div class="confirm-actions">
+          <button type="button" id="edit-cancel" class="btn-ghost">Annuler</button>
+          <button type="submit" class="btn-primary">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODALE COMMUNE DE CONFIRMATION -->
+  <div id="confirm-modal" class="confirm-overlay hidden">
+    <div class="confirm-box">
+      <p id="confirm-message">Es-tu sûr ?</p>
+      <div class="confirm-actions">
+        <button id="confirm-cancel" class="btn-ghost">Annuler</button>
+        <button id="confirm-ok" class="btn-danger">Supprimer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALE COLLABORATEUR / PROFIL PUBLIC (SUIVRE) -->
+  <div id="profile-modal" class="confirm-overlay hidden">
+    <div class="confirm-box edit-box">
+      <div id="public-profile-content"></div>
+      <div class="confirm-actions">
+        <button type="button" id="profile-close" class="btn-ghost">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TEMPLATES KANBAN CARD ================= -->
+  <template id="task-card-template">
+    <article class="task-card" draggable="true">
+      <div class="task-card-top">
+        <input type="checkbox" class="task-select" title="Sélectionner">
+        <span class="priority-dot"></span>
+        <h3 class="task-title"></h3>
+        <button class="task-edit" title="Modifier">✎</button>
+        <button class="task-delete" title="Supprimer">✕</button>
+      </div>
+      <p class="task-description"></p>
+      <span class="task-tag"></span>
+      <div class="task-meta">
+        <span class="task-due"></span>
+        <select class="task-status-select" aria-label="Statut">
+          <option value="a_faire">À faire</option>
+          <option value="en_cours">En cours</option>
+          <option value="terminee">Terminée</option>
+        </select>
+      </div>
+      
+      <!-- Checklist / Sous-tâches -->
+      <div class="subtasks">
+        <button type="button" class="subtasks-toggle">
+          <span class="subtasks-caret">▸</span> Checklist
+          <span class="subtasks-progress"></span>
+        </button>
+        <div class="subtasks-body hidden">
+          <ul class="subtasks-list"></ul>
+          <form class="subtask-form">
+            <input type="text" class="subtask-input" placeholder="Ajouter une sous-tâche…" maxlength="200" aria-label="Nouvelle sous-tâche">
+          </form>
+        </div>
+      </div>
+      
+      <!-- Pièces jointes -->
+      <div class="attachments">
+        <button type="button" class="attachments-toggle">
+          <span class="attachments-caret">▸</span> Pièces jointes
+          <span class="attachments-count"></span>
+        </button>
+        <div class="attachments-body hidden">
+          <ul class="attachments-list"></ul>
+          <label class="attachment-add">
+            <input type="file" class="attachment-input" hidden>
+            <span>＋ Ajouter un fichier</span>
+          </label>
+        </div>
+      </div>
+      
+      <div class="reactions"></div>
+      
+      <!-- Commentaires -->
+      <div class="comments">
+        <button type="button" class="comments-toggle">
+          <span class="comments-caret">▸</span> Discussion
+          <span class="comments-count"></span>
+        </button>
+        <div class="comments-body hidden">
+          <ul class="comments-list"></ul>
+          <form class="comment-form">
+            <input type="text" class="comment-input" placeholder="Commenter… (@nom pour mentionner)" maxlength="1000" aria-label="Ajouter un commentaire">
+          </form>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <!-- TEMPLATE D'UN COMMENTAIRE -->
+  <template id="comment-item-template">
+    <li class="comment-item">
+      <span class="comment-author"></span>
+      <span class="comment-body"></span>
+      <button type="button" class="comment-delete" title="Supprimer">✕</button>
+    </li>
+  </template>
+
+  <!-- TEMPLATE D'UNE PIÈCE JOINTE -->
+  <template id="attachment-item-template">
+    <li class="attachment-item">
+      <button type="button" class="attachment-download" title="Télécharger"></button>
+      <span class="attachment-size"></span>
+      <button type="button" class="attachment-delete" title="Supprimer">✕</button>
+    </li>
+  </template>
+
+  <!-- TEMPLATE D'UNE SOUS-TÂCHE -->
+  <template id="subtask-item-template">
+    <li class="subtask-item">
+      <label>
+        <input type="checkbox" class="subtask-check">
+        <span class="subtask-title"></span>
+      </label>
+      <button type="button" class="subtask-delete" title="Supprimer">✕</button>
+    </li>
+  </template>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

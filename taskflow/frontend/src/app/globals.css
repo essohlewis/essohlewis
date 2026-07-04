@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-paper text-ink transition-colors duration-300 min-h-screen antialiased;
+  }
+  
+  [data-theme="dark"] body {
+    @apply bg-paper-dark text-ink-dark;
+  }
+}
+
+/* Glassmorphism utility card */
+.card-glass {
+  @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-line dark:border-line-dark shadow-md rounded-task;
+}
