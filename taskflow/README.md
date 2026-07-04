@@ -103,6 +103,25 @@ Cette version 2 se concentre sur la **performance** (temps de réponse, bande pa
 - **Intégration continue GitHub Actions** (`.github/workflows/taskflow-ci.yml`) : démarre un MySQL jetable, importe le schéma et lance la suite Jest à chaque push/PR touchant `taskflow/`.
 - Nouveaux tests d'intégration : recherche plein texte et actions groupées.
 
+## Nouveautés — tâches récurrentes
+
+Une tâche peut désormais **se répéter** automatiquement :
+
+- Choix de la récurrence à la création et dans la modale d'édition :
+  **quotidienne**, **hebdomadaire** ou **mensuelle** (ou aucune).
+- Quand une tâche récurrente **dotée d'une échéance** passe à *Terminée*, la
+  **prochaine occurrence** est créée automatiquement (statut *À faire*, échéance
+  décalée de l'intervalle, mêmes titre/description/priorité/tag/espace).
+- Le calcul de la nouvelle date se fait **côté SQL** (`DATE_ADD`), donc sans
+  dérive de fuseau. L'intervalle provient d'une **liste blanche** (`daily` /
+  `weekly` / `monthly`) : aucune injection possible.
+- Un badge **🔁** signale les tâches récurrentes ; un toast confirme la date de
+  la prochaine occurrence lorsqu'elle est générée.
+
+La réponse de `PUT /api/tasks/:id` inclut `next_occurrence` (la tâche créée, ou
+`null`). La colonne `recurrence` de `tasks` est créée automatiquement au
+démarrage si elle manque.
+
 ## Nouveautés — suivi du temps (minuteur)
 
 Chaque tâche dispose désormais d'un **minuteur intégré** (fonctionnalité de type
@@ -284,8 +303,9 @@ npm test
 `sort` accepte : `recent` (défaut), `ancien`, `echeance`, `priorite`.
 
 Chaque tâche renvoyée par `GET /api/tasks` inclut `subtasks_total`, `subtasks_done`,
-ainsi que `time_spent` (secondes cumulées) et `timer_elapsed` (secondes du minuteur
-en cours, 0 si à l'arrêt).
+`recurrence` (`daily`/`weekly`/`monthly` ou `null`), ainsi que `time_spent`
+(secondes cumulées) et `timer_elapsed` (secondes du minuteur en cours, 0 si à
+l'arrêt). `POST`/`PUT /api/tasks` acceptent le champ `recurrence`.
 
 \* `/refresh` et `/logout` ne nécessitent pas de token d'accès, mais un `refreshToken` valide dans le corps :
 ```json

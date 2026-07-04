@@ -128,6 +128,13 @@ if (require.main === module) {
       await pool.query("ALTER TABLE tasks ADD COLUMN timer_start DATETIME NULL");
     }
 
+    // Migration pour les tâches récurrentes
+    const [recurrenceColumns] = await pool.query("SHOW COLUMNS FROM tasks LIKE 'recurrence'");
+    if (recurrenceColumns.length === 0) {
+      console.log("ℹ️ La colonne 'recurrence' est manquante dans 'tasks'. Ajout en cours...");
+      await pool.query("ALTER TABLE tasks ADD COLUMN recurrence VARCHAR(10) NULL");
+    }
+
     try {
       await pool.query("CREATE INDEX idx_tasks_user_status_active ON tasks(user_id, status, is_archived)");
     } catch (e) { /* index existant */ }

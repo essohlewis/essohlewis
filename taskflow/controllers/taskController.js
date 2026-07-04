@@ -50,6 +50,20 @@ const STATUSES = ['a_faire', 'en_cours', 'terminee'];
 const PRIORITIES = ['basse', 'moyenne', 'haute'];
 const EXPORT_COLUMNS = ['title', 'description', 'status', 'priority', 'tag', 'due_date'];
 
+// Récurrence des tâches. La valeur est ramenée à NULL (non récurrente) si elle
+// n'est pas dans cette liste. L'intervalle SQL associé sert à calculer la date
+// de la prochaine occurrence côté MySQL (arithmétique de DATE, sans dérive de
+// fuseau). Les clés sont une liste blanche : aucune injection possible.
+const RECURRENCES = ['daily', 'weekly', 'monthly'];
+const RECURRENCE_INTERVAL = {
+  daily: 'INTERVAL 1 DAY',
+  weekly: 'INTERVAL 1 WEEK',
+  monthly: 'INTERVAL 1 MONTH'
+};
+function normalizeRecurrence(value) {
+  return RECURRENCES.includes(value) ? value : null;
+}
+
 function isValidDate(str) {
   if (typeof str !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(str)) return false;
   const d = new Date(`${str}T00:00:00Z`);
@@ -363,7 +377,7 @@ const getTaskById = asyncHandler(async (req, res) => {
 
 // POST /api/tasks
 const createTask = asyncHandler(async (req, res) => {
-  const { title, description, status, priority, due_date, tag, workspaceId } = req.body;
+  const { title, description, status, priority, due_date, tag, workspaceId, recurrence } = req.body;
 
   let finalWorkspaceId = null;
   if (workspaceId) {
@@ -378,8 +392,8 @@ const createTask = asyncHandler(async (req, res) => {
   }
 
   const [result] = await pool.query(
-    `INSERT INTO tasks (user_id, title, description, status, priority, due_date, tag, workspace_id, tenant_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO tasks (user_id, title, description, status, priority, due_date, tag, workspace_id, tenant_id, recurrence)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       req.userId,
       title,
@@ -389,7 +403,8 @@ const createTask = asyncHandler(async (req, res) => {
       due_date || null,
       tag || null,
       finalWorkspaceId,
-      req.tenantId || null
+      req.tenantId || null,
+      normalizeRecurrence(recurrence)
     ]
   );
 
@@ -421,7 +436,7 @@ const updateTask = asyncHandler(async (req, res) => {
   const pick = (field) => (field in req.body ? req.body[field] : currentTask[field]);
 
   const changes = {};
-  for (const field of ['title', 'description', 'status', 'priority', 'due_date', 'tag']) {
+  for (const field of ['title', 'description', 'status', 'priority', 'due_date', 'tag', 'recurrence']) {
     if (field in req.body && req.body[field] !== currentTask[field]) {
       changes[field] = { old: currentTask[field], new: req.body[field] };
     }
@@ -433,11 +448,12 @@ const updateTask = asyncHandler(async (req, res) => {
   const priority = pick('priority');
   const due_date = pick('due_date');
   const tag = pick('tag');
+  const recurrence = normalizeRecurrence(pick('recurrence'));
 
   await pool.query(
-    `UPDATE tasks SET title = ?, description = ?, status = ?, priority = ?, due_date = ?, tag = ?
+    `UPDATE tasks SET title = ?, description = ?, status = ?, priority = ?, due_date = ?, tag = ?, recurrence = ?
      WHERE id = ?`,
-    [title, description || null, status, priority, due_date || null, tag || null, req.params.id]
+    [title, description || null, status, priority, due_date || null, tag || null, recurrence, req.params.id]
   );
 
   // Invalider le cache
@@ -452,12 +468,32 @@ const updateTask = asyncHandler(async (req, res) => {
     await logTaskAudit(req.params.id, req.userId, 'updated', changes);
   }
 
+  let spawnedNext = null;
   if (pick('status') === 'terminee' && currentTask.status !== 'terminee') {
     logActivity(req.userId, 'completed', currentTask.id, title);
+
+    // Tâche récurrente terminée avec une échéance : on crée automatiquement la
+    // prochaine occurrence (statut « à faire », échéance décalée de l'intervalle).
+    // Le calcul de date se fait côté SQL (DATE_ADD) pour éviter toute dérive de
+    // fuseau, et l'intervalle vient d'une liste blanche (aucune injection).
+    const interval = recurrence ? RECURRENCE_INTERVAL[recurrence] : null;
+    if (interval && due_date) {
+      const [nextResult] = await pool.query(
+        `INSERT INTO tasks
+           (user_id, title, description, status, priority, due_date, tag, workspace_id, tenant_id, recurrence)
+         SELECT user_id, title, description, 'a_faire', priority,
+                DATE_ADD(due_date, ${interval}), tag, workspace_id, tenant_id, recurrence
+           FROM tasks WHERE id = ?`,
+        [req.params.id]
+      );
+      await logTaskAudit(nextResult.insertId, req.userId, 'created', { from_recurrence: currentTask.id });
+      const [[nextRow]] = await pool.query('SELECT * FROM tasks WHERE id = ?', [nextResult.insertId]);
+      spawnedNext = nextRow;
+    }
   }
 
   const [rows] = await pool.query('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
-  res.json(rows[0]);
+  res.json({ ...rows[0], next_occurrence: spawnedNext });
 });
 
 // PATCH /api/tasks/bulk

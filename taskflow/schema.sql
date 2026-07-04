@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   priority ENUM('basse', 'moyenne', 'haute') DEFAULT 'moyenne',
   tag VARCHAR(40) NULL,
   due_date DATE NULL,
+  recurrence VARCHAR(10) NULL,
   workspace_id INT NULL,
   tenant_id INT NULL,
   is_archived BOOLEAN DEFAULT FALSE,

@@ -396,6 +396,12 @@
                 </select>
                 <input type="text" id="task-tag" placeholder="Tag (ex: travail)" maxlength="40">
                 <input type="date" id="task-due-date" aria-label="Date d'échéance">
+                <select id="task-recurrence" aria-label="Récurrence" title="Répéter la tâche">
+                  <option value="">Sans répétition</option>
+                  <option value="daily">🔁 Chaque jour</option>
+                  <option value="weekly">🔁 Chaque semaine</option>
+                  <option value="monthly">🔁 Chaque mois</option>
+                </select>
                 <button type="submit" class="btn-primary">Ajouter</button>
               </div>
             </form>
@@ -654,6 +660,15 @@
           <div class="input-group">
             <label for="edit-due-date">Échéance</label>
             <input type="date" id="edit-due-date">
+          </div>
+          <div class="input-group">
+            <label for="edit-recurrence">Récurrence</label>
+            <select id="edit-recurrence">
+              <option value="">Sans répétition</option>
+              <option value="daily">🔁 Chaque jour</option>
+              <option value="weekly">🔁 Chaque semaine</option>
+              <option value="monthly">🔁 Chaque mois</option>
+            </select>
           </div>
         </div>
 

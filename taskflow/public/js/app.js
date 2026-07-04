@@ -81,6 +81,7 @@ const editDescription = document.getElementById('edit-description');
 const editPriority = document.getElementById('edit-priority');
 const editTag = document.getElementById('edit-tag');
 const editDueDate = document.getElementById('edit-due-date');
+const editRecurrence = document.getElementById('edit-recurrence');
 const editCancel = document.getElementById('edit-cancel');
 const shareEmail = document.getElementById('share-email');
 const shareBtn = document.getElementById('share-btn');
@@ -967,9 +968,10 @@ taskForm.addEventListener('submit', async (e) => {
   const priority = document.getElementById('task-priority').value;
   const tag = document.getElementById('task-tag').value;
   const due_date = document.getElementById('task-due-date').value || null;
+  const recurrence = document.getElementById('task-recurrence').value || null;
 
   try {
-    const created = await createTaskRequest({ title, description, priority, tag, due_date });
+    const created = await createTaskRequest({ title, description, priority, tag, due_date, recurrence });
     taskForm.reset();
     document.getElementById('task-priority').value = 'moyenne';
     showToast('Tâche ajoutée.');
@@ -1469,6 +1471,7 @@ function openEdit(task) {
   editPriority.value = task.priority || 'moyenne';
   editTag.value = task.tag || '';
   editDueDate.value = toDateInput(task.due_date);
+  editRecurrence.value = task.recurrence || '';
   shareEmail.value = '';
   
   loadShares(task.id);
@@ -1574,7 +1577,8 @@ editForm.addEventListener('submit', async (e) => {
     description: editDescription.value.trim() || null,
     priority: editPriority.value,
     tag: editTag.value.trim() || null,
-    due_date: editDueDate.value || null
+    due_date: editDueDate.value || null,
+    recurrence: editRecurrence.value || null
   };
 
   try {
@@ -1701,6 +1705,15 @@ function buildTaskCard(task) {
     tagEl.textContent = '';
   }
 
+  // Badge « tâche récurrente » (🔁), inséré à côté du tag.
+  if (task.recurrence) {
+    const badge = document.createElement('span');
+    badge.className = 'task-recurrence-badge';
+    badge.textContent = `🔁 ${recurrenceLabel(task.recurrence)}`;
+    badge.title = 'Tâche récurrente : une nouvelle occurrence est créée à sa complétion';
+    tagEl.insertAdjacentElement('afterend', badge);
+  }
+
   const dueEl = node.querySelector('.task-due');
   dueEl.textContent = task.due_date
     ? `Échéance : ${new Date(task.due_date).toLocaleDateString('fr-FR')}`
@@ -1744,6 +1757,12 @@ function buildTaskCard(task) {
   wireTimer(node, task);
 
   return card;
+}
+
+// Libellé lisible d'une récurrence.
+const RECURRENCE_LABELS = { daily: 'Quotidienne', weekly: 'Hebdomadaire', monthly: 'Mensuelle' };
+function recurrenceLabel(recurrence) {
+  return RECURRENCE_LABELS[recurrence] || '';
 }
 
 // ================= Suivi du temps (minuteur) =================
@@ -2189,10 +2208,19 @@ async function updateTaskStatus(taskId, status) {
   renderTasks();
 
   try {
-    await apiRequest(`/tasks/${taskId}`, {
+    const updated = await apiRequest(`/tasks/${taskId}`, {
       method: 'PUT',
       body: JSON.stringify({ status })
     });
+    // Tâche récurrente terminée : le serveur a créé la prochaine occurrence.
+    // On recharge pour la faire apparaître, et on prévient l'utilisateur.
+    if (updated && updated.next_occurrence) {
+      const when = updated.next_occurrence.due_date
+        ? new Date(updated.next_occurrence.due_date).toLocaleDateString('fr-FR')
+        : null;
+      showToast(when ? `Prochaine occurrence créée pour le ${when}.` : 'Prochaine occurrence créée.');
+      await loadTasks();
+    }
     loadStats();
     loadReminders();
   } catch (err) {

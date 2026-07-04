@@ -609,3 +609,86 @@ describe('Suivi du temps (minuteur) /api/tasks/:id/timer', () => {
     expect(res.statusCode).toBe(404);
   });
 });
+
+describe('Tâches récurrentes /api/tasks', () => {
+  const DAY_MS = 24 * 60 * 60 * 1000;
+
+  it('refuse une récurrence invalide', async () => {
+    const res = await request(app)
+      .post('/api/tasks')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ title: 'Récurrence bidon', recurrence: 'yearly' });
+    expect(res.statusCode).toBe(422);
+  });
+
+  it('crée une tâche récurrente et la conserve', async () => {
+    const res = await request(app)
+      .post('/api/tasks')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ title: 'Arroser les plantes', recurrence: 'daily', due_date: '2030-03-10' });
+    expect(res.statusCode).toBe(201);
+    expect(res.body.recurrence).toBe('daily');
+  });
+
+  it('génère la prochaine occurrence (+1 jour) à la complétion', async () => {
+    const created = (await request(app)
+      .post('/api/tasks')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ title: 'Rituel quotidien', recurrence: 'daily', due_date: '2030-03-10' })).body;
+
+    const done = await request(app)
+      .put(`/api/tasks/${created.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ status: 'terminee' });
+
+    expect(done.statusCode).toBe(200);
+    expect(done.body.next_occurrence).toBeTruthy();
+    expect(done.body.next_occurrence.status).toBe('a_faire');
+    expect(done.body.next_occurrence.recurrence).toBe('daily');
+    const delta = new Date(done.body.next_occurrence.due_date) - new Date(created.due_date);
+    expect(delta).toBe(DAY_MS);
+  });
+
+  it('génère la prochaine occurrence (+7 jours) pour une récurrence hebdomadaire', async () => {
+    const created = (await request(app)
+      .post('/api/tasks')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ title: 'Bilan hebdo', recurrence: 'weekly', due_date: '2030-03-10' })).body;
+
+    const done = await request(app)
+      .put(`/api/tasks/${created.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ status: 'terminee' });
+
+    const delta = new Date(done.body.next_occurrence.due_date) - new Date(created.due_date);
+    expect(delta).toBe(7 * DAY_MS);
+  });
+
+  it('ne génère rien pour une tâche non récurrente', async () => {
+    const created = (await request(app)
+      .post('/api/tasks')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ title: 'Tâche unique', due_date: '2030-03-10' })).body;
+
+    const done = await request(app)
+      .put(`/api/tasks/${created.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ status: 'terminee' });
+
+    expect(done.body.next_occurrence).toBeNull();
+  });
+
+  it('ne génère rien pour une tâche récurrente sans échéance', async () => {
+    const created = (await request(app)
+      .post('/api/tasks')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ title: 'Récurrente sans date', recurrence: 'daily' })).body;
+
+    const done = await request(app)
+      .put(`/api/tasks/${created.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ status: 'terminee' });
+
+    expect(done.body.next_occurrence).toBeNull();
+  });
+});

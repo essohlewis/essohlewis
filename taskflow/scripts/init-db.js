@@ -167,6 +167,18 @@ async function main() {
       console.warn("⚠️ Attention : échec de la migration des colonnes de suivi du temps :", migErr.message);
     }
 
+    // Tâches récurrentes : colonne recurrence
+    try {
+      const [recurrenceColumns] = await connection.query("SHOW COLUMNS FROM tasks LIKE 'recurrence'");
+      if (recurrenceColumns.length === 0) {
+        console.log("ℹ️ La colonne 'recurrence' est manquante dans 'tasks'. Ajout en cours...");
+        await connection.query("ALTER TABLE tasks ADD COLUMN recurrence VARCHAR(10) NULL");
+        console.log("✅ Colonne 'recurrence' ajoutée avec succès.");
+      }
+    } catch (migErr) {
+      console.warn("⚠️ Attention : échec de la migration de la colonne 'recurrence' :", migErr.message);
+    }
+
     try {
       const [wsTenantColumns] = await connection.query("SHOW COLUMNS FROM workspaces LIKE 'tenant_id'");
       if (wsTenantColumns.length === 0) {
