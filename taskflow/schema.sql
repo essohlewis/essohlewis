@@ -94,12 +94,14 @@ CREATE TABLE IF NOT EXISTS tasks (
   priority ENUM('basse', 'moyenne', 'haute') DEFAULT 'moyenne',
   tag VARCHAR(40) NULL,
   due_date DATE NULL,
+  recurrence VARCHAR(10) NULL,
   workspace_id INT NULL,
   tenant_id INT NULL,
   is_archived BOOLEAN DEFAULT FALSE,
   archived_at DATETIME NULL,
   time_spent INT NOT NULL DEFAULT 0,
   timer_start DATETIME NULL,
+  due_reminded_at DATETIME NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -167,6 +169,29 @@ CREATE TABLE IF NOT EXISTS attachments (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
 );
+
+-- Étiquettes multiples : une tâche peut porter plusieurs étiquettes (en plus du
+-- champ `tag` unique historique, conservé). Unicité (tâche, étiquette).
+CREATE TABLE IF NOT EXISTS task_labels (
+  task_id INT NOT NULL,
+  label VARCHAR(40) NOT NULL,
+  PRIMARY KEY (task_id, label),
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_task_labels_label ON task_labels(label);
+
+-- Vues enregistrées : combinaisons de filtres/tri sauvegardées par l'utilisateur.
+CREATE TABLE IF NOT EXISTS saved_views (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  name VARCHAR(80) NOT NULL,
+  filters JSON NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_saved_views_user ON saved_views(user_id);
 
 -- Table des sous-tâches (checklist rattachée à une tâche)
 CREATE TABLE IF NOT EXISTS subtasks (

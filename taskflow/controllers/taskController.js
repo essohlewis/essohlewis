@@ -50,10 +50,75 @@ const STATUSES = ['a_faire', 'en_cours', 'terminee'];
 const PRIORITIES = ['basse', 'moyenne', 'haute'];
 const EXPORT_COLUMNS = ['title', 'description', 'status', 'priority', 'tag', 'due_date'];
 
+// Récurrence des tâches. La valeur est ramenée à NULL (non récurrente) si elle
+// n'est pas dans cette liste. L'intervalle SQL associé sert à calculer la date
+// de la prochaine occurrence côté MySQL (arithmétique de DATE, sans dérive de
+// fuseau). Les clés sont une liste blanche : aucune injection possible.
+const RECURRENCES = ['daily', 'weekly', 'monthly'];
+const RECURRENCE_INTERVAL = {
+  daily: 'INTERVAL 1 DAY',
+  weekly: 'INTERVAL 1 WEEK',
+  monthly: 'INTERVAL 1 MONTH'
+};
+function normalizeRecurrence(value) {
+  return RECURRENCES.includes(value) ? value : null;
+}
+
+// ===== Étiquettes multiples (task_labels) =====
+const MAX_LABELS = 20;
+
+// Nettoie un tableau d'étiquettes : chaînes non vides, ≤ 40 caractères, dédoublonnées
+// (insensible à la casse pour le dédoublonnage), bornées à MAX_LABELS.
+function sanitizeLabels(input) {
+  if (!Array.isArray(input)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const raw of input) {
+    if (typeof raw !== 'string') continue;
+    const label = raw.trim().slice(0, 40);
+    if (!label) continue;
+    const key = label.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(label);
+    if (out.length >= MAX_LABELS) break;
+  }
+  return out;
+}
+
+// Remplace l'ensemble des étiquettes d'une tâche par la liste fournie.
+async function syncTaskLabels(taskId, labels) {
+  await pool.query('DELETE FROM task_labels WHERE task_id = ?', [taskId]);
+  if (labels.length > 0) {
+    const values = labels.map((l) => [taskId, l]);
+    await pool.query('INSERT INTO task_labels (task_id, label) VALUES ?', [values]);
+  }
+}
+
+async function getTaskLabels(taskId) {
+  const [rows] = await pool.query(
+    'SELECT label FROM task_labels WHERE task_id = ? ORDER BY label ASC',
+    [taskId]
+  );
+  return rows.map((r) => r.label);
+}
+
 function isValidDate(str) {
   if (typeof str !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(str)) return false;
   const d = new Date(`${str}T00:00:00Z`);
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === str;
+}
+
+// Normalise une échéance (chaîne 'AAAA-MM-JJ' ou Date renvoyée par MySQL) en
+// 'AAAA-MM-JJ' selon le calendrier local, pour comparer deux échéances sans être
+// piégé par le fuseau (une colonne DATE est rendue à minuit local par mysql2).
+function dueDateYMD(value) {
+  if (!value) return null;
+  if (typeof value === 'string') return value.slice(0, 10);
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 function csvCell(value) {
@@ -146,6 +211,11 @@ const getTasks = asyncHandler(async (req, res) => {
     conditions.push('tag = ?');
     params.push(tag);
   }
+  // Filtre par étiquette multiple : tâches portant l'étiquette demandée.
+  if (req.query.label) {
+    conditions.push('EXISTS (SELECT 1 FROM task_labels tl WHERE tl.task_id = tasks.id AND tl.label = ?)');
+    params.push(req.query.label);
+  }
   if (search && search.trim()) {
     const { clause, params: searchParams } = buildSearchClause(search);
     conditions.push(clause);
@@ -215,6 +285,17 @@ const getTasks = asyncHandler(async (req, res) => {
       myRxByTask.get(r.task_id).push(r.emoji);
     });
 
+    // Étiquettes multiples : agrégat groupé (pas de N+1).
+    const [lbls] = await pool.query(
+      `SELECT task_id, label FROM task_labels WHERE task_id IN (?) ORDER BY label ASC`,
+      [ids]
+    );
+    const lblByTask = new Map();
+    lbls.forEach((l) => {
+      if (!lblByTask.has(l.task_id)) lblByTask.set(l.task_id, []);
+      lblByTask.get(l.task_id).push(l.label);
+    });
+
     tasks.forEach((t) => {
       const agg = byTask.get(t.id);
       t.subtasks_total = agg ? agg.total : 0;
@@ -223,6 +304,7 @@ const getTasks = asyncHandler(async (req, res) => {
       t.comments_count = cmtByTask.get(t.id) || 0;
       t.reactions = rxByTask.get(t.id) || [];
       t.my_reactions = myRxByTask.get(t.id) || [];
+      t.labels = lblByTask.get(t.id) || [];
     });
   }
 
@@ -358,12 +440,13 @@ const getTaskById = asyncHandler(async (req, res) => {
   if (!task) {
     throw new AppError('Tâche introuvable ou accès refusé.', 404);
   }
+  task.labels = await getTaskLabels(req.params.id);
   res.json(task);
 });
 
 // POST /api/tasks
 const createTask = asyncHandler(async (req, res) => {
-  const { title, description, status, priority, due_date, tag, workspaceId } = req.body;
+  const { title, description, status, priority, due_date, tag, workspaceId, recurrence } = req.body;
 
   let finalWorkspaceId = null;
   if (workspaceId) {
@@ -378,8 +461,8 @@ const createTask = asyncHandler(async (req, res) => {
   }
 
   const [result] = await pool.query(
-    `INSERT INTO tasks (user_id, title, description, status, priority, due_date, tag, workspace_id, tenant_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO tasks (user_id, title, description, status, priority, due_date, tag, workspace_id, tenant_id, recurrence)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       req.userId,
       title,
@@ -389,7 +472,8 @@ const createTask = asyncHandler(async (req, res) => {
       due_date || null,
       tag || null,
       finalWorkspaceId,
-      req.tenantId || null
+      req.tenantId || null,
+      normalizeRecurrence(recurrence)
     ]
   );
 
@@ -401,11 +485,16 @@ const createTask = asyncHandler(async (req, res) => {
     statsCache.invalidate(statsCacheKey(req.userId, req.tenantId, null));
   }
 
+  const labels = sanitizeLabels(req.body.labels);
+  if (labels.length > 0) {
+    await syncTaskLabels(result.insertId, labels);
+  }
+
   logActivity(req.userId, 'created', result.insertId, title);
   await logTaskAudit(result.insertId, req.userId, 'created', { title, status, priority, due_date, tag });
 
   const [rows] = await pool.query('SELECT * FROM tasks WHERE id = ?', [result.insertId]);
-  res.status(201).json(rows[0]);
+  res.status(201).json({ ...rows[0], labels });
 });
 
 // PUT /api/tasks/:id
@@ -421,7 +510,7 @@ const updateTask = asyncHandler(async (req, res) => {
   const pick = (field) => (field in req.body ? req.body[field] : currentTask[field]);
 
   const changes = {};
-  for (const field of ['title', 'description', 'status', 'priority', 'due_date', 'tag']) {
+  for (const field of ['title', 'description', 'status', 'priority', 'due_date', 'tag', 'recurrence']) {
     if (field in req.body && req.body[field] !== currentTask[field]) {
       changes[field] = { old: currentTask[field], new: req.body[field] };
     }
@@ -433,11 +522,19 @@ const updateTask = asyncHandler(async (req, res) => {
   const priority = pick('priority');
   const due_date = pick('due_date');
   const tag = pick('tag');
+  const recurrence = normalizeRecurrence(pick('recurrence'));
+
+  // Si l'échéance change, on « réarme » le rappel d'échéance (due_reminded_at =
+  // NULL) pour qu'une nouvelle notification puisse repartir sur la nouvelle date.
+  const oldYMD = dueDateYMD(currentTask.due_date);
+  const newYMD = due_date ? String(due_date).slice(0, 10) : null;
+  const dueReminderReset = oldYMD !== newYMD ? 'NULL' : 'due_reminded_at';
 
   await pool.query(
-    `UPDATE tasks SET title = ?, description = ?, status = ?, priority = ?, due_date = ?, tag = ?
+    `UPDATE tasks SET title = ?, description = ?, status = ?, priority = ?, due_date = ?, tag = ?, recurrence = ?,
+            due_reminded_at = ${dueReminderReset}
      WHERE id = ?`,
-    [title, description || null, status, priority, due_date || null, tag || null, req.params.id]
+    [title, description || null, status, priority, due_date || null, tag || null, recurrence, req.params.id]
   );
 
   // Invalider le cache
@@ -448,16 +545,42 @@ const updateTask = asyncHandler(async (req, res) => {
     statsCache.invalidate(statsCacheKey(req.userId, req.tenantId, null));
   }
 
+  // Étiquettes multiples : si le champ `labels` est fourni, on remplace l'ensemble.
+  if ('labels' in req.body) {
+    await syncTaskLabels(req.params.id, sanitizeLabels(req.body.labels));
+  }
+
   if (Object.keys(changes).length > 0) {
     await logTaskAudit(req.params.id, req.userId, 'updated', changes);
   }
 
+  let spawnedNext = null;
   if (pick('status') === 'terminee' && currentTask.status !== 'terminee') {
     logActivity(req.userId, 'completed', currentTask.id, title);
+
+    // Tâche récurrente terminée avec une échéance : on crée automatiquement la
+    // prochaine occurrence (statut « à faire », échéance décalée de l'intervalle).
+    // Le calcul de date se fait côté SQL (DATE_ADD) pour éviter toute dérive de
+    // fuseau, et l'intervalle vient d'une liste blanche (aucune injection).
+    const interval = recurrence ? RECURRENCE_INTERVAL[recurrence] : null;
+    if (interval && due_date) {
+      const [nextResult] = await pool.query(
+        `INSERT INTO tasks
+           (user_id, title, description, status, priority, due_date, tag, workspace_id, tenant_id, recurrence)
+         SELECT user_id, title, description, 'a_faire', priority,
+                DATE_ADD(due_date, ${interval}), tag, workspace_id, tenant_id, recurrence
+           FROM tasks WHERE id = ?`,
+        [req.params.id]
+      );
+      await logTaskAudit(nextResult.insertId, req.userId, 'created', { from_recurrence: currentTask.id });
+      const [[nextRow]] = await pool.query('SELECT * FROM tasks WHERE id = ?', [nextResult.insertId]);
+      spawnedNext = nextRow;
+    }
   }
 
   const [rows] = await pool.query('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
-  res.json(rows[0]);
+  const labels = await getTaskLabels(req.params.id);
+  res.json({ ...rows[0], labels, next_occurrence: spawnedNext });
 });
 
 // PATCH /api/tasks/bulk

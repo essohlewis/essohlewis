@@ -167,6 +167,30 @@ async function main() {
       console.warn("⚠️ Attention : échec de la migration des colonnes de suivi du temps :", migErr.message);
     }
 
+    // Tâches récurrentes : colonne recurrence
+    try {
+      const [recurrenceColumns] = await connection.query("SHOW COLUMNS FROM tasks LIKE 'recurrence'");
+      if (recurrenceColumns.length === 0) {
+        console.log("ℹ️ La colonne 'recurrence' est manquante dans 'tasks'. Ajout en cours...");
+        await connection.query("ALTER TABLE tasks ADD COLUMN recurrence VARCHAR(10) NULL");
+        console.log("✅ Colonne 'recurrence' ajoutée avec succès.");
+      }
+    } catch (migErr) {
+      console.warn("⚠️ Attention : échec de la migration de la colonne 'recurrence' :", migErr.message);
+    }
+
+    // Rappels d'échéance automatiques : colonne due_reminded_at (anti-doublon)
+    try {
+      const [dueRemindedColumns] = await connection.query("SHOW COLUMNS FROM tasks LIKE 'due_reminded_at'");
+      if (dueRemindedColumns.length === 0) {
+        console.log("ℹ️ La colonne 'due_reminded_at' est manquante dans 'tasks'. Ajout en cours...");
+        await connection.query("ALTER TABLE tasks ADD COLUMN due_reminded_at DATETIME NULL");
+        console.log("✅ Colonne 'due_reminded_at' ajoutée avec succès.");
+      }
+    } catch (migErr) {
+      console.warn("⚠️ Attention : échec de la migration de la colonne 'due_reminded_at' :", migErr.message);
+    }
+
     try {
       const [wsTenantColumns] = await connection.query("SHOW COLUMNS FROM workspaces LIKE 'tenant_id'");
       if (wsTenantColumns.length === 0) {
@@ -205,6 +229,33 @@ async function main() {
 
     try {
       await connection.query("CREATE INDEX idx_workspaces_tenant ON workspaces(tenant_id)");
+    } catch (e) { /* index existant */ }
+
+    // Étiquettes multiples + vues enregistrées (bases déjà existantes)
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS task_labels (
+        task_id INT NOT NULL,
+        label VARCHAR(40) NOT NULL,
+        PRIMARY KEY (task_id, label),
+        FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+      )
+    `);
+    try {
+      await connection.query("CREATE INDEX idx_task_labels_label ON task_labels(label)");
+    } catch (e) { /* index existant */ }
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS saved_views (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        name VARCHAR(80) NOT NULL,
+        filters JSON NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    try {
+      await connection.query("CREATE INDEX idx_saved_views_user ON saved_views(user_id)");
     } catch (e) { /* index existant */ }
 
     console.log('✅ Base initialisée avec succès (tables et index créés).');

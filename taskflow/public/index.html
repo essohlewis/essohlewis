@@ -395,7 +395,14 @@
                   <option value="haute">Priorité haute</option>
                 </select>
                 <input type="text" id="task-tag" placeholder="Tag (ex: travail)" maxlength="40">
+                <input type="text" id="task-labels" placeholder="Étiquettes (ex: urgent, dev)" aria-label="Étiquettes séparées par des virgules">
                 <input type="date" id="task-due-date" aria-label="Date d'échéance">
+                <select id="task-recurrence" aria-label="Récurrence" title="Répéter la tâche">
+                  <option value="">Sans répétition</option>
+                  <option value="daily">🔁 Chaque jour</option>
+                  <option value="weekly">🔁 Chaque semaine</option>
+                  <option value="monthly">🔁 Chaque mois</option>
+                </select>
                 <button type="submit" class="btn-primary">Ajouter</button>
               </div>
             </form>
@@ -425,6 +432,11 @@
               <button id="import-btn" class="btn-ghost" type="button" title="Importer un fichier JSON">⬆ Importer</button>
               <input type="file" id="import-file" accept=".json,application/json" hidden>
             </div>
+          </section>
+
+          <!-- Vues enregistrées : combinaisons de filtres/tri sauvegardées -->
+          <section class="saved-views-bar" id="saved-views-bar" aria-label="Vues enregistrées">
+            <button id="save-view-btn" class="btn-ghost saved-view-save" type="button" title="Enregistrer les filtres actuels comme vue">💾 Enregistrer la vue</button>
           </section>
 
           <!-- Kanban Board -->
@@ -652,8 +664,21 @@
             <input type="text" id="edit-tag" maxlength="40">
           </div>
           <div class="input-group">
+            <label for="edit-labels">Étiquettes</label>
+            <input type="text" id="edit-labels" placeholder="urgent, dev" aria-label="Étiquettes séparées par des virgules">
+          </div>
+          <div class="input-group">
             <label for="edit-due-date">Échéance</label>
             <input type="date" id="edit-due-date">
+          </div>
+          <div class="input-group">
+            <label for="edit-recurrence">Récurrence</label>
+            <select id="edit-recurrence">
+              <option value="">Sans répétition</option>
+              <option value="daily">🔁 Chaque jour</option>
+              <option value="weekly">🔁 Chaque semaine</option>
+              <option value="monthly">🔁 Chaque mois</option>
+            </select>
           </div>
         </div>
 

@@ -39,6 +39,9 @@ const taskRules = [
   body('priority').optional().isIn(['basse', 'moyenne', 'haute']).withMessage('Priorité invalide.'),
   body('tag').optional({ nullable: true }).trim().isLength({ max: 40 }).withMessage('Le tag est trop long (40 caractères max).'),
   body('due_date').optional({ nullable: true }).isISO8601().withMessage('Date invalide (format attendu : AAAA-MM-JJ).'),
+  body('recurrence').optional({ nullable: true, checkFalsy: true }).isIn(['daily', 'weekly', 'monthly']).withMessage('Récurrence invalide.'),
+  body('labels').optional({ nullable: true }).isArray({ max: 20 }).withMessage('Étiquettes invalides (20 maximum).'),
+  body('labels.*').optional().isString().trim().isLength({ max: 40 }).withMessage('Étiquette trop longue (40 caractères max).'),
   checkValidation
 ];
 
@@ -50,6 +53,9 @@ const taskUpdateRules = [
   body('priority').optional().isIn(['basse', 'moyenne', 'haute']).withMessage('Priorité invalide.'),
   body('tag').optional({ nullable: true }).trim().isLength({ max: 40 }).withMessage('Le tag est trop long (40 caractères max).'),
   body('due_date').optional({ nullable: true }).isISO8601().withMessage('Date invalide (format attendu : AAAA-MM-JJ).'),
+  body('recurrence').optional({ nullable: true, checkFalsy: true }).isIn(['daily', 'weekly', 'monthly']).withMessage('Récurrence invalide.'),
+  body('labels').optional({ nullable: true }).isArray({ max: 20 }).withMessage('Étiquettes invalides (20 maximum).'),
+  body('labels.*').optional().isString().trim().isLength({ max: 40 }).withMessage('Étiquette trop longue (40 caractères max).'),
   checkValidation
 ];
 

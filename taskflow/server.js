@@ -12,6 +12,7 @@ const workspaceRoutes = require('./routes/workspaceRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const tenantRoutes = require('./routes/tenantRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const savedViewRoutes = require('./routes/savedViewRoutes');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const { errorHandler } = require('./middleware/errorHandler');
 const { identifyTenant } = require('./middleware/tenant');
@@ -50,6 +51,7 @@ app.use('/api/workspaces', workspaceRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/tenants', tenantRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/views', savedViewRoutes);
 
 // Route de vérification rapide
 app.get('/api/health', (req, res) => {
@@ -71,6 +73,24 @@ if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`🚀 Serveur lancé sur http://localhost:${PORT}`);
   });
+
+  // Rappels d'échéance automatiques : balayage périodique des tâches en retard
+  // ou à échéance proche → notification au propriétaire (persistée + SSE).
+  // Démarré uniquement quand on lance vraiment le serveur (jamais sous Jest).
+  const pool = require('./config/db');
+  const { runDueReminderScan } = require('./utils/dueReminders');
+  const { createAndSendNotification } = require('./controllers/notificationController');
+  const REMINDER_INTERVAL_MS = Number(process.env.DUE_REMINDER_INTERVAL_MS) || 15 * 60 * 1000;
+
+  const scanReminders = () =>
+    runDueReminderScan(pool, createAndSendNotification).catch((err) =>
+      console.error('⚠️ Balayage des rappels d\'échéance échoué :', err.message)
+    );
+
+  // Premier passage peu après le démarrage (laisse le temps aux migrations),
+  // puis à intervalle régulier. unref() : n'empêche pas le process de s'arrêter.
+  setTimeout(scanReminders, 10 * 1000).unref();
+  setInterval(scanReminders, REMINDER_INTERVAL_MS).unref();
 }
 
 // Migration auto-exécutée au démarrage
@@ -128,6 +148,20 @@ if (require.main === module) {
       await pool.query("ALTER TABLE tasks ADD COLUMN timer_start DATETIME NULL");
     }
 
+    // Migration pour les tâches récurrentes
+    const [recurrenceColumns] = await pool.query("SHOW COLUMNS FROM tasks LIKE 'recurrence'");
+    if (recurrenceColumns.length === 0) {
+      console.log("ℹ️ La colonne 'recurrence' est manquante dans 'tasks'. Ajout en cours...");
+      await pool.query("ALTER TABLE tasks ADD COLUMN recurrence VARCHAR(10) NULL");
+    }
+
+    // Migration pour les rappels d'échéance automatiques (anti-doublon)
+    const [dueRemindedColumns] = await pool.query("SHOW COLUMNS FROM tasks LIKE 'due_reminded_at'");
+    if (dueRemindedColumns.length === 0) {
+      console.log("ℹ️ La colonne 'due_reminded_at' est manquante dans 'tasks'. Ajout en cours...");
+      await pool.query("ALTER TABLE tasks ADD COLUMN due_reminded_at DATETIME NULL");
+    }
+
     try {
       await pool.query("CREATE INDEX idx_tasks_user_status_active ON tasks(user_id, status, is_archived)");
     } catch (e) { /* index existant */ }
@@ -182,6 +216,33 @@ if (require.main === module) {
       await pool.query("ALTER TABLE workspaces ADD CONSTRAINT fk_workspaces_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE");
       console.log("✅ Migration réussie : colonne 'tenant_id' ajoutée à 'workspaces'.");
     }
+
+    // Étiquettes multiples (task_labels) et vues enregistrées (saved_views)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS task_labels (
+        task_id INT NOT NULL,
+        label VARCHAR(40) NOT NULL,
+        PRIMARY KEY (task_id, label),
+        FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+      )
+    `);
+    try {
+      await pool.query("CREATE INDEX idx_task_labels_label ON task_labels(label)");
+    } catch (e) { /* index existant */ }
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS saved_views (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        name VARCHAR(80) NOT NULL,
+        filters JSON NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    try {
+      await pool.query("CREATE INDEX idx_saved_views_user ON saved_views(user_id)");
+    } catch (e) { /* index existant */ }
 
     // 2. Créer la table workspace_members
     await pool.query(`
