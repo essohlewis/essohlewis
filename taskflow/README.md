@@ -103,6 +103,28 @@ Cette version 2 se concentre sur la **performance** (temps de réponse, bande pa
 - **Intégration continue GitHub Actions** (`.github/workflows/taskflow-ci.yml`) : démarre un MySQL jetable, importe le schéma et lance la suite Jest à chaque push/PR touchant `taskflow/`.
 - Nouveaux tests d'intégration : recherche plein texte et actions groupées.
 
+## Nouveautés — étiquettes multiples & vues enregistrées
+
+**Étiquettes multiples** (en plus du `tag` unique historique, conservé) :
+
+- Une tâche peut porter **plusieurs étiquettes** (saisies séparées par des
+  virgules à la création et dans la modale d'édition). Dédoublonnage
+  insensible à la casse, 40 caractères et 20 étiquettes max.
+- Les étiquettes s'affichent en **puces cliquables** sur les cartes : un clic
+  **filtre** la liste sur cette étiquette (re-clic pour retirer le filtre), avec
+  un indicateur « Étiquette : … ✕ » dans la barre d'outils.
+- `GET /api/tasks?label=…` filtre côté serveur (via la table `task_labels`,
+  agrégat groupé sans N+1). Chaque tâche renvoyée inclut un tableau `labels`.
+
+**Vues enregistrées** :
+
+- Le bouton **💾 Enregistrer la vue** sauvegarde la **combinaison de filtres/tri
+  courante** (recherche, priorité, tag, étiquette, tri) sous un nom.
+- Les vues apparaissent en puces : un clic **ré-applique** tous les filtres, la
+  croix les supprime. Limite de 30 vues par utilisateur.
+- Les filtres sont **assainis côté serveur** (liste blanche de clés/valeurs)
+  avant d'être stockés dans une colonne `JSON` : aucun contenu arbitraire.
+
 ## Nouveautés — rappels d'échéance automatiques
 
 Le serveur **surveille les échéances** en tâche de fond et prévient
@@ -319,13 +341,17 @@ npm test
 | DELETE  | /api/tasks/:id/subtasks/:subId | Oui | Supprimer une sous-tâche              |
 | POST    | /api/tasks/:id/timer/start | Oui    | Démarrer le minuteur de la tâche       |
 | POST    | /api/tasks/:id/timer/stop  | Oui    | Arrêter le minuteur (cumule le temps)  |
+| GET     | /api/tasks?label=…       | Oui      | Filtrer par étiquette multiple          |
+| GET/POST| /api/views               | Oui      | Lister / créer une vue enregistrée      |
+| DELETE  | /api/views/:id           | Oui      | Supprimer une vue enregistrée           |
 
 `sort` accepte : `recent` (défaut), `ancien`, `echeance`, `priorite`.
 
 Chaque tâche renvoyée par `GET /api/tasks` inclut `subtasks_total`, `subtasks_done`,
-`recurrence` (`daily`/`weekly`/`monthly` ou `null`), ainsi que `time_spent`
-(secondes cumulées) et `timer_elapsed` (secondes du minuteur en cours, 0 si à
-l'arrêt). `POST`/`PUT /api/tasks` acceptent le champ `recurrence`.
+`labels` (tableau d'étiquettes), `recurrence` (`daily`/`weekly`/`monthly` ou
+`null`), ainsi que `time_spent` (secondes cumulées) et `timer_elapsed` (secondes
+du minuteur en cours, 0 si à l'arrêt). `POST`/`PUT /api/tasks` acceptent les
+champs `recurrence` et `labels` (tableau).
 
 \* `/refresh` et `/logout` ne nécessitent pas de token d'accès, mais un `refreshToken` valide dans le corps :
 ```json

@@ -231,6 +231,33 @@ async function main() {
       await connection.query("CREATE INDEX idx_workspaces_tenant ON workspaces(tenant_id)");
     } catch (e) { /* index existant */ }
 
+    // Étiquettes multiples + vues enregistrées (bases déjà existantes)
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS task_labels (
+        task_id INT NOT NULL,
+        label VARCHAR(40) NOT NULL,
+        PRIMARY KEY (task_id, label),
+        FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+      )
+    `);
+    try {
+      await connection.query("CREATE INDEX idx_task_labels_label ON task_labels(label)");
+    } catch (e) { /* index existant */ }
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS saved_views (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        name VARCHAR(80) NOT NULL,
+        filters JSON NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    try {
+      await connection.query("CREATE INDEX idx_saved_views_user ON saved_views(user_id)");
+    } catch (e) { /* index existant */ }
+
     console.log('✅ Base initialisée avec succès (tables et index créés).');
     console.log('   Tu peux maintenant lancer : npm start');
   } catch (err) {

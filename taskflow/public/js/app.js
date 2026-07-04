@@ -11,6 +11,7 @@ let eventSource = null;
 
 let allTasks = [];
 let activeWorkspaceId = null;
+let activeLabelFilter = null; // étiquette multiple servant de filtre courant
 const cachedWs = localStorage.getItem('taskflow_workspace_id');
 if (cachedWs && cachedWs !== 'personal') {
   activeWorkspaceId = parseInt(cachedWs, 10) || null;
@@ -82,6 +83,7 @@ const editPriority = document.getElementById('edit-priority');
 const editTag = document.getElementById('edit-tag');
 const editDueDate = document.getElementById('edit-due-date');
 const editRecurrence = document.getElementById('edit-recurrence');
+const editLabels = document.getElementById('edit-labels');
 const editCancel = document.getElementById('edit-cancel');
 const shareEmail = document.getElementById('share-email');
 const shareBtn = document.getElementById('share-btn');
@@ -947,6 +949,9 @@ function showApp() {
     userAvatarPlaceholder.appendChild(imgBadge);
   }
 
+  // Charger les vues enregistrées (filtres/tri sauvegardés)
+  loadSavedViews();
+
   // Lancer le flux de notifications SSE
   initNotifications();
   loadNotifications();
@@ -969,9 +974,10 @@ taskForm.addEventListener('submit', async (e) => {
   const tag = document.getElementById('task-tag').value;
   const due_date = document.getElementById('task-due-date').value || null;
   const recurrence = document.getElementById('task-recurrence').value || null;
+  const labels = parseLabelsInput(document.getElementById('task-labels').value);
 
   try {
-    const created = await createTaskRequest({ title, description, priority, tag, due_date, recurrence });
+    const created = await createTaskRequest({ title, description, priority, tag, due_date, recurrence, labels });
     taskForm.reset();
     document.getElementById('task-priority').value = 'moyenne';
     showToast('Tâche ajoutée.');
@@ -995,12 +1001,95 @@ filterTag.addEventListener('change', loadTasks);
 sortSelect.addEventListener('change', loadTasks);
 loadMoreBtn.addEventListener('click', loadMoreTasks);
 
+// ================= Vues enregistrées (filtres/tri sauvegardés) =================
+const saveViewBtn = document.getElementById('save-view-btn');
+if (saveViewBtn) saveViewBtn.addEventListener('click', saveCurrentView);
+
+// Capture les filtres actuellement appliqués (mêmes clés que le backend).
+function currentFilters() {
+  const f = {};
+  if (searchInput.value.trim()) f.search = searchInput.value.trim();
+  if (filterPriority.value) f.priority = filterPriority.value;
+  if (filterTag.value) f.tag = filterTag.value;
+  if (activeLabelFilter) f.label = activeLabelFilter;
+  if (sortSelect.value) f.sort = sortSelect.value;
+  return f;
+}
+
+// Ré-applique une vue : repositionne les contrôles puis recharge les tâches.
+function applyView(filters) {
+  const f = filters || {};
+  searchInput.value = f.search || '';
+  filterPriority.value = f.priority || '';
+  sortSelect.value = f.sort || 'recent';
+  filterTag.value = f.tag || '';
+  activeLabelFilter = f.label || null;
+  renderLabelFilterIndicator();
+  loadTasks();
+}
+
+async function loadSavedViews() {
+  try {
+    const views = await apiRequest('/views');
+    renderSavedViews(views);
+  } catch (err) {
+    /* silencieux : les vues sont un confort, pas un bloquant */
+  }
+}
+
+function renderSavedViews(views) {
+  const bar = document.getElementById('saved-views-bar');
+  if (!bar) return;
+  bar.querySelectorAll('.saved-view-chip').forEach((c) => c.remove());
+  views.forEach((v) => {
+    const chip = document.createElement('div');
+    chip.className = 'saved-view-chip';
+    const name = document.createElement('span');
+    name.textContent = v.name;
+    name.title = 'Appliquer cette vue';
+    name.addEventListener('click', () => applyView(v.filters || {}));
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'saved-view-del';
+    del.textContent = '✕';
+    del.title = 'Supprimer la vue';
+    del.addEventListener('click', (e) => { e.stopPropagation(); deleteSavedView(v.id); });
+    chip.append(name, del);
+    bar.insertBefore(chip, saveViewBtn);
+  });
+}
+
+async function saveCurrentView() {
+  const name = window.prompt('Nom de la vue :');
+  if (!name || !name.trim()) return;
+  try {
+    await apiRequest('/views', {
+      method: 'POST',
+      body: JSON.stringify({ name: name.trim(), filters: currentFilters() })
+    });
+    showToast('Vue enregistrée.');
+    loadSavedViews();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function deleteSavedView(id) {
+  try {
+    await apiRequest(`/views/${id}`, { method: 'DELETE' });
+    loadSavedViews();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
 // ================= Chargement des tâches =================
 function taskQueryParams(offset) {
   const params = new URLSearchParams();
   if (searchInput.value.trim()) params.set('search', searchInput.value.trim());
   if (filterPriority.value) params.set('priority', filterPriority.value);
   if (filterTag.value) params.set('tag', filterTag.value);
+  if (activeLabelFilter) params.set('label', activeLabelFilter);
   if (sortSelect.value) params.set('sort', sortSelect.value);
   params.set('limit', PAGE_SIZE);
   params.set('offset', offset);
@@ -1472,6 +1561,7 @@ function openEdit(task) {
   editTag.value = task.tag || '';
   editDueDate.value = toDateInput(task.due_date);
   editRecurrence.value = task.recurrence || '';
+  editLabels.value = Array.isArray(task.labels) ? task.labels.join(', ') : '';
   shareEmail.value = '';
   
   loadShares(task.id);
@@ -1578,7 +1668,8 @@ editForm.addEventListener('submit', async (e) => {
     priority: editPriority.value,
     tag: editTag.value.trim() || null,
     due_date: editDueDate.value || null,
-    recurrence: editRecurrence.value || null
+    recurrence: editRecurrence.value || null,
+    labels: parseLabelsInput(editLabels.value)
   };
 
   try {
@@ -1714,6 +1805,23 @@ function buildTaskCard(task) {
     tagEl.insertAdjacentElement('afterend', badge);
   }
 
+  // Étiquettes multiples : puces cliquables (clic = filtrer par cette étiquette).
+  if (Array.isArray(task.labels) && task.labels.length > 0) {
+    const wrap = document.createElement('div');
+    wrap.className = 'task-labels';
+    task.labels.forEach((label) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'label-chip';
+      chip.textContent = label;
+      chip.title = `Filtrer par l'étiquette « ${label} »`;
+      if (activeLabelFilter === label) chip.classList.add('active');
+      chip.addEventListener('click', () => setLabelFilter(label));
+      wrap.appendChild(chip);
+    });
+    tagEl.insertAdjacentElement('afterend', wrap);
+  }
+
   const dueEl = node.querySelector('.task-due');
   dueEl.textContent = task.due_date
     ? `Échéance : ${new Date(task.due_date).toLocaleDateString('fr-FR')}`
@@ -1763,6 +1871,55 @@ function buildTaskCard(task) {
 const RECURRENCE_LABELS = { daily: 'Quotidienne', weekly: 'Hebdomadaire', monthly: 'Mensuelle' };
 function recurrenceLabel(recurrence) {
   return RECURRENCE_LABELS[recurrence] || '';
+}
+
+// ================= Étiquettes multiples (filtre) =================
+function setLabelFilter(label) {
+  // Re-cliquer sur l'étiquette active la retire (bascule).
+  activeLabelFilter = activeLabelFilter === label ? null : label;
+  renderLabelFilterIndicator();
+  loadTasks();
+}
+
+function clearLabelFilter() {
+  if (!activeLabelFilter) return;
+  activeLabelFilter = null;
+  renderLabelFilterIndicator();
+  loadTasks();
+}
+
+// Affiche (ou retire) un petit bandeau « Étiquette : … ✕ » dans la barre d'outils.
+function renderLabelFilterIndicator() {
+  let el = document.getElementById('label-filter-indicator');
+  if (!activeLabelFilter) {
+    if (el) el.remove();
+    return;
+  }
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'label-filter-indicator';
+    el.className = 'label-filter-indicator';
+    const toolbar = document.querySelector('.toolbar');
+    (toolbar || document.body).appendChild(el);
+  }
+  el.textContent = '';
+  const span = document.createElement('span');
+  span.textContent = `Étiquette : ${activeLabelFilter}`;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = '✕';
+  btn.title = 'Retirer le filtre d\'étiquette';
+  btn.addEventListener('click', clearLabelFilter);
+  el.append(span, btn);
+}
+
+// Convertit une saisie « a, b , c » en tableau d'étiquettes propre.
+function parseLabelsInput(value) {
+  return (value || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+    .slice(0, 20);
 }
 
 // ================= Suivi du temps (minuteur) =================

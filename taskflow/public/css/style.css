@@ -1058,6 +1058,101 @@ input.invalid, select.invalid, textarea.invalid {
   white-space: nowrap;
 }
 
+/* ===== Étiquettes multiples ===== */
+.task-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 12px;
+}
+
+.label-chip {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--amber);
+  background: var(--amber-soft);
+  border: 1px solid transparent;
+  padding: 3px 10px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+}
+
+.label-chip:hover { border-color: var(--amber); }
+.label-chip:active { transform: scale(0.95); }
+.label-chip.active {
+  border-color: var(--amber);
+  box-shadow: 0 0 0 2px var(--amber-soft);
+}
+
+.label-filter-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--amber);
+  background: var(--amber-soft);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.label-filter-indicator button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+  line-height: 1;
+  min-height: auto;
+}
+
+/* ===== Vues enregistrées ===== */
+.saved-views-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.saved-view-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 4px 6px 4px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+.saved-view-chip:hover { border-color: var(--blue); color: var(--blue); }
+
+.saved-view-chip .saved-view-del {
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0 2px;
+  min-height: auto;
+}
+
+.saved-view-chip .saved-view-del:hover { color: var(--rose); }
+
+.saved-view-save {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  min-height: auto;
+}
+
 .task-meta {
   display: flex;
   align-items: center;

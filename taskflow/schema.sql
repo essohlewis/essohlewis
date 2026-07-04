@@ -170,6 +170,29 @@ CREATE TABLE IF NOT EXISTS attachments (
   FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
 );
 
+-- Étiquettes multiples : une tâche peut porter plusieurs étiquettes (en plus du
+-- champ `tag` unique historique, conservé). Unicité (tâche, étiquette).
+CREATE TABLE IF NOT EXISTS task_labels (
+  task_id INT NOT NULL,
+  label VARCHAR(40) NOT NULL,
+  PRIMARY KEY (task_id, label),
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_task_labels_label ON task_labels(label);
+
+-- Vues enregistrées : combinaisons de filtres/tri sauvegardées par l'utilisateur.
+CREATE TABLE IF NOT EXISTS saved_views (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  name VARCHAR(80) NOT NULL,
+  filters JSON NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_saved_views_user ON saved_views(user_id);
+
 -- Table des sous-tâches (checklist rattachée à une tâche)
 CREATE TABLE IF NOT EXISTS subtasks (
   id INT AUTO_INCREMENT PRIMARY KEY,
