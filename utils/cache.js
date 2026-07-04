@@ -3,6 +3,8 @@ const logger = require('./logger');
 
 let client = null;
 let connected = false;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
 
 const initCache = async () => {
   try {
@@ -14,16 +16,30 @@ const initCache = async () => {
     client = redis.createClient({
       host: process.env.REDIS_HOST || 'localhost',
       port: process.env.REDIS_PORT || 6379,
-      password: process.env.REDIS_PASSWORD || undefined
+      password: process.env.REDIS_PASSWORD || undefined,
+      socket: {
+        reconnectStrategy: (retries) => {
+          if (retries > MAX_RECONNECT_ATTEMPTS) {
+            logger.warn('Redis: max reconnection attempts reached, giving up');
+            return new Error('Redis reconnection limit exceeded');
+          }
+          const delay = Math.min(1000 * Math.pow(2, retries), 30000);
+          logger.info(`Redis: reconnecting in ${delay}ms (attempt ${retries + 1}/${MAX_RECONNECT_ATTEMPTS})`);
+          return delay;
+        }
+      }
     });
 
     client.on('error', (err) => {
-      logger.warn('Redis connection error: %s', err.message);
+      if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+        reconnectAttempts++;
+      }
       connected = false;
     });
 
     client.on('connect', () => {
       logger.info('Redis connected successfully');
+      reconnectAttempts = 0;
       connected = true;
     });
 
