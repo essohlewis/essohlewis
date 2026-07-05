@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Devenir partenaire — BookingCI</title>
+  <meta name="description" content="Inscrivez gratuitement votre restaurant ou votre résidence meublée sur BookingCI. Gérez vos réservations depuis un tableau de bord simple et touchez plus de clients.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23E2603B'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='white' font-family='Arial'%3EB%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container">
+      <nav class="nav" aria-label="Navigation principale">
+        <a href="../index.html" class="brand"><span class="brand__mark"><span>B</span></span> Booking<em>CI</em></a>
+        <ul class="nav__links">
+          <li><a href="restaurants.html">Restaurants</a></li>
+          <li><a href="residences.html">Résidences</a></li>
+          <li><a href="devenir-partenaire.html" class="is-active">Devenir partenaire</a></li>
+        </ul>
+        <div class="nav__actions">
+          <a href="connexion.html" class="btn btn--ghost btn--sm">Se connecter</a>
+        </div>
+        <button class="burger" aria-label="Ouvrir le menu" aria-expanded="false"><span></span></button>
+      </nav>
+    </div>
+    <div class="mobile-menu">
+      <a href="restaurants.html">Restaurants</a>
+      <a href="residences.html">Résidences</a>
+      <a href="devenir-partenaire.html">Devenir partenaire</a>
+      <a href="connexion.html">Se connecter</a>
+    </div>
+  </header>
+
+  <section class="page-hero">
+    <div class="container page-hero__inner">
+      <nav class="breadcrumb" aria-label="Fil d'ariane">
+        <a href="../index.html">Accueil</a> <span>/</span> <span>Devenir partenaire</span>
+      </nav>
+      <span class="eyebrow">Espace professionnel</span>
+      <h1>Développez votre activité avec BookingCI</h1>
+      <p class="muted">Inscription gratuite, commission transparente, paiements Mobile Money. Rejoignez le réseau des restaurants et résidences de Côte d'Ivoire.</p>
+    </div>
+  </section>
+
+  <main class="section container">
+    <div class="listing-layout" style="grid-template-columns:1fr">
+
+      <!-- Avantages -->
+      <div class="features" style="margin-bottom:2.5rem">
+        <div class="feature reveal"><div class="feature__icon">📈</div><h3>Plus de visibilité</h3><p>Apparaissez auprès de milliers de clients à la recherche d'un établissement.</p></div>
+        <div class="feature reveal"><div class="feature__icon">🗓️</div><h3>Gestion des réservations</h3><p>Acceptez, refusez et suivez vos réservations en temps réel.</p></div>
+        <div class="feature reveal"><div class="feature__icon">💰</div><h3>Paiements Mobile Money</h3><p>Encaissez via Orange, MTN, Moov et Wave, directement sur votre compte.</p></div>
+        <div class="feature reveal"><div class="feature__icon">📊</div><h3>Statistiques claires</h3><p>Suivez vos vues, votre taux de conversion et votre chiffre d'affaires.</p></div>
+      </div>
+
+      <!-- Formulaire d'inscription -->
+      <section class="reveal" style="margin-bottom:3rem">
+        <div class="section-head"><span class="eyebrow">Inscription</span><h2>Ajoutez votre établissement</h2></div>
+
+        <div id="partner-success" class="alert alert--ok hidden">✅ Merci ! Votre établissement a été soumis. Notre équipe le validera sous 24&nbsp;h et vous recevrez un accès à votre tableau de bord.</div>
+
+        <form id="partner-form" data-validate class="form-grid cols-2" novalidate style="background:#fff;border:1px solid var(--line);border-radius:var(--radius-lg);padding:clamp(1.2rem,3vw,2rem)">
+          <div class="field">
+            <label for="p-nom">Nom de l'établissement <span class="req">*</span></label>
+            <input class="input" id="p-nom" name="nom" required minlength="2">
+            <small class="field-error"></small>
+          </div>
+          <div class="field">
+            <label for="p-type">Type <span class="req">*</span></label>
+            <select class="select" id="p-type" name="type" required>
+              <option value="">Choisir…</option>
+              <option value="restaurant">Restaurant / Maquis</option>
+              <option value="residence">Résidence meublée</option>
+            </select>
+            <small class="field-error"></small>
+          </div>
+          <div class="field">
+            <label for="p-ville">Ville <span class="req">*</span></label>
+            <select class="select" id="p-ville" name="ville" required><option value="">Choisir…</option></select>
+            <small class="field-error"></small>
+          </div>
+          <div class="field">
+            <label for="p-commune">Commune / quartier <span class="req">*</span></label>
+            <input class="input" id="p-commune" name="commune" required>
+            <small class="field-error"></small>
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label for="p-adresse">Adresse complète <span class="req">*</span></label>
+            <input class="input" id="p-adresse" name="adresse" required minlength="5">
+            <small class="field-error"></small>
+          </div>
+          <div class="field">
+            <label for="p-tel">Téléphone <span class="req">*</span></label>
+            <input class="input" id="p-tel" name="tel" type="tel" data-type="tel" required placeholder="+225 07 00 00 00 00">
+            <small class="field-error"></small>
+          </div>
+          <div class="field">
+            <label for="p-email">E-mail <span class="req">*</span></label>
+            <input class="input" id="p-email" name="email" type="email" required>
+            <small class="field-error"></small>
+          </div>
+          <div class="field">
+            <label for="p-prix">Tarif indicatif (FCFA) <span class="req">*</span></label>
+            <input class="input" id="p-prix" name="prix" type="number" min="500" step="500" required placeholder="Ex. 8000">
+            <small class="field-error"></small>
+          </div>
+          <div class="field">
+            <label for="p-photos">Photos de l'établissement</label>
+            <input class="input" id="p-photos" name="photos" type="file" accept="image/*" multiple>
+            <small class="help">JPG/PNG — jusqu'à 8 photos.</small>
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label for="p-desc">Description <span class="req">*</span></label>
+            <textarea class="textarea" id="p-desc" name="description" required minlength="20" placeholder="Présentez votre établissement, son ambiance, ses spécialités…"></textarea>
+            <small class="field-error"></small>
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label class="check" style="border:none;padding:0">
+              <input type="checkbox" required> J'accepte les conditions générales partenaires <span class="req">*</span>
+            </label>
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <button type="submit" class="btn btn--primary" id="p-submit">Publier mon établissement</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Tableau de bord (aperçu démo) -->
+      <section class="reveal">
+        <div class="section-head"><span class="eyebrow">Aperçu</span><h2>Votre tableau de bord</h2><p class="muted">Un exemple de ce que vous verrez une fois votre établissement validé.</p></div>
+
+        <div class="stat-cards">
+          <div class="stat-card"><b>1 248</b><span>Vues ce mois</span><div class="trend">▲ 12%</div></div>
+          <div class="stat-card"><b>37</b><span>Réservations</span><div class="trend">▲ 8%</div></div>
+          <div class="stat-card"><b>412 000</b><span>FCFA encaissés</span><div class="trend">▲ 15%</div></div>
+          <div class="stat-card"><b>4,7/5</b><span>Note moyenne</span><div class="trend">▲ 0,2</div></div>
+        </div>
+
+        <div data-tabs data-tabs-scope="#partner-dash">
+          <div class="dash-tabs">
+            <button data-tab="dp-resa" class="is-active">Réservations</button>
+            <button data-tab="dp-infos">Mes infos</button>
+            <button data-tab="dp-stats">Statistiques</button>
+          </div>
+          <div id="partner-dash">
+            <div class="dash-panel is-active" id="dp-resa">
+              <div class="table-wrap">
+                <table class="data">
+                  <thead><tr><th>Client</th><th>Date</th><th>Personnes</th><th>Montant</th><th>Statut</th></tr></thead>
+                  <tbody>
+                    <tr><td>Aïcha K.</td><td>08 juil. · 20h00</td><td>4</td><td>32 000 FCFA</td><td><span class="status status--ok">Confirmée</span></td></tr>
+                    <tr><td>Serge B.</td><td>09 juil. · 12h30</td><td>2</td><td>16 000 FCFA</td><td><span class="status status--wait">En attente</span></td></tr>
+                    <tr><td>Fatou D.</td><td>10 juil. · 19h30</td><td>6</td><td>48 000 FCFA</td><td><span class="status status--ok">Confirmée</span></td></tr>
+                    <tr><td>Kouassi N.</td><td>11 juil. · 21h00</td><td>3</td><td>24 000 FCFA</td><td><span class="status status--cancel">Annulée</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="dash-panel" id="dp-infos">
+              <p class="muted">Modifiez le nom, les photos, les tarifs et les disponibilités de votre établissement. Les changements sont appliqués en temps réel sur votre fiche publique.</p>
+              <div class="spec-list">
+                <div class="spec"><span class="ico">🏷️</span><span>Nom &amp; catégorie</span></div>
+                <div class="spec"><span class="ico">📷</span><span>Galerie photos</span></div>
+                <div class="spec"><span class="ico">💵</span><span>Tarifs FCFA</span></div>
+                <div class="spec"><span class="ico">🗓️</span><span>Calendrier de dispo</span></div>
+              </div>
+            </div>
+            <div class="dash-panel" id="dp-stats">
+              <p class="muted">Analysez vos performances : vues, taux de conversion, provenance des clients par commune et revenus mensuels.</p>
+              <div class="stat-cards">
+                <div class="stat-card"><b>3,0%</b><span>Taux de conversion</span></div>
+                <div class="stat-card"><b>Cocody</b><span>1ère commune source</span></div>
+                <div class="stat-card"><b>Wave</b><span>Paiement le + utilisé</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-bottom" style="border:none;margin:0;padding:0">
+        <span>© <span id="year">2026</span> BookingCI. Tous droits réservés.</span>
+        <a href="../index.html">Retour à l'accueil</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../assets/js/data.js"></script>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

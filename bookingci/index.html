@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BookingCI — Réservez restaurants & résidences meublées en Côte d'Ivoire</title>
+  <meta name="description" content="BookingCI : réservez une table dans les meilleurs restaurants ou une résidence meublée (villa, appartement, studio) à Abidjan, Bouaké, Yamoussoukro et San-Pédro. Paiement Mobile Money, sans frais cachés.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23E2603B'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='white' font-family='Arial'%3EB%3C/text%3E%3C/svg%3E">
+</head>
+<body data-root="1">
+
+  <!-- ============ EN-TÊTE ============ -->
+  <header class="site-header">
+    <div class="container">
+      <nav class="nav" aria-label="Navigation principale">
+        <a href="index.html" class="brand">
+          <span class="brand__mark"><span>B</span></span>
+          Booking<em>CI</em>
+        </a>
+        <ul class="nav__links">
+          <li><a href="pages/restaurants.html">Restaurants</a></li>
+          <li><a href="pages/residences.html">Résidences</a></li>
+          <li><a href="pages/devenir-partenaire.html">Devenir partenaire</a></li>
+        </ul>
+        <div class="nav__actions">
+          <a href="pages/connexion.html" class="btn btn--ghost btn--sm">Se connecter</a>
+          <a href="pages/devenir-partenaire.html" class="btn btn--primary btn--sm">Ajouter mon établissement</a>
+        </div>
+        <button class="burger" aria-label="Ouvrir le menu" aria-expanded="false"><span></span></button>
+      </nav>
+    </div>
+    <div class="mobile-menu">
+      <a href="pages/restaurants.html">Restaurants</a>
+      <a href="pages/residences.html">Résidences</a>
+      <a href="pages/devenir-partenaire.html">Devenir partenaire</a>
+      <a href="pages/connexion.html">Se connecter</a>
+      <a href="pages/devenir-partenaire.html" class="btn btn--primary btn--block">Ajouter mon établissement</a>
+    </div>
+  </header>
+
+  <main>
+    <!-- ============ HERO + RECHERCHE ============ -->
+    <section class="hero">
+      <div class="container hero__inner">
+        <div>
+          <span class="eyebrow">🇨🇮 La réservation locale, simplifiée</span>
+          <h1>Réservez une <span class="accent">table</span> ou une <span class="accent">résidence</span> en Côte d'Ivoire</h1>
+          <p class="hero__lead">Restaurants, maquis, villas, appartements et studios meublés à Abidjan et dans les grandes villes. Prix en FCFA, paiement Mobile Money, sans frais cachés.</p>
+
+          <!-- Recherche rapide -->
+          <form class="searchbar" id="quick-search" aria-label="Recherche rapide">
+            <div class="seg" role="tablist" aria-label="Type de réservation">
+              <button type="button" class="is-active" data-type="restaurant" role="tab">🍽️ Restaurant</button>
+              <button type="button" data-type="residence" role="tab">🏠 Résidence</button>
+            </div>
+            <div class="searchbar__grid">
+              <div class="field">
+                <label for="qs-ville">Ville</label>
+                <select class="select" id="qs-ville">
+                  <option value="">Toutes les villes</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="qs-date" id="qs-date-label">Date &amp; heure</label>
+                <input class="input" type="date" id="qs-date">
+              </div>
+              <div class="field">
+                <button type="submit" class="btn btn--primary btn--block">🔎 Rechercher</button>
+              </div>
+            </div>
+          </form>
+
+          <div class="hero__stats">
+            <div class="hero__stat"><b>320+</b><span>établissements</span></div>
+            <div class="hero__stat"><b>14</b><span>communes couvertes</span></div>
+            <div class="hero__stat"><b>4,7/5</b><span>satisfaction client</span></div>
+          </div>
+        </div>
+        <div class="hero__art" aria-hidden="true">
+          <span class="emoji">🍽️🏠</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TOP RESTAURANTS ============ -->
+    <section class="section container">
+      <div class="section-head">
+        <span class="eyebrow">Sélection</span>
+        <h2>Top restaurants du moment</h2>
+        <p class="muted">Les tables les plus appréciées par la communauté BookingCI.</p>
+      </div>
+      <div class="cards-grid" id="top-restaurants"></div>
+      <div class="text-center" style="margin-top:2rem">
+        <a href="pages/restaurants.html" class="btn btn--ghost">Voir tous les restaurants →</a>
+      </div>
+    </section>
+
+    <!-- ============ RÉSIDENCES POPULAIRES ============ -->
+    <section class="section container" style="padding-top:0">
+      <div class="section-head">
+        <span class="eyebrow">Séjours</span>
+        <h2>Résidences meublées populaires</h2>
+        <p class="muted">Villas, appartements et studios prêts à vous accueillir.</p>
+      </div>
+      <div class="cards-grid" id="top-residences"></div>
+      <div class="text-center" style="margin-top:2rem">
+        <a href="pages/residences.html" class="btn btn--ghost">Voir toutes les résidences →</a>
+      </div>
+    </section>
+
+    <!-- ============ POURQUOI NOUS ============ -->
+    <section class="section" style="background:var(--cream-2)">
+      <div class="container">
+        <div class="section-head text-center">
+          <span class="eyebrow">Confiance</span>
+          <h2>Pourquoi réserver avec BookingCI ?</h2>
+        </div>
+        <div class="features">
+          <div class="feature reveal">
+            <div class="feature__icon">🔒</div>
+            <h3>Paiement sécurisé</h3>
+            <p>Orange Money, MTN MoMo, Moov Money et Wave. Vos transactions sont protégées de bout en bout.</p>
+          </div>
+          <div class="feature reveal">
+            <div class="feature__icon">🎯</div>
+            <h3>Sans frais cachés</h3>
+            <p>Le prix affiché en FCFA est le prix final. Pas de mauvaise surprise au moment de payer.</p>
+          </div>
+          <div class="feature reveal">
+            <div class="feature__icon">⚡</div>
+            <h3>Confirmation rapide</h3>
+            <p>Réservez en moins de deux minutes et recevez une confirmation par SMS.</p>
+          </div>
+          <div class="feature reveal">
+            <div class="feature__icon">📍</div>
+            <h3>100% local</h3>
+            <p>Une plateforme pensée pour la Côte d'Ivoire : communes d'Abidjan et grandes villes du pays.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TÉMOIGNAGES ============ -->
+    <section class="section container">
+      <div class="section-head text-center">
+        <span class="eyebrow">Ils nous font confiance</span>
+        <h2>Ce que disent nos clients</h2>
+      </div>
+      <div class="testimonials" id="temoignages"></div>
+    </section>
+
+    <!-- ============ CTA PARTENAIRE ============ -->
+    <section class="section container" style="padding-top:0">
+      <div class="cta-band reveal">
+        <span class="eyebrow" style="color:#ffe6d8">Professionnels</span>
+        <h2>Vous gérez un restaurant ou une résidence&nbsp;?</h2>
+        <p>Rejoignez BookingCI gratuitement, gérez vos réservations depuis un tableau de bord simple et touchez des milliers de clients à travers la Côte d'Ivoire.</p>
+        <div style="margin-top:1.4rem">
+          <a href="pages/devenir-partenaire.html" class="btn btn--light">Ajouter mon établissement</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ PIED DE PAGE ============ -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="index.html" class="brand"><span class="brand__mark"><span>B</span></span> Booking<em style="color:var(--orange)">CI</em></a>
+          <p>La plateforme ivoirienne de réservation de restaurants et de résidences meublées. Abidjan · Bouaké · Yamoussoukro · San-Pédro.</p>
+          <div class="pay-badges" aria-label="Moyens de paiement">
+            <span class="pay-badge">Orange Money</span>
+            <span class="pay-badge">MTN MoMo</span>
+            <span class="pay-badge">Moov Money</span>
+            <span class="pay-badge">Wave</span>
+          </div>
+        </div>
+        <div class="footer-col">
+          <h4>Découvrir</h4>
+          <ul>
+            <li><a href="pages/restaurants.html">Restaurants</a></li>
+            <li><a href="pages/residences.html">Résidences</a></li>
+            <li><a href="pages/connexion.html">Mon espace client</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Professionnels</h4>
+          <ul>
+            <li><a href="pages/devenir-partenaire.html">Devenir partenaire</a></li>
+            <li><a href="pages/devenir-partenaire.html">Tableau de bord</a></li>
+            <li><a href="pages/connexion.html">Se connecter</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Aide</h4>
+          <ul>
+            <li><a href="#">Centre d'aide</a></li>
+            <li><a href="#">Contact</a></li>
+            <li><a href="#">Conditions générales</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© <span id="year">2026</span> BookingCI. Tous droits réservés.</span>
+        <span>Fait avec ❤ en Côte d'Ivoire</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

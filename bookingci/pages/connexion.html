@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion &amp; espace client — BookingCI</title>
+  <meta name="description" content="Connectez-vous à votre espace BookingCI : historique de réservations, favoris et notifications de confirmation.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23E2603B'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='white' font-family='Arial'%3EB%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container">
+      <nav class="nav" aria-label="Navigation principale">
+        <a href="../index.html" class="brand"><span class="brand__mark"><span>B</span></span> Booking<em>CI</em></a>
+        <ul class="nav__links">
+          <li><a href="restaurants.html">Restaurants</a></li>
+          <li><a href="residences.html">Résidences</a></li>
+          <li><a href="devenir-partenaire.html">Devenir partenaire</a></li>
+        </ul>
+        <div class="nav__actions">
+          <a href="devenir-partenaire.html" class="btn btn--primary btn--sm">Ajouter mon établissement</a>
+        </div>
+        <button class="burger" aria-label="Ouvrir le menu" aria-expanded="false"><span></span></button>
+      </nav>
+    </div>
+    <div class="mobile-menu">
+      <a href="restaurants.html">Restaurants</a>
+      <a href="residences.html">Résidences</a>
+      <a href="devenir-partenaire.html">Devenir partenaire</a>
+      <a href="devenir-partenaire.html" class="btn btn--primary btn--block">Ajouter mon établissement</a>
+    </div>
+  </header>
+
+  <main class="section container">
+    <nav class="breadcrumb" aria-label="Fil d'ariane">
+      <a href="../index.html">Accueil</a> <span>/</span> <span>Connexion</span>
+    </nav>
+
+    <div class="auth-wrap">
+      <!-- Carte formulaire -->
+      <div class="auth-card">
+        <div class="auth-switch" data-tabs data-tabs-scope="#auth-forms" role="tablist">
+          <button data-tab="login" class="is-active">Connexion</button>
+          <button data-tab="register">Inscription</button>
+        </div>
+
+        <div id="auth-forms">
+          <!-- Connexion -->
+          <div class="auth-panel dash-panel is-active" id="login">
+            <h2>Content de vous revoir 👋</h2>
+            <p class="muted">Accédez à vos réservations et favoris.</p>
+            <form data-auth="login" data-validate novalidate>
+              <div class="field">
+                <label for="l-email">E-mail ou téléphone <span class="req">*</span></label>
+                <input class="input" id="l-email" name="identifiant" required>
+                <small class="field-error"></small>
+              </div>
+              <div class="field">
+                <label for="l-pass">Mot de passe <span class="req">*</span></label>
+                <input class="input" id="l-pass" name="password" type="password" required minlength="6">
+                <small class="field-error"></small>
+              </div>
+              <button type="submit" class="btn btn--primary btn--block">Se connecter</button>
+              <p class="help text-center" style="margin-top:.8rem"><a href="#">Mot de passe oublié ?</a></p>
+            </form>
+          </div>
+
+          <!-- Inscription -->
+          <div class="auth-panel dash-panel" id="register">
+            <h2>Créer un compte</h2>
+            <p class="muted">Réservez plus vite et suivez vos favoris.</p>
+            <form data-auth="register" data-validate novalidate>
+              <div class="form-grid cols-2">
+                <div class="field">
+                  <label for="r-nom">Nom complet <span class="req">*</span></label>
+                  <input class="input" id="r-nom" name="nom" required minlength="2">
+                  <small class="field-error"></small>
+                </div>
+                <div class="field">
+                  <label for="r-tel">Téléphone <span class="req">*</span></label>
+                  <input class="input" id="r-tel" name="tel" type="tel" data-type="tel" required placeholder="+225 07 00 00 00 00">
+                  <small class="field-error"></small>
+                </div>
+              </div>
+              <div class="field">
+                <label for="r-email">E-mail <span class="req">*</span></label>
+                <input class="input" id="r-email" name="email" type="email" required>
+                <small class="field-error"></small>
+              </div>
+              <div class="form-grid cols-2">
+                <div class="field">
+                  <label for="r-pass">Mot de passe <span class="req">*</span></label>
+                  <input class="input" id="r-pass" name="password" type="password" required minlength="6">
+                  <small class="field-error"></small>
+                </div>
+                <div class="field">
+                  <label for="r-pass2">Confirmer <span class="req">*</span></label>
+                  <input class="input" id="r-pass2" name="password2" type="password" required data-match="#r-pass">
+                  <small class="field-error"></small>
+                </div>
+              </div>
+              <button type="submit" class="btn btn--primary btn--block">Créer mon compte</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Aside marketing -->
+      <aside class="auth-aside">
+        <h2>Votre espace BookingCI</h2>
+        <ul>
+          <li>🗂️ <span>Retrouvez tout votre <strong>historique de réservations</strong>.</span></li>
+          <li>❤️ <span>Gardez vos <strong>établissements favoris</strong> à portée de main.</span></li>
+          <li>🔔 <span>Recevez vos <strong>confirmations</strong> par SMS et e-mail.</span></li>
+          <li>💳 <span>Payez en toute sécurité via <strong>Mobile Money</strong>.</span></li>
+        </ul>
+      </aside>
+    </div>
+
+    <!-- Espace client (révélé après connexion) -->
+    <section id="client-space" class="hidden" style="margin-top:3rem">
+      <div class="section-head"><span class="eyebrow">Mon espace</span><h2>Bonjour, ravi de vous revoir 🎉</h2></div>
+
+      <div data-tabs data-tabs-scope="#client-panels">
+        <div class="dash-tabs">
+          <button data-tab="cl-histo" class="is-active">Mes réservations</button>
+          <button data-tab="cl-fav">Mes favoris</button>
+          <button data-tab="cl-notif">Notifications</button>
+        </div>
+        <div id="client-panels">
+          <div class="dash-panel is-active" id="cl-histo">
+            <div class="table-wrap">
+              <table class="data">
+                <thead><tr><th>Établissement</th><th>Quand</th><th>Montant</th><th>Statut</th></tr></thead>
+                <tbody id="client-historique"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="dash-panel" id="cl-fav">
+            <div class="cards-grid" id="client-favoris"></div>
+          </div>
+          <div class="dash-panel" id="cl-notif">
+            <div class="alert alert--info">🔔 Votre réservation au restaurant <strong>Océan Lagune</strong> est confirmée pour le 10 juillet à 20h00.</div>
+            <div class="alert alert--ok">✅ Paiement Wave de 32 000 FCFA reçu. Merci !</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer" style="margin-top:3rem">
+    <div class="container">
+      <div class="footer-bottom" style="border:none;margin:0;padding:0">
+        <span>© <span id="year">2026</span> BookingCI. Tous droits réservés.</span>
+        <a href="../index.html">Retour à l'accueil</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../assets/js/data.js"></script>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>
