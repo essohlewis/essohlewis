@@ -261,6 +261,17 @@
     }
   ];
 
+  /* Coordonnées géographiques [latitude, longitude] par établissement.
+     Utilisées par la carte Leaflet de la fiche. En production, ces
+     coordonnées seront fournies par le backend avec chaque établissement. */
+  const COORDS = {
+    r1: [5.3592, -3.9990], r2: [5.3010, -3.9960], r3: [5.3250, -4.0220], r4: [5.3560, -3.9660],
+    r5: [5.3450, -4.0830], r6: [5.3750, -3.9960], r7: [6.8090, -5.2760], r8: [7.6900, -5.0300],
+    h1: [5.3480, -4.0010], h2: [5.3270, -4.0180], h3: [5.3040, -3.9930], h4: [5.3950, -3.9820],
+    h5: [4.7480, -6.6360], h6: [5.3520, -3.9700], h7: [6.8200, -5.2780], h8: [7.6870, -5.0260]
+  };
+  RESTAURANTS.concat(RESIDENCES).forEach(function (e) { e.coord = COORDS[e.id] || null; });
+
   const TEMOIGNAGES = [
     { nom: 'Aïcha K.', ville: 'Cocody', texte: "Réservation en 2 minutes pour un dîner d'anniversaire. Table prête à notre arrivée, aucune surprise. Je recommande !", note: 5 },
     { nom: 'Serge B.', ville: 'Plateau', texte: "J'ai loué un appartement pour une mission d'une semaine. Photos fidèles, paiement Wave rapide et sécurisé. Parfait.", note: 5 },

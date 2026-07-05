@@ -23,10 +23,12 @@ bookingci/
 │   ├── css/
 │   │   └── style.css              # Design system complet (tokens + composants)
 │   ├── js/
-│   │   ├── data.js                # Données démo + "API" simulée + helpers
+│   │   ├── data.js                # Données démo (+ coordonnées) + "API" simulée + helpers
 │   │   ├── main.js                # UI transverse : nav, reveal, toasts, validation, favoris
 │   │   ├── filtres.js             # Filtrage / tri côté client des listings
-│   │   └── reservation.js         # Fiche : carousel, calendrier, widget réservation
+│   │   └── reservation.js         # Fiche : carousel, calendrier, carte Leaflet, réservation
+│   ├── vendor/
+│   │   └── leaflet/               # Leaflet 1.9.4 auto-hébergé (JS, CSS, images marqueurs)
 │   └── images/                    # (Vos photos réelles — placeholders SVG générés en JS)
 └── README.md
 ```
@@ -55,6 +57,11 @@ python3 -m http.server 8000
 - **Accessibilité** : contrastes soignés, `alt` sur les images, navigation
   clavier (galerie, menus), `:focus-visible`, respect de
   `prefers-reduced-motion`.
+- **Carte interactive** : la fiche établissement affiche une vraie carte
+  **Leaflet + OpenStreetMap** centrée sur les coordonnées de l'établissement
+  (marqueur + popup). Leaflet est **auto-hébergé** dans `assets/vendor/leaflet/`
+  (aucune dépendance CDN pour la librairie) ; seules les tuiles proviennent
+  d'OpenStreetMap. Un repli visuel s'affiche si les tuiles sont indisponibles.
 - **Animations discrètes** : révélations au scroll via `IntersectionObserver`
   (classe `.reveal`).
 
@@ -172,7 +179,12 @@ Wave**. L'intégration réelle se fait côté backend avec un agrégateur ivoiri
 1. Remplacer l'API simulée par de vrais appels `fetch()` (voir ci-dessus).
 2. Déposer les vraies photos dans `assets/images/` et remplacer l'appel à
    `BookingCI.placeholder()` par les URLs réelles.
-3. Ajouter une carte réelle (Google Maps / Leaflet + OpenStreetMap) dans la
-   fiche établissement.
+3. Renseigner les coordonnées `coord: [lat, lng]` réelles de chaque
+   établissement (la carte Leaflet est déjà en place — voir `data.js`).
 4. Brancher l'authentification (JWT ou sessions) et sécuriser les endpoints.
 5. Intégrer CinetPay / PayDunya pour les paiements Mobile Money.
+
+> **Note tuiles cartographiques** : les tuiles OpenStreetMap publiques
+> conviennent au développement. En production à fort trafic, prévoyez un
+> fournisseur de tuiles dédié (MapTiler, Stadia Maps, ou une instance OSM)
+> conformément à la politique d'usage d'OpenStreetMap.

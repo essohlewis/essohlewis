@@ -213,8 +213,45 @@
     }).join('');
   }
 
+  // --- Carte Leaflet + OpenStreetMap ---
+  let carte = null;
   function rendreCarte() {
-    $('#fiche-carte-txt').textContent = etab.adresse;
+    const txt = $('#fiche-carte-txt');
+    if (txt) txt.textContent = '📍 ' + etab.adresse;
+
+    const mapEl = $('#fiche-map');
+    if (!mapEl) return;
+
+    // Repli si Leaflet n'a pas pu être chargé (hors ligne) ou coord absente
+    if (typeof L === 'undefined' || !etab.coord) {
+      mapEl.classList.add('is-fallback');
+      mapEl.innerHTML =
+        '<div><div class="pin">📍</div><strong>' + UI.escapeHtml(etab.adresse) + '</strong>' +
+        '<p class="muted" style="margin:.3rem 0 0">Carte momentanément indisponible.</p></div>';
+      return;
+    }
+
+    // Évite une double initialisation
+    if (carte) { carte.remove(); carte = null; }
+
+    carte = L.map(mapEl, { scrollWheelZoom: false, attributionControl: true })
+      .setView(etab.coord, 15);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(carte);
+
+    L.marker(etab.coord).addTo(carte)
+      .bindPopup('<strong>' + UI.escapeHtml(etab.nom) + '</strong><br>' + UI.escapeHtml(etab.adresse))
+      .openPopup();
+
+    // Réactive le zoom molette au clic sur la carte (UX : évite les captures de scroll)
+    carte.on('focus', function () { carte.scrollWheelZoom.enable(); });
+    carte.on('blur', function () { carte.scrollWheelZoom.disable(); });
+
+    // Corrige le calcul des dimensions une fois le conteneur peint
+    setTimeout(function () { if (carte) carte.invalidateSize(); }, 250);
   }
 
   function rendreAvis() {
