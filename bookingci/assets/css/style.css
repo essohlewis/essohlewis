@@ -353,6 +353,15 @@ input[type="range"] { width: 100%; accent-color: var(--terracotta); }
 .empty-state { text-align: center; padding: 3rem 1rem; color: var(--muted); }
 .empty-state .emoji { font-size: 3rem; }
 
+/* Indicateur de chargement (feedback visuel pendant les appels API) */
+.loading-state { grid-column: 1 / -1; display: grid; place-items: center; gap: .8rem; padding: 3rem 1rem; color: var(--muted); }
+.spinner {
+  width: 42px; height: 42px; border-radius: 50%;
+  border: 4px solid var(--cream-2); border-top-color: var(--terracotta);
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 .filters-toggle { display: inline-flex; }
 
 /* Fiche établissement */
@@ -484,7 +493,14 @@ table.data tr:last-child td { border-bottom: none; }
   .reveal { opacity: 1; transform: none; }
 }
 
-/* ---------- 9. Responsive ---------- */
+/* ---------- 9. Responsive ----------
+ * Approche mobile-first. Points de rupture :
+ *   Mobile   : < 640px   (base, 1 colonne, menu burger)
+ *   Tablette : 640–1024px (grilles 2 col, menu burger conservé)
+ *   Desktop  : > 1024px   (navigation complète, mises en page multi-colonnes)
+ */
+
+/* --- Tablette : à partir de 640px --- */
 @media (min-width: 640px) {
   .searchbar__grid { grid-template-columns: repeat(2, 1fr) auto; align-items: end; }
   .cards-grid { grid-template-columns: repeat(2, 1fr); }
@@ -494,7 +510,24 @@ table.data tr:last-child td { border-bottom: none; }
   .form-grid.cols-2 { grid-template-columns: 1fr 1fr; }
 }
 
-@media (min-width: 900px) {
+/* --- Mobile + tablette (< 1024px) : filtres repliables + cibles tactiles --- */
+@media (max-width: 1023.98px) {
+  /* Les filtres sont masqués et dépliés via le bouton "Filtres & tri" */
+  .filters { display: none; margin-bottom: 1rem; }
+  .filters.is-open-mobile { display: block; animation: fade-up .25s ease; }
+
+  /* Zones cliquables confortables au doigt : ≥ 44px (recommandation WCAG) */
+  .btn { min-height: 44px; }
+  .btn--sm { min-height: 40px; }
+  .card__fav { width: 44px; height: 44px; font-size: 1.2rem; }
+  .seg button, .dash-tabs button, .auth-switch button { min-height: 44px; }
+  .gallery__btn { width: 48px; height: 48px; }
+  .calendar__day { min-height: 40px; }
+  .filters__reset { min-height: 40px; }
+}
+
+/* --- Desktop : à partir de 1025px --- */
+@media (min-width: 1025px) {
   .nav__links { display: flex; }
   .nav__actions { display: flex; }
   .burger { display: none; }
@@ -509,6 +542,6 @@ table.data tr:last-child td { border-bottom: none; }
   .footer-grid { grid-template-columns: 1.6fr 1fr 1fr 1fr; }
 }
 
-@media (min-width: 1100px) {
+@media (min-width: 1200px) {
   .testimonials { grid-template-columns: repeat(4, 1fr); }
 }

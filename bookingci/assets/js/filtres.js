@@ -191,9 +191,11 @@
     const panel = $('#filters-panel');
     if (!toggle || !panel) return;
     toggle.addEventListener('click', function () {
+      // On ne fait que basculer la classe : l'affichage est piloté par le CSS
+      // (média < 1024px), ce qui évite tout style inline en conflit.
       const open = panel.classList.toggle('is-open-mobile');
-      panel.style.display = open ? 'block' : '';
       toggle.setAttribute('aria-expanded', String(open));
+      toggle.textContent = open ? '✕ Masquer les filtres' : '⚙️ Filtres & tri';
     });
   }
 
@@ -219,6 +221,12 @@
   /* ---------------------------------------------------------------
    * Démarrage : chargement des données via l'"API"
    * ------------------------------------------------------------- */
+  // Feedback visuel immédiat pendant l'appel réseau
+  const gridInit = $('#cards-grid');
+  if (gridInit) {
+    gridInit.innerHTML = '<div class="loading-state"><div class="spinner" role="status" aria-label="Chargement en cours"></div><span>Chargement des établissements…</span></div>';
+  }
+
   BCI.api.getEtablissements(listingType).then(function (data) {
     source = data;
     peuplerVilles();
