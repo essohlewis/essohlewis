@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tarifs — Samson Gym</title>
+<meta name="description" content="Tarifs Samson Gym : séances à l'unité et abonnements mensuels, avec ou sans tapis de course.">
+<script>(function(){try{if(localStorage.getItem('samson-theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();</script>
+<meta name="robots" content="index,follow">
+<meta name="theme-color" content="#111111">
+<meta name="author" content="Samson Gym">
+<link rel="canonical" href="https://samsongym.ci/tarifs.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Samson Gym">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:title" content="Tarifs — Samson Gym">
+<meta property="og:description" content="Tarifs Samson Gym : séances à l’unité et abonnements mensuels, avec ou sans tapis de course.">
+<meta property="og:url" content="https://samsongym.ci/tarifs.html">
+<meta property="og:image" content="https://samsongym.ci/assets/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Tarifs — Samson Gym">
+<meta name="twitter:description" content="Tarifs Samson Gym : séances à l’unité et abonnements mensuels, avec ou sans tapis de course.">
+<meta name="twitter:image" content="https://samsongym.ci/assets/og-image.png">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="css/style.css">
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"HealthClub",
+  "@id":"https://samsongym.ci/#gym",
+  "name":"Samson Gym",
+  "description":"Centre sportif à Angré 22e, Abidjan : musculation, cardio, spinning, danse et cours collectifs 7j/7.",
+  "image":"https://samsongym.ci/assets/og-image.png",
+  "url":"https://samsongym.ci/",
+  "telephone":"+2250757274855",
+  "priceRange":"2000–30000 XOF",
+  "currenciesAccepted":"XOF",
+  "paymentAccepted":"Espèces, Mobile Money",
+  "address":{"@type":"PostalAddress","streetAddress":"Angré 22e","addressLocality":"Abidjan","addressRegion":"Abidjan","addressCountry":"CI"},
+  "areaServed":"Abidjan",
+  "openingHoursSpecification":[
+    {"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],"opens":"06:30","closes":"21:00"},
+    {"@type":"OpeningHoursSpecification","dayOfWeek":"Sunday","opens":"07:30","closes":"20:30"}
+  ],
+  "sameAs":["https://www.facebook.com/","https://www.instagram.com/"]
+}
+</script>
+<style>
+  .toggle-wrap{display:flex; justify-content:center; gap:8px; margin-bottom:50px;}
+  .toggle-btn{
+    font-family:var(--font-label); font-size:13px; letter-spacing:1.5px; text-transform:uppercase;
+    padding:13px 26px; border-radius:30px; border:1px solid #dddddd; background:#fff; color:var(--muted);
+    transition:all .2s ease;
+  }
+  .toggle-btn.is-active{background:var(--blood); color:#fff; border-color:var(--blood);}
+
+  .price-panel{display:grid; grid-template-columns:1fr 1fr; gap:26px; max-width:820px; margin:0 auto;}
+  .price-card{padding:38px; text-align:center; position:relative;}
+  .price-card.featured{background:var(--stone-900); color:var(--ivory);}
+  .price-card .tag{
+    position:absolute; top:-13px; left:50%; transform:translateX(-50%);
+    background:var(--gold); color:var(--stone-950); font-family:var(--font-label); font-size:10.5px;
+    letter-spacing:1.5px; text-transform:uppercase; padding:5px 14px; border-radius:20px; font-weight:700;
+  }
+  .price-card .plan{font-family:var(--font-label); font-size:12.5px; letter-spacing:2px; text-transform:uppercase; color:var(--muted);}
+  .price-card.featured .plan{color:var(--gold-light);}
+  .price-card .amount{font-family:var(--font-display); font-size:50px; margin:14px 0 6px;}
+  .price-card .amount span{font-size:16px; font-family:var(--font-label); color:var(--muted);}
+  .price-card.featured .amount{color:var(--gold);}
+  .price-card.featured .amount span{color:#cfcfcf;}
+  .price-card .desc{font-size:13px; color:var(--muted); margin-bottom:22px;}
+  .price-card.featured .desc{color:#cfcfcf;}
+  .price-card ul{text-align:left; font-size:13.5px;}
+  .price-card ul li{display:flex; gap:10px; padding:8px 0; border-bottom:1px solid #ededed;}
+  .price-card.featured ul li{border-bottom:1px solid rgba(255,255,255,.1);}
+
+  .faq-item{border-bottom:1px solid #e5e5e5; padding:22px 0;}
+  .faq-q{display:flex; justify-content:space-between; align-items:center; font-family:var(--font-label); font-weight:600; font-size:14.5px; text-transform:uppercase; letter-spacing:.5px; color:var(--stone-900);}
+  .faq-q .plus{font-size:20px; color:var(--gold); transition:transform .25s ease;}
+  .faq-item.is-open .plus{transform:rotate(45deg);}
+  .faq-a{max-height:0; overflow:hidden; transition:max-height .3s ease;}
+  .faq-item.is-open .faq-a{max-height:200px;}
+  .faq-a p{padding-top:14px; font-size:13.5px; color:var(--muted); max-width:600px;}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container nav">
+    <a href="index.html" class="brand">
+      <div class="brand-ring"><svg viewBox="0 0 24 24" fill="none" stroke="#ff8c1a" stroke-width="1.6"><path d="M12 2c1.5 3 1 5-1 7-2 2-2 5 0 7 2-1 3-3 3-5 2 1 3 3 2 6-3 3-8 3-11 0-3-3-3-8 0-11 2-2 4-3 7-4z"/></svg></div>
+      <div class="brand-text">CENTRE SPORTIF<b>SAMSON GYM</b></div>
+    </a>
+    <nav class="nav-links">
+      <a href="index.html" data-page="index.html">Accueil</a>
+      <a href="cours.html" data-page="cours.html">Cours collectifs</a>
+      <a href="coachs.html" data-page="coachs.html">Coachs</a>
+      <a href="tarifs.html" data-page="tarifs.html">Tarifs</a>
+      <a href="equipements.html" data-page="equipements.html">Équipements</a>
+      <a href="contact.html" data-page="contact.html">Contact</a>
+      <a href="contact.html" class="btn btn-gold nav-cta">Nous rejoindre</a>
+    </nav>
+    <button class="theme-toggle-btn" data-theme-toggle aria-label="Changer de thème">🌙</button>
+    <button class="nav-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
+  </div>
+</header>
+
+<section class="page-hero">
+  <div class="pillar-deco"><svg viewBox="0 0 200 500" preserveAspectRatio="none"><rect x="60" y="0" width="80" height="500" fill="#ff8c1a"/><path d="M60 180 L100 210 L70 240 L140 270 L90 300 L140 340 L60 500 Z" fill="#111111"/></svg></div>
+  <div class="container page-hero-inner reveal">
+    <div class="breadcrumb">Accueil <span>/</span> Tarifs</div>
+    <div class="eyebrow">Renseignements</div>
+    <h1>Des tarifs<br><span class="accent">clairs</span> et accessibles</h1>
+    <p class="lede">Séance libre ou abonnement mensuel, avec ou sans tapis de course — choisissez la formule adaptée à votre rythme.</p>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="toggle-wrap reveal">
+      <button class="toggle-btn is-active" data-pricing-toggle="seance">À la séance</button>
+      <button class="toggle-btn" data-pricing-toggle="abonnement">Abonnement mensuel</button>
+    </div>
+
+    <div class="price-panel reveal-stagger" data-pricing-panel="seance" style="display:grid;">
+      <div class="price-card card reveal" style="--i:0">
+        <div class="plan">Sans tapis de course</div>
+        <div class="amount">2 000 <span>FCFA</span></div>
+        <p class="desc">Accès libre à l'espace musculation, cardio et au cours collectif du jour.</p>
+        <ul>
+          <li>✔ Accès musculation & cardio</li>
+          <li>✔ Cours collectif du jour inclus</li>
+          <li>✔ Vestiaires & douches</li>
+        </ul>
+      </div>
+      <div class="price-card card featured reveal" style="--i:1">
+        <div class="tag">+ Tapis de course</div>
+        <div class="plan">Avec tapis de course (20mn)</div>
+        <div class="amount">3 000 <span>FCFA</span></div>
+        <p class="desc">La formule séance, avec 20 minutes de tapis de course en plus.</p>
+        <ul>
+          <li>✔ Tout le forfait "sans tapis"</li>
+          <li>✔ 20 minutes de tapis de course</li>
+          <li>✔ Idéal pour une séance cardio ciblée</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="price-panel reveal-stagger" data-pricing-panel="abonnement" style="display:none;">
+      <div class="price-card card reveal" style="--i:0">
+        <div class="plan">Sans tapis de course</div>
+        <div class="amount">25 000 <span>FCFA</span><span style="font-size:11px; display:block; margin-top:4px;">/ mois</span></div>
+        <p class="desc">Accès illimité au centre pendant un mois, cours collectifs inclus.</p>
+        <ul>
+          <li>✔ Accès illimité, tous les jours</li>
+          <li>✔ Tous les cours collectifs inclus</li>
+          <li>✔ Vestiaires & douches</li>
+        </ul>
+      </div>
+      <div class="price-card card featured reveal" style="--i:1">
+        <div class="tag">Le plus complet</div>
+        <div class="plan">Avec tapis de course (20mn)</div>
+        <div class="amount">30 000 <span>FCFA</span><span style="font-size:11px; display:block; margin-top:4px; color:#cfcfcf;">/ mois</span></div>
+        <p class="desc">L'abonnement complet, avec 20 minutes de tapis de course à chaque visite.</p>
+        <ul>
+          <li>✔ Tout le forfait "sans tapis"</li>
+          <li>✔ 20 minutes de tapis à chaque séance</li>
+          <li>✔ La formule la plus utilisée par nos membres</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section-alt">
+  <div class="container">
+    <div class="reveal" style="text-align:center; margin-bottom:44px;">
+      <div class="eyebrow" style="justify-content:center;">Horaires</div>
+      <h2 class="section-title">Ouvert 7 jours sur 7</h2>
+    </div>
+    <div class="grid-2 reveal-stagger" style="max-width:640px; margin:0 auto;">
+      <div class="card reveal" style="--i:0; background:var(--stone-800); border-color:rgba(255,255,255,.08); padding:30px; text-align:center;">
+        <div style="font-family:var(--font-label); color:var(--gold-light); letter-spacing:1.5px; text-transform:uppercase; font-size:12px;">Lundi – samedi</div>
+        <div style="font-family:var(--font-display); font-size:30px; color:var(--ivory); margin-top:10px;">6h30 – 21h00</div>
+      </div>
+      <div class="card reveal" style="--i:1; background:var(--stone-800); border-color:rgba(255,255,255,.08); padding:30px; text-align:center;">
+        <div style="font-family:var(--font-label); color:var(--gold-light); letter-spacing:1.5px; text-transform:uppercase; font-size:12px;">Dimanche</div>
+        <div style="font-family:var(--font-display); font-size:30px; color:var(--ivory); margin-top:10px;">7h30 – 20h30</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container" style="max-width:760px;">
+    <div class="reveal" style="margin-bottom:36px;">
+      <div class="eyebrow">Questions fréquentes</div>
+      <h2 class="section-title">Avant de venir</h2>
+    </div>
+
+    <div class="faq-item reveal" data-accordion-item>
+      <div class="faq-q" data-accordion-trigger>Faut-il réserver un cours à l'avance ? <span class="plus">+</span></div>
+      <div class="faq-a"><p>Non, les cours collectifs sont accessibles librement avec votre séance ou votre abonnement. Il suffit d'arriver 10 minutes avant.</p></div>
+    </div>
+    <div class="faq-item" data-accordion-item>
+      <div class="faq-q" data-accordion-trigger>L'abonnement mensuel est-il engageant ? <span class="plus">+</span></div>
+      <div class="faq-a"><p>Non, l'abonnement est valable un mois glissant sans engagement de durée au-delà.</p></div>
+    </div>
+    <div class="faq-item" data-accordion-item>
+      <div class="faq-q" data-accordion-trigger>Le tapis de course est-il disponible à tout moment ? <span class="plus">+</span></div>
+      <div class="faq-a"><p>Le forfait "avec tapis de course" donne droit à 20 minutes par visite, selon la disponibilité de la machine.</p></div>
+    </div>
+    <div class="faq-item" data-accordion-item>
+      <div class="faq-q" data-accordion-trigger>Comment payer sur place ? <span class="plus">+</span></div>
+      <div class="faq-a"><p>Le règlement se fait directement à l'accueil du centre, en espèces ou par mobile money.</p></div>
+    </div>
+  </div>
+</section>
+
+<section style="background:linear-gradient(120deg, var(--blood) 0%, var(--blood-light) 100%); color:var(--ivory); padding:70px 0;">
+  <div class="container reveal" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:24px;">
+    <div>
+      <h2 style="font-family:var(--font-display); text-transform:uppercase; font-size:clamp(26px,3.6vw,40px);">Une question sur les tarifs ?</h2>
+      <p style="margin-top:8px; color:#ffe0c2; font-size:14.5px;">Notre équipe vous répond par téléphone ou sur place.</p>
+    </div>
+    <a href="contact.html" class="btn btn-gold">Nous contacter</a>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="brand">
+          <div class="brand-ring"><svg viewBox="0 0 24 24" fill="none" stroke="#ff8c1a" stroke-width="1.6"><path d="M12 2c1.5 3 1 5-1 7-2 2-2 5 0 7 2-1 3-3 3-5 2 1 3 3 2 6-3 3-8 3-11 0-3-3-3-8 0-11 2-2 4-3 7-4z"/></svg></div>
+          <div class="brand-text">CENTRE SPORTIF<b>SAMSON GYM</b></div>
+        </a>
+        <p>Angré 22e, Abidjan — musculation, cardio et cours collectifs, sept jours sur sept.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Navigation</h4>
+        <ul>
+          <li><a href="cours.html">Cours collectifs</a></li>
+          <li><a href="coachs.html">Nos coachs</a></li>
+          <li><a href="tarifs.html">Tarifs</a></li>
+          <li><a href="equipements.html">Équipements</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Horaires</h4>
+        <ul><li>Lun. – Sam. : 6h30 – 21h00</li><li>Dimanche : 7h30 – 20h30</li></ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contact</h4>
+        <ul><li>07 57 27 48 55</li><li>25 21 00 61 98</li><li>Angré 22e, Abidjan</li></ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Samson Gym — Centre Sportif Angré 22e.</span>
+      <div class="footer-socials">
+        <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="#ffc98c"><path d="M13 22v-9h3l.5-4H13V6.5c0-1.2.3-2 2-2h2V1.1C16.6 1 15.4 1 14 1c-3 0-5 1.8-5 5.2V9H6v4h3v9h4z"/></svg></a>
+        <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="#ffc98c" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg></a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<a href="https://wa.me/2250757274855" class="float-cta" aria-label="WhatsApp">
+  <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2zm5.8 14.3c-.2.6-1.3 1.2-1.9 1.3-.5.1-1.1.1-1.8-.1-.4-.1-.9-.3-1.6-.6-2.8-1.2-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.4.7-.4h.5c.2 0 .4 0 .6.4.2.5.7 1.8.8 1.9.1.2.1.3 0 .5-.1.2-.2.3-.3.5-.2.2-.3.3-.5.5-.2.2-.3.4-.1.7.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.5 1.5.3.1.5.1.7-.1.2-.2.7-.8.9-1.1.2-.3.4-.2.6-.1.2.1 1.5.7 1.8.8.3.1.5.2.5.3.1.2.1.7-.1 1.3z"/></svg>
+</a>
+
+<script src="js/script.js"></script>
+</body>
+</html>
