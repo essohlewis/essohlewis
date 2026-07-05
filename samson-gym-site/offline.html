@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hors ligne — Samson Gym</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#111111">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  body{min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--stone-900); color:var(--ivory);}
+  .offline-box{text-align:center; max-width:460px; padding:40px 28px;}
+  .offline-box svg{width:70px; height:70px; margin:0 auto 24px;}
+  .offline-box h1{font-family:var(--font-display); text-transform:uppercase; font-size:clamp(30px,7vw,46px); color:var(--gold);}
+  .offline-box p{color:#cfcfcf; font-size:15px; margin-top:14px;}
+  .offline-box .btn{margin-top:28px;}
+</style>
+</head>
+<body>
+  <div class="offline-box">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#ff8c1a" stroke-width="1.4"><path d="M4 12h16M6 8v8M18 8v8M2 10v4M22 10v4"/></svg>
+    <div class="eyebrow" style="justify-content:center;">Connexion perdue</div>
+    <h1>Vous êtes<br>hors ligne</h1>
+    <p>Pas de réseau pour le moment. Les pages déjà visitées — dont le planning des cours — restent consultables. Réessayez dès que la connexion revient.</p>
+    <button class="btn btn-gold" onclick="location.reload()">Réessayer</button>
+  </div>
+</body>
+</html>
