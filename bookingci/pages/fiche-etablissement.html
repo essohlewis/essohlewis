@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fiche établissement — BookingCI</title>
+  <meta name="description" content="Découvrez les photos, équipements, avis et disponibilités de cet établissement, puis réservez en ligne avec paiement Mobile Money.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23E2603B'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='white' font-family='Arial'%3EB%3C/text%3E%3C/svg%3E">
+</head>
+<body data-page="fiche">
+
+  <header class="site-header">
+    <div class="container">
+      <nav class="nav" aria-label="Navigation principale">
+        <a href="../index.html" class="brand"><span class="brand__mark"><span>B</span></span> Booking<em>CI</em></a>
+        <ul class="nav__links">
+          <li><a href="restaurants.html">Restaurants</a></li>
+          <li><a href="residences.html">Résidences</a></li>
+          <li><a href="devenir-partenaire.html">Devenir partenaire</a></li>
+        </ul>
+        <div class="nav__actions">
+          <a href="connexion.html" class="btn btn--ghost btn--sm">Se connecter</a>
+          <a href="devenir-partenaire.html" class="btn btn--primary btn--sm">Ajouter mon établissement</a>
+        </div>
+        <button class="burger" aria-label="Ouvrir le menu" aria-expanded="false"><span></span></button>
+      </nav>
+    </div>
+    <div class="mobile-menu">
+      <a href="restaurants.html">Restaurants</a>
+      <a href="residences.html">Résidences</a>
+      <a href="devenir-partenaire.html">Devenir partenaire</a>
+      <a href="connexion.html">Se connecter</a>
+      <a href="devenir-partenaire.html" class="btn btn--primary btn--block">Ajouter mon établissement</a>
+    </div>
+  </header>
+
+  <main class="container" id="fiche-root">
+    <nav class="breadcrumb" aria-label="Fil d'ariane">
+      <a href="../index.html">Accueil</a> <span>/</span>
+      <a href="restaurants.html" id="bc-type">Restaurants</a> <span>/</span>
+      <span id="bc-nom">…</span>
+    </nav>
+
+    <!-- En-tête fiche -->
+    <div class="fiche-head">
+      <div>
+        <span class="badge badge--orange" id="fiche-tag">…</span>
+        <h1 id="fiche-titre" style="margin:.5rem 0 .3rem">Chargement…</h1>
+        <div class="rating" id="fiche-note"></div>
+        <p class="muted" id="fiche-lieu" style="margin-top:.3rem"></p>
+      </div>
+    </div>
+
+    <!-- Galerie / carousel -->
+    <div class="gallery" id="gallery">
+      <div class="gallery__track" id="gallery-track"></div>
+      <button class="gallery__btn gallery__btn--prev" id="gallery-prev" aria-label="Photo précédente">‹</button>
+      <button class="gallery__btn gallery__btn--next" id="gallery-next" aria-label="Photo suivante">›</button>
+      <div class="gallery__dots" id="gallery-dots"></div>
+    </div>
+
+    <div class="fiche-layout" style="margin-top:2rem">
+      <!-- Contenu principal -->
+      <div class="fiche-main">
+        <section>
+          <h2>À propos</h2>
+          <p id="fiche-description"></p>
+          <div class="spec-list" id="fiche-specs"></div>
+        </section>
+
+        <section>
+          <h2>Équipements &amp; services</h2>
+          <ul class="equip-list" id="fiche-equipements"></ul>
+        </section>
+
+        <section>
+          <h2>Localisation</h2>
+          <div class="map-frame">
+            <div>
+              <div class="pin">📍</div>
+              <strong id="fiche-carte-txt"></strong>
+              <p class="muted" style="margin:.3rem 0 0">Carte interactive intégrée à la version backend (Google&nbsp;Maps / OpenStreetMap).</p>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2>Avis clients</h2>
+          <div class="reviews" id="fiche-avis"></div>
+        </section>
+
+        <!-- Contact direct -->
+        <section>
+          <h2>Contacter l'établissement</h2>
+          <form id="contact-form" data-validate class="form-grid cols-2" novalidate>
+            <div class="field">
+              <label for="c-nom">Nom <span class="req">*</span></label>
+              <input class="input" id="c-nom" name="nom" required minlength="2">
+              <small class="field-error"></small>
+            </div>
+            <div class="field">
+              <label for="c-tel">Téléphone <span class="req">*</span></label>
+              <input class="input" id="c-tel" name="tel" type="tel" data-type="tel" required placeholder="+225 07 00 00 00 00">
+              <small class="field-error"></small>
+            </div>
+            <div class="field" style="grid-column:1/-1">
+              <label for="c-msg">Message <span class="req">*</span></label>
+              <textarea class="textarea" id="c-msg" name="message" required minlength="10" placeholder="Votre demande…"></textarea>
+              <small class="field-error"></small>
+            </div>
+            <div class="field" style="grid-column:1/-1">
+              <button type="submit" class="btn btn--green">Envoyer le message</button>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      <!-- Widget de réservation -->
+      <aside>
+        <div class="booking-widget">
+          <div class="price-lead">
+            <b id="w-prix">—</b><span class="muted" id="w-prix-unite">/ nuit</span>
+          </div>
+
+          <form id="w-form" novalidate>
+            <!-- Calendrier -->
+            <div class="field">
+              <label>Choisissez vos dates</label>
+              <div id="w-calendar" class="calendar"></div>
+            </div>
+
+            <div class="form-grid cols-2">
+              <div class="field">
+                <label id="w-date1-label">Date</label>
+                <div class="input" style="background:var(--cream)" id="w-date1-val" aria-live="polite">—</div>
+              </div>
+              <div class="field" id="w-date2-field">
+                <label id="w-date2-label">Départ</label>
+                <div class="input" style="background:var(--cream)" id="w-date2-val" aria-live="polite">—</div>
+              </div>
+            </div>
+
+            <div class="field" id="w-heure-field">
+              <label for="w-heure">Heure</label>
+              <select class="select" id="w-heure"><option value="">Choisir…</option></select>
+            </div>
+
+            <div class="field">
+              <label for="w-personnes">Nombre de personnes</label>
+              <input class="input" type="number" id="w-personnes" min="1" max="20" value="2">
+            </div>
+
+            <div class="booking-summary" id="w-resume"></div>
+
+            <label style="font-weight:600;font-family:var(--font-title);font-size:.9rem">Mode de paiement</label>
+            <div class="pay-choice" id="w-paiement"></div>
+
+            <button type="submit" class="btn btn--primary btn--block" id="w-submit">Réserver maintenant</button>
+            <p class="help text-center">Sans frais de service · Confirmation par SMS</p>
+            <div id="w-confirm" class="hidden"></div>
+          </form>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer" style="margin-top:3rem">
+    <div class="container">
+      <div class="footer-bottom" style="border:none;margin:0;padding:0">
+        <span>© <span id="year">2026</span> BookingCI. Tous droits réservés.</span>
+        <a href="../index.html">Retour à l'accueil</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../assets/js/data.js"></script>
+  <script src="../assets/js/main.js"></script>
+  <script src="../assets/js/reservation.js"></script>
+</body>
+</html>

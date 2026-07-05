@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Restaurants à réserver — BookingCI</title>
+  <meta name="description" content="Trouvez et réservez une table dans les meilleurs restaurants, maquis et grillades de Côte d'Ivoire. Filtrez par ville, commune, type de cuisine et budget.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23E2603B'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='white' font-family='Arial'%3EB%3C/text%3E%3C/svg%3E">
+</head>
+<body data-listing="restaurant">
+
+  <header class="site-header">
+    <div class="container">
+      <nav class="nav" aria-label="Navigation principale">
+        <a href="../index.html" class="brand"><span class="brand__mark"><span>B</span></span> Booking<em>CI</em></a>
+        <ul class="nav__links">
+          <li><a href="restaurants.html" class="is-active">Restaurants</a></li>
+          <li><a href="residences.html">Résidences</a></li>
+          <li><a href="devenir-partenaire.html">Devenir partenaire</a></li>
+        </ul>
+        <div class="nav__actions">
+          <a href="connexion.html" class="btn btn--ghost btn--sm">Se connecter</a>
+          <a href="devenir-partenaire.html" class="btn btn--primary btn--sm">Ajouter mon établissement</a>
+        </div>
+        <button class="burger" aria-label="Ouvrir le menu" aria-expanded="false"><span></span></button>
+      </nav>
+    </div>
+    <div class="mobile-menu">
+      <a href="restaurants.html">Restaurants</a>
+      <a href="residences.html">Résidences</a>
+      <a href="devenir-partenaire.html">Devenir partenaire</a>
+      <a href="connexion.html">Se connecter</a>
+      <a href="devenir-partenaire.html" class="btn btn--primary btn--block">Ajouter mon établissement</a>
+    </div>
+  </header>
+
+  <section class="page-hero">
+    <div class="container page-hero__inner">
+      <nav class="breadcrumb" aria-label="Fil d'ariane">
+        <a href="../index.html">Accueil</a> <span>/</span> <span>Restaurants</span>
+      </nav>
+      <span class="eyebrow">Restauration</span>
+      <h1>Réservez une table</h1>
+      <p class="muted">Ivoirienne, grillades, fruits de mer, cuisine du monde… Trouvez le restaurant idéal près de chez vous.</p>
+    </div>
+  </section>
+
+  <main class="section container">
+    <div class="listing-layout">
+
+      <!-- ===== FILTRES ===== -->
+      <button class="btn btn--ghost filters-toggle" id="filters-toggle" aria-expanded="false" style="margin-bottom:1rem">⚙️ Filtres &amp; tri</button>
+      <aside class="filters" id="filters-panel" aria-label="Filtres">
+        <h3>Filtres <button type="button" class="filters__reset" id="f-reset">Réinitialiser</button></h3>
+
+        <div class="filter-group">
+          <h4>Recherche</h4>
+          <input class="input" type="search" id="f-recherche" placeholder="Nom, quartier…">
+        </div>
+        <div class="filter-group">
+          <h4>Ville</h4>
+          <select class="select" id="f-ville"><option value="">Toutes les villes</option></select>
+        </div>
+        <div class="filter-group">
+          <h4>Commune / quartier</h4>
+          <select class="select" id="f-commune"><option value="">Toutes communes / quartiers</option></select>
+        </div>
+        <div class="filter-group">
+          <h4>Type de cuisine</h4>
+          <select class="select" id="f-cuisine"><option value="">Toutes les cuisines</option></select>
+        </div>
+        <div class="filter-group">
+          <h4>Budget max : <span class="range-val" id="f-prix-val">—</span></h4>
+          <input type="range" id="f-prix" min="0" max="20000" value="20000">
+        </div>
+      </aside>
+
+      <!-- ===== RÉSULTATS ===== -->
+      <div>
+        <div class="listing-toolbar">
+          <span class="listing-count" id="listing-count">Chargement…</span>
+          <label class="sr-only" for="f-tri">Trier par</label>
+          <select class="select" id="f-tri">
+            <option value="populaire">Trier : popularité</option>
+            <option value="prix-asc">Prix croissant</option>
+            <option value="prix-desc">Prix décroissant</option>
+            <option value="note">Meilleures notes</option>
+          </select>
+        </div>
+        <div class="cards-grid" id="cards-grid"></div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-bottom" style="border:none;margin:0;padding:0">
+        <span>© <span id="year">2026</span> BookingCI. Tous droits réservés.</span>
+        <a href="../index.html">Retour à l'accueil</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../assets/js/data.js"></script>
+  <script src="../assets/js/main.js"></script>
+  <script src="../assets/js/filtres.js"></script>
+</body>
+</html>
