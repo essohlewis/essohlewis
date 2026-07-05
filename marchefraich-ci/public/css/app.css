@@ -1,0 +1,221 @@
+/* =====================================================================
+   MarchéFraîch CI — Feuille de style (mobile-first)
+   Palette : vert marché + orange chaleureux, fond crème.
+   ===================================================================== */
+
+:root {
+  --vert:        #2e7d32;
+  --vert-fonce:  #1b5e20;
+  --vert-clair:  #e8f3e9;
+  --orange:      #ef6c00;
+  --orange-clair:#fff3e0;
+  --fond:        #f6f7f2;
+  --carte:       #ffffff;
+  --texte:       #1f2421;
+  --gris:        #6b7280;
+  --gris-clair:  #e5e7eb;
+  --rouge:       #c62828;
+  --bleu:        #1565c0;
+  --rayon:       14px;
+  --ombre:       0 2px 10px rgba(0,0,0,.06);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--fond);
+  color: var(--texte);
+  line-height: 1.5;
+  padding-bottom: 4.5rem; /* place pour la barre de navigation basse */
+}
+
+a { color: var(--vert-fonce); }
+
+.conteneur { max-width: 720px; margin: 0 auto; padding: 1rem; }
+
+/* ---------- En-tête ---------- */
+.entete {
+  background: var(--vert);
+  color: #fff;
+  padding: .85rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  box-shadow: var(--ombre);
+}
+.entete a { color: #fff; text-decoration: none; }
+.entete .logo { font-weight: 800; font-size: 1.15rem; letter-spacing: .3px; }
+.entete .logo span { color: #ffe0b2; }
+.entete .panier-lien {
+  background: rgba(255,255,255,.18);
+  padding: .35rem .7rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: .9rem;
+}
+
+/* ---------- Titres ---------- */
+h1 { font-size: 1.4rem; margin: .2rem 0 1rem; }
+h2 { font-size: 1.15rem; margin: 1.2rem 0 .6rem; }
+.sous-titre { color: var(--gris); margin-top: -.4rem; }
+
+/* ---------- Cartes ---------- */
+.carte {
+  background: var(--carte);
+  border-radius: var(--rayon);
+  box-shadow: var(--ombre);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+.carte-lien { text-decoration: none; color: inherit; display: block; }
+.carte-lien:active { transform: scale(.99); }
+
+/* ---------- Grilles ---------- */
+.grille { display: grid; gap: .8rem; }
+.grille-2 { grid-template-columns: repeat(2, 1fr); }
+@media (min-width: 560px) { .grille-3 { grid-template-columns: repeat(3, 1fr); } }
+
+/* ---------- Produits ---------- */
+.produit-photo, .etal-photo {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 10px;
+  background: var(--vert-clair);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem;
+}
+.prix { color: var(--orange); font-weight: 800; font-size: 1.05rem; }
+.unite { color: var(--gris); font-weight: 500; font-size: .85rem; }
+.stock-bas { color: var(--rouge); font-size: .8rem; font-weight: 600; }
+
+/* ---------- Boutons ---------- */
+.bouton, button.bouton {
+  display: inline-block;
+  background: var(--vert);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: .7rem 1.1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  text-align: center;
+}
+.bouton:active { background: var(--vert-fonce); }
+.bouton.pleine-largeur { width: 100%; }
+.bouton.orange { background: var(--orange); }
+.bouton.orange:active { background: #d35400; }
+.bouton.secondaire { background: #fff; color: var(--vert-fonce); border: 1.5px solid var(--vert); }
+.bouton.danger { background: #fff; color: var(--rouge); border: 1.5px solid var(--rouge); }
+.bouton.petit { padding: .4rem .7rem; font-size: .85rem; }
+
+/* ---------- Formulaires ---------- */
+label { display: block; font-weight: 600; margin: .8rem 0 .3rem; font-size: .95rem; }
+input, select, textarea {
+  width: 100%;
+  padding: .7rem;
+  border: 1.5px solid var(--gris-clair);
+  border-radius: 10px;
+  font-size: 1rem;
+  font-family: inherit;
+  background: #fff;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--vert); }
+textarea { min-height: 80px; resize: vertical; }
+.champ-aide { color: var(--gris); font-size: .82rem; margin-top: .2rem; }
+.ligne-champs { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+
+/* ---------- Messages flash ---------- */
+.flash { padding: .8rem 1rem; border-radius: 10px; margin-bottom: .8rem; font-weight: 500; }
+.flash.succes { background: var(--vert-clair); color: var(--vert-fonce); }
+.flash.erreur { background: #fdecea; color: var(--rouge); }
+.flash.info   { background: var(--orange-clair); color: #b35400; }
+
+/* ---------- Badges de statut ---------- */
+.badge {
+  display: inline-block;
+  padding: .25rem .6rem;
+  border-radius: 999px;
+  font-size: .78rem;
+  font-weight: 700;
+}
+.badge.recue          { background: #e3f2fd; color: var(--bleu); }
+.badge.en_preparation { background: var(--orange-clair); color: #b35400; }
+.badge.en_livraison   { background: #ede7f6; color: #5e35b1; }
+.badge.livree         { background: var(--vert-clair); color: var(--vert-fonce); }
+.badge.annulee        { background: #fdecea; color: var(--rouge); }
+.badge.paye           { background: var(--vert-clair); color: var(--vert-fonce); }
+.badge.en_attente     { background: #fff8e1; color: #a67c00; }
+.badge.echoue         { background: #fdecea; color: var(--rouge); }
+
+/* ---------- Listes / lignes ---------- */
+.ligne {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: .6rem; padding: .7rem 0; border-bottom: 1px solid var(--gris-clair);
+}
+.ligne:last-child { border-bottom: none; }
+.muted { color: var(--gris); font-size: .88rem; }
+
+/* ---------- Récapitulatif ---------- */
+.recap .ligne { border-bottom: 1px dashed var(--gris-clair); }
+.recap .total { font-weight: 800; font-size: 1.15rem; border-top: 2px solid var(--texte); padding-top: .6rem; }
+
+/* ---------- Quantité ---------- */
+.qte { display: flex; align-items: center; gap: .4rem; }
+.qte input { width: 64px; text-align: center; }
+
+/* ---------- Suivi (timeline) ---------- */
+.timeline { list-style: none; padding: 0; margin: 1rem 0; }
+.timeline li {
+  position: relative; padding: 0 0 1.1rem 1.8rem; color: var(--gris);
+  border-left: 2px solid var(--gris-clair); margin-left: .5rem;
+}
+.timeline li::before {
+  content: ""; position: absolute; left: -8px; top: 2px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--gris-clair);
+}
+.timeline li.fait { color: var(--texte); font-weight: 600; border-left-color: var(--vert); }
+.timeline li.fait::before { background: var(--vert); }
+.timeline li:last-child { border-left-color: transparent; }
+
+/* ---------- Barre de navigation basse (espaces connectés) ---------- */
+.nav-bas {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: #fff; border-top: 1px solid var(--gris-clair);
+  display: flex; justify-content: space-around; z-index: 30;
+}
+.nav-bas a {
+  flex: 1; text-align: center; padding: .55rem 0; text-decoration: none;
+  color: var(--gris); font-size: .72rem; font-weight: 600;
+}
+.nav-bas a .icone { display: block; font-size: 1.25rem; }
+.nav-bas a.actif { color: var(--vert); }
+
+/* ---------- Choix de rôle (accueil) ---------- */
+.roles { display: grid; gap: .7rem; margin-top: 1rem; }
+.role-carte {
+  display: flex; align-items: center; gap: .9rem;
+  padding: 1rem; background: #fff; border-radius: var(--rayon);
+  box-shadow: var(--ombre); text-decoration: none; color: inherit;
+}
+.role-carte .emoji { font-size: 1.8rem; }
+.role-carte strong { display: block; }
+
+.hero {
+  background: linear-gradient(135deg, var(--vert) 0%, var(--vert-fonce) 100%);
+  color: #fff; border-radius: var(--rayon); padding: 1.6rem 1.2rem; margin-bottom: 1rem;
+}
+.hero h1 { margin: 0 0 .3rem; font-size: 1.6rem; }
+.hero p { margin: 0; opacity: .92; }
+
+.centre { text-align: center; }
+.mt { margin-top: 1rem; }
+.pastille { font-size: .8rem; background: var(--vert-clair); color: var(--vert-fonce); padding: .15rem .5rem; border-radius: 999px; font-weight: 700; }

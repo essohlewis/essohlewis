@@ -1,0 +1,13 @@
+# Réécriture d'URL vers le front controller
+RewriteEngine On
+
+# Sert directement les fichiers/dossiers existants (assets, uploads...)
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Toutes les autres requêtes passent par index.php
+RewriteRule ^ index.php [L]
+
+# Sécurité : pas de listing de répertoire
+Options -Indexes

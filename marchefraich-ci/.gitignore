@@ -1,0 +1,13 @@
+# Fichiers d'environnement / secrets
+.env
+config/config.local.php
+
+# Uploads utilisateurs (conserver le dossier, pas le contenu)
+public/uploads/*
+!public/uploads/.gitkeep
+!public/uploads/.gitignore
+
+# Divers
+*.log
+.DS_Store
+/vendor/
