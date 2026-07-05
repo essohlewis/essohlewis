@@ -1,0 +1,27 @@
+# Environnement / secrets
+.env
+*.pem
+*.key
+
+# Dépendances
+/vendor/
+
+# Stockage runtime
+/storage/logs/*.log
+/storage/cache/*
+!/storage/logs/.gitkeep
+!/storage/cache/.gitkeep
+
+# Build front
+/public/assets/css/app.css
+/node_modules/
+
+# OS / éditeurs
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# PHPUnit cache
+/.phpunit.cache/

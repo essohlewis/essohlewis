@@ -1,0 +1,84 @@
+# ─────────────────────────────────────────────────────────────
+# Transouscris — stack de développement (une seule commande) :
+#     docker compose up --build
+# puis ouvrir http://localhost:8080
+#
+# Le service `app` attend MySQL, applique le schéma + les données de
+# départ automatiquement (si la base est vide), puis sert l'application.
+# ─────────────────────────────────────────────────────────────
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8080:80"
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8080
+      # Clé de DÉVELOPPEMENT uniquement — régénérer en production
+      # (openssl rand -base64 32).
+      APP_KEY: "ZGV2LWtleS10cmFuc291c2NyaXMtY2hhbmdlLW1lLTAwMDA="
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_NAME: transouscris
+      DB_USER: transouscris
+      DB_PASS: transouscris
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      # Montage du code pour l'édition à chaud en développement.
+      - .:/var/www/html
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_DATABASE: transouscris
+      MYSQL_USER: transouscris
+      MYSQL_PASSWORD: transouscris
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      # Exposé pour un accès depuis l'hôte (client SQL). Optionnel.
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  # Worker de la garantie de remboursement automatique (optionnel).
+  # Rejoue périodiquement les remboursements dus.
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    # Contourne l'entrypoint applicatif : seul `app` applique les migrations.
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "until php -r 'new PDO(\"mysql:host=mysql;dbname=transouscris\", \"transouscris\", \"transouscris\");' 2>/dev/null; do echo 'worker: attente MySQL...'; sleep 3; done;
+       while true; do php /var/www/html/bin/console.php guarantee:run; sleep 60; done"
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_KEY: "ZGV2LWtleS10cmFuc291c2NyaXMtY2hhbmdlLW1lLTAwMDA="
+      DB_HOST: mysql
+      DB_NAME: transouscris
+      DB_USER: transouscris
+      DB_PASS: transouscris
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - .:/var/www/html
+    restart: unless-stopped
+
+volumes:
+  db_data:

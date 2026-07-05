@@ -1,0 +1,10 @@
+.git
+.github
+.phpunit.cache
+vendor
+node_modules
+storage/logs/*.log
+storage/cache/*
+.env
+*.md
+!README.md

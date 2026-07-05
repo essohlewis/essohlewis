@@ -1,0 +1,57 @@
+/*
+ * Thème sombre Transouscris.
+ * Approche : surcharge des utilitaires Tailwind réellement utilisés sous
+ * `html.dark`, ce qui applique le mode sombre à toutes les vues sans devoir
+ * annoter chaque élément. Le basculement ajoute/retire la classe `dark` sur
+ * <html> (voir app.js) ; un script anti-flash l'applique avant le rendu.
+ */
+
+html.dark { color-scheme: dark; }
+html.dark body { background-color: #0b1220 !important; color: #e2e8f0 !important; }
+
+/* Surfaces */
+html.dark .bg-white       { background-color: #111a2e !important; }
+html.dark .bg-slate-50    { background-color: #0b1220 !important; }
+html.dark .bg-slate-100   { background-color: #1e293b !important; }
+html.dark .bg-slate-800   { background-color: #0f172a !important; }
+html.dark .bg-slate-900   { background-color: #020617 !important; }
+
+/* Texte */
+html.dark .text-slate-900 { color: #f1f5f9 !important; }
+html.dark .text-slate-800 { color: #e2e8f0 !important; }
+html.dark .text-slate-700 { color: #cbd5e1 !important; }
+html.dark .text-slate-600 { color: #cbd5e1 !important; }
+html.dark .text-slate-500 { color: #94a3b8 !important; }
+html.dark .text-slate-400 { color: #94a3b8 !important; }
+
+/* Bordures & séparateurs */
+html.dark .border,
+html.dark .border-slate-200,
+html.dark .border-slate-300 { border-color: #233047 !important; }
+html.dark .divide-y > * + * { border-color: #233047 !important; }
+
+/* Ombres plus marquées */
+html.dark .shadow,
+html.dark .shadow-sm { box-shadow: 0 1px 3px rgba(0, 0, 0, .55) !important; }
+
+/* Survols */
+html.dark .hover\:bg-slate-50:hover  { background-color: #1e293b !important; }
+html.dark .hover\:bg-slate-100:hover { background-color: #243049 !important; }
+
+/* Champs de formulaire */
+html.dark input,
+html.dark select,
+html.dark textarea {
+    background-color: #0b1220 !important;
+    color: #e2e8f0 !important;
+    border-color: #233047 !important;
+}
+html.dark input::placeholder { color: #64748b !important; }
+
+/* Teintes claires d'accent -> variantes sombres lisibles */
+html.dark .bg-teal-50     { background-color: #0e2b2b !important; }
+html.dark .bg-emerald-50  { background-color: #0e2b1f !important; }
+html.dark .bg-emerald-100 { background-color: #134e35 !important; color: #a7f3d0 !important; }
+html.dark .bg-amber-100   { background-color: #4a3410 !important; color: #fde68a !important; }
+html.dark .bg-rose-100    { background-color: #4a1520 !important; color: #fecaca !important; }
+html.dark .bg-slate-100.text-slate-600 { color: #cbd5e1 !important; }

@@ -1,0 +1,26 @@
+{
+    "name": "Transouscris — Recharge mobile & forfaits",
+    "short_name": "Transouscris",
+    "description": "Recharge de crédit et forfaits Orange, MTN, Moov en Côte d'Ivoire. Portefeuille sécurisé et paiement mobile money.",
+    "start_url": "/dashboard",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#f8fafc",
+    "theme_color": "#0f766e",
+    "lang": "fr",
+    "icons": [
+        {
+            "src": "/assets/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/assets/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}
