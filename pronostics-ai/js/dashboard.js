@@ -18,16 +18,70 @@
     setupSidebarMobile();
     setupSettings();
     setupFilters();
+    setupCardActions();
+
+    // Modules dynamiques
+    if (window.PronosNotifications) PronosNotifications.init();
 
     await loadData();
     renderKPIs();
     renderPredictions();
+    renderLive();
     renderHistory();
     renderBestSports();
     renderPerf();
+    renderBankroll();
+    renderCommunity();
+
+    startLiveEngine();
+
+    // Bankroll : mise à jour de l'UI à chaque changement
+    if (window.PronosBankroll) PronosBankroll.on(() => { renderBankroll(); renderKPIs(); renderCommunity(); });
 
     // Ré-appliquer les libellés dynamiques au changement de langue
-    document.addEventListener('langchange', () => { renderPredictions(); renderHistory(); renderBestSports(); });
+    document.addEventListener('langchange', () => {
+      renderPredictions(); renderHistory(); renderBestSports(); renderBankroll(); renderCommunity();
+    });
+  }
+
+  /* --- Délégation des actions de carte (parier / cotes) --- */
+  function setupCardActions() {
+    const getPred = (id) => ALL_PREDS.find((p) => p.id === id);
+    ['preds-grid', 'live-grid'].forEach((gid) => {
+      const g = document.getElementById(gid);
+      if (g) PronosPredictions.bindCardActions(g, getPred);
+    });
+  }
+
+  /* --- Moteur de matchs en direct --- */
+  function startLiveEngine() {
+    if (!window.PronosLive) return;
+    PronosLive.init(ALL_PREDS);
+    const fr = () => I18N.lang === 'fr';
+
+    PronosLive.on('update', ({ pred }) => {
+      // Mettre à jour la carte dans les deux grilles
+      const today = document.getElementById('preds-grid');
+      const live = document.getElementById('live-grid');
+      if (today) PronosPredictions.refreshCard(today, pred);
+      if (live) PronosPredictions.refreshCard(live, pred);
+    });
+
+    PronosLive.on('goal', ({ pred, home }) => {
+      const scorer = home ? pred.home : pred.away;
+      if (window.PronosNotifications) PronosNotifications.push(
+        (fr() ? '⚽ But ! ' : '⚽ Goal! ') + scorer,
+        `${pred.home} ${pred.live.homeScore}-${pred.live.awayScore} ${pred.away} · ${pred.live.minute}'`, 'goal');
+    });
+
+    PronosLive.on('resolved', ({ pred, won }) => {
+      // Régler les paris + notifier
+      if (window.PronosBankroll) PronosBankroll.settle(pred.id, won);
+      if (window.PronosNotifications) PronosNotifications.push(
+        won ? (fr() ? '✅ Pronostic gagné' : '✅ Pick won') : (fr() ? '❌ Pronostic perdu' : '❌ Pick lost'),
+        `${pred.home} ${pred.score.home}-${pred.score.away} ${pred.away}`, won ? 'won' : 'lost');
+      renderKPIs(); renderHistory(); renderLive();
+    });
   }
 
   /* --- Injecte les infos utilisateur --- */
@@ -64,6 +118,10 @@
       const active = document.querySelector('.side-nav a[data-view=' + name + ']');
       const titleEl = document.querySelector('[data-page-title]');
       if (active && titleEl) titleEl.textContent = active.querySelector('span').textContent;
+      // Rendus spécifiques à la vue ouverte
+      if (name === 'live') renderLive();
+      if (name === 'bankroll') renderBankroll();
+      if (name === 'community') renderCommunity();
       // Fermer sidebar mobile
       document.querySelector('.sidebar').classList.remove('open');
       document.querySelector('.sidebar-overlay').classList.remove('open');
@@ -94,8 +152,16 @@
     const notif = document.querySelector('[data-setting-notif]');
     if (notif) {
       notif.checked = localStorage.getItem('pronos-notif') === '1';
-      notif.addEventListener('change', () => {
+      notif.addEventListener('change', async () => {
         localStorage.setItem('pronos-notif', notif.checked ? '1' : '0');
+        // Demander la permission système à l'activation
+        if (notif.checked && window.PronosNotifications) {
+          const perm = await PronosNotifications.requestPermission();
+          if (perm === 'denied') {
+            PronosToast(I18N.lang === 'fr' ? 'Notifications bloquées par le navigateur.' : 'Notifications blocked by the browser.', 'err');
+            notif.checked = false; localStorage.setItem('pronos-notif', '0'); return;
+          }
+        }
         PronosToast(notif.checked
           ? (I18N.lang === 'fr' ? 'Notifications activées' : 'Notifications enabled')
           : (I18N.lang === 'fr' ? 'Notifications désactivées' : 'Notifications disabled'));
@@ -151,12 +217,88 @@
         <p>${I18N.t('dash.empty')}</p></div>`;
       return;
     }
-    grid.innerHTML = list.map((p, i) => PronosPredictions.cardHTML(p, i)).join('');
+    grid.innerHTML = list.map((p) => PronosPredictions.cardHTML(p)).join('');
     PronosPredictions.animateGauges(grid);
-    PronosPredictions.bindTilt(grid);
     I18N.apply(grid);
   }
   function val(name) { const el = document.querySelector('[data-filter=' + name + ']'); return el ? el.value : ''; }
+
+  /* --- Vue MATCHS EN DIRECT --- */
+  function renderLive() {
+    const grid = document.getElementById('live-grid');
+    if (!grid) return;
+    const fr = I18N.lang === 'fr';
+    const live = ALL_PREDS.filter((p) => p.status === 'live');
+    const badge = document.querySelector('[data-live-count]');
+    if (badge) { badge.textContent = live.length; badge.style.display = live.length ? 'grid' : 'none'; }
+
+    if (!live.length) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <p>${fr ? 'Aucun match en direct actuellement. Revenez plus tard !' : 'No live match right now. Come back later!'}</p></div>`;
+      return;
+    }
+    grid.innerHTML = live.map((p) => PronosPredictions.cardHTML(p)).join('');
+    PronosPredictions.animateGauges(grid);
+    I18N.apply(grid);
+  }
+
+  /* --- Vue BANKROLL (portefeuille virtuel) --- */
+  function renderBankroll() {
+    const host = document.getElementById('view-bankroll');
+    if (!host || !window.PronosBankroll) return;
+    const s = PronosBankroll.stats();
+    const fr = I18N.lang === 'fr';
+    const money = (n) => Math.round(n).toLocaleString(I18N.lang) + ' FCFA';
+
+    // KPIs bankroll
+    setText('[data-bk=balance]', money(s.balance));
+    setText('[data-bk=profit]', (s.profit >= 0 ? '+' : '') + money(s.profit));
+    setText('[data-bk=roi]', (s.roi >= 0 ? '+' : '') + s.roi + '%');
+    setText('[data-bk=winrate]', s.winRate + '%');
+    const profitEl = document.querySelector('[data-bk=profit]');
+    if (profitEl) profitEl.style.color = s.profit >= 0 ? 'var(--brand-green)' : 'var(--brand-red)';
+
+    // Liste des paris
+    const listEl = document.getElementById('bets-list');
+    if (listEl) {
+      if (!s.bets.length) {
+        listEl.innerHTML = `<div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 9V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v4a2 2 0 0 0 0 4v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4a2 2 0 0 0 0-4z"/></svg>
+          <p>${fr ? 'Aucun pari pour le moment. Placez votre premier pari depuis les pronostics du jour !' : 'No bets yet. Place your first bet from today\'s picks!'}</p>
+          <button class="btn btn-primary" data-goto="today">${fr ? 'Voir les pronostics' : 'View picks'}</button></div>`;
+        wireGoto(listEl);
+        return;
+      }
+      listEl.innerHTML = s.bets.map((b) => {
+        const label = b.prediction[I18N.lang] || b.prediction.fr;
+        const st = { open: fr ? 'En cours' : 'Open', won: fr ? 'Gagné' : 'Won', lost: fr ? 'Perdu' : 'Lost' }[b.status];
+        return `<div class="bet-row bet-${b.status}">
+          <div class="bet-teams">
+            <span class="mini-logo" style="background:${b.homeMeta.c}">${b.homeMeta.i}</span>
+            <span class="bet-info"><b>${b.home} v ${b.away}</b><small>${label} · ${fr ? 'cote' : 'odds'} ${b.odds}</small></span>
+          </div>
+          <div class="bet-nums">
+            <span class="bet-stake-v">${money(b.stake)}</span>
+            <span class="bet-status s-${b.status}">${st}${b.status === 'won' ? ' +' + money(b.payout) : ''}</span>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  /* --- Vue COMMUNAUTÉ (classement + badges) --- */
+  function renderCommunity() {
+    if (!window.PronosCommunity) return;
+    PronosCommunity.renderBadges(document.getElementById('badges-grid'));
+    PronosCommunity.renderLeaderboard(document.getElementById('leaderboard'));
+  }
+
+  function setText(sel, v) { document.querySelectorAll(sel).forEach((el) => (el.textContent = v)); }
+  function wireGoto(root) {
+    (root || document).querySelectorAll('[data-goto]').forEach((b) =>
+      b.addEventListener('click', () => document.querySelector('.side-nav a[data-view=' + b.dataset.goto + ']').click()));
+  }
 
   /* --- KPIs personnels --- */
   function renderKPIs() {

@@ -52,33 +52,54 @@
       </div>`;
   }
 
+  /* Zone centrale du match : score live / score final / heure à venir */
+  function matchMid(p) {
+    if (p.status === 'live' && p.live) {
+      return `<div class="match-mid"><span class="live-score">${p.live.homeScore}<span class="sep">-</span>${p.live.awayScore}</span><span class="live-min"><span class="dot"></span>${p.live.minute}'</span></div>`;
+    }
+    if ((p.status === 'won' || p.status === 'lost') && p.score) {
+      return `<div class="match-mid"><span class="final-score">${p.score.home}<span class="sep">-</span>${p.score.away}</span><span class="time">${I18N.lang === 'fr' ? 'Terminé' : 'Full time'}</span></div>`;
+    }
+    return `<div class="match-mid"><span class="vs">VS</span><span class="time">${fmtTime(p.kickoff)}</span></div>`;
+  }
+
   /* --- Carte détaillée (dashboard) --- */
-  function cardHTML(p, i) {
+  function cardHTML(p) {
     const pred = p.prediction[I18N.lang] || p.prediction.fr;
     const analysis = p.analysis[I18N.lang] || p.analysis.fr;
+    const fr = I18N.lang === 'fr';
+    const canBet = p.status === 'upcoming' || p.status === 'live';
+    const betLabel = window.PronosBankroll && PronosBankroll.hasBetOn(p.id)
+      ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M20 6L9 17l-5-5"/></svg> ${fr ? 'Pari placé' : 'Bet placed'}`
+      : `🎟️ ${fr ? 'Parier' : 'Bet'}`;
     return `
-    <article class="pred-card tilt" tabindex="0" aria-label="${p.home} vs ${p.away}">
+    <article class="pred-card tilt ${p.status === 'live' ? 'is-live' : ''}" tabindex="0" data-pred-id="${p.id}" aria-label="${p.home} vs ${p.away}">
       <div class="pred-card__head">
         <span class="pred-card__league"><span aria-hidden="true">${p.flag}</span> ${p.league}</span>
         ${statusBadge(p.status)}
       </div>
       <div class="match-row">
         <div class="match-team">${logo(p.homeMeta, 'match-logo')}<span>${p.home}</span></div>
-        <div class="match-mid"><span class="vs">VS</span><span class="time">${fmtTime(p.kickoff)}</span></div>
+        ${matchMid(p)}
         <div class="match-team">${logo(p.awayMeta, 'match-logo')}<span>${p.away}</span></div>
       </div>
       <div class="pred-card__pred">
-        <span class="lbl">${I18N.lang === 'fr' ? 'Prédiction IA' : 'AI prediction'}</span>
-        <span class="val"><strong>${pred}</strong><span class="odds">${I18N.lang === 'fr' ? 'Cote' : 'Odds'} ${p.odds}</span></span>
+        <span class="lbl">${fr ? 'Prédiction IA' : 'AI prediction'}</span>
+        <span class="val"><strong>${pred}</strong><span class="odds">${fr ? 'Cote' : 'Odds'} ${p.odds}</span></span>
       </div>
       <p class="pred-card__analysis">${analysis}</p>
       <div class="pred-card__foot">
-        ${gauge(p.confidence, i)}
+        ${gauge(p.confidence, p.id)}
         <div class="pred-card__conf">
           <div class="conf__row"><span>${I18N.t('conf.ai')}</span><span class="conf-tag ${confClass(p.confidence)}">${confLabel(p.confidence)}</span></div>
           <div class="conf__bar"><span class="conf__fill" style="width:0" data-w="${p.confidence}"></span></div>
         </div>
       </div>
+      <div class="pred-card__actions">
+        ${canBet ? `<button class="btn btn-primary btn-sm" data-bet="${p.id}" ${PronosBankroll && PronosBankroll.hasBetOn(p.id) ? 'disabled' : ''}>${betLabel}</button>` : `<span class="result-pill ${p.status}">${p.status === 'won' ? '✓ ' + I18N.t('status.won') : '✕ ' + I18N.t('status.lost')}</span>`}
+        <button class="btn btn-secondary btn-sm" data-odds-toggle="${p.id}">📊 ${fr ? 'Cotes' : 'Odds'}</button>
+      </div>
+      <div class="odds-slot" data-odds-slot="${p.id}" hidden></div>
     </article>`;
   }
 
@@ -131,6 +152,54 @@
     });
   }
 
+  /* Câble les actions des cartes (parier / comparer les cotes) via délégation.
+     `getPred(id)` doit renvoyer l'objet pronostic correspondant. */
+  function bindCardActions(container, getPred) {
+    if (container._actionsBound) return; // éviter les doublons
+    container._actionsBound = true;
+    container.addEventListener('click', (e) => {
+      const betBtn = e.target.closest('[data-bet]');
+      if (betBtn && !betBtn.disabled) {
+        const p = getPred(betBtn.getAttribute('data-bet'));
+        if (p && window.PronosBankroll) PronosBankroll.openBetModal(p);
+        return;
+      }
+      const oddsBtn = e.target.closest('[data-odds-toggle]');
+      if (oddsBtn) {
+        const id = oddsBtn.getAttribute('data-odds-toggle');
+        const slot = container.querySelector(`[data-odds-slot="${id}"]`);
+        const p = getPred(id);
+        if (!slot || !p) return;
+        if (slot.hasAttribute('hidden')) {
+          slot.innerHTML = window.PronosCommunity ? PronosCommunity.renderOdds(p) : '';
+          slot.removeAttribute('hidden');
+          oddsBtn.classList.add('active');
+        } else {
+          slot.setAttribute('hidden', '');
+          oddsBtn.classList.remove('active');
+        }
+      }
+    });
+  }
+
+  /* Met à jour une carte live en place (score + minute + statut). */
+  function refreshCard(container, p) {
+    const el = container.querySelector(`[data-pred-id="${p.id}"]`);
+    if (!el) return;
+    // Remplacer le nœud par une carte fraîche (conserve l'état d'ouverture des cotes)
+    const oddsOpen = el.querySelector('[data-odds-slot]') && !el.querySelector('[data-odds-slot]').hasAttribute('hidden');
+    const tmp = document.createElement('div');
+    tmp.innerHTML = cardHTML(p);
+    const fresh = tmp.firstElementChild;
+    el.replaceWith(fresh);
+    animateGauges(container);
+    if (oddsOpen) {
+      const slot = fresh.querySelector('[data-odds-slot]');
+      slot.innerHTML = window.PronosCommunity ? PronosCommunity.renderOdds(p) : '';
+      slot.removeAttribute('hidden');
+    }
+  }
+
   // Exposition
-  window.PronosPredictions = { cardHTML, lockedCardHTML, animateGauges, bindTilt, fmtTime, confClass };
+  window.PronosPredictions = { cardHTML, lockedCardHTML, animateGauges, bindTilt, bindCardActions, refreshCard, matchMid, fmtTime, confClass };
 })();

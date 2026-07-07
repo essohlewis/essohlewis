@@ -91,6 +91,10 @@ const PRED_TYPES = {
   ],
 };
 
+/* Bookmakers pour le comparateur de cotes (populaires en Europe/Afrique).
+   👉 Remplacer par un vrai flux de cotes (API odds) le cas échéant. */
+const BOOKMAKERS = ['1xBet', 'Betwinner', 'Melbet', 'Bet365', 'Premierbet'];
+
 /* Fragments d'analyse "IA" — recomposés dynamiquement. */
 const ANALYSIS_BITS = {
   fr: [
@@ -150,15 +154,26 @@ function generatePredictions() {
     const kickoff = new Date();
     kickoff.setHours(13 + Math.floor(rand() * 9), Math.floor(rand() * 6) * 10, 0, 0);
 
-    // Statut : quelques matchs passés (résolus), un LIVE, le reste à venir
+    // Statut : quelques matchs passés (résolus), plusieurs LIVE, le reste à venir
     let status = 'upcoming';
+    let live = null;      // { minute, homeScore, awayScore } pour les matchs en direct
+    let score = null;     // score final pour les matchs résolus
     if (idx < 5) {
       status = rand() > (confidence / 100) ? 'lost' : 'won'; // résolus selon la confiance
       kickoff.setDate(kickoff.getDate() - (idx % 3) - 1);
-    } else if (idx === 5) {
+      score = { home: Math.floor(rand() * 4), away: Math.floor(rand() * 3) };
+    } else if (idx >= 5 && idx <= 7) {
       status = 'live';
       kickoff.setHours(new Date().getHours(), 0, 0, 0);
+      live = { minute: 12 + Math.floor(rand() * 55), homeScore: Math.floor(rand() * 3), awayScore: Math.floor(rand() * 2) };
     }
+
+    // Cotes multi-bookmakers (variation ±0.18 autour de la cote IA)
+    const base = parseFloat(odds);
+    const bookmakers = BOOKMAKERS.map((name, k) => ({
+      name,
+      odds: Math.max(1.2, base + (rand() - 0.5) * 0.36 + (k === 2 ? 0.06 : 0)).toFixed(2),
+    }));
 
     // Analyse composée de 2 fragments
     const bitsFr = ANALYSIS_BITS.fr, bitsEn = ANALYSIS_BITS.en;
@@ -182,6 +197,9 @@ function generatePredictions() {
       odds,
       analysis: { fr: `${bitsFr[a1]} ${bitsFr[a2]}`, en: `${bitsEn[a1]} ${bitsEn[a2]}` },
       status,                    // upcoming | live | won | lost
+      live,                      // état temps réel (null si non live)
+      score,                     // score final (null si non résolu)
+      bookmakers,                // cotes comparées
       premium: confidence > 80 && idx > 2, // pronostics à forte confiance = premium
     };
   }).sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
@@ -222,5 +240,29 @@ function fetchPerformanceSeries() {
   );
 }
 
+/* Membres de la communauté (classement / leaderboard).
+   👉 À remplacer par un endpoint /leaderboard réel. */
+function fetchLeaderboard() {
+  const rand = seededRandom(dateSeed() + 21);
+  const names = [
+    ['Kwame A.', 'Ghana', '#6C5CE7'], ['Sophie L.', 'France', '#00b85f'],
+    ['Rajesh G.', 'Inde', '#38BDF8'], ['Diego M.', 'Argentine', '#FF4D4D'],
+    ['Amara D.', 'Sénégal', '#FFB020'], ['Chen W.', 'Chine', '#00E676'],
+    ['Luca R.', 'Italie', '#6CABDD'], ['Fatima Z.', 'Maroc', '#A50044'],
+    ['James O.', 'Nigéria', '#1D428A'], ['Ana P.', 'Brésil', '#006437'],
+  ];
+  const members = names.map(([name, country, c], i) => {
+    const winRate = Math.round(64 + rand() * 30);
+    const roi = Math.round((rand() * 60 - 8) * 10) / 10;
+    const balance = Math.round(8000 + rand() * 92000);
+    return {
+      id: 'm' + i, name, country, color: c,
+      initials: name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2),
+      winRate, roi, balance, bets: 20 + Math.floor(rand() * 200),
+    };
+  });
+  return Promise.resolve(members.sort((a, b) => b.roi - a.roi));
+}
+
 // Exposition globale (pas de bundler → variables globales contrôlées)
-window.PronosData = { fetchPredictions, fetchPlatformStats, fetchPerformanceSeries, LEAGUES };
+window.PronosData = { fetchPredictions, fetchPlatformStats, fetchPerformanceSeries, fetchLeaderboard, LEAGUES, BOOKMAKERS };

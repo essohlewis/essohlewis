@@ -4,7 +4,7 @@
    "network first" avec repli cache pour la navigation.
    Incrémenter CACHE_VERSION à chaque déploiement pour purger l'ancien.
    ===================================================================== */
-const CACHE_VERSION = 'pronosai-v1';
+const CACHE_VERSION = 'pronosai-v2';
 const APP_SHELL = [
   './',
   './index.html',
@@ -17,6 +17,10 @@ const APP_SHELL = [
   './js/i18n.js',
   './js/data.js',
   './js/predictions.js',
+  './js/live.js',
+  './js/bankroll.js',
+  './js/notifications.js',
+  './js/community.js',
   './js/main.js',
   './js/auth.js',
   './js/dashboard.js',

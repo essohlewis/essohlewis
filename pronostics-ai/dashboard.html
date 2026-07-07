@@ -24,9 +24,12 @@
 
       <nav class="side-nav" aria-label="Navigation du tableau de bord">
         <a href="#today" data-view="today" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9z"/></svg><span data-i18n="dash.today">Pronostics du jour</span></a>
+        <a href="#live" data-view="live"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M6.3 6.3a8 8 0 0 0 0 11.4M17.7 6.3a8 8 0 0 1 0 11.4M3.5 3.5a12 12 0 0 0 0 17M20.5 3.5a12 12 0 0 1 0 17"/></svg><span data-i18n="dash.live">En direct</span><span class="nav-count" data-live-count></span></a>
         <a href="#sports" data-view="sports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 4.5h-5L8 10z"/></svg><span data-i18n="dash.sports">Sports</span></a>
+        <a href="#bankroll" data-view="bankroll"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 9v.01M18 15v.01"/></svg><span data-i18n="dash.bankroll">Bankroll</span></a>
         <a href="#history" data-view="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg><span data-i18n="dash.history">Historique</span></a>
         <a href="#stats" data-view="stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="7"/><rect x="12" y="6" width="3" height="11"/><rect x="17" y="13" width="3" height="4"/></svg><span data-i18n="dash.stats">Statistiques</span></a>
+        <a href="#community" data-view="community"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg><span data-i18n="dash.community">Communauté</span></a>
         <a href="#subscription" data-view="subscription"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg><span data-i18n="dash.subscription">Abonnement</span></a>
         <a href="#settings" data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3.5 14 1.6 1.6 0 0 0 2 12.6H2a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 3.5 7a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 8 3.5h.1A1.6 1.6 0 0 0 9.4 2v-.1a2 2 0 1 1 4 0V2a1.6 1.6 0 0 0 2.6 1.1 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8v.1A1.6 1.6 0 0 0 22 9.4h.1a2 2 0 1 1 0 4H22a1.6 1.6 0 0 0-1.5 1z"/></svg><span data-i18n="dash.settings">Paramètres</span></a>
       </nav>
@@ -53,6 +56,17 @@
           <h1 data-page-title data-i18n="dash.today">Pronostics du jour</h1>
         </div>
         <div class="topbar-actions">
+          <!-- Cloche de notifications + panneau déroulant -->
+          <div class="notif-wrap" data-notif-dropdown>
+            <button class="icon-btn" data-notif-bell aria-label="Notifications">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+              <span class="notif-badge" data-notif-badge>0</span>
+            </button>
+            <div class="notif-panel">
+              <div class="notif-panel__head"><b data-i18n="dash.notifTitle">Notifications</b><button class="link" data-notif-clear data-i18n="dash.notifClear">Tout effacer</button></div>
+              <div class="notif-panel__list" data-notif-list></div>
+            </div>
+          </div>
           <select class="lang-select" data-lang-select aria-label="Langue"><option value="fr">🇫🇷 FR</option><option value="en">🇬🇧 EN</option></select>
           <button class="icon-btn theme-toggle" data-theme-toggle aria-label="Changer de thème">
             <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
@@ -85,6 +99,47 @@
           </div>
 
           <div class="preds-grid" id="preds-grid"><!-- injecté par dashboard.js --></div>
+        </section>
+
+        <!-- VUE : MATCHS EN DIRECT -->
+        <section class="view" id="view-live">
+          <div class="live-banner">
+            <span class="live-banner__pulse"></span>
+            <div><b data-i18n="dash.liveTitle">Matchs en direct</b><span data-i18n="dash.liveSub">Scores et statuts mis à jour en temps réel par l'IA.</span></div>
+          </div>
+          <div class="preds-grid" id="live-grid"><!-- injecté par dashboard.js --></div>
+        </section>
+
+        <!-- VUE : BANKROLL -->
+        <section class="view" id="view-bankroll">
+          <div class="bankroll-hero">
+            <div class="bankroll-hero__main">
+              <span class="bankroll-hero__label" data-i18n="dash.bkBalance">Solde virtuel</span>
+              <span class="bankroll-hero__balance" data-bk="balance">—</span>
+              <span class="bankroll-hero__note" data-i18n="dash.bkNote">Paris fictifs · aucun argent réel · 18+</span>
+            </div>
+            <div class="bankroll-hero__stats">
+              <div><span data-i18n="dash.bkProfit">Profit</span><b data-bk="profit">—</b></div>
+              <div><span>ROI</span><b data-bk="roi">—</b></div>
+              <div><span data-i18n="dash.kpiWinrate">Réussite</span><b data-bk="winrate">—</b></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel__head"><h3 data-i18n="dash.bkBets">Mes paris</h3></div>
+            <div id="bets-list" class="bets-list"></div>
+          </div>
+        </section>
+
+        <!-- VUE : COMMUNAUTÉ -->
+        <section class="view" id="view-community">
+          <div class="panel">
+            <div class="panel__head"><h3 data-i18n="dash.badges">Mes badges</h3><p data-i18n="dash.badgesSub">Débloquez des récompenses en pariant.</p></div>
+            <div class="badges-grid" id="badges-grid"></div>
+          </div>
+          <div class="panel">
+            <div class="panel__head"><h3 data-i18n="dash.leaderboard">Classement de la communauté</h3><p data-i18n="dash.leaderboardSub">Top parieurs par ROI.</p></div>
+            <div class="leaderboard" id="leaderboard"></div>
+          </div>
         </section>
 
         <!-- VUE : SPORTS -->
@@ -178,6 +233,10 @@
   <script src="js/i18n.js"></script>
   <script src="js/data.js"></script>
   <script src="js/predictions.js"></script>
+  <script src="js/live.js"></script>
+  <script src="js/bankroll.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/community.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/dashboard.js"></script>
   <script>

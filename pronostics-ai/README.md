@@ -14,6 +14,13 @@ Plateforme web **front-end pur** (HTML5 + CSS3 + JavaScript vanilla, **aucun fra
 - **PWA** : `manifest.json` + `service-worker.js` (cache hors-ligne).
 - **Accessibilité** : `aria-*`, navigation clavier, contrastes, `prefers-reduced-motion`.
 
+### 🆕 Fonctionnalités dynamiques (temps réel)
+
+- **⚽ Matchs en direct** (`live.js`) : moteur temps réel qui fait avancer la minute de jeu, marque des buts et **résout automatiquement les pronostics** (gagné/perdu) en fin de match. Cartes mises à jour en place.
+- **🎟️ Bankroll & paris virtuels** (`bankroll.js`) : portefeuille virtuel (aucun argent réel), modale de placement de pari avec calcul du gain potentiel, **règlement automatique** à la résolution du match, historique, ROI et taux de réussite.
+- **🔔 Notifications** (`notifications.js`) : centre de notifications in-app (cloche + panneau), alertes de buts/résolutions/paris, et **notifications système PWA** (API Notification) après consentement.
+- **🏆 Communauté & comparateur** (`community.js`) : **classement (leaderboard)** des membres par ROI avec insertion de l'utilisateur, **badges de gamification** débloqués selon l'activité, et **comparateur de cotes** multi-bookmakers (meilleure cote surlignée).
+
 ## 📁 Structure
 
 ```
@@ -30,6 +37,10 @@ pronostics-ai/
 │   ├── i18n.js           # Multilingue FR/EN
 │   ├── data.js           # Données mock + fetchPredictions() (⚠ point de branchement API)
 │   ├── predictions.js    # Rendu des cartes de pronostic
+│   ├── live.js           # Moteur de matchs en direct (temps réel)
+│   ├── bankroll.js       # Portefeuille virtuel & paris fictifs
+│   ├── notifications.js  # Centre de notifications + push PWA
+│   ├── community.js      # Classement, badges & comparateur de cotes
 │   ├── main.js           # Interactions landing
 │   ├── auth.js           # Validation + session factice
 │   └── dashboard.js      # Logique du tableau de bord

@@ -89,6 +89,14 @@ const STRINGS = {
     'col.match': 'Match', 'col.league': 'Ligue', 'col.pred': 'Pronostic', 'col.conf': 'Confiance', 'col.odds': 'Cote', 'col.result': 'Résultat',
     'status.upcoming': 'À venir', 'status.live': 'En direct', 'status.won': 'Gagné', 'status.lost': 'Perdu',
     'conf.ai': 'Confiance IA',
+    // Nouvelles fonctionnalités
+    'dash.live': 'En direct', 'dash.bankroll': 'Bankroll', 'dash.community': 'Communauté',
+    'dash.notifTitle': 'Notifications', 'dash.notifClear': 'Tout effacer',
+    'dash.liveTitle': 'Matchs en direct', 'dash.liveSub': "Scores et statuts mis à jour en temps réel par l'IA.",
+    'dash.bkBalance': 'Solde virtuel', 'dash.bkNote': 'Paris fictifs · aucun argent réel · 18+',
+    'dash.bkProfit': 'Profit', 'dash.bkBets': 'Mes paris',
+    'dash.badges': 'Mes badges', 'dash.badgesSub': 'Débloquez des récompenses en pariant.',
+    'dash.leaderboard': 'Classement de la communauté', 'dash.leaderboardSub': 'Top parieurs par ROI.',
   },
   en: {
     'nav.home': 'Home', 'nav.predictions': 'Predictions', 'nav.sports': 'Sports',
@@ -159,6 +167,14 @@ const STRINGS = {
     'col.match': 'Match', 'col.league': 'League', 'col.pred': 'Prediction', 'col.conf': 'Confidence', 'col.odds': 'Odds', 'col.result': 'Result',
     'status.upcoming': 'Upcoming', 'status.live': 'Live', 'status.won': 'Won', 'status.lost': 'Lost',
     'conf.ai': 'AI confidence',
+    // New features
+    'dash.live': 'Live', 'dash.bankroll': 'Bankroll', 'dash.community': 'Community',
+    'dash.notifTitle': 'Notifications', 'dash.notifClear': 'Clear all',
+    'dash.liveTitle': 'Live matches', 'dash.liveSub': 'Scores and statuses updated in real time by the AI.',
+    'dash.bkBalance': 'Virtual balance', 'dash.bkNote': 'Virtual bets · no real money · 18+',
+    'dash.bkProfit': 'Profit', 'dash.bkBets': 'My bets',
+    'dash.badges': 'My badges', 'dash.badgesSub': 'Unlock rewards by betting.',
+    'dash.leaderboard': 'Community leaderboard', 'dash.leaderboardSub': 'Top bettors by ROI.',
   },
 };
 
