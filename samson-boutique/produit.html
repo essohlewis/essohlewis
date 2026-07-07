@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fiche produit | SAMSON Boutique</title>
+  <meta name="description" content="Détails du produit SAMSON Boutique : caractéristiques, avis clients, variantes et livraison à Abidjan.">
+  <meta name="theme-color" content="#FF6B00">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23FF6B00'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle'%3E%F0%9F%8F%8B%EF%B8%8F%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/variables.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/themes.css">
+</head>
+<body>
+  <div id="sb-header"></div>
+
+  <main class="section" style="padding-top:20px">
+    <div class="container">
+      <div class="breadcrumb" id="pd-breadcrumb"></div>
+
+      <div class="produit-detail" id="produit-detail">
+        <!-- Galerie -->
+        <div class="gallery">
+          <div class="main-img" id="pd-main-img"></div>
+          <div class="thumbs" id="pd-thumbs"></div>
+        </div>
+
+        <!-- Infos -->
+        <div class="pd-info">
+          <span class="pd-cat" id="pd-cat"></span>
+          <h1 id="pd-nom"></h1>
+          <div class="pd-meta" id="pd-meta"></div>
+          <div class="pd-price" id="pd-price"></div>
+          <div class="pd-stock" id="pd-stock"></div>
+
+          <div id="pd-variantes"></div>
+
+          <div class="pd-actions">
+            <div class="qty">
+              <button id="pd-qty-minus" aria-label="Diminuer">−</button>
+              <input id="pd-qty-val" value="1" readonly aria-label="Quantité" style="border:none;background:transparent;text-align:center;width:36px;font-weight:700">
+              <button id="pd-qty-plus" aria-label="Augmenter">+</button>
+            </div>
+            <button class="btn btn-primary btn-lg" id="pd-add">🛒 Ajouter au panier</button>
+            <button class="btn btn-dark btn-lg" id="pd-buy">Acheter maintenant</button>
+            <button class="btn btn-ghost" id="pd-wish">🤍 Favori</button>
+          </div>
+
+          <div class="trust-row">
+            <span class="trust-chip secure">🔒 Paiement sécurisé</span>
+            <span class="trust-chip">🚚 Livraison 24-48h</span>
+            <span class="trust-chip">↩️ Retour 7 jours</span>
+            <span class="trust-chip">✅ Produit authentique</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Onglets -->
+      <div class="pd-tabs">
+        <div class="tabs-head">
+          <button class="tab-btn active" data-tab="tab-desc">Description</button>
+          <button class="tab-btn" data-tab="tab-carac">Caractéristiques</button>
+          <button class="tab-btn" data-tab="tab-livraison">Livraison & Retour</button>
+          <button class="tab-btn" data-tab="tab-avis">Avis clients</button>
+        </div>
+        <div class="tab-panel active" id="tab-desc"></div>
+        <div class="tab-panel" id="tab-carac"></div>
+        <div class="tab-panel" id="tab-livraison"></div>
+        <div class="tab-panel" id="tab-avis"></div>
+      </div>
+
+      <!-- Produits similaires -->
+      <div style="margin-top:50px">
+        <div class="section-head" style="text-align:left;margin-bottom:24px"><h2 style="font-size:1.5rem">Complète ton équipement</h2></div>
+        <div class="produits-grid" id="pd-similaires"></div>
+      </div>
+    </div>
+  </main>
+
+  <div id="sb-footer"></div>
+
+  <script src="assets/js/data/products.js"></script>
+  <script src="assets/js/modules/storage.js"></script>
+  <script src="assets/js/modules/security.js"></script>
+  <script src="assets/js/modules/toast.js"></script>
+  <script src="assets/js/modules/theme.js"></script>
+  <script src="assets/js/modules/wishlist.js"></script>
+  <script src="assets/js/modules/cart.js"></script>
+  <script src="assets/js/modules/search.js"></script>
+  <script src="assets/js/modules/product.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

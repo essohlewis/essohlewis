@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mon panier | SAMSON Boutique</title>
+  <meta name="description" content="Votre panier SAMSON Boutique. Vérifiez vos articles et passez commande avec paiement Mobile Money.">
+  <meta name="theme-color" content="#FF6B00">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23FF6B00'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle'%3E%F0%9F%8F%8B%EF%B8%8F%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/variables.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/themes.css">
+</head>
+<body>
+  <div id="sb-header"></div>
+
+  <div class="page-band"><div class="container"><h1>Mon panier</h1></div></div>
+
+  <main class="section" style="padding-top:24px">
+    <div class="container">
+      <div class="breadcrumb"><a href="index.html">Accueil</a> › <span>Panier</span></div>
+      <div class="checkout-layout">
+        <div id="panier-liste"></div>
+        <div class="order-summary" id="panier-summary"></div>
+      </div>
+    </div>
+  </main>
+
+  <div id="sb-footer"></div>
+
+  <script src="assets/js/data/products.js"></script>
+  <script src="assets/js/modules/storage.js"></script>
+  <script src="assets/js/modules/security.js"></script>
+  <script src="assets/js/modules/toast.js"></script>
+  <script src="assets/js/modules/theme.js"></script>
+  <script src="assets/js/modules/wishlist.js"></script>
+  <script src="assets/js/modules/cart.js"></script>
+  <script src="assets/js/modules/search.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    // Rendu de la page panier (spécifique à cette page)
+    (function () {
+      function render() {
+        const liste = document.getElementById('panier-liste');
+        const sum = document.getElementById('panier-summary');
+        if (!liste) return;
+        const esc = SB.security.escapeHtml;
+        const items = SB.cart.items();
+        if (!items.length) {
+          liste.innerHTML = `<div class="no-results"><div class="big">🛒</div><h3>Votre panier est vide</h3><a href="catalogue.html" class="btn btn-primary" style="margin-top:16px">Découvrir la boutique</a></div>`;
+          sum.style.display = 'none';
+          return;
+        }
+        sum.style.display = 'block';
+        liste.innerHTML = `<div class="step-card">` + items.map(l => {
+          const p = SB.getProduit(l.id); if (!p) return '';
+          const key = SB.cart.ligneKey(l.id, l.variante);
+          const vl = SB.cart.varLabel(l.variante);
+          return `<div class="os-line" style="padding:14px 0">
+            <img src="${SB.produitImage(p)}" alt="" style="width:70px;height:70px">
+            <div style="flex:1">
+              <div class="os-nom" style="font-size:.95rem"><a href="produit.html?id=${p.id}">${esc(p.nom)}</a></div>
+              ${vl ? `<div class="os-q">${esc(vl)}</div>` : ''}
+              <div class="cl-prix" style="color:var(--orange);font-weight:700">${SB.formatPrix(SB.prixEffectif(p))}</div>
+              <div class="cl-qty" style="margin-top:6px">
+                <button onclick="SB.cart.incrementer('${key}',-1);renderPanier()">−</button>
+                <span style="margin:0 10px;font-weight:700">${l.qty}</span>
+                <button onclick="SB.cart.incrementer('${key}',1);renderPanier()">+</button>
+              </div>
+            </div>
+            <div style="text-align:right">
+              <div class="os-p">${SB.formatPrix(SB.prixEffectif(p) * l.qty)}</div>
+              <button class="cl-remove" style="margin-top:8px" onclick="SB.cart.retirer('${key}');renderPanier()" aria-label="Supprimer">🗑️</button>
+            </div>
+          </div>`;
+        }).join('') + `</div>`;
+
+        const t = SB.cart.totaux();
+        const promo = SB.cart.getPromo();
+        sum.innerHTML = `<h4>Récapitulatif</h4>
+          <div class="promo-row" style="margin:14px 0">
+            <input class="input" id="pg-promo" placeholder="Code promo" value="${promo ? esc(promo.code) : ''}">
+            <button class="btn btn-dark btn-sm" onclick="if(document.getElementById('pg-promo').value){SB.cart.appliquerPromo(document.getElementById('pg-promo').value);renderPanier()}">OK</button>
+          </div>
+          ${promo ? `<div class="os-totals" style="margin:0"><div class="l" style="color:var(--succes)"><span>🎟️ ${esc(promo.label)}</span><button onclick="SB.cart.retirerPromo();renderPanier()" style="color:var(--erreur);font-size:.8rem">retirer</button></div></div>` : ''}
+          <div class="os-totals">
+            <div class="l"><span>Sous-total</span><span>${SB.formatPrix(t.sousTotal)}</span></div>
+            ${t.remise ? `<div class="l" style="color:var(--succes)"><span>Remise</span><span>−${SB.formatPrix(t.remise)}</span></div>` : ''}
+            <div class="l"><span>Livraison</span><span>${t.livraisonOfferte ? 'Offerte 🎉' : 'Calculée au paiement'}</span></div>
+            <div class="l grand"><span>Total</span><span class="prix-actuel">${SB.formatPrix(t.total)}</span></div>
+          </div>
+          <a href="checkout.html" class="btn btn-primary btn-block btn-lg" style="margin-top:16px">Passer la commande →</a>
+          <a href="catalogue.html" class="btn btn-ghost btn-block btn-sm" style="margin-top:8px">Continuer mes achats</a>
+          <div class="trust-row" style="justify-content:center;margin-top:14px"><span class="trust-chip secure">🔒 Paiement sécurisé Mobile Money</span></div>`;
+      }
+      window.renderPanier = render;
+      document.addEventListener('DOMContentLoaded', render);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boutique — Catalogue | SAMSON Boutique</title>
+  <meta name="description" content="Découvrez tout le catalogue SAMSON Boutique : musculation, cardio, fitness, nutrition, accessoires et vêtements de sport. Filtrez, triez et commandez en quelques clics.">
+  <meta name="theme-color" content="#FF6B00">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23FF6B00'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle'%3E%F0%9F%8F%8B%EF%B8%8F%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/variables.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/themes.css">
+</head>
+<body>
+  <div id="sb-header"></div>
+
+  <div class="page-band">
+    <div class="container"><h1>La Boutique</h1><p>Tout le matériel pour repousser vos limites</p></div>
+  </div>
+
+  <main class="section" style="padding-top:24px">
+    <div class="container">
+      <div class="breadcrumb"><a href="index.html">Accueil</a> › <span>Boutique</span></div>
+
+      <div class="catalogue-toolbar">
+        <button class="btn btn-dark btn-sm filter-mobile-btn" id="open-filters">⚙️ Filtres</button>
+        <span class="count-res" id="count-res">Chargement…</span>
+        <div class="spacer"></div>
+        <div style="position:relative;flex:1;max-width:280px">
+          <input class="input" id="catalogue-search" type="search" placeholder="🔍 Recherche instantanée…" aria-label="Recherche">
+        </div>
+        <select class="select" id="tri-select" style="max-width:200px" aria-label="Trier">
+          <option value="pertinence">Trier : Pertinence</option>
+          <option value="prix-asc">Prix croissant</option>
+          <option value="prix-desc">Prix décroissant</option>
+          <option value="nouveautes">Nouveautés</option>
+          <option value="ventes">Meilleures ventes</option>
+          <option value="note">Mieux notés</option>
+        </select>
+      </div>
+
+      <div class="catalogue-layout">
+        <aside class="filters" id="filters">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <strong>Filtres</strong>
+            <button class="icon-btn" style="color:var(--texte)" onclick="document.getElementById('filters').classList.remove('open');document.getElementById('overlay').classList.remove('show')" aria-label="Fermer les filtres">✕</button>
+          </div>
+          <div id="filters-body"></div>
+        </aside>
+
+        <div>
+          <div class="produits-grid" id="produits-grid"></div>
+          <div class="pagination" id="pagination"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="sb-footer"></div>
+
+  <script src="assets/js/data/products.js"></script>
+  <script src="assets/js/modules/storage.js"></script>
+  <script src="assets/js/modules/security.js"></script>
+  <script src="assets/js/modules/toast.js"></script>
+  <script src="assets/js/modules/theme.js"></script>
+  <script src="assets/js/modules/wishlist.js"></script>
+  <script src="assets/js/modules/cart.js"></script>
+  <script src="assets/js/modules/search.js"></script>
+  <script src="assets/js/modules/catalog.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

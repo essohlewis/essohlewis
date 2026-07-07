@@ -1,0 +1,78 @@
+/* =====================================================================
+   SAMSON BOUTIQUE — Variables & Design Tokens
+   ===================================================================== */
+:root {
+  /* Palette de marque */
+  --orange:      #FF6B00;
+  --orange-dark: #E65100;
+  --orange-soft: #FFF0E6;
+  --noir:        #0D0D0D;
+  --noir-soft:   #1A1A1A;
+  --blanc:       #FFFFFF;
+  --gris:        #F5F5F5;
+  --gris-txt:    #6B6B6B;
+  --succes:      #16A34A;
+  --erreur:      #DC2626;
+  --info:        #2563EB;
+  --or:          #FFB800;
+
+  /* Rôles sémantiques (thème clair par défaut) */
+  --bg:          #FFFFFF;
+  --bg-alt:      #F5F5F5;
+  --surface:     #FFFFFF;
+  --surface-2:   #FAFAFA;
+  --texte:       #0D0D0D;
+  --texte-doux:  #6B6B6B;
+  --bordure:     #EAEAEA;
+  --header-bg:   rgba(13, 13, 13, 0.92);
+  --header-txt:  #FFFFFF;
+  --ombre-sm:    0 2px 8px rgba(0, 0, 0, 0.06);
+  --ombre:       0 8px 30px rgba(0, 0, 0, 0.10);
+  --ombre-lg:    0 20px 50px rgba(0, 0, 0, 0.18);
+  --ombre-orange:0 10px 30px rgba(255, 107, 0, 0.30);
+
+  /* Dégradés */
+  --grad-orange: linear-gradient(135deg, #FF6B00 0%, #E65100 100%);
+  --grad-hero:   linear-gradient(135deg, #E65100 0%, #0D0D0D 100%);
+  --grad-dark:   linear-gradient(160deg, #1A1A1A 0%, #0D0D0D 100%);
+
+  /* Typographie */
+  --font-titre: 'Poppins', system-ui, sans-serif;
+  --font-corps: 'Inter', system-ui, sans-serif;
+
+  /* Rayons */
+  --r-sm: 8px;
+  --r:    14px;
+  --r-lg: 22px;
+  --r-full: 999px;
+
+  /* Transitions */
+  --t-rapide: 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  --t:        0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  --t-lent:   0.6s cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Layout */
+  --max-w: 1240px;
+  --header-h: 68px;
+  --z-header: 100;
+  --z-drawer: 200;
+  --z-toast: 300;
+  --z-modal: 400;
+}
+
+/* Thème sombre */
+:root[data-theme="dark"] {
+  --bg:          #0D0D0D;
+  --bg-alt:      #141414;
+  --surface:     #1A1A1A;
+  --surface-2:   #202020;
+  --texte:       #F5F5F5;
+  --texte-doux:  #9A9A9A;
+  --bordure:     #2A2A2A;
+  --header-bg:   rgba(13, 13, 13, 0.85);
+  --header-txt:  #FFFFFF;
+  --orange-soft: #2A1A0D;
+  --ombre-sm:    0 2px 8px rgba(0, 0, 0, 0.4);
+  --ombre:       0 8px 30px rgba(0, 0, 0, 0.5);
+  --ombre-lg:    0 20px 50px rgba(0, 0, 0, 0.7);
+}

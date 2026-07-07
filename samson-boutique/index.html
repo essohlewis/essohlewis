@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAMSON Boutique — Matériel de sport & fitness à Abidjan</title>
+  <meta name="description" content="SAMSON Boutique, l'extension digitale de SAMSON GYM. Matériel de musculation, cardio, fitness, nutrition et vêtements de sport. Livraison rapide à Abidjan, paiement Wave, Orange, MTN & Moov Money.">
+  <meta name="theme-color" content="#FF6B00">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23FF6B00'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle'%3E%F0%9F%8F%8B%EF%B8%8F%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/variables.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/themes.css">
+</head>
+<body>
+  <div id="sb-header"></div>
+
+  <!-- ============ HERO ============ -->
+  <section class="hero">
+    <div class="hero-grid-bg"></div>
+    <div class="container">
+      <div class="hero-inner">
+        <span class="kicker reveal-up">🔥 Nouvelle collection SAMSON GYM disponible</span>
+        <h1 class="reveal-up">Équipe-toi comme un <span class="hl">champion</span>.</h1>
+        <p class="lead reveal-up">Du matériel de sport professionnel livré chez toi à Abidjan. Musculation, cardio, nutrition, textile — tout l'univers SAMSON GYM, à portée de clic.</p>
+        <div class="hero-cta reveal-up">
+          <a href="catalogue.html" class="btn btn-primary btn-lg">Découvrir la boutique →</a>
+          <a href="#categories" class="btn btn-ghost btn-lg" style="color:#fff;border-color:rgba(255,255,255,.4)">Voir les catégories</a>
+        </div>
+        <div class="hero-stats reveal-up">
+          <div><div class="num"><span data-count="4500" data-suffix="+">0</span></div><div class="lbl">Clients satisfaits</div></div>
+          <div><div class="num"><span data-count="250" data-suffix="+">0</span></div><div class="lbl">Produits</div></div>
+          <div><div class="num"><span data-count="24" data-suffix="h">0</span></div><div class="lbl">Livraison Abidjan</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ RÉASSURANCE ============ -->
+  <section class="section" style="padding-block:36px">
+    <div class="container">
+      <div class="reassurance">
+        <div class="item" data-reveal><span class="ico-big">🔒</span><div><h4>Paiement sécurisé</h4><p>Wave, Orange, MTN & Moov Money</p></div></div>
+        <div class="item" data-reveal data-reveal-delay="1"><span class="ico-big">🚚</span><div><h4>Livraison rapide</h4><p>24-48h à Abidjan, partout en CI</p></div></div>
+        <div class="item" data-reveal data-reveal-delay="2"><span class="ico-big">✅</span><div><h4>Produits authentiques</h4><p>Qualité garantie SAMSON</p></div></div>
+        <div class="item" data-reveal data-reveal-delay="3"><span class="ico-big">💬</span><div><h4>Support 7j/7</h4><p>Une équipe à votre écoute</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CATÉGORIES ============ -->
+  <section class="section" id="categories" style="padding-top:24px">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Explorer</span>
+        <h2>Nos catégories<span class="underline"></span></h2>
+        <p>Trouvez tout ce qu'il vous faut pour atteindre vos objectifs.</p>
+      </div>
+      <div class="cat-grid" id="home-categories"></div>
+    </div>
+  </section>
+
+  <!-- ============ PRODUITS VEDETTES (carrousel) ============ -->
+  <section class="section" style="background:var(--bg-alt)">
+    <div class="container">
+      <div class="section-head"><span class="eyebrow">Le meilleur de SAMSON</span><h2>Produits vedettes<span class="underline"></span></h2></div>
+      <div class="carousel" data-carousel>
+        <div class="carousel-nav"><button data-car-prev aria-label="Précédent">‹</button><button data-car-next aria-label="Suivant">›</button></div>
+        <div class="carousel-track" id="home-vedettes"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ NOUVEAUTÉS ============ -->
+  <section class="section">
+    <div class="container">
+      <div class="section-head"><span class="eyebrow">Fraîchement arrivés</span><h2>Nouveautés<span class="underline"></span></h2></div>
+      <div class="produits-grid" id="home-nouveautes"></div>
+    </div>
+  </section>
+
+  <!-- ============ BANDEAU PROMO ============ -->
+  <section class="section" style="padding-block:20px">
+    <div class="container">
+      <div class="newsletter" data-reveal style="text-align:left">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap">
+          <div>
+            <span class="badge badge-promo" style="margin-bottom:10px">Offre limitée</span>
+            <h2>Jusqu'à −20% sur une sélection</h2>
+            <p style="opacity:.9;margin-top:8px">Profitez de nos meilleurs prix sur le matériel de musculation et la nutrition.</p>
+          </div>
+          <a href="catalogue.html" class="btn btn-primary btn-lg">J'en profite →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MEILLEURES VENTES / PROMOS ============ -->
+  <section class="section" style="background:var(--bg-alt)">
+    <div class="container">
+      <div class="section-head"><span class="eyebrow">Populaire</span><h2>En promotion<span class="underline"></span></h2></div>
+      <div class="produits-grid" id="home-promos"></div>
+      <div class="text-center" style="margin-top:34px"><a href="catalogue.html" class="btn btn-outline btn-lg">Voir tout le catalogue</a></div>
+    </div>
+  </section>
+
+  <!-- ============ COMPTEURS ============ -->
+  <section class="section">
+    <div class="container">
+      <div class="counters">
+        <div class="counter-item" data-reveal><div class="c-num"><span data-count="4500" data-suffix="+">0</span></div><div class="c-lbl">Clients satisfaits</div></div>
+        <div class="counter-item" data-reveal data-reveal-delay="1"><div class="c-num"><span data-count="12000" data-suffix="+">0</span></div><div class="c-lbl">Commandes livrées</div></div>
+        <div class="counter-item" data-reveal data-reveal-delay="2"><div class="c-num"><span data-count="250" data-suffix="+">0</span></div><div class="c-lbl">Produits au catalogue</div></div>
+        <div class="counter-item" data-reveal data-reveal-delay="3"><div class="c-num"><span data-count="98" data-suffix="%">0</span></div><div class="c-lbl">Avis positifs</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TÉMOIGNAGES ============ -->
+  <section class="section" style="background:var(--bg-alt)">
+    <div class="container">
+      <div class="section-head"><span class="eyebrow">Ils nous font confiance</span><h2>Avis de nos clients<span class="underline"></span></h2></div>
+      <div style="max-width:640px;margin:auto" id="home-temoins"></div>
+    </div>
+  </section>
+
+  <!-- ============ NEWSLETTER ============ -->
+  <section class="section">
+    <div class="container">
+      <div class="newsletter" data-reveal>
+        <h2>Restez au top de votre forme</h2>
+        <p style="opacity:.9;margin-top:10px">Inscrivez-vous et recevez nos offres exclusives et conseils d'entraînement.</p>
+        <form data-fake-form="Merci ! Vous êtes inscrit à la newsletter SAMSON.">
+          <input type="email" required placeholder="Votre adresse e-mail" aria-label="E-mail">
+          <button class="btn btn-primary" type="submit">S'inscrire</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <div id="sb-footer"></div>
+
+  <script src="assets/js/data/products.js"></script>
+  <script src="assets/js/modules/storage.js"></script>
+  <script src="assets/js/modules/security.js"></script>
+  <script src="assets/js/modules/toast.js"></script>
+  <script src="assets/js/modules/theme.js"></script>
+  <script src="assets/js/modules/wishlist.js"></script>
+  <script src="assets/js/modules/cart.js"></script>
+  <script src="assets/js/modules/search.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

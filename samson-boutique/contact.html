@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact | SAMSON Boutique</title>
+  <meta name="description" content="Contactez SAMSON Boutique à Cocody Angré, Abidjan. WhatsApp, téléphone et formulaire.">
+  <meta name="theme-color" content="#FF6B00">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23FF6B00'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle'%3E%F0%9F%8F%8B%EF%B8%8F%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/variables.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/themes.css">
+</head>
+<body>
+  <div id="sb-header"></div>
+
+  <div class="page-band"><div class="container"><h1>Contactez-nous</h1><p>Notre équipe vous répond 7j/7</p></div></div>
+
+  <main class="section" style="padding-top:24px">
+    <div class="container">
+      <div class="checkout-layout">
+        <div class="step-card">
+          <h3>✉️ Envoyez-nous un message</h3>
+          <form data-fake-form="Merci ! Votre message a bien été envoyé, nous vous répondrons vite.">
+            <div class="form-row">
+              <div class="field"><label>Nom <span class="req">*</span></label><input class="input" required placeholder="Votre nom"></div>
+              <div class="field"><label>Téléphone <span class="req">*</span></label><input class="input" required inputmode="tel" placeholder="07 00 00 00 00"></div>
+            </div>
+            <div class="field"><label>E-mail</label><input class="input" type="email" placeholder="vous@exemple.com"></div>
+            <div class="field"><label>Sujet</label>
+              <select class="select"><option>Question sur un produit</option><option>Suivi de commande</option><option>Livraison</option><option>Autre</option></select>
+            </div>
+            <div class="field"><label>Message <span class="req">*</span></label><textarea class="input" rows="5" required placeholder="Votre message…"></textarea></div>
+            <button class="btn btn-primary btn-lg" type="submit">Envoyer le message</button>
+          </form>
+        </div>
+
+        <aside>
+          <div class="step-card" style="margin-bottom:16px">
+            <h3>📍 Nos coordonnées</h3>
+            <p style="margin-bottom:10px">🏠 <strong>Adresse</strong><br>SAMSON GYM, Cocody Angré, Abidjan, Côte d'Ivoire</p>
+            <p style="margin-bottom:10px">📞 <strong>Téléphone</strong><br>+225 07 00 00 00 00</p>
+            <p style="margin-bottom:10px">🕐 <strong>Horaires</strong><br>Lun-Sam : 8h-20h · Dim : 9h-18h</p>
+            <a class="btn btn-primary btn-block" style="margin-top:10px" href="https://wa.me/2250700000000?text=Bonjour%20SAMSON%20Boutique" target="_blank" rel="noopener">💬 Discuter sur WhatsApp</a>
+          </div>
+          <div class="step-card">
+            <h3>❓ Questions fréquentes</h3>
+            <details style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:600">Quels sont les délais de livraison ?</summary><p class="muted" style="margin-top:8px">24 à 48h à Abidjan, 2 à 5 jours pour l'intérieur du pays.</p></details>
+            <details style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:600">Comment payer ma commande ?</summary><p class="muted" style="margin-top:8px">Wave, Orange Money, MTN MoMo, Moov Money ou paiement à la livraison.</p></details>
+            <details><summary style="cursor:pointer;font-weight:600">Puis-je retourner un produit ?</summary><p class="muted" style="margin-top:8px">Oui, sous 7 jours si le produit est neuf et non utilisé.</p></details>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <div id="sb-footer"></div>
+
+  <script src="assets/js/data/products.js"></script>
+  <script src="assets/js/modules/storage.js"></script>
+  <script src="assets/js/modules/security.js"></script>
+  <script src="assets/js/modules/toast.js"></script>
+  <script src="assets/js/modules/theme.js"></script>
+  <script src="assets/js/modules/wishlist.js"></script>
+  <script src="assets/js/modules/cart.js"></script>
+  <script src="assets/js/modules/search.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

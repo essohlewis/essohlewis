@@ -1,0 +1,79 @@
+/* =====================================================================
+   SAMSON BOUTIQUE — Reset & Base
+   ===================================================================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: var(--font-corps);
+  background: var(--bg);
+  color: var(--texte);
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: background var(--t), color var(--t);
+  -webkit-font-smoothing: antialiased;
+}
+
+body.no-scroll { overflow: hidden; }
+
+h1, h2, h3, h4, h5 { font-family: var(--font-titre); font-weight: 700; line-height: 1.15; }
+
+a { color: inherit; text-decoration: none; }
+
+img, svg { max-width: 100%; display: block; }
+
+button, input, select, textarea { font-family: inherit; font-size: inherit; color: inherit; }
+
+button { cursor: pointer; border: none; background: none; }
+
+ul { list-style: none; }
+
+:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; border-radius: 4px; }
+
+::selection { background: var(--orange); color: #fff; }
+
+/* Barre de défilement */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--gris-txt); border-radius: 999px; opacity: .5; }
+::-webkit-scrollbar-thumb:hover { background: var(--orange); }
+
+/* Conteneur */
+.container { width: 100%; max-width: var(--max-w); margin-inline: auto; padding-inline: clamp(16px, 4vw, 32px); }
+
+/* Utilitaires */
+.section { padding-block: clamp(48px, 8vw, 96px); }
+.text-center { text-align: center; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.muted { color: var(--texte-doux); }
+.hidden { display: none !important; }
+.prix-actuel { font-weight: 800; letter-spacing: .3px; color: var(--texte); }
+.prix-barre { text-decoration: line-through; color: var(--texte-doux); font-weight: 500; font-size: .9em; margin-left: 6px; }
+.accent { color: var(--orange); }
+
+/* En-têtes de section */
+.section-head { text-align: center; max-width: 640px; margin: 0 auto clamp(28px, 5vw, 52px); }
+.section-head .eyebrow {
+  display: inline-block; color: var(--orange); font-weight: 700; font-size: .8rem;
+  letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px;
+}
+.section-head h2 { font-size: clamp(1.7rem, 4vw, 2.6rem); }
+.section-head p { color: var(--texte-doux); margin-top: 12px; }
+
+/* Grilles */
+.grid { display: grid; gap: clamp(14px, 2vw, 24px); }
+
+/* Ligne de séparation animée sous les titres */
+.section-head h2 span.underline {
+  display: block; width: 64px; height: 4px; margin: 14px auto 0;
+  background: var(--grad-orange); border-radius: 999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+}
