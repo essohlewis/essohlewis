@@ -1,0 +1,94 @@
+/* =====================================================================
+   variables.css — Design tokens (couleurs, thèmes, typographie, ombres)
+   Toute la charte graphique est centralisée ici pour faciliter la
+   maintenance et l'ajout de nouveaux thèmes.
+   ===================================================================== */
+
+:root {
+  /* --- Palette de marque (constante quel que soit le thème) --- */
+  --brand-green: #00E676;   /* Accent primaire : confiance / gains */
+  --brand-green-dim: #00b85f;
+  --brand-purple: #6C5CE7;  /* Accent secondaire : électrique */
+  --brand-purple-dim: #5646d6;
+  --brand-amber: #FFB020;   /* Alertes / avertissements */
+  --brand-red: #FF4D4D;     /* Pertes / erreurs */
+  --brand-blue: #38BDF8;
+
+  /* --- Rayons, transitions, z-index --- */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-pill: 999px;
+
+  --transition-fast: 140ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition: 260ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 520ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  --z-header: 100;
+  --z-modal: 1000;
+  --z-toast: 1100;
+
+  /* --- Typographie --- */
+  --font-display: 'Space Grotesk', 'Sora', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+
+  --fs-hero: clamp(2.4rem, 6vw, 4.4rem);
+  --fs-h2: clamp(1.8rem, 4vw, 2.8rem);
+  --fs-h3: clamp(1.2rem, 2.4vw, 1.5rem);
+
+  /* --- Largeur de contenu --- */
+  --maxw: 1200px;
+}
+
+/* =====================================================================
+   THÈME SOMBRE (par défaut) — « salle des marchés sportive »
+   ===================================================================== */
+:root,
+:root[data-theme='dark'] {
+  --bg: #0A0E1A;
+  --bg-2: #111827;
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface-2: rgba(255, 255, 255, 0.06);
+  --surface-solid: #141b2d;
+  --glass-bg: rgba(20, 27, 45, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.08);
+
+  --text: #F5F7FA;
+  --text-dim: #9CA3AF;
+  --text-faint: #6B7280;
+
+  --border: rgba(255, 255, 255, 0.08);
+  --shadow-soft: 0 10px 40px rgba(0, 0, 0, 0.45);
+  --glow-green: 0 0 24px rgba(0, 230, 118, 0.35);
+  --glow-purple: 0 0 24px rgba(108, 92, 231, 0.35);
+
+  --hero-radial: radial-gradient(60% 60% at 70% 10%, rgba(108, 92, 231, 0.22), transparent 60%),
+                 radial-gradient(50% 50% at 15% 20%, rgba(0, 230, 118, 0.14), transparent 55%);
+  color-scheme: dark;
+}
+
+/* =====================================================================
+   THÈME CLAIR
+   ===================================================================== */
+:root[data-theme='light'] {
+  --bg: #F4F6FB;
+  --bg-2: #FFFFFF;
+  --surface: rgba(15, 23, 42, 0.03);
+  --surface-2: rgba(15, 23, 42, 0.05);
+  --surface-solid: #FFFFFF;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(15, 23, 42, 0.08);
+
+  --text: #0B1220;
+  --text-dim: #566072;
+  --text-faint: #8A94A6;
+
+  --border: rgba(15, 23, 42, 0.1);
+  --shadow-soft: 0 10px 40px rgba(15, 23, 42, 0.12);
+  --glow-green: 0 0 22px rgba(0, 184, 95, 0.28);
+  --glow-purple: 0 0 22px rgba(108, 92, 231, 0.25);
+
+  --hero-radial: radial-gradient(60% 60% at 70% 10%, rgba(108, 92, 231, 0.14), transparent 60%),
+                 radial-gradient(50% 50% at 15% 20%, rgba(0, 184, 95, 0.12), transparent 55%);
+  color-scheme: light;
+}

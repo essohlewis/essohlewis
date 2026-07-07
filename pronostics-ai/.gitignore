@@ -1,0 +1,13 @@
+# Dépendances (le projet est front-end pur, aucune dépendance requise)
+node_modules/
+package.json
+package-lock.json
+
+# OS / éditeurs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log

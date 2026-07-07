@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PronosAI — L'IA qui prédit vos victoires sportives</title>
+  <meta name="description" content="Pronostics sportifs quotidiens de haute précision générés par IA sur les plus grandes compétitions d'Europe, d'Afrique, d'Asie et d'Amérique." />
+  <meta name="theme-color" content="#0A0E1A" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
+  <link rel="apple-touch-icon" href="assets/icon.svg" />
+
+  <!-- Applique le thème AVANT le rendu pour éviter tout flash -->
+  <script>(function(){var t=localStorage.getItem('pronos-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+
+  <!-- Polices Google (préconnexion pour la performance) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- ============ HEADER ============ -->
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="index.html" aria-label="PronosAI">
+        <img class="brand__logo" src="assets/logo.svg" alt="" />
+        <span>Pronos<b>AI</b></span>
+      </a>
+
+      <nav class="main-nav" aria-label="Navigation principale">
+        <a href="#top" data-i18n="nav.home">Accueil</a>
+        <a href="#preview" data-i18n="nav.predictions">Pronostics</a>
+        <a href="#sports" data-i18n="nav.sports">Sports</a>
+        <a href="#pricing" data-i18n="nav.pricing">Tarifs</a>
+        <a href="auth.html" data-auth-link data-i18n="nav.login">Connexion</a>
+      </nav>
+
+      <div class="header-actions">
+        <select class="lang-select desktop-only" data-lang-select aria-label="Langue">
+          <option value="fr">🇫🇷 FR</option>
+          <option value="en">🇬🇧 EN</option>
+        </select>
+
+        <button class="icon-btn theme-toggle" data-theme-toggle aria-label="Changer de thème" title="Thème clair/sombre">
+          <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+          <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+
+        <a class="btn btn-primary desktop-only" href="auth.html#signup" data-i18n="nav.signup">S'inscrire</a>
+
+        <button class="icon-btn nav-toggle" aria-label="Menu" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- ============ HERO ============ -->
+    <section class="hero">
+      <div class="container">
+        <div class="hero__text">
+          <span class="eyebrow reveal"><span class="dot"></span><span data-i18n="hero.badge">Propulsé par l'IA · Mis à jour chaque jour</span></span>
+          <h1 class="reveal" data-delay="1"><span data-i18n="hero.title1">L'IA qui prédit </span><span class="grad" data-i18n="hero.titleHi">vos victoires</span></h1>
+          <p class="hero__lead reveal" data-delay="2" data-i18n="hero.lead">Des pronostics sportifs quotidiens de haute précision sur les plus grandes compétitions d'Europe, d'Afrique, d'Asie et d'Amérique — générés par notre moteur d'intelligence artificielle.</p>
+          <div class="hero__cta reveal" data-delay="3">
+            <a class="btn btn-primary btn-lg btn-pulse" href="auth.html#signup" data-i18n="hero.cta1">Recevoir mes pronostics du jour</a>
+            <a class="btn btn-secondary btn-lg" href="#how" data-i18n="hero.cta2">Voir comment ça marche</a>
+          </div>
+          <div class="hero-stats reveal" data-delay="3">
+            <div class="stat"><div class="stat__num"><span data-count="87" data-suffix="%">0%</span></div><div class="stat__label" data-i18n="stat.winrate">Taux de réussite</div></div>
+            <div class="stat"><div class="stat__num"><span data-count="42">0</span></div><div class="stat__label" data-i18n="stat.perday">Pronostics / jour</div></div>
+            <div class="stat"><div class="stat__num"><span data-count="12840">0</span></div><div class="stat__label" data-i18n="stat.members">Membres actifs</div></div>
+          </div>
+        </div>
+
+        <!-- Visuel mockup animé -->
+        <div class="hero__visual reveal" data-delay="2">
+          <span class="mock-orb a"></span><span class="mock-orb b"></span>
+          <div class="mock-card float">
+            <div class="mock-card__top">
+              <span class="pred-card__league">🏴 Premier League</span>
+              <span class="mock-badge">IA · 92%</span>
+            </div>
+            <div class="mock-match">
+              <span class="mock-team"><span class="mock-logo" style="background:#6CABDD">MCI</span> Man City</span>
+              <span class="mock-vs">VS</span>
+              <span class="mock-team">Arsenal <span class="mock-logo" style="background:#EF0107">ARS</span></span>
+            </div>
+            <div class="mock-pred">
+              <span class="mock-pred__label">Prédiction</span>
+              <span class="mock-pred__val">Victoire domicile · 1.85</span>
+            </div>
+            <div class="conf">
+              <div class="conf__row"><span>Confiance IA</span><span>92%</span></div>
+              <div class="conf__bar"><span class="conf__fill" style="width:92%"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ APERÇU PRONOSTICS DU JOUR ============ -->
+    <section id="preview">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow"><span class="dot"></span><span data-i18n="preview.badge">Aperçu du jour</span></span>
+          <h2 data-i18n="preview.title">Les pronostics du jour</h2>
+          <p data-i18n="preview.sub">Un échantillon de ce que notre IA génère chaque matin. Inscrivez-vous pour tout débloquer.</p>
+        </div>
+        <div class="card-grid reveal" id="preview-cards" data-delay="1"><!-- injecté par main.js --></div>
+      </div>
+    </section>
+
+    <!-- ============ SPORTS COUVERTS ============ -->
+    <section id="sports">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow"><span class="dot"></span><span data-i18n="sports.badge">Couverture mondiale</span></span>
+          <h2 data-i18n="sports.title">Tous les sports, toutes les régions</h2>
+          <p data-i18n="sports.sub">Football, basketball, cricket… nous couvrons les compétitions les plus populaires des quatre continents.</p>
+        </div>
+        <div class="sports-grid">
+          <div class="sport-tile reveal"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 4.5h-5L8 10z"/></svg><span class="region">Europe</span><h3>Football</h3><p>Premier League, Liga, Ligue 1, Serie A, Bundesliga</p></div>
+          <div class="sport-tile reveal" data-delay="1"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M5 5c3 3 3 11 0 14M19 5c-3 3-3 11 0 14"/></svg><span class="region">Amérique</span><h3>Basketball</h3><p>NBA, playoffs, matchs de saison régulière</p></div>
+          <div class="sport-tile reveal" data-delay="2"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 4.5h-5L8 10z"/></svg><span class="region">Afrique</span><h3>Football</h3><p>CAF Champions League, championnats locaux</p></div>
+          <div class="sport-tile reveal"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 4.5h-5L8 10z"/></svg><span class="region">Amérique Sud</span><h3>Football</h3><p>Copa Libertadores, Brasileirão</p></div>
+          <div class="sport-tile reveal" data-delay="1"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4l16 16M8 4a8 8 0 0 1 12 12"/><circle cx="6" cy="6" r="2"/></svg><span class="region">Asie</span><h3>Cricket</h3><p>Indian Premier League (IPL)</p></div>
+          <div class="sport-tile reveal" data-delay="2"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 4.5h-5L8 10z"/></svg><span class="region">Asie</span><h3>Football</h3><p>Saudi Pro League, J-League</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ COMMENT ÇA MARCHE ============ -->
+    <section id="how">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow"><span class="dot"></span><span data-i18n="how.badge">Simple et rapide</span></span>
+          <h2 data-i18n="how.title">Comment ça marche</h2>
+          <p data-i18n="how.sub">Quatre étapes pour transformer la donnée en décisions éclairées.</p>
+        </div>
+        <div class="steps">
+          <div class="step reveal"><h3 data-i18n="how.s1t">Inscription</h3><p data-i18n="how.s1d">Créez votre compte gratuit en moins de 30 secondes.</p></div>
+          <div class="step reveal" data-delay="1"><h3 data-i18n="how.s2t">L'IA analyse</h3><p data-i18n="how.s2d">Notre moteur traite des milliers de données par match.</p></div>
+          <div class="step reveal" data-delay="2"><h3 data-i18n="how.s3t">Réception quotidienne</h3><p data-i18n="how.s3d">Recevez vos pronostics chaque matin sur votre tableau de bord.</p></div>
+          <div class="step reveal" data-delay="3"><h3 data-i18n="how.s4t">Suivi des résultats</h3><p data-i18n="how.s4d">Suivez vos performances et votre taux de réussite en temps réel.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ POURQUOI NOTRE IA ============ -->
+    <section id="why">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow"><span class="dot"></span><span data-i18n="why.badge">Notre technologie</span></span>
+          <h2 data-i18n="why.title">Pourquoi notre IA fait la différence</h2>
+          <p data-i18n="why.sub">Un moteur nourri de données, entraîné à repérer la valeur là où d'autres voient du hasard.</p>
+        </div>
+        <div class="feature-grid">
+          <div class="feature reveal"><div class="ico-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l3-3 3 3 5-6"/></svg></div><h3 data-i18n="why.f1t">Analyse de données massives</h3><p data-i18n="why.f1d">Des millions de statistiques traitées : forme, historiques, blessures, météo.</p></div>
+          <div class="feature reveal" data-delay="1"><div class="ico-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 12l8-4"/><circle cx="12" cy="12" r="2"/></svg></div><h3 data-i18n="why.f2t">Modèle probabiliste</h3><p data-i18n="why.f2d">Chaque pronostic est assorti d'un niveau de confiance calculé.</p></div>
+          <div class="feature reveal" data-delay="2"><div class="ico-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="4"/></svg></div><h3 data-i18n="why.f3t">Détection de valeur</h3><p data-i18n="why.f3d">Nous identifions les cotes sous-évaluées par les bookmakers.</p></div>
+          <div class="feature reveal" data-delay="3"><div class="ico-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg></div><h3 data-i18n="why.f4t">Apprentissage continu</h3><p data-i18n="why.f4d">Le modèle s'améliore à chaque résultat pour affiner ses prédictions.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PREUVE SOCIALE ============ -->
+    <section id="proof">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow"><span class="dot"></span><span data-i18n="proof.badge">Preuve sociale</span></span>
+          <h2 data-i18n="proof.title">Des résultats qui parlent</h2>
+        </div>
+        <div class="proof">
+          <div class="perf-chart reveal">
+            <h3 data-i18n="proof.chart">Taux de réussite sur 12 mois</h3>
+            <div class="chart-wrap" id="perf-chart"></div>
+          </div>
+          <div class="testimonials reveal" data-delay="1">
+            <div class="testimonial">
+              <div class="stars">★★★★★</div>
+              <p>« Depuis que je suis les pronostics de PronosAI, mon taux de réussite a explosé. Les analyses sont bluffantes. »</p>
+              <div class="who"><span class="avatar" style="background:#6C5CE7">KA</span><div><b>Kwame A.</b><span>Accra, Ghana</span></div></div>
+            </div>
+            <div class="testimonial">
+              <div class="stars">★★★★★</div>
+              <p>« L'interface est superbe et les niveaux de confiance de l'IA m'aident vraiment à décider. Je recommande. »</p>
+              <div class="who"><span class="avatar" style="background:#00b85f">SL</span><div><b>Sophie L.</b><span>Lyon, France</span></div></div>
+            </div>
+            <div class="testimonial">
+              <div class="stars">★★★★★</div>
+              <p>« Couverture mondiale impressionnante, de la NBA à la CAF. Un outil devenu indispensable. »</p>
+              <div class="who"><span class="avatar" style="background:#38BDF8">RG</span><div><b>Rajesh G.</b><span>Mumbai, Inde</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TARIFS ============ -->
+    <section id="pricing" class="pricing">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow"><span class="dot"></span><span data-i18n="pricing.badge">Tarifs</span></span>
+          <h2 data-i18n="pricing.title">Choisissez votre plan</h2>
+          <p data-i18n="pricing.sub">Commencez gratuitement, passez au niveau supérieur quand vous êtes prêt.</p>
+        </div>
+
+        <div class="pricing-toggle reveal">
+          <span data-price-m class="active" data-i18n="pricing.monthly">Mensuel</span>
+          <button class="switch" role="switch" aria-checked="false" aria-label="Basculer mensuel/annuel"></button>
+          <span data-price-y data-i18n="pricing.yearly">Annuel</span>
+          <span class="save-badge" data-i18n="pricing.save">-20%</span>
+        </div>
+
+        <div class="plans">
+          <!-- Gratuit -->
+          <div class="plan reveal">
+            <h3 data-i18n="plan.free">Gratuit</h3>
+            <p class="plan__desc" data-i18n="plan.freeDesc">Pour découvrir la plateforme.</p>
+            <div class="plan__price" data-monthly data-free data-monthly-val="0"><span class="amount">0</span> <span class="per">FCFA</span></div>
+            <ul class="plan__features">
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> 2 pronostics par jour</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Football Europe</li>
+              <li class="off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg> Confiance IA détaillée</li>
+              <li class="off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg> Toutes les régions</li>
+            </ul>
+            <a class="btn btn-secondary btn-block" href="auth.html#signup" data-i18n="plan.choose">Choisir ce plan</a>
+          </div>
+
+          <!-- Premium (mis en avant) -->
+          <div class="plan plan--featured reveal" data-delay="1">
+            <span class="plan__tag" data-i18n="plan.popular">Le plus populaire</span>
+            <h3 data-i18n="plan.premium">Premium</h3>
+            <p class="plan__desc" data-i18n="plan.premiumDesc">Pour les parieurs réguliers.</p>
+            <div class="plan__price" data-monthly data-monthly-val="4900" data-yearly="47000"><span class="amount">4 900</span> <span class="per">FCFA/mois</span></div>
+            <ul class="plan__features">
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Pronostics illimités</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Toutes les régions & sports</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Confiance IA détaillée</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Statistiques avancées</li>
+            </ul>
+            <a class="btn btn-primary btn-block" href="auth.html#signup" data-i18n="plan.choose">Choisir ce plan</a>
+          </div>
+
+          <!-- VIP -->
+          <div class="plan reveal" data-delay="2">
+            <h3 data-i18n="plan.vip">VIP</h3>
+            <p class="plan__desc" data-i18n="plan.vipDesc">Accès total, sans limite.</p>
+            <div class="plan__price" data-monthly data-monthly-val="9900" data-yearly="95000"><span class="amount">9 900</span> <span class="per">FCFA/mois</span></div>
+            <ul class="plan__features">
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Tout le plan Premium</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Pronostics VIP exclusifs</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Alertes en temps réel</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Support prioritaire 24/7</li>
+            </ul>
+            <a class="btn btn-secondary btn-block" href="auth.html#signup" data-i18n="plan.choose">Choisir ce plan</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FAQ ============ -->
+    <section id="faq">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow"><span class="dot"></span><span data-i18n="faq.badge">Questions</span></span>
+          <h2 data-i18n="faq.title">Questions fréquentes</h2>
+        </div>
+        <div class="faq reveal">
+          <div class="faq-item">
+            <button class="faq-item__q" aria-expanded="false">Comment l'IA génère-t-elle ses pronostics ?<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="faq-item__a"><p>Notre moteur analyse des milliers de points de données par match (forme des équipes, historiques, statistiques avancées, cotes) puis calcule une probabilité et un niveau de confiance pour chaque prédiction.</p></div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-item__q" aria-expanded="false">Les pronostics garantissent-ils des gains ?<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="faq-item__a"><p>Non. Aucun pronostic ne peut garantir un résultat. Le sport comporte une part d'incertitude. Nos analyses visent à maximiser vos chances, jamais à promettre des gains. Jouez de manière responsable.</p></div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-item__q" aria-expanded="false">Puis-je annuler mon abonnement à tout moment ?<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="faq-item__a"><p>Oui, l'abonnement est sans engagement. Vous pouvez l'annuler en un clic depuis votre espace membre, à tout moment.</p></div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-item__q" aria-expanded="false">Quels sports et régions sont couverts ?<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="faq-item__a"><p>Football (Europe, Afrique, Amérique du Sud, Asie), basketball (NBA) et cricket (IPL). Nous ajoutons régulièrement de nouvelles compétitions.</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CTA FINAL ============ -->
+    <section class="cta-final">
+      <div class="container">
+        <div class="cta-final__box reveal">
+          <h2 data-i18n="cta.title">Prêt à passer au niveau supérieur ?</h2>
+          <p data-i18n="cta.sub">Rejoignez des milliers de membres qui font confiance à notre IA chaque jour.</p>
+          <a class="btn btn-primary btn-lg btn-pulse" href="auth.html#signup" data-i18n="cta.btn">Commencer gratuitement</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="responsible">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+        <p><b>18+</b> · <span data-i18n="footer.responsible">Les paris comportent des risques.</span> <span data-i18n="footer.responsible2">Interdit aux moins de 18 ans. Jouez de manière responsable.</span></p>
+      </div>
+
+      <div class="footer-grid">
+        <div class="footer-col footer-brand">
+          <a class="brand" href="index.html"><img class="brand__logo" src="assets/logo.svg" alt="" /><span>Pronos<b>AI</b></span></a>
+          <p data-i18n="footer.tagline">L'intelligence artificielle au service de vos pronostics sportifs.</p>
+          <div class="socials">
+            <a href="#" aria-label="X"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.9 2H22l-7 8 8.2 12h-6.6l-5.2-7-6 7H2l7.5-8.6L1.5 2h6.8l4.7 6.4L18.9 2Z"/></svg></a>
+            <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg></a>
+            <a href="#" aria-label="Telegram"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3L2.9 11.6c-1.1.4-1 1.8.1 2.1l4.8 1.5 1.8 5.6c.3.8 1.3 1 1.9.4l2.6-2.5 4.9 3.6c.7.5 1.7.1 1.9-.7l3.1-15c.2-1-.8-1.8-1.8-1.4Z"/></svg></a>
+          </div>
+        </div>
+        <div class="footer-col">
+          <h4 data-i18n="footer.product">Produit</h4>
+          <a href="#preview" data-i18n="nav.predictions">Pronostics</a>
+          <a href="#sports" data-i18n="nav.sports">Sports</a>
+          <a href="#pricing" data-i18n="nav.pricing">Tarifs</a>
+        </div>
+        <div class="footer-col">
+          <h4 data-i18n="footer.company">Entreprise</h4>
+          <a href="#why">À propos</a>
+          <a href="#faq">FAQ</a>
+          <a href="mailto:contact@pronosai.app">Contact</a>
+        </div>
+        <div class="footer-col">
+          <h4 data-i18n="footer.legal">Légal</h4>
+          <a href="#">Conditions d'utilisation</a>
+          <a href="#">Confidentialité</a>
+          <a href="#">Jeu responsable</a>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>© 2026 PronosAI. <span data-i18n="footer.rights">Tous droits réservés.</span></span>
+        <span>Made with ⚡ · HTML · CSS · JS</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts (ordre important : data → predictions → i18n → main) -->
+  <script src="js/theme.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/predictions.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    // Enregistrement du service worker (PWA)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('service-worker.js').catch(() => {}));
+    }
+  </script>
+</body>
+</html>

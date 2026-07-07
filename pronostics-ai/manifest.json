@@ -1,0 +1,34 @@
+{
+  "name": "PronosAI — Pronostics Sportifs par IA",
+  "short_name": "PronosAI",
+  "description": "Des pronostics sportifs quotidiens de haute précision générés par intelligence artificielle.",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0A0E1A",
+  "theme_color": "#0A0E1A",
+  "categories": ["sports", "productivity", "finance"],
+  "icons": [
+    {
+      "src": "assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Pronostics du jour",
+      "short_name": "Du jour",
+      "url": "./dashboard.html#today"
+    },
+    {
+      "name": "Mes statistiques",
+      "short_name": "Stats",
+      "url": "./dashboard.html#stats"
+    }
+  ]
+}
