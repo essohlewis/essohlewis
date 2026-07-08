@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="PronoStars — le réseau social des pronostiqueurs sportifs. Partage tes analyses, gagne en crédibilité, suis les meilleurs experts. 🇨🇮" />
+  <meta name="theme-color" content="#0a0e14" />
+  <title>PronoStars — Réseau social de pronostics sportifs</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>" />
+</head>
+<body>
+  <!--
+    ===========================================================================
+    PronoStars — SPA (Single Page Application) à routage par hash (#/...)
+    Structure : nav (gauche) · main (vues) · aside (droite).
+    Le contenu des vues est injecté dynamiquement par app.js dans #view.
+    ===========================================================================
+  -->
+  <div class="app">
+
+    <!-- ================= COLONNE GAUCHE : NAVIGATION ================= -->
+    <nav class="nav">
+      <a href="#/feed" class="brand">
+        <span class="logo">🎯</span>
+        <span class="brand-name">Prono<span>Stars</span></span>
+      </a>
+
+      <div class="nav-links" id="navLinks">
+        <a href="#/feed" class="nav-link" data-route="feed">
+          <span class="ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+          </span>
+          <span>Accueil</span>
+        </a>
+        <a href="#/explore" class="nav-link" data-route="explore">
+          <span class="ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+          </span>
+          <span>Explorer</span>
+        </a>
+        <a href="#/leaderboard" class="nav-link" data-route="leaderboard">
+          <span class="ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 21h8M12 17v4"/><path d="M7 4h10v5a5 5 0 01-10 0V4z"/><path d="M17 5h3v2a3 3 0 01-3 3M7 5H4v2a3 3 0 003 3"/></svg>
+          </span>
+          <span>Classement</span>
+        </a>
+        <a href="#/notifications" class="nav-link" data-route="notifications">
+          <span class="ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+          </span>
+          <span>Notifications</span>
+          <span class="badge-count" id="navNotifBadge" style="display:none">0</span>
+        </a>
+        <a href="#/search" class="nav-link" data-route="search">
+          <span class="ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+          </span>
+          <span>Recherche</span>
+        </a>
+        <a href="#/profile/u_moi" class="nav-link" data-route="profile">
+          <span class="ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+          </span>
+          <span>Profil</span>
+        </a>
+      </div>
+
+      <a href="#/create" class="nav-cta">＋ Publier un pronostic</a>
+
+      <button class="theme-toggle" id="themeToggle" title="Basculer le thème">
+        <span id="themeLabel">🌙 Mode sombre</span>
+        <span>⇄</span>
+      </button>
+
+      <a href="#/profile/u_moi" class="nav-me" id="navMe"><!-- rempli par app.js --></a>
+    </nav>
+
+    <!-- ================= COLONNE CENTRALE : VUES ================= -->
+    <main class="main">
+      <header class="topbar">
+        <button class="back-btn" id="backBtn" title="Retour">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div>
+          <h1 id="topTitle">Accueil</h1>
+          <div class="sub" id="topSub"></div>
+        </div>
+      </header>
+
+      <div id="view"><!-- Contenu injecté par app.js --></div>
+    </main>
+
+    <!-- ================= COLONNE DROITE : ASIDE ================= -->
+    <aside class="aside">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+        <input type="text" id="asideSearch" placeholder="Rechercher un pronostiqueur, #hashtag…" />
+      </div>
+
+      <div class="widget" id="widgetTrends"><!-- tendances --></div>
+      <div class="widget" id="widgetSuggest"><!-- suggestions à suivre --></div>
+      <div class="widget" id="widgetBattles"><!-- battles --></div>
+
+      <p style="font-size:.72rem;color:var(--text-faint);padding:0 8px;line-height:1.5">
+        ⚠️ PronoStars est un réseau social de partage d'analyses sportives à visée
+        communautaire et de divertissement. La plateforme ne prend aucun pari et ne
+        gère aucun argent de jeu. © 2026 PronoStars 🇨🇮
+      </p>
+    </aside>
+  </div>
+
+  <!-- ================= BARRE DE NAVIGATION MOBILE (bas) ================= -->
+  <nav class="mobile-nav" id="mobileNav">
+    <a href="#/feed" data-route="feed">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      <span>Accueil</span>
+    </a>
+    <a href="#/explore" data-route="explore">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+      <span>Explorer</span>
+    </a>
+    <a href="#/create" class="m-fab" data-route="create" title="Publier">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+    </a>
+    <a href="#/leaderboard" data-route="leaderboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 21h8M12 17v4"/><path d="M7 4h10v5a5 5 0 01-10 0V4z"/></svg>
+      <span>Top</span>
+    </a>
+    <a href="#/notifications" data-route="notifications">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+      <span>Alertes</span>
+      <span class="badge-count" id="mobileNotifBadge" style="display:none">0</span>
+    </a>
+  </nav>
+
+  <!-- Conteneur des toasts -->
+  <div class="toast-wrap" id="toastWrap"></div>
+
+  <!-- Scripts : api.js (données) puis app.js (logique). Pas de bundler. -->
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
