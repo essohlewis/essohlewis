@@ -35,14 +35,22 @@ ligue, et onglets (Pronostics / En cours / Gagnés / Perdus / Analyses / Likes).
 
 Score de crédibilité 0–100 pondérant : **réussite récente** (42 %), **difficulté des cotes
 gagnées** (24 %), **régularité** (18 %) et **volume** (16 %), avec un **bonus/malus de série**.
-La formule complète est documentée en commentaire dans `app.js` (section 2).
+La formule complète est documentée en commentaire dans `app.js` (section 2), et rendue
+**transparente** pour l'utilisateur via un modal cliquable sur la jauge du profil.
+
+## 🚀 Innovations
+
+Ticker **« En direct »** temps réel, **coupons combinés** (cote totale + statut auto),
+**sondages communautaires** animés, **transparence du TrustScore** (modal de décomposition)
+et **Coach IA** (analyse simulée). Détails complets dans [`INNOVATIONS.md`](./INNOVATIONS.md).
 
 ## 🔌 Intégration backend (à brancher)
 
 Les fonctions de `api.js` (`getFeed`, `getUser`, `getUserPredictions`, `createPrediction`,
-`toggleFollow`, `likePrediction`, `getLeaderboard`…) sont des **stubs** prêts à être connectés à
-une **API REST PHP 8.2+ MVC (PDO/MySQL)**, avec authentification par token et paiement
-**Mobile Money (CinetPay / PayDunya)** pour les fonctions premium.
+`toggleFollow`, `likePrediction`, `getLeaderboard`, `getLive`, `getCoupons`, `voteSondage`…)
+sont des **stubs** prêts à être connectés à une **API REST PHP 8.2+ MVC (PDO/MySQL)**, avec
+authentification par token et paiement **Mobile Money (CinetPay / PayDunya)** pour les
+fonctions premium.
 
 ## 📝 Notes
 

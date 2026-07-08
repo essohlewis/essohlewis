@@ -106,6 +106,7 @@ function computeStats(userId) {
       parLigue: [],
       sportFavori: "—",
       badge: PALIERS_BADGE[PALIERS_BADGE.length - 1],
+      composantes: null,
     };
   }
 
@@ -178,6 +179,14 @@ function computeStats(userId) {
     streak, streakType,
     roi, coteMoyenneGagnee: coteMoyenneGagnee || 0,
     forme, parLigue, sportFavori, badge,
+    // Décomposition détaillée pour le modal de transparence du TrustScore.
+    composantes: {
+      reussite: { valeur: reussite, poids: 0.42, contribution: 0.42 * reussite },
+      difficulte: { valeur: difficulte, poids: 0.24, contribution: 0.24 * difficulte },
+      regularite: { valeur: regularite, poids: 0.18, contribution: 0.18 * regularite },
+      volume: { valeur: volume, poids: 0.16, contribution: 0.16 * volume },
+      bonusSerie,
+    },
   };
 }
 
@@ -391,6 +400,173 @@ function predictionCardHTML(p, opts = {}) {
   </article>`;
 }
 
+/* ---- Statut dérivé d'un coupon combiné (perdu > en_cours > gagné) ---- */
+function couponStatut(c) {
+  if (c.selections.some((s) => s.statut === "perdu")) return "perdu";
+  if (c.selections.every((s) => s.statut === "gagne")) return "gagne";
+  return "en_cours";
+}
+
+/** CARTE DE COUPON COMBINÉ (innovation « le combiné »). */
+function couponCardHTML(c) {
+  const auteur = API.mockData.users.find((u) => u.id === c.auteurId);
+  const me = API.mockData.currentUserId;
+  const coteTotale = c.selections.reduce((acc, s) => acc * s.cote, 1);
+  const statut = couponStatut(c);
+  const liked = c.likes.includes(me);
+  const nbGagnes = c.selections.filter((s) => s.statut === "gagne").length;
+
+  const selsHTML = c.selections.map((s) => {
+    const ico = s.statut === "gagne" ? "🟢" : s.statut === "perdu" ? "🔴" : "🟡";
+    return `
+      <div class="cp-sel">
+        <span class="cp-sel-ico">${ico}</span>
+        <div class="cp-sel-main">
+          <div class="cp-sel-match">${esc(s.equipeA)} <span class="cp-vs">vs</span> ${esc(s.equipeB)}</div>
+          <div class="cp-sel-choix">${esc(s.ligue)} · <b>${esc(s.choix)}</b></div>
+        </div>
+        <span class="cp-sel-cote">${fmtCote(s.cote)}</span>
+      </div>`;
+  }).join("");
+
+  return `
+  <article class="card coupon-card" data-card="${c.id}">
+    <div class="card-head">
+      ${avatarHTML(auteur, "sm")}
+      <div class="who">
+        <div class="line1">
+          <span class="name" data-nav="#/profile/${auteur.id}">${esc(auteur.nom)}</span>
+          ${verifHTML(auteur.badge)}
+          <span class="handle">@${esc(auteur.pseudo)}</span>
+          <span class="time">${timeAgo(c.date)}</span>
+        </div>
+      </div>
+      <span class="coupon-tag">🎟️ Combiné ×${c.selections.length}</span>
+    </div>
+
+    <div class="coupon-title">${esc(c.titre)} ${c.premium ? '<span class="premium-tag">🔒 Coup sûr</span>' : ""}</div>
+
+    <div class="coupon-body">${selsHTML}</div>
+
+    <div class="coupon-foot">
+      <div class="cp-progress">
+        <span>${nbGagnes}/${c.selections.length} validées</span>
+        <div class="cp-track"><div class="cp-fill" style="width:${(nbGagnes / c.selections.length) * 100}%"></div></div>
+      </div>
+      <div class="cp-total">
+        <span class="cp-total-lbl">Cote totale</span>
+        <span class="cp-total-val">${fmtCote(coteTotale)}</span>
+      </div>
+    </div>
+
+    <div class="statut-banner statut-${statut}" style="margin-top:10px">
+      <span>${LIBELLE_STATUT[statut]}</span>
+    </div>
+
+    <div class="actions">
+      <button class="action like ${liked ? "on" : ""}" data-couponlike="${c.id}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 000-7.8z"/></svg>
+        <span data-count>${c.likes.length}</span>
+      </button>
+      <button class="action repost">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 2l4 4-4 4"/><path d="M3 12V9a4 4 0 014-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 12v3a4 4 0 01-4 4H3"/></svg>
+        <span>${c.reposts.length}</span>
+      </button>
+      <button class="action save" data-share="${c.id}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/></svg>
+      </button>
+    </div>
+  </article>`;
+}
+
+/** SONDAGE COMMUNAUTAIRE (barres de vote animées). */
+function pollHTML(p) {
+  const s = p.sondage;
+  if (!s) return "";
+  const me = API.mockData.currentUserId;
+  const aVote = s.votants.includes(me);
+  const total = s.options.reduce((acc, o) => acc + o.votes, 0) || 1;
+  const maxVotes = Math.max(...s.options.map((o) => o.votes));
+
+  const opts = s.options.map((o, i) => {
+    const pct = Math.round((o.votes / total) * 100);
+    const lead = aVote && o.votes === maxVotes ? "lead" : "";
+    return `
+      <button class="poll-opt ${aVote ? "voted" : ""} ${lead}" data-vote="${p.id}" data-optindex="${i}" ${aVote ? "disabled" : ""}>
+        <span class="poll-fill" style="width:${aVote ? pct : 0}%"></span>
+        <span class="poll-label">${esc(o.label)}</span>
+        <span class="poll-pct">${aVote ? pct + "%" : ""}</span>
+      </button>`;
+  }).join("");
+
+  return `
+    <div class="poll" data-poll="${p.id}">
+      <div class="poll-q">📊 ${esc(s.question)}</div>
+      <div class="poll-opts">${opts}</div>
+      <div class="poll-total">${total.toLocaleString("fr-FR")} vote${total > 1 ? "s" : ""} ${aVote ? "· Merci pour ton vote !" : "· Clique pour voter"}</div>
+    </div>`;
+}
+
+/**
+ * COACH IA — analyse simulée (heuristique 100 % front, aucune donnée externe).
+ * Combine la fiabilité de l'auteur (TrustScore), sa réussite sur la ligue du
+ * match et la cote proposée pour rendre un « indice de confiance IA » + verdict.
+ * >>> Point d'intégration : remplacer par un appel au service d'analyse. <<<
+ */
+function coachIA(p) {
+  const s = computeStats(p.auteurId);
+  // Fiabilité de l'auteur sur cette ligue précise (sinon réussite globale).
+  const lg = s.parLigue.find((l) => l.ligue === p.match.ligue);
+  const fiabLigue = lg ? lg.pct : s.tauxReussite;
+  // Score IA pondéré : 45% TrustScore, 35% fiabilité ligue, 20% « raison » de la cote.
+  // Une cote entre 1.4 et 2.2 est jugée « raisonnable » (bonus), très haute = risque.
+  const coteScore = p.cote <= 1.35 ? 55 : p.cote <= 2.2 ? 90 : p.cote <= 3 ? 65 : 40;
+  const indice = Math.round(0.45 * s.trustScore + 0.35 * fiabLigue + 0.20 * coteScore);
+
+  let verdict, couleur, emoji;
+  if (indice >= 72) { verdict = "Pronostic solide — l'historique et la cote sont cohérents."; couleur = "var(--vert)"; emoji = "✅"; }
+  else if (indice >= 55) { verdict = "Pronostic correct — à jouer avec mesure."; couleur = "var(--jaune)"; emoji = "🟡"; }
+  else { verdict = "Prudence — profil ou cote à risque sur ce pari."; couleur = "var(--rouge)"; emoji = "⚠️"; }
+
+  return { indice, verdict, couleur, emoji, fiabLigue, trust: s.trustScore };
+}
+
+function coachIAHTML(p) {
+  const ia = coachIA(p);
+  return `
+    <div class="coach-ia" style="--ia:${ia.couleur}">
+      <div class="ia-head">
+        <span class="ia-badge">🤖 Coach IA</span>
+        <span class="ia-indice">${ia.indice}<small>/100</small></span>
+      </div>
+      <div class="ia-bar"><div class="ia-bar-fill" style="width:${ia.indice}%"></div></div>
+      <div class="ia-verdict">${ia.emoji} ${esc(ia.verdict)}</div>
+      <div class="ia-detail">
+        Basé sur : TrustScore auteur <b>${ia.trust}</b> · fiabilité ${esc(p.match.ligue)} <b>${ia.fiabLigue}%</b> · cote <b>${fmtCote(p.cote)}</b>.
+        <span class="ia-note">Analyse simulée à titre indicatif — pas un conseil de pari.</span>
+      </div>
+    </div>`;
+}
+
+/** Ticker de matchs en direct (mis à jour par un timer). */
+function liveTickerHTML(matchs) {
+  if (!matchs.length) return "";
+  const items = matchs.map((m) => `
+    <div class="live-item" data-live="${m.id}">
+      <span class="live-dot"></span>
+      <span class="live-min" data-min>${m.minute}'</span>
+      <span class="live-team">${m.logoA} ${esc(m.equipeA)}</span>
+      <span class="live-score" data-score>${m.scoreA}-${m.scoreB}</span>
+      <span class="live-team">${esc(m.equipeB)} ${m.logoB}</span>
+      <span class="live-lg">${esc(m.ligue)}</span>
+    </div>`).join("");
+  return `
+    <div class="live-ticker">
+      <div class="live-badge"><span class="live-dot"></span> EN DIRECT</div>
+      <div class="live-track">${items}${items}</div>
+    </div>`;
+}
+
 /* -----------------------------------------------------------------------------
  *  5. Vues
  * --------------------------------------------------------------------------- */
@@ -406,21 +582,49 @@ function setTop(title, sub = "") {
 async function renderFeed() {
   setTop("Accueil", "Fil des comptes suivis");
   view().innerHTML = loaderHTML();
-  const preds = await API.getFeed();
+  const [preds, live] = await Promise.all([API.getFeed(), API.getLive()]);
   if (!preds.length) {
-    view().innerHTML = emptyHTML("📭", "Ton fil est vide", "Suis des pronostiqueurs pour voir leurs analyses ici.");
+    view().innerHTML = liveTickerHTML(live) + emptyHTML("📭", "Ton fil est vide", "Suis des pronostiqueurs pour voir leurs analyses ici.");
+    startLiveTicker();
     return;
   }
-  view().innerHTML = `<div class="feed">${preds.map((p) => predictionCardHTML(p)).join("")}</div>`;
+  view().innerHTML = liveTickerHTML(live) + `<div class="feed">${preds.map((p) => predictionCardHTML(p)).join("")}</div>`;
+  startLiveTicker();
   observeReveal();
+}
+
+/* Timer du ticker « en direct » : fait progresser minute et score (simulation). */
+let liveTimer = null;
+function startLiveTicker() {
+  clearInterval(liveTimer);
+  liveTimer = setInterval(() => {
+    // Si le ticker n'est plus à l'écran, on arrête le timer (économie).
+    if (!document.querySelector(".live-ticker")) { clearInterval(liveTimer); return; }
+    API.mockData.liveMatches.forEach((m) => {
+      if (m.minute < 90) m.minute += 1;
+      // ~4 % de chance de but à chaque tick pour animer les scores.
+      if (Math.random() < 0.04) { Math.random() < 0.5 ? m.scoreA++ : m.scoreB++; }
+    });
+    // Reflet dans le DOM (tous les items, y compris la copie dupliquée du défilé).
+    $$(".live-item").forEach((el) => {
+      const m = API.mockData.liveMatches.find((x) => x.id === el.dataset.live);
+      if (!m) return;
+      const min = el.querySelector("[data-min]");
+      const sc = el.querySelector("[data-score]");
+      if (min) min.textContent = m.minute + "'";
+      if (sc) sc.textContent = `${m.scoreA}-${m.scoreB}`;
+    });
+  }, 3000);
 }
 
 /* ---- 5.2 EXPLORER (tous les pronostics + tendances) ---- */
 async function renderExplore() {
   setTop("Explorer", "Tous les pronostics de la communauté");
   view().innerHTML = loaderHTML();
-  const preds = await API.getAllPredictions();
+  const [preds, coupons] = await Promise.all([API.getAllPredictions(), API.getCoupons()]);
   view().innerHTML = `
+    <div class="section-title">🎟️ Coupons combinés à la une</div>
+    <div class="feed">${coupons.map((c) => couponCardHTML(c)).join("")}</div>
     <div class="section-title">🔥 Pronostics du moment</div>
     <div class="feed">${preds.map((p) => predictionCardHTML(p)).join("")}</div>`;
   observeReveal();
@@ -472,7 +676,7 @@ async function renderProfile(userId, tab = "tous") {
       </div>
     </div>
 
-    ${perfBlockHTML(stats)}
+    ${perfBlockHTML(stats, userId)}
 
     <div class="tabs" id="profileTabs">
       ${["tous:Pronostics", "en_cours:En cours", "gagne:Gagnés", "perdu:Perdus", "analyses:Analyses", "likes:Likes"]
@@ -490,7 +694,7 @@ async function renderProfile(userId, tab = "tous") {
 }
 
 /** Bloc statistiques de performance (jauge, tuiles, streak, sparkline, ligues). */
-function perfBlockHTML(s) {
+function perfBlockHTML(s, userId = "") {
   const roiCls = s.roi >= 0 ? "pos" : "neg";
   const streakTxt = s.streak > 1 && s.streakType
     ? (s.streakType === "gagne"
@@ -522,7 +726,7 @@ function perfBlockHTML(s) {
     </div>
 
     <div class="perf-grid">
-      <div class="gauge" id="gauge">
+      <div class="gauge" id="gauge" ${s.composantes ? `data-trustdetail="${userId}" role="button" tabindex="0" title="Voir le détail du TrustScore"` : ""}>
         <svg viewBox="0 0 120 120">
           <circle class="bg-ring" cx="60" cy="60" r="52"></circle>
           <circle class="fg-ring" cx="60" cy="60" r="52" id="gaugeFg"
@@ -615,13 +819,80 @@ function animateNumber(el, from, to, duration) {
   requestAnimationFrame(step);
 }
 
+/**
+ * MODAL DE TRANSPARENCE DU TRUSTSCORE (innovation).
+ * Décompose le score en ses 4 composantes pondérées + bonus de série, avec des
+ * barres et l'explication de chaque critère.
+ */
+function openTrustModal(userId) {
+  const s = computeStats(userId);
+  if (!s.composantes) return;
+  const c = s.composantes;
+  const u = API.mockData.users.find((x) => x.id === userId);
+
+  const lignes = [
+    { k: "Réussite récente", d: "Taux de victoires, les pronostics récents comptant davantage.", v: c.reussite },
+    { k: "Difficulté des cotes", d: "Gagner des cotes élevées rapporte plus de crédibilité.", v: c.difficulte },
+    { k: "Régularité", d: "La constance est récompensée, l'irrégularité pénalisée.", v: c.regularite },
+    { k: "Volume", d: "Un échantillon mûr fiabilise le score (plafonné ~30 pronos).", v: c.volume },
+  ].map((l) => `
+    <div class="trust-row">
+      <div class="trust-row-head">
+        <span class="trust-k">${l.k}</span>
+        <span class="trust-w">poids ${Math.round(l.v.poids * 100)}%</span>
+      </div>
+      <div class="trust-track"><div class="trust-fill" style="width:${Math.round(l.v.valeur * 100)}%"></div></div>
+      <div class="trust-d">${l.d} <b>+${Math.round(l.v.contribution * 100)} pts</b></div>
+    </div>`).join("");
+
+  const bonusTxt = c.bonusSerie > 1 ? `Bonus de série ×${c.bonusSerie.toFixed(2)} 🔥`
+    : c.bonusSerie < 1 ? `Malus de série ×${c.bonusSerie.toFixed(2)}`
+    : "Pas de bonus de série";
+
+  const modal = document.createElement("div");
+  modal.className = "modal-backdrop";
+  modal.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title">🔬 TrustScore de ${esc(u.nom)}</div>
+          <div class="modal-sub">Comment ce score de crédibilité est calculé</div>
+        </div>
+        <button class="modal-x" data-modalclose>✕</button>
+      </div>
+      <div class="modal-score">
+        <div class="modal-score-val">${s.trustScore}</div>
+        <div class="modal-score-lbl">/ 100 · ${s.badge.emoji} ${s.badge.nom}</div>
+      </div>
+      <div class="modal-body">${lignes}
+        <div class="trust-bonus">${bonusTxt}</div>
+        <p class="trust-formula">TrustScore = 100 × (0,42·Réussite + 0,24·Difficulté + 0,18·Régularité + 0,16·Volume) × BonusSérie</p>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  // Animer les barres.
+  requestAnimationFrame(() => $$(".trust-fill").forEach((f) => (f.style.width = f.style.width)));
+}
+
 /** Charge et affiche la liste des pronostics d'un onglet de profil. */
 async function loadProfileTab(userId, filter) {
   const list = $("#profileList");
   if (!list) return;
   list.innerHTML = loaderHTML();
   const preds = await API.getUserPredictions(userId, filter);
-  if (!preds.length) {
+
+  // Onglet « Pronostics » : on met en avant les coupons combinés de l'auteur.
+  let couponsHTML = "";
+  if (filter === "tous") {
+    const coupons = await API.getUserCoupons(userId);
+    if (coupons.length) {
+      couponsHTML = `<div class="section-title" style="padding-top:8px">🎟️ Coupons combinés</div>
+        <div class="feed">${coupons.map((c) => couponCardHTML(c)).join("")}</div>
+        <div class="section-title" style="padding-top:8px">🎯 Pronostics simples</div>`;
+    }
+  }
+
+  if (!preds.length && !couponsHTML) {
     const msg = {
       en_cours: "Aucun pronostic en cours.",
       gagne: "Aucun pronostic gagné pour l'instant.",
@@ -633,7 +904,7 @@ async function loadProfileTab(userId, filter) {
     list.innerHTML = emptyHTML("🗒️", "C'est vide ici", msg);
     return;
   }
-  list.innerHTML = `<div class="feed">${preds.map((p) => predictionCardHTML(p)).join("")}</div>`;
+  list.innerHTML = couponsHTML + `<div class="feed">${preds.map((p) => predictionCardHTML(p)).join("")}</div>`;
   observeReveal();
 }
 
@@ -661,6 +932,10 @@ async function renderPredictionDetail(id) {
     </div>
 
     ${predictionCardHTML(p, { clampAnalyse: false })}
+
+    <div style="padding:0 16px">${coachIAHTML(p)}</div>
+
+    ${p.sondage ? `<div style="padding:14px 16px 0">${pollHTML(p)}</div>` : ""}
 
     <div class="section-title">💬 Commentaires (${p.commentaires.length})</div>
     <div class="comment-form">
@@ -1023,6 +1298,54 @@ document.addEventListener("click", async (e) => {
     const on = p.likes.includes(API.mockData.currentUserId);
     likeBtn.classList.toggle("on", on);
     likeBtn.querySelector("[data-count]").textContent = p.likes.length;
+    return;
+  }
+
+  // -- Like d'un coupon combiné --
+  const cpLike = e.target.closest("[data-couponlike]");
+  if (cpLike) {
+    e.stopPropagation();
+    const c = API.mockData.coupons.find((x) => x.id === cpLike.dataset.couponlike);
+    if (c) {
+      const meId = API.mockData.currentUserId;
+      const i = c.likes.indexOf(meId);
+      if (i >= 0) c.likes.splice(i, 1); else c.likes.push(meId);
+      cpLike.classList.toggle("on", i < 0);
+      cpLike.querySelector("[data-count]").textContent = c.likes.length;
+    }
+    return;
+  }
+
+  // -- Vote à un sondage communautaire --
+  const voteBtn = e.target.closest("[data-vote]");
+  if (voteBtn && !voteBtn.disabled) {
+    e.stopPropagation();
+    const predId = voteBtn.dataset.vote;
+    await API.voteSondage(predId, +voteBtn.dataset.optindex);
+    const fresh = await API.getPrediction(predId);
+    const pollEl = voteBtn.closest(".poll");
+    if (pollEl) {
+      pollEl.outerHTML = pollHTML(fresh);
+      // Forcer l'animation des barres depuis 0 → pourcentage.
+      const np = document.querySelector(`.poll[data-poll="${predId}"]`);
+      if (np) np.querySelectorAll(".poll-fill").forEach((f) => {
+        const w = f.style.width; f.style.width = "0"; f.getBoundingClientRect(); f.style.width = w;
+      });
+    }
+    toast("Vote enregistré 🗳️", "ok");
+    return;
+  }
+
+  // -- Ouvrir le détail du TrustScore (gauge cliquable) --
+  const trustGauge = e.target.closest("[data-trustdetail]");
+  if (trustGauge) {
+    openTrustModal(trustGauge.dataset.trustdetail);
+    return;
+  }
+
+  // -- Fermer le modal --
+  if (e.target.closest("[data-modalclose]") || e.target.classList.contains("modal-backdrop")) {
+    const m = $(".modal-backdrop"); if (m) m.remove();
     return;
   }
 

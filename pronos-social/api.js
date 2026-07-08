@@ -171,6 +171,16 @@ const mockData = {
       commentaires: [
         { id: "c3", auteurId: "u_yao", texte: "Le derby ouest-africain, ça va chauffer 🔥🔥", date: "2026-07-08T11:00:00" },
       ],
+      // Sondage communautaire attaché au pronostic (innovation : vote de la communauté).
+      sondage: {
+        question: "Et toi, tu vois quoi pour ce choc ?",
+        options: [
+          { label: "Victoire Côte d'Ivoire 🇨🇮", votes: 142 },
+          { label: "Match nul", votes: 63 },
+          { label: "Victoire Sénégal 🇸🇳", votes: 118 },
+        ],
+        votants: [],
+      },
       date: "2026-07-08T07:30:00",
     },
     {
@@ -392,6 +402,15 @@ const mockData = {
       reposts: [],
       sauvegardes: ["u_moi"],
       commentaires: [],
+      sondage: {
+        question: "Qui remporte ce duel de géants africains ?",
+        options: [
+          { label: "Victoire Maroc 🇲🇦", votes: 205 },
+          { label: "Match nul", votes: 71 },
+          { label: "Victoire Cameroun 🇨🇲", votes: 96 },
+        ],
+        votants: [],
+      },
       date: "2026-07-08T05:30:00",
     },
     {
@@ -504,6 +523,53 @@ const mockData = {
   battles: [
     { id: "b1", aId: "u_kader", bId: "u_awa", journee: "Journée CAN", scoreA: 3, scoreB: 2, statut: "en_cours" },
     { id: "b2", aId: "u_serge", bId: "u_yao", journee: "Multi-ligues", scoreA: 4, scoreB: 4, statut: "en_cours" },
+  ],
+
+  /* ---- MATCHS EN DIRECT (innovation : ticker temps réel) ----------------
+   * En production, ces données proviendraient d'un flux live (websocket ou
+   * polling d'une API de scores type Sportradar). Ici, app.js fait progresser
+   * la minute et le score via un timer pour simuler le direct.
+   * --------------------------------------------------------------------- */
+  liveMatches: [
+    { id: "L1", equipeA: "Man City", logoA: "🔵", equipeB: "Arsenal", logoB: "🔴", ligue: "Premier League", minute: 62, scoreA: 1, scoreB: 1 },
+    { id: "L2", equipeA: "Côte d'Ivoire", logoA: "🇨🇮", equipeB: "Sénégal", logoB: "🇸🇳", ligue: "CAN", minute: 28, scoreA: 1, scoreB: 0 },
+    { id: "L3", equipeA: "Real Madrid", logoA: "⚪", equipeB: "Bayern", logoB: "🔴", ligue: "Champions League", minute: 74, scoreA: 2, scoreB: 2 },
+    { id: "L4", equipeA: "Maroc", logoA: "🇲🇦", equipeB: "Cameroun", logoB: "🇨🇲", ligue: "CAN", minute: 11, scoreA: 0, scoreB: 0 },
+  ],
+
+  /* ---- COUPONS COMBINÉS (innovation : « le combiné ») --------------------
+   * Un coupon regroupe plusieurs sélections. La cote totale = produit des
+   * cotes. Le statut est dérivé : perdu si une sélection est perdue, gagné si
+   * toutes gagnées, en cours sinon. Très ancré dans la culture ouest-africaine.
+   * --------------------------------------------------------------------- */
+  coupons: [
+    {
+      id: "cp_1", auteurId: "u_kader", titre: "Combiné sûr du week-end 🔒", premium: true,
+      date: "2026-07-08T06:00:00", likes: ["u_moi", "u_awa", "u_serge"], reposts: ["u_awa"], sauvegardes: ["u_moi"],
+      selections: [
+        { equipeA: "Man City", equipeB: "Arsenal", ligue: "Premier League", choix: "Man City gagne", cote: 1.85, statut: "en_cours" },
+        { equipeA: "Real Madrid", equipeB: "Bayern", ligue: "Champions League", choix: "Les deux marquent", cote: 1.55, statut: "en_cours" },
+        { equipeA: "Maroc", equipeB: "Cameroun", ligue: "CAN", choix: "Maroc gagne", cote: 1.90, statut: "en_cours" },
+      ],
+    },
+    {
+      id: "cp_2", auteurId: "u_awa", titre: "Le triplé buts ⚡", premium: false,
+      date: "2026-07-05T10:00:00", likes: ["u_kader", "u_yao"], reposts: [], sauvegardes: [],
+      selections: [
+        { equipeA: "Liverpool", equipeB: "Chelsea", ligue: "Premier League", choix: "Over 2.5", cote: 1.80, statut: "gagne" },
+        { equipeA: "Barcelone", equipeB: "Atlético", ligue: "Champions League", choix: "BTTS Oui", cote: 1.80, statut: "gagne" },
+        { equipeA: "Nigeria", equipeB: "Égypte", ligue: "CAN", choix: "Nigeria gagne", cote: 2.05, statut: "gagne" },
+      ],
+    },
+    {
+      id: "cp_3", auteurId: "u_serge", titre: "Combiné prudence 3 matchs", premium: false,
+      date: "2026-07-04T09:00:00", likes: ["u_binta"], reposts: [], sauvegardes: [],
+      selections: [
+        { equipeA: "Inter", equipeB: "Juventus", ligue: "Champions League", choix: "Under 3.5", cote: 1.45, statut: "gagne" },
+        { equipeA: "PSG", equipeB: "Marseille", ligue: "Ligue 1", choix: "Over 2.5", cote: 1.70, statut: "gagne" },
+        { equipeA: "Tottenham", equipeB: "Man United", ligue: "Premier League", choix: "Man United gagne", cote: 2.40, statut: "perdu" },
+      ],
+    },
   ],
 };
 
@@ -738,6 +804,50 @@ async function getTrends() {
   return [...mockData.tendances];
 }
 
+/**
+ * GET /api/live — matchs en direct (ticker temps réel).
+ */
+async function getLive() {
+  await wait(40);
+  return [...mockData.liveMatches];
+}
+
+/**
+ * GET /api/coupons — tous les coupons combinés.
+ */
+async function getCoupons() {
+  await wait();
+  return [...mockData.coupons].sort((a, b) => new Date(b.date) - new Date(a.date));
+}
+
+/**
+ * GET /api/users/{id}/coupons — coupons d'un pronostiqueur.
+ */
+async function getUserCoupons(id) {
+  await wait();
+  return mockData.coupons
+    .filter((c) => c.auteurId === id)
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+}
+
+/**
+ * POST /api/predictions/{id}/vote — vote à un sondage communautaire.
+ * @param {string} predId
+ * @param {number} optionIndex
+ */
+async function voteSondage(predId, optionIndex) {
+  await wait(50);
+  const p = mockData.predictions.find((x) => x.id === predId);
+  if (!p || !p.sondage) return null;
+  const me = mockData.currentUserId;
+  if (p.sondage.votants.includes(me)) return p.sondage; // un seul vote par personne
+  const opt = p.sondage.options[optionIndex];
+  if (!opt) return p.sondage;
+  opt.votes++;
+  p.sondage.votants.push(me);
+  return p.sondage;
+}
+
 /* -----------------------------------------------------------------------------
  *  Helpers synchrones (utilitaires internes, non exposés comme endpoints).
  * --------------------------------------------------------------------------- */
@@ -765,5 +875,9 @@ window.API = {
   getNotifications,
   getBattles,
   getTrends,
+  getLive,
+  getCoupons,
+  getUserCoupons,
+  voteSondage,
   getCurrentUserSync,
 };
