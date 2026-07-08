@@ -1272,11 +1272,78 @@ async function getNotifications() {
 }
 
 /**
+ * Insère une notification (utilisé par le flux temps réel simulé).
+ * >>> En production : poussée par le serveur via WebSocket / SSE. <<<
+ */
+function pushNotification(notif) {
+  mockData.notifications.unshift({ id: nextId("n"), lu: false, date: nowISO(), ...notif });
+}
+
+/**
  * GET /api/battles — défis en cours.
  */
 async function getBattles() {
   await wait();
   return [...mockData.battles];
+}
+
+/** GET /api/battles/{id} — un défi précis. */
+async function getBattle(id) {
+  await wait(50);
+  return mockData.battles.find((b) => b.id === id) || null;
+}
+
+/** GET /api/users/{id}/battles — défis impliquant un utilisateur. */
+async function getUserBattles(id) {
+  await wait(50);
+  return mockData.battles.filter((b) => b.aId === id || b.bId === id);
+}
+
+/**
+ * POST /api/battles — lance un défi contre un adversaire.
+ * statut : 'propose' (en attente) → 'en_cours' (accepté) → 'termine'.
+ */
+async function createBattle(adversaireId, journee) {
+  await wait();
+  const me = mockData.currentUserId;
+  if (adversaireId === me) return { ok: false, error: "Tu ne peux pas te défier toi-même." };
+  const b = {
+    id: nextId("b"), aId: me, bId: adversaireId,
+    journee: journee || "Défi de la journée", scoreA: 0, scoreB: 0,
+    statut: "propose", proposePar: me, date: nowISO(),
+  };
+  mockData.battles.unshift(b);
+  return { ok: true, battle: b };
+}
+
+/** PATCH /api/battles/{id}/accept — accepte un défi. */
+async function acceptBattle(id) {
+  await wait(50);
+  const b = mockData.battles.find((x) => x.id === id);
+  if (b) b.statut = "en_cours";
+  return b;
+}
+
+/** DELETE /api/battles/{id} — refuse/annule un défi. */
+async function declineBattle(id) {
+  await wait(50);
+  const i = mockData.battles.findIndex((x) => x.id === id);
+  if (i >= 0) mockData.battles.splice(i, 1);
+  return { ok: true };
+}
+
+/**
+ * PATCH /api/battles/{id}/advance — simulation démo : fait avancer le score
+ * (chaque « journée » ajoute des points aléatoires) et peut terminer le défi.
+ */
+async function advanceBattle(id, terminer = false) {
+  await wait(50);
+  const b = mockData.battles.find((x) => x.id === id);
+  if (!b) return null;
+  b.scoreA += Math.floor(Math.random() * 3);
+  b.scoreB += Math.floor(Math.random() * 3);
+  if (terminer) b.statut = "termine";
+  return b;
 }
 
 /**
@@ -1381,5 +1448,12 @@ window.API = {
   getThread,
   sendMessage,
   countUnreadMessages,
+  getBattle,
+  getUserBattles,
+  createBattle,
+  acceptBattle,
+  declineBattle,
+  advanceBattle,
+  pushNotification,
   getCurrentUserSync,
 };

@@ -868,7 +868,8 @@ async function renderProfile(userId, tab = "tous") {
         <div class="profile-actions">
           ${isMe
             ? `<button class="btn" data-editprofile>✏️ Modifier le profil</button>`
-            : `<button class="btn btn-icon" data-msg="${u.id}" title="Envoyer un message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 9 9 0 01-4-.9L3 21l1.9-4.5A8.4 8.4 0 0121 11.5z"/></svg></button>
+            : `<button class="btn btn-icon" data-battle="${u.id}" title="Défier ${esc(u.pseudo)}">⚔️</button>
+               <button class="btn btn-icon" data-msg="${u.id}" title="Envoyer un message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 9 9 0 01-4-.9L3 21l1.9-4.5A8.4 8.4 0 0121 11.5z"/></svg></button>
                <button class="btn btn-follow ${suit ? "on" : ""}" data-follow="${u.id}"></button>`}
         </div>
       </div>
@@ -1578,6 +1579,198 @@ function applyAccent(key) {
   document.documentElement.style.setProperty("--accent-grad", a.grad);
 }
 
+/* ---- 5.10 STATISTIQUES DE LA PLATEFORME (tableau de bord) ---- */
+function renderStats() {
+  setTop("Statistiques", "Le pouls de la communauté PronoStars");
+  const preds = API.mockData.predictions;
+  const users = API.mockData.users;
+  const champs = API.mockData.championnats;
+
+  const resolus = preds.filter((p) => p.statut === "gagne" || p.statut === "perdu");
+  const gagnes = preds.filter((p) => p.statut === "gagne").length;
+  const perdus = preds.filter((p) => p.statut === "perdu").length;
+  const enCours = preds.filter((p) => p.statut === "en_cours").length;
+  const tauxComm = resolus.length ? Math.round((gagnes / resolus.length) * 100) : 0;
+
+  // Agrégations.
+  const parSport = agrege(preds, (p) => champSport(p.match.ligue));
+  const parRegion = agrege(preds, (p) => (CHAMP_INDEX[p.match.ligue] || {}).region || "Autre");
+  const parLigue = agrege(preds, (p) => p.match.ligue);
+  const topLigues = Object.entries(parLigue).sort((a, b) => b[1] - a[1]).slice(0, 6);
+
+  const totalLikes = preds.reduce((s, p) => s + p.likes.length, 0);
+  const totalComs = preds.reduce((s, p) => s + p.commentaires.length, 0);
+  const coteMoy = preds.reduce((s, p) => s + p.cote, 0) / preds.length;
+
+  // Barre de répartition des statuts (segments étiquetés = encodage secondaire).
+  const totStatut = gagnes + perdus + enCours || 1;
+  const statutBar = `
+    <div class="stat-splitbar">
+      <div class="ssb-seg g" style="width:${(gagnes / totStatut) * 100}%" title="Gagnés : ${gagnes}"></div>
+      <div class="ssb-seg p" style="width:${(perdus / totStatut) * 100}%" title="Perdus : ${perdus}"></div>
+      <div class="ssb-seg e" style="width:${(enCours / totStatut) * 100}%" title="En cours : ${enCours}"></div>
+    </div>
+    <div class="ssb-legend">
+      <span><i class="dot g"></i> Gagnés <b>${gagnes}</b></span>
+      <span><i class="dot p"></i> Perdus <b>${perdus}</b></span>
+      <span><i class="dot e"></i> En cours <b>${enCours}</b></span>
+    </div>`;
+
+  view().innerHTML = `
+    <div class="stats-page">
+      <div class="stat-hero">
+        ${statTile("🎯", preds.length, "Pronostics publiés")}
+        ${statTile("✅", tauxComm + "%", "Réussite communautaire")}
+        ${statTile("👥", users.length, "Pronostiqueurs")}
+        ${statTile("🌍", champs.length, "Compétitions")}
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-t">📊 Répartition des pronostics</div>
+        ${statutBar}
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-t">🏅 Pronostics par sport</div>
+        ${barsHTML(Object.entries(parSport).sort((a, b) => b[1] - a[1]).map(([k, v]) => [`${sportEmoji(k)} ${k}`, v]))}
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-t">🏆 Top championnats</div>
+        ${barsHTML(topLigues.map(([k, v]) => [`${ligueEmoji(k)} ${k}`, v]))}
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-t">🗺️ Pronostics par région</div>
+        ${barsHTML(Object.entries(parRegion).sort((a, b) => b[1] - a[1]).map(([k, v]) => [k, v]))}
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-t">💬 Engagement de la communauté</div>
+        <div class="stat-hero" style="margin:0">
+          ${statTile("❤️", totalLikes.toLocaleString("fr-FR"), "J'aime")}
+          ${statTile("💬", totalComs, "Commentaires")}
+          ${statTile("🎟️", API.mockData.coupons.length, "Coupons")}
+          ${statTile("📈", fmtCote(coteMoy), "Cote moyenne")}
+        </div>
+      </div>
+
+      <p class="set-desc" style="text-align:center;padding:8px 16px 20px">
+        Données agrégées sur l'ensemble des pronostics de la plateforme (démo).
+      </p>
+    </div>`;
+
+  // Animer les barres.
+  requestAnimationFrame(() => $$(".bar-fill, .ssb-seg").forEach((el) => {
+    const w = el.dataset.w; if (w != null) el.style.width = w + "%";
+  }));
+}
+
+function agrege(arr, keyFn) {
+  const m = {};
+  arr.forEach((x) => { const k = keyFn(x); m[k] = (m[k] || 0) + 1; });
+  return m;
+}
+
+function statTile(ico, val, label) {
+  return `<div class="stat-tile"><div class="st-ico">${ico}</div><div class="st-val">${val}</div><div class="st-lbl">${esc(label)}</div></div>`;
+}
+
+/** Barres horizontales à hue unique (magnitude), étiquetées. */
+function barsHTML(pairs) {
+  const max = Math.max(1, ...pairs.map((p) => p[1]));
+  return `<div class="bars">${pairs.map(([label, v]) => `
+    <div class="bar-row" title="${esc(label)} : ${v}">
+      <span class="bar-label">${esc(label)}</span>
+      <span class="bar-track"><span class="bar-fill" data-w="${(v / max) * 100}" style="width:0"></span></span>
+      <span class="bar-val">${v}</span>
+    </div>`).join("")}</div>`;
+}
+
+/* ---- 5.11 BATTLES : liste + création ---- */
+async function renderBattles() {
+  setTop("Battles", "Défie les autres pronostiqueurs ⚔️");
+  view().innerHTML = loaderHTML();
+  const me = API.mockData.currentUserId;
+  const battles = await API.getUserBattles(me);
+  const autres = await API.getBattles();
+  const communaute = autres.filter((b) => b.aId !== me && b.bId !== me);
+
+  view().innerHTML = `
+    <div class="section-title">⚔️ Mes défis</div>
+    ${battles.length ? battles.map((b) => battleRowHTML(b, me)).join("") : emptyHTML("🤝", "Aucun défi", "Va sur un profil et clique sur « Défier » pour lancer un battle.")}
+    ${communaute.length ? `<div class="section-title">🌍 Défis de la communauté</div>${communaute.map((b) => battleRowHTML(b, me)).join("")}` : ""}
+  `;
+}
+
+function battleRowHTML(b, me) {
+  const a = API.mockData.users.find((u) => u.id === b.aId);
+  const bb = API.mockData.users.find((u) => u.id === b.bId);
+  if (!a || !bb) return "";
+  const statutLabel = b.statut === "propose" ? "🟡 En attente" : b.statut === "termine" ? "⚪ Terminé" : "🟢 En cours";
+  const gagnant = b.statut === "termine" ? (b.scoreA > b.scoreB ? a : b.scoreB > b.scoreA ? bb : null) : null;
+  return `
+    <div class="battle-row" data-nav="#/battle/${b.id}">
+      <div class="br-players">
+        <span class="br-side ${gagnant === a ? "win" : ""}">${a.avatar} ${esc(a.pseudo)}</span>
+        <span class="br-score">${b.scoreA} – ${b.scoreB}</span>
+        <span class="br-side ${gagnant === bb ? "win" : ""}">${esc(bb.pseudo)} ${bb.avatar}</span>
+      </div>
+      <div class="br-foot">
+        <span class="br-journee">${esc(b.journee)}</span>
+        <span class="br-statut">${statutLabel}</span>
+      </div>
+    </div>`;
+}
+
+/* ---- 5.12 BATTLE : détail ---- */
+async function renderBattleDetail(id) {
+  setTop("Battle", "");
+  view().innerHTML = loaderHTML();
+  const b = await API.getBattle(id);
+  if (!b) { view().innerHTML = emptyHTML("⚔️", "Défi introuvable", ""); return; }
+  const a = API.mockData.users.find((u) => u.id === b.aId);
+  const bb = API.mockData.users.find((u) => u.id === b.bId);
+  const me = API.mockData.currentUserId;
+  const suisImplique = b.aId === me || b.bId === me;
+  const proposeAMoi = b.statut === "propose" && b.bId === me;
+  const peutAvancer = b.statut === "en_cours" && suisImplique;
+  const gagnant = b.statut === "termine" ? (b.scoreA > b.scoreB ? a : b.scoreB > b.scoreA ? bb : null) : null;
+
+  view().innerHTML = `
+    <div class="battle-detail">
+      <div class="bd-vs">
+        <div class="bd-player ${gagnant === a ? "win" : ""}" data-nav="#/profile/${a.id}">
+          ${avatarHTML(a, "lg")}
+          <div class="bd-name">${esc(a.nom)} ${verifHTML(a.badge)}</div>
+          <div class="bd-score">${b.scoreA}</div>
+        </div>
+        <div class="bd-mid">
+          <div class="bd-vs-lbl">VS</div>
+          <div class="bd-journee">${esc(b.journee)}</div>
+        </div>
+        <div class="bd-player ${gagnant === bb ? "win" : ""}" data-nav="#/profile/${bb.id}">
+          ${avatarHTML(bb, "lg")}
+          <div class="bd-name">${esc(bb.nom)} ${verifHTML(bb.badge)}</div>
+          <div class="bd-score">${b.scoreB}</div>
+        </div>
+      </div>
+
+      ${gagnant ? `<div class="bd-winner">🏆 Vainqueur : ${esc(gagnant.nom)} !</div>`
+        : b.statut === "termine" ? `<div class="bd-winner draw">🤝 Match nul !</div>` : ""}
+
+      <div class="bd-actions">
+        ${proposeAMoi ? `
+          <button class="btn btn-primary" data-battleaccept="${b.id}">✅ Accepter le défi</button>
+          <button class="btn" data-battledecline="${b.id}">✖️ Refuser</button>` : ""}
+        ${peutAvancer ? `
+          <button class="btn" data-battleadvance="${b.id}">⚡ Simuler une journée</button>
+          <button class="btn btn-primary" data-battlefinish="${b.id}">🏁 Terminer le défi</button>` : ""}
+        ${b.statut === "propose" && b.proposePar === me ? `<div class="set-desc">En attente de la réponse de ${esc(bb.nom)}…</div>` : ""}
+      </div>
+    </div>`;
+}
+
 /* ---- 5.8 RECHERCHE ---- */
 async function renderSearch(query = "") {
   setTop("Recherche", "Pronostiqueurs, matchs, #hashtags");
@@ -1798,6 +1991,26 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
+  // -- Lancer un défi (battle) --
+  const battleBtn = e.target.closest("[data-battle]");
+  if (battleBtn) {
+    const r = await API.createBattle(battleBtn.dataset.battle, "Défi de la journée");
+    if (!r.ok) { toast(r.error, "err"); return; }
+    toast("Défi lancé ⚔️ En attente de la réponse.", "ok");
+    location.hash = `#/battle/${r.battle.id}`;
+    return;
+  }
+
+  // -- Accepter / refuser / avancer / terminer un défi --
+  const accBtn = e.target.closest("[data-battleaccept]");
+  if (accBtn) { await API.acceptBattle(accBtn.dataset.battleaccept); toast("Défi accepté ! ⚔️", "ok"); router(); return; }
+  const decBtn = e.target.closest("[data-battledecline]");
+  if (decBtn) { await API.declineBattle(decBtn.dataset.battledecline); toast("Défi refusé.", ""); location.hash = "#/battles"; return; }
+  const advBtn = e.target.closest("[data-battleadvance]");
+  if (advBtn) { await API.advanceBattle(advBtn.dataset.battleadvance, false); router(); return; }
+  const finBtn = e.target.closest("[data-battlefinish]");
+  if (finBtn) { await API.advanceBattle(finBtn.dataset.battlefinish, true); toast("Défi terminé 🏁", "ok"); router(); return; }
+
   // -- Voir plus (analyse) --
   const vp = e.target.closest("[data-voirplus]");
   if (vp) {
@@ -1902,14 +2115,15 @@ async function renderAside() {
   updateSuggestions();
 
   // Battles.
-  const battles = await API.getBattles();
+  const battles = (await API.getBattles()).filter((b) => b.statut !== "propose").slice(0, 3);
   $("#widgetBattles").innerHTML = `
     <h3>⚔️ Battles en cours</h3>
     ${battles.map((b) => {
       const a = API.mockData.users.find((u) => u.id === b.aId);
       const bb = API.mockData.users.find((u) => u.id === b.bId);
+      if (!a || !bb) return "";
       return `
-      <div class="widget-item">
+      <div class="widget-item" data-nav="#/battle/${b.id}">
         <div class="t1">${esc(b.journee)}</div>
         <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px;margin-top:6px">
           <span style="display:flex;align-items:center;gap:5px;min-width:0"><span>${a.avatar}</span><b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.82rem">${esc(a.pseudo)}</b></span>
@@ -1917,7 +2131,8 @@ async function renderAside() {
           <span style="display:flex;align-items:center;gap:5px;min-width:0;justify-content:flex-end"><b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.82rem">${esc(bb.pseudo)}</b><span>${bb.avatar}</span></span>
         </div>
       </div>`;
-    }).join("")}`;
+    }).join("")}
+    <div class="widget-more" data-nav="#/battles">Voir tous les défis</div>`;
 }
 
 /** Suggestions « À suivre » : comptes non suivis, triés par TrustScore. */
@@ -2022,7 +2237,7 @@ async function router() {
   window.scrollTo({ top: 0 });
 
   // Bouton retour mobile : visible dès qu'on n'est pas sur une vue racine.
-  const racines = ["feed", "explore", "leaderboard", "notifications", "search", "create", "messages"];
+  const racines = ["feed", "explore", "leaderboard", "notifications", "search", "create", "messages", "battles"];
   // La liste des messages est une racine, mais un fil de discussion ne l'est pas.
   const estRacine = racines.includes(route) && !(route === "messages" && parts[1]);
   $("#backBtn").classList.toggle("show", !estRacine);
@@ -2043,6 +2258,9 @@ async function router() {
       if (parts[1]) await renderThread(parts[1]); else await renderMessages();
       break;
     case "settings": setActiveNav(""); renderSettings(); break;
+    case "stats": setActiveNav(""); renderStats(); break;
+    case "battles": setActiveNav(""); await renderBattles(); break;
+    case "battle": setActiveNav(""); await renderBattleDetail(parts[1]); break;
     default: setActiveNav("feed"); await renderFeed();
   }
 }
@@ -2078,12 +2296,47 @@ let appStarted = false;
 
 /** Affiche le portail d'authentification et masque l'application. */
 function showAuthGate() {
+  stopLiveNotifs();
   document.getElementById("appRoot").hidden = true;
   document.getElementById("mobileNav").hidden = true;
   const gate = document.getElementById("authGate");
   gate.hidden = false;
   renderAuthGate();
 }
+
+/* -----------------------------------------------------------------------------
+ *  Notifications en temps réel (simulation) : de l'activité arrive en direct.
+ *  >>> En production : flux serveur via WebSocket / Server-Sent Events. <<<
+ * --------------------------------------------------------------------------- */
+let liveNotifTimer = null;
+function startLiveNotifs() {
+  stopLiveNotifs();
+  liveNotifTimer = setInterval(() => {
+    if (!API.mockData.currentUserId) return;
+    const me = API.getCurrentUserSync();
+    const autres = API.mockData.users.filter((u) => u.id !== me.id);
+    if (!autres.length) return;
+    const acteur = autres[Math.floor(Math.random() * autres.length)];
+    const mesPreds = API.mockData.predictions.filter((p) => p.auteurId === me.id);
+    // Pondération : plus de likes/commentaires que de follows.
+    const types = mesPreds.length ? ["like", "like", "comment", "follow"] : ["follow"];
+    const type = types[Math.floor(Math.random() * types.length)];
+    const cible = mesPreds.length ? mesPreds[Math.floor(Math.random() * mesPreds.length)].id : null;
+
+    let texte, toastMsg;
+    if (type === "follow") { texte = "a commencé à vous suivre"; toastMsg = `➕ @${acteur.pseudo} vous suit !`; }
+    else if (type === "like") { texte = "a aimé votre pronostic"; toastMsg = `❤️ @${acteur.pseudo} a aimé ton pronostic`; }
+    else { texte = "a commenté votre pronostic"; toastMsg = `💬 @${acteur.pseudo} a commenté`; }
+
+    API.pushNotification({ type, acteurId: acteur.id, cibleId: type === "follow" ? null : cible, texte });
+    updateNotifBadge();
+    // Toast uniquement si ce type de notification est activé dans les Paramètres.
+    if (state.notifPrefs[type] !== false) toast(toastMsg, "");
+    // Rafraîchir la vue Notifications si elle est ouverte.
+    if ((location.hash || "").startsWith("#/notifications")) renderNotifications();
+  }, 16000);
+}
+function stopLiveNotifs() { clearInterval(liveNotifTimer); liveNotifTimer = null; }
 
 /** Révèle l'application après connexion et initialise les vues. */
 function enterApp() {
@@ -2094,6 +2347,7 @@ function enterApp() {
   renderAside();
   updateNotifBadge();
   updateMsgBadge();
+  startLiveNotifs();
   if (!appStarted) { window.addEventListener("hashchange", router); appStarted = true; }
   if (!location.hash || location.hash === "#" || location.hash === "#/") {
     location.hash = "#/feed";
@@ -2276,6 +2530,8 @@ function openAccountMenu() {
         <button class="acc-item" data-acc="profile">👤 Voir mon profil</button>
         <button class="acc-item" data-acc="edit">✏️ Modifier le profil</button>
         <button class="acc-item" data-acc="messages">💬 Messages</button>
+        <button class="acc-item" data-acc="battles">⚔️ Mes battles</button>
+        <button class="acc-item" data-acc="stats">📊 Statistiques</button>
         <button class="acc-item" data-acc="settings">⚙️ Paramètres</button>
         <div class="acc-sep">Changer de compte (démo)</div>
         <div class="acc-switch">
@@ -2302,6 +2558,8 @@ function openAccountMenu() {
     if (acc.dataset.acc === "profile") { modal.remove(); location.hash = `#/profile/${me.id}`; }
     else if (acc.dataset.acc === "edit") { modal.remove(); openEditProfile(); }
     else if (acc.dataset.acc === "messages") { modal.remove(); location.hash = "#/messages"; }
+    else if (acc.dataset.acc === "battles") { modal.remove(); location.hash = "#/battles"; }
+    else if (acc.dataset.acc === "stats") { modal.remove(); location.hash = "#/stats"; }
     else if (acc.dataset.acc === "settings") { modal.remove(); location.hash = "#/settings"; }
     else if (acc.dataset.acc === "logout") {
       modal.remove(); API.logout(); toast("Déconnecté. À bientôt 👋", ""); showAuthGate();

@@ -146,6 +146,39 @@ départ 10 000 FCFA, gain = cote × mise).
 > tout contenu créé pendant la session (message, commentaire, pronostic) est
 > toujours horodaté après les données de démo, quel que soit l'horaire de la machine.
 
+## 11. 📊 Statistiques de la plateforme (tableau de bord)
+Une page **Statistiques** (menu « Mon compte » → Statistiques) agrège l'activité
+de toute la communauté :
+- **Tuiles clés** : pronostics publiés, taux de réussite communautaire, nombre de
+  pronostiqueurs, nombre de compétitions.
+- **Répartition des statuts** : barre segmentée étiquetée (gagnés / perdus / en cours).
+- **Barres de magnitude** (hue unique) : pronostics par sport, top championnats,
+  par région.
+- **Engagement** : total de j'aime, commentaires, coupons, cote moyenne.
+
+> Les visualisations suivent une méthode de dataviz : formes choisies selon le rôle
+> de la donnée (tuiles pour les chiffres phares, barres pour la magnitude), palette
+> **validée** (séparation daltonisme ΔE ≈ 22, contraste OK), étiquettes directes sur
+> chaque barre et surbrillances de statut toujours accompagnées d'un libellé.
+
+## 12. ⚔️ Battles jouables
+Les défis entre pronostiqueurs deviennent interactifs :
+- Bouton **« Défier »** ⚔️ sur chaque profil → crée un battle (statut « en attente »).
+- **Page de détail** du battle (face-à-face, scores, journée) avec, selon le rôle :
+  **Accepter / Refuser** (défié), **Simuler une journée / Terminer** (participant).
+- **Liste « Mes battles »** + défis de la communauté. Vainqueur mis en avant.
+- API : `createBattle`, `acceptBattle`, `declineBattle`, `advanceBattle`, `getBattle`,
+  `getUserBattles`.
+
+## 13. 🔔 Notifications en temps réel (simulées)
+Un flux d'activité **arrive en direct** : toutes les ~16 s, un membre aime, commente
+ou s'abonne — la notification s'ajoute au fil, le **badge** s'incrémente et un **toast**
+apparaît (uniquement pour les types activés dans les Paramètres). Démarré à la
+connexion, arrêté à la déconnexion.
+
+- API : `pushNotification()` · Logique : `startLiveNotifs()` / `stopLiveNotifs()`.
+- **Intégration** : remplacer le timer par un flux serveur (WebSocket / SSE).
+
 ## 6. 🤖 Coach IA (analyse simulée)
 Sur le détail d'un pronostic, un panneau **Coach IA** rend un **indice de confiance
 (0–100)** et un **verdict** calculés par une heuristique combinant :
