@@ -367,6 +367,26 @@ function avatarHTML(user, taille = "sm") {
   return `<div class="avatar ${taille}" style="${bg}" data-nav="#/profile/${user.id}">${user.avatar}</div>`;
 }
 
+// Palette de réactions rapides.
+const EMOJIS_REACT = ["❤️", "🔥", "😮", "👏", "😂", "💯"];
+
+/** Barre de réactions emoji (pronostics et messages). kind : 'pred' | 'msg'. */
+function reactionsHTML(reactions, kind, id) {
+  reactions = reactions || {};
+  const me = API.mockData.currentUserId;
+  const chips = Object.entries(reactions)
+    .filter(([, arr]) => arr.length)
+    .map(([e, arr]) => `<button class="react-chip ${arr.includes(me) ? "on" : ""}" data-react="${kind}:${id}" data-emoji="${e}">${e} <span>${arr.length}</span></button>`)
+    .join("");
+  return `<div class="reactions" id="react-${kind}-${id}">
+    ${chips}
+    <div class="react-add-wrap">
+      <button class="react-add" data-reactadd title="Réagir">🙂<b>+</b></button>
+      <div class="react-palette">${EMOJIS_REACT.map((e) => `<button data-react="${kind}:${id}" data-emoji="${e}">${e}</button>`).join("")}</div>
+    </div>
+  </div>`;
+}
+
 /**
  * CARTE DE PRONOSTIC — composant central, réutilisé dans le feed, le profil,
  * l'exploration, etc.
@@ -437,6 +457,8 @@ function predictionCardHTML(p, opts = {}) {
       <span>${LIBELLE_STATUT[p.statut]}</span>
       ${resolveBtn}
     </div>
+
+    ${reactionsHTML(p.reactions, "pred", p.id)}
 
     <div class="actions">
       <button class="action like ${liked ? "on" : ""}" data-like="${p.id}">
@@ -1482,10 +1504,68 @@ async function renderThread(autreId) {
 
 function threadBubblesHTML(msgs, me) {
   if (!msgs.length) return `<div class="empty" style="padding:30px"><span>Envoie le premier message 👋</span></div>`;
-  return msgs.map((m) => `
+  return msgs.map((m) => {
+    const contenu = m.predId
+      ? sharedPredCardHTML(m.predId) + `<span class="bubble-time">${timeAgo(m.date)}</span>`
+      : `${linkifyHashtags(m.texte)}<span class="bubble-time">${timeAgo(m.date)}</span>`;
+    return `
     <div class="bubble-row ${m.deId === me ? "mine" : "theirs"}">
-      <div class="bubble">${linkifyHashtags(m.texte)}<span class="bubble-time">${timeAgo(m.date)}</span></div>
-    </div>`).join("");
+      <div class="bubble-wrap">
+        <div class="bubble ${m.predId ? "has-pred" : ""}">${contenu}</div>
+        ${reactionsHTML(m.reactions, "msg", m.id)}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+/** Mini-carte d'un pronostic partagé dans une conversation. */
+function sharedPredCardHTML(predId) {
+  const p = API.mockData.predictions.find((x) => x.id === predId);
+  if (!p) return `<i style="opacity:.7">Pronostic indisponible</i>`;
+  const auteur = API.mockData.users.find((u) => u.id === p.auteurId);
+  return `
+    <div class="shared-pred" data-nav="#/prediction/${p.id}">
+      <div class="sp-top">${ligueEmoji(p.match.ligue)} ${esc(p.match.ligue)} · ${LIBELLE_STATUT[p.statut]}</div>
+      <div class="sp-teams">${p.match.logoA} ${esc(p.match.equipeA)} <span>vs</span> ${esc(p.match.equipeB)} ${p.match.logoB}</div>
+      <div class="sp-bet">${esc(p.choix)} · <b>${fmtCote(p.cote)}</b> ${starsHTML(p.confiance)}</div>
+      <div class="sp-auth">🎯 par @${esc(auteur.pseudo)}</div>
+    </div>`;
+}
+
+/** Modal de partage d'un pronostic vers une conversation. */
+async function openShareModal(predId) {
+  const me = API.getCurrentUserSync();
+  const convs = await API.getConversations();
+  const convUsers = convs.map((c) => c.user);
+  // Complète avec les comptes suivis (hors conversations existantes).
+  const suivis = API.mockData.users.filter(
+    (u) => me.abonnements.includes(u.id) && !convUsers.some((c) => c.id === u.id)
+  );
+  const dest = [...convUsers, ...suivis];
+
+  const modal = document.createElement("div");
+  modal.className = "modal-backdrop";
+  modal.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <div><div class="modal-title">📤 Partager le pronostic</div>
+          <div class="modal-sub">Envoie-le dans une conversation</div></div>
+        <button class="modal-x" data-modalclose>✕</button>
+      </div>
+      <div class="modal-body">
+        ${dest.length ? dest.map((u) => `
+          <button class="share-dest" data-shareto="${u.id}" data-sharepred="${predId}">
+            ${avatarHTML(u, "sm")}
+            <div class="sd-info"><b>${esc(u.nom)}</b> ${verifHTML(u.badge)}<div class="sd-h">@${esc(u.pseudo)}</div></div>
+            <span class="sd-send">Envoyer</span>
+          </button>`).join("") : `<p class="set-desc">Suis des pronostiqueurs ou démarre une conversation pour pouvoir partager.</p>`}
+        <button class="acc-item" data-copylink style="margin-top:6px">🔗 Copier le lien</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.querySelector("[data-copylink]")?.addEventListener("click", () => {
+    modal.remove(); toast("Lien copié ! 🔗", "ok");
+  });
 }
 
 /* ---- 5.9 PARAMÈTRES ---- */
@@ -1961,11 +2041,46 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
-  // -- Partager (simulé) --
+  // -- Partager : pronostic → modal de partage ; coupon → lien copié --
   const shareBtn = e.target.closest("[data-share]");
   if (shareBtn) {
     e.stopPropagation();
-    toast("Lien du pronostic copié ! 🔗", "ok");
+    const sid = shareBtn.dataset.share;
+    if (sid.startsWith("p_")) openShareModal(sid);
+    else toast("Lien copié ! 🔗", "ok");
+    return;
+  }
+
+  // -- Réactions emoji (ouvrir la palette) --
+  const reactAdd = e.target.closest("[data-reactadd]");
+  if (reactAdd) {
+    e.stopPropagation();
+    const wrap = reactAdd.closest(".react-add-wrap");
+    const wasOpen = wrap.classList.contains("open");
+    $$(".react-add-wrap.open").forEach((w) => w.classList.remove("open"));
+    wrap.classList.toggle("open", !wasOpen);
+    return;
+  }
+
+  // -- Réactions emoji (choisir / basculer) --
+  const reactBtn = e.target.closest("[data-react]");
+  if (reactBtn) {
+    e.stopPropagation();
+    const [kind, id] = reactBtn.dataset.react.split(":");
+    const emoji = reactBtn.dataset.emoji;
+    const reactions = kind === "pred" ? await API.reactPrediction(id, emoji) : await API.reactMessage(id, emoji);
+    const cont = document.getElementById(`react-${kind}-${id}`);
+    if (cont) cont.outerHTML = reactionsHTML(reactions, kind, id);
+    return;
+  }
+
+  // -- Envoyer un pronostic partagé dans une conversation --
+  const shareTo = e.target.closest("[data-shareto]");
+  if (shareTo) {
+    await API.sharePrediction(shareTo.dataset.shareto, shareTo.dataset.sharepred);
+    $(".modal-backdrop")?.remove();
+    toast("Pronostic partagé 📤", "ok");
+    updateMsgBadge();
     return;
   }
 
@@ -2074,6 +2189,13 @@ document.addEventListener("click", async (e) => {
     const list = $("#exploreList");
     if (list) list.scrollIntoView({ behavior: "smooth", block: "start" });
     return;
+  }
+});
+
+// Ferme toute palette de réactions ouverte dès qu'on clique en dehors.
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".react-add-wrap")) {
+    $$(".react-add-wrap.open").forEach((w) => w.classList.remove("open"));
   }
 });
 

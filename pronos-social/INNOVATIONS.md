@@ -179,6 +179,21 @@ connexion, arrêté à la déconnexion.
 - API : `pushNotification()` · Logique : `startLiveNotifs()` / `stopLiveNotifs()`.
 - **Intégration** : remplacer le timer par un flux serveur (WebSocket / SSE).
 
+## 14. 😊 Réactions emoji
+Réactions rapides (❤️ 🔥 😮 👏 😂 💯) sur les **pronostics** et les **messages** :
+- Palette d'emoji au clic sur « 🙂+ », **une réaction par personne** (choisir un
+  autre emoji déplace la réaction, re-cliquer la retire).
+- Pastilles agrégées (emoji + compteur), la mienne surlignée.
+- API : `reactPrediction(id, emoji)`, `reactMessage(id, emoji)`.
+
+## 15. 📤 Partage d'un pronostic dans une conversation
+Le bouton **Partager** d'un pronostic ouvre un sélecteur de conversations. Le
+pronostic est envoyé dans le fil de discussion et **rendu en mini-carte**
+(match, choix, cote, étoiles, auteur) cliquable vers le détail.
+
+- API : `sharePrediction(userId, predId)` (message porteur d'un `predId`).
+- Rendu : `sharedPredCardHTML()` dans `threadBubblesHTML()`.
+
 ## 6. 🤖 Coach IA (analyse simulée)
 Sur le détail d'un pronostic, un panneau **Coach IA** rend un **indice de confiance
 (0–100)** et un **verdict** calculés par une heuristique combinant :

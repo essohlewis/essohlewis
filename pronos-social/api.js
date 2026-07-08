@@ -897,6 +897,15 @@ mockData.users.forEach((u) => {
   u.motDePasse = u.motDePasse || "demo1234";
 });
 
+// Quelques réactions emoji de démonstration.
+const _seedReactions = (id, obj) => {
+  const p = mockData.predictions.find((x) => x.id === id);
+  if (p) p.reactions = obj;
+};
+_seedReactions("p_001", { "🔥": ["u_awa", "u_serge"], "💯": ["u_moi"] });
+_seedReactions("p_002", { "❤️": ["u_kader", "u_yao"], "😮": ["u_serge"] });
+_seedReactions("p_021", { "🔥": ["u_moi", "u_binta"] });
+
 /* -----------------------------------------------------------------------------
  *  FONCTIONS API FACTICES (async)
  *  >>> Chacune correspondra à un endpoint REST PHP. <<<
@@ -1228,6 +1237,49 @@ async function savePrediction(id) {
   return p;
 }
 
+/* -----------------------------------------------------------------------------
+ *  Réactions emoji (une réaction par personne, sur pronostics et messages).
+ *  `reactions` : objet { "🔥": [userId, …], … }.
+ * --------------------------------------------------------------------------- */
+function _toggleReaction(cible, emoji) {
+  cible.reactions = cible.reactions || {};
+  const me = mockData.currentUserId;
+  const avait = (cible.reactions[emoji] || []).includes(me);
+  // Une seule réaction par personne : on retire l'utilisateur de toutes les autres.
+  Object.keys(cible.reactions).forEach((e) => {
+    cible.reactions[e] = cible.reactions[e].filter((u) => u !== me);
+  });
+  if (!avait) (cible.reactions[emoji] = cible.reactions[emoji] || []).push(me);
+  // Nettoyage des emojis sans réaction.
+  Object.keys(cible.reactions).forEach((e) => { if (!cible.reactions[e].length) delete cible.reactions[e]; });
+  return cible.reactions;
+}
+
+/** POST /api/predictions/{id}/react */
+async function reactPrediction(id, emoji) {
+  await wait(40);
+  const p = mockData.predictions.find((x) => x.id === id);
+  return p ? _toggleReaction(p, emoji) : null;
+}
+
+/** POST /api/messages/{id}/react */
+async function reactMessage(id, emoji) {
+  await wait(40);
+  const m = mockData.messages.find((x) => x.id === id);
+  return m ? _toggleReaction(m, emoji) : null;
+}
+
+/**
+ * POST /api/messages/{userId}/share — partage un pronostic dans une conversation.
+ * Le message porte `predId` et sera rendu comme une mini-carte de pronostic.
+ */
+async function sharePrediction(autreId, predId) {
+  await wait(50);
+  const m = { id: nextId("m"), deId: mockData.currentUserId, aId: autreId, texte: "", predId, date: nowISO(), lu: true };
+  mockData.messages.push(m);
+  return m;
+}
+
 /**
  * POST /api/predictions/{id}/comments
  */
@@ -1455,5 +1507,8 @@ window.API = {
   declineBattle,
   advanceBattle,
   pushNotification,
+  reactPrediction,
+  reactMessage,
+  sharePrediction,
   getCurrentUserSync,
 };
