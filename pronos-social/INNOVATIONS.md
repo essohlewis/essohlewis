@@ -54,7 +54,31 @@ boîte noire.
 
 - Logique : `openTrustModal(userId)`, alimenté par `computeStats().composantes`.
 
-## 5. 🤖 Coach IA (analyse simulée)
+## 5. 🌍 Championnats du monde entier
+Catalogue mondial de compétitions structuré et groupé par **région** (Afrique,
+Europe, Amériques, Asie & Moyen-Orient, International), chacune avec son
+**drapeau/emoji** et son pays :
+
+- **Afrique** : CAN, Ligue 1 CIV 🇨🇮, Botola Pro 🇲🇦, CAF Champions League, Egyptian Premier League 🇪🇬, PSL 🇿🇦
+- **Europe** : Premier League, Ligue 1, La Liga 🇪🇸, Serie A 🇮🇹, Bundesliga 🇩🇪, Liga Portugal 🇵🇹, Eredivisie 🇳🇱, Champions League, Europa League
+- **Amériques** : MLS 🇺🇸, Liga MX 🇲🇽, Brasileirão 🇧🇷, Primera División 🇦🇷, Copa Libertadores
+- **Asie & Moyen-Orient** : Saudi Pro League 🇸🇦, J1 League 🇯🇵, Qatar Stars League 🇶🇦
+- **International** : Coupe du Monde, Tennis ATP
+
+Concrètement dans l'app :
+- **Barre de filtres** défilable dans l'Explorateur : une puce par championnat
+  (avec compteur de pronostics), groupée par région, filtrant le fil en direct.
+- **Route dédiée** `#/championnat/:nom` (le nom de ligue sur chaque carte est
+  cliquable → ouvre l'Explorateur filtré sur ce championnat).
+- **Drapeau du championnat** affiché sur chaque carte et chaque sélection de coupon.
+- **Formulaire de création** avec un menu déroulant groupé par région (`<optgroup>`).
+- Nouveaux pronostics de démo (El Clásico, Derby de Milan, Klassiker, Superclásico
+  argentin, derby de Casablanca, derby d'Abidjan ASEC–Africa, etc.).
+
+- Données : `mockData.championnats` · API : `getChampionnats()`
+- Logique : `champBarHTML()`, `renderExploreList()`, `champOptionsHTML()`, `ligueEmoji()`.
+
+## 6. 🤖 Coach IA (analyse simulée)
 Sur le détail d'un pronostic, un panneau **Coach IA** rend un **indice de confiance
 (0–100)** et un **verdict** calculés par une heuristique combinant :
 `45 % TrustScore de l'auteur + 35 % sa fiabilité sur la ligue du match + 20 % qualité de la cote`.

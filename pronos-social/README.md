@@ -41,8 +41,10 @@ La formule complète est documentée en commentaire dans `app.js` (section 2), e
 ## 🚀 Innovations
 
 Ticker **« En direct »** temps réel, **coupons combinés** (cote totale + statut auto),
-**sondages communautaires** animés, **transparence du TrustScore** (modal de décomposition)
-et **Coach IA** (analyse simulée). Détails complets dans [`INNOVATIONS.md`](./INNOVATIONS.md).
+**sondages communautaires** animés, **transparence du TrustScore** (modal de décomposition),
+**Coach IA** (analyse simulée) et un **catalogue de championnats du monde entier** (25+
+compétitions groupées par région, filtre par championnat dans l'Explorateur).
+Détails complets dans [`INNOVATIONS.md`](./INNOVATIONS.md).
 
 ## 🔌 Intégration backend (à brancher)
 

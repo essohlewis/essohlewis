@@ -965,3 +965,42 @@ input, textarea, select { font-family: inherit; }
 .trust-d b { color: var(--vert); }
 .trust-bonus { text-align: center; font-weight: 700; padding: 10px; background: var(--jaune-soft); border-radius: var(--r-sm); margin: 6px 0 12px; }
 .trust-formula { font-size: 0.74rem; color: var(--text-faint); font-family: ui-monospace, monospace; line-height: 1.5; text-align: center; }
+
+/* --- 15.6 Barre de filtres par CHAMPIONNAT (Explorer) --- */
+.champ-bar {
+  display: flex; align-items: center; gap: 8px;
+  overflow-x: auto; scrollbar-width: none;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-soft);
+  position: sticky; top: var(--header-h); z-index: 10;
+  background: var(--surface-glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.champ-bar::-webkit-scrollbar { height: 0; }
+.champ-sep {
+  flex-shrink: 0; font-size: 0.64rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .5px; color: var(--text-faint);
+  padding: 0 2px 0 10px; border-left: 1px solid var(--border);
+  align-self: center;
+}
+.champ-sep:first-child { border-left: none; }
+.champ-chip {
+  flex-shrink: 0; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: var(--r-full);
+  border: 1px solid var(--border); background: var(--bg-elev);
+  font-weight: 700; font-size: 0.85rem; color: var(--text-dim);
+  transition: all var(--tr);
+}
+.champ-chip:hover { border-color: var(--accent); color: var(--text); }
+.champ-chip.active {
+  background: var(--accent-grad); color: #1a1200; border-color: transparent;
+  box-shadow: 0 4px 12px rgba(255,143,0,.28);
+}
+.champ-chip .cc-n {
+  font-size: 0.72rem; font-weight: 800;
+  background: var(--bg); color: var(--text-dim);
+  padding: 1px 7px; border-radius: var(--r-full);
+}
+.champ-chip.active .cc-n { background: rgba(0,0,0,.18); color: #1a1200; }
+.match-league .lg { cursor: pointer; }
+.match-league .lg:hover { color: var(--accent); }

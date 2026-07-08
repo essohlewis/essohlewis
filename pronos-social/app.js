@@ -239,6 +239,32 @@ function linkifyHashtags(txt) {
 /** Formatage FCFA / cote. */
 function fmtCote(c) { return Number(c).toFixed(2); }
 
+/* --- Catalogue des championnats : index synchrone { nom → championnat } --- */
+const CHAMP_INDEX = {};
+function buildChampIndex() {
+  API.mockData.championnats.forEach((c) => { CHAMP_INDEX[c.nom] = c; });
+}
+/** Emoji/drapeau d'un championnat à partir de son nom (défaut : 🏆). */
+function ligueEmoji(nom) { return (CHAMP_INDEX[nom] || {}).emoji || "🏆"; }
+
+/** Options <optgroup> du sélecteur de championnat, groupées par région. */
+function champOptionsHTML() {
+  const regions = {};
+  API.mockData.championnats.forEach((c) => {
+    (regions[c.region] = regions[c.region] || []).push(c);
+  });
+  const ordre = ["Afrique", "Europe", "Amériques", "Asie & Moyen-Orient", "International"];
+  let html = "";
+  ordre.forEach((r) => {
+    if (!regions[r]) return;
+    html += `<optgroup label="${esc(r)}">` +
+      regions[r].map((c) => `<option value="${esc(c.nom)}">${c.emoji} ${esc(c.nom)} (${esc(c.pays)})</option>`).join("") +
+      `</optgroup>`;
+  });
+  html += `<optgroup label="Autre"><option value="Autre">🏟️ Autre compétition</option></optgroup>`;
+  return html;
+}
+
 /** Distance temporelle « il y a … » en français. */
 function timeAgo(iso) {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -346,7 +372,7 @@ function predictionCardHTML(p, opts = {}) {
 
     <div class="match-box" data-nav="#/prediction/${p.id}">
       <div class="match-league">
-        <span class="lg">🏆 ${esc(m.ligue)}</span>
+        <span class="lg" data-nav="#/championnat/${encodeURIComponent(m.ligue)}">${ligueEmoji(m.ligue)} ${esc(m.ligue)}</span>
         <span>${fmtMatchDate(m.date)}</span>
       </div>
       <div class="match-teams">
@@ -423,7 +449,7 @@ function couponCardHTML(c) {
         <span class="cp-sel-ico">${ico}</span>
         <div class="cp-sel-main">
           <div class="cp-sel-match">${esc(s.equipeA)} <span class="cp-vs">vs</span> ${esc(s.equipeB)}</div>
-          <div class="cp-sel-choix">${esc(s.ligue)} · <b>${esc(s.choix)}</b></div>
+          <div class="cp-sel-choix">${ligueEmoji(s.ligue)} ${esc(s.ligue)} · <b>${esc(s.choix)}</b></div>
         </div>
         <span class="cp-sel-cote">${fmtCote(s.cote)}</span>
       </div>`;
@@ -617,16 +643,73 @@ function startLiveTicker() {
   }, 3000);
 }
 
-/* ---- 5.2 EXPLORER (tous les pronostics + tendances) ---- */
-async function renderExplore() {
-  setTop("Explorer", "Tous les pronostics de la communauté");
+/* ---- 5.2 EXPLORER (championnats du monde + filtre) ---- */
+// Filtre de championnat courant + données mises en cache pour le re-rendu.
+let exploreFilter = "tous";
+let exploreData = { preds: [], coupons: [], champs: [] };
+
+async function renderExplore(preselect = null) {
+  setTop("Explorer", "Championnats du monde entier 🌍");
   view().innerHTML = loaderHTML();
-  const [preds, coupons] = await Promise.all([API.getAllPredictions(), API.getCoupons()]);
+  const [preds, coupons, champs] = await Promise.all([
+    API.getAllPredictions(), API.getCoupons(), API.getChampionnats(),
+  ]);
+  exploreData = { preds, coupons, champs };
+  if (preselect) exploreFilter = preselect;
+
   view().innerHTML = `
-    <div class="section-title">🎟️ Coupons combinés à la une</div>
-    <div class="feed">${coupons.map((c) => couponCardHTML(c)).join("")}</div>
-    <div class="section-title">🔥 Pronostics du moment</div>
-    <div class="feed">${preds.map((p) => predictionCardHTML(p)).join("")}</div>`;
+    <div class="champ-bar" id="champBar">${champBarHTML()}</div>
+    <div id="exploreList"></div>`;
+  renderExploreList();
+}
+
+/** Barre de filtres par championnat (regroupée par région, défilable). */
+function champBarHTML() {
+  const { preds, champs } = exploreData;
+  const counts = {};
+  preds.forEach((p) => { counts[p.match.ligue] = (counts[p.match.ligue] || 0) + 1; });
+
+  // Chip « Tous » + une chip par championnat ayant au moins un pronostic.
+  const actifs = champs.filter((c) => counts[c.nom]);
+  const tous = `<button class="champ-chip ${exploreFilter === "tous" ? "active" : ""}" data-champ="tous">🌐 Tous <span class="cc-n">${preds.length}</span></button>`;
+
+  // On groupe visuellement par région (séparateurs).
+  const ordreRegions = ["Afrique", "Europe", "Amériques", "Asie & Moyen-Orient", "International"];
+  let chips = tous;
+  ordreRegions.forEach((region) => {
+    const dansRegion = actifs.filter((c) => c.region === region);
+    if (!dansRegion.length) return;
+    chips += `<span class="champ-sep">${region}</span>`;
+    chips += dansRegion.map((c) =>
+      `<button class="champ-chip ${exploreFilter === c.nom ? "active" : ""}" data-champ="${esc(c.nom)}">${c.emoji} ${esc(c.nom)} <span class="cc-n">${counts[c.nom]}</span></button>`
+    ).join("");
+  });
+  return chips;
+}
+
+/** Rendu de la liste filtrée par le championnat sélectionné. */
+function renderExploreList() {
+  const box = $("#exploreList");
+  if (!box) return;
+  const { preds, coupons } = exploreData;
+  const f = exploreFilter;
+  const fp = f === "tous" ? preds : preds.filter((p) => p.match.ligue === f);
+  // Les coupons couvrent plusieurs championnats : affichés seulement en vue « Tous ».
+  const fc = f === "tous" ? coupons : [];
+
+  let html = "";
+  if (fc.length) {
+    html += `<div class="section-title">🎟️ Coupons combinés à la une</div>
+      <div class="feed">${fc.map((c) => couponCardHTML(c)).join("")}</div>`;
+  }
+  const titre = f === "tous"
+    ? "🔥 Pronostics du moment"
+    : `${ligueEmoji(f)} ${esc(f)} — ${fp.length} pronostic${fp.length > 1 ? "s" : ""}`;
+  html += `<div class="section-title">${titre}</div>`;
+  html += fp.length
+    ? `<div class="feed">${fp.map((p) => predictionCardHTML(p)).join("")}</div>`
+    : emptyHTML("🗒️", "Aucun pronostic", "Rien dans ce championnat pour l'instant.");
+  box.innerHTML = html;
   observeReveal();
 }
 
@@ -1042,15 +1125,8 @@ function renderCreate() {
 
       <div class="field row2">
         <div class="field">
-          <label>Ligue / compétition</label>
-          <select id="fLigue">
-            <option>CAN</option>
-            <option>Ligue 1</option>
-            <option>Premier League</option>
-            <option>Champions League</option>
-            <option>Tennis ATP</option>
-            <option>Autre</option>
-          </select>
+          <label>Championnat / compétition</label>
+          <select id="fLigue">${champOptionsHTML()}</select>
         </div>
         <div class="field">
           <label>Date & heure du match</label>
@@ -1441,6 +1517,18 @@ document.addEventListener("click", async (e) => {
     renderLeaderboard(seg.dataset.period);
     return;
   }
+
+  // -- Filtre par championnat (chips de l'Explorateur) --
+  const champChip = e.target.closest("[data-champ]");
+  if (champChip) {
+    exploreFilter = champChip.dataset.champ;
+    $$("#champBar .champ-chip").forEach((c) => c.classList.toggle("active", c === champChip));
+    renderExploreList();
+    // Faire remonter la liste sous la barre de filtres.
+    const list = $("#exploreList");
+    if (list) list.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
 });
 
 /* -----------------------------------------------------------------------------
@@ -1579,7 +1667,7 @@ async function router() {
 
   switch (route) {
     case "feed": setActiveNav("feed"); await renderFeed(); break;
-    case "explore": setActiveNav("explore"); await renderExplore(); break;
+    case "explore": setActiveNav("explore"); await renderExplore("tous"); break;
     case "profile": setActiveNav(parts[1] === API.mockData.currentUserId ? "profile" : ""); await renderProfile(parts[1] || "u_moi"); break;
     case "prediction": setActiveNav(""); await renderPredictionDetail(parts[1]); break;
     case "leaderboard": setActiveNav("leaderboard"); await renderLeaderboard(); break;
@@ -1587,6 +1675,7 @@ async function router() {
     case "notifications": setActiveNav("notifications"); await renderNotifications(); break;
     case "search": setActiveNav("search"); await renderSearch(decodeURIComponent(parts[1] || "")); break;
     case "hashtag": setActiveNav(""); await renderHashtag(decodeURIComponent(parts[1] || "")); break;
+    case "championnat": setActiveNav("explore"); await renderExplore(decodeURIComponent(parts[1] || "tous")); break;
     default: setActiveNav("feed"); await renderFeed();
   }
 }
@@ -1606,6 +1695,7 @@ $("#asideSearch").addEventListener("keydown", (e) => {
  * --------------------------------------------------------------------------- */
 function boot() {
   applyTheme("dark");
+  buildChampIndex();
   renderNavMe();
   renderAside();
   updateNotifBadge();

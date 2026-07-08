@@ -498,6 +498,116 @@ const mockData = {
       commentaires: [],
       date: "2026-06-26T09:00:00",
     },
+
+    /* ===== NOUVEAUX CHAMPIONNATS DU MONDE ENTIER ===== */
+    {
+      id: "p_021",
+      auteurId: "u_kader",
+      match: { equipeA: "Real Madrid", logoA: "⚪", equipeB: "Barcelone", logoB: "🔵", ligue: "La Liga", hashtag: "LaLiga", date: "2026-07-11T21:00:00" },
+      typePari: "BTTS", choix: "Les deux équipes marquent — Oui", cote: 1.60, confiance: 4, premium: true,
+      analyse: "El Clásico ! Les deux meilleures attaques d'Espagne, historique de matchs spectaculaires. Le BTTS est quasi une évidence dans ce choc au sommet de la Liga. Coup sûr.",
+      statut: "en_cours", likes: ["u_moi", "u_awa", "u_serge"], reposts: ["u_awa"], sauvegardes: ["u_moi"], commentaires: [],
+      date: "2026-07-08T07:00:00",
+    },
+    {
+      id: "p_022",
+      auteurId: "u_serge",
+      match: { equipeA: "Inter", logoA: "🔵", equipeB: "Milan", logoB: "🔴", ligue: "Serie A", hashtag: "SerieA", date: "2026-07-06T20:45:00", score: "2-1" },
+      typePari: "Over/Under", choix: "Under 3.5 buts", cote: 1.50, confiance: 3, premium: false,
+      analyse: "Derby della Madonnina serré et tactique. Peu de buts attendus.",
+      statut: "gagne", likes: ["u_kader", "u_moi"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-06T10:00:00",
+    },
+    {
+      id: "p_023",
+      auteurId: "u_awa",
+      match: { equipeA: "Bayern", logoA: "🔴", equipeB: "Dortmund", logoB: "🟡", ligue: "Bundesliga", hashtag: "Bundesliga", date: "2026-07-12T18:30:00" },
+      typePari: "Over/Under", choix: "Over 3.5 buts", cote: 2.20, confiance: 4, premium: false,
+      analyse: "Der Klassiker allemand livre toujours du grand spectacle. Deux attaques dévastatrices, défenses joueuses. Je vise le Over 3.5, cote de valeur.",
+      statut: "en_cours", likes: ["u_moi", "u_binta"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-08T06:30:00",
+    },
+    {
+      id: "p_024",
+      auteurId: "u_yao",
+      match: { equipeA: "Benfica", logoA: "🔴", equipeB: "Porto", logoB: "🔵", ligue: "Liga Portugal", hashtag: "LigaPortugal", date: "2026-07-04T21:15:00", score: "2-0" },
+      typePari: "1N2", choix: "1 (Benfica gagne)", cote: 1.95, confiance: 3, premium: false,
+      analyse: "O Clássico à la Luz, Benfica solide à domicile.",
+      statut: "gagne", likes: ["u_kader"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-04T09:00:00",
+    },
+    {
+      id: "p_025",
+      auteurId: "u_binta",
+      match: { equipeA: "Ajax", logoA: "🔴", equipeB: "PSV", logoB: "🔴", ligue: "Eredivisie", hashtag: "Eredivisie", date: "2026-07-03T16:30:00", score: "1-2" },
+      typePari: "1N2", choix: "1 (Ajax gagne)", cote: 2.05, confiance: 3, premium: false,
+      analyse: "De Topper à Amsterdam, je tente l'Ajax à domicile.",
+      statut: "perdu", likes: [], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-03T09:00:00",
+    },
+    {
+      id: "p_026",
+      auteurId: "u_moi",
+      match: { equipeA: "Inter Miami", logoA: "🩷", equipeB: "LA Galaxy", logoB: "⚪", ligue: "MLS", hashtag: "MLS", date: "2026-07-13T02:00:00" },
+      typePari: "1N2", choix: "1 (Inter Miami gagne)", cote: 1.75, confiance: 4, premium: false,
+      analyse: "Messi en feu à domicile, Inter Miami favori logique face à des Galaxy irréguliers.",
+      statut: "en_cours", likes: ["u_serge", "u_awa"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-08T03:30:00",
+    },
+    {
+      id: "p_027",
+      auteurId: "u_serge",
+      match: { equipeA: "Flamengo", logoA: "🔴", equipeB: "Palmeiras", logoB: "🟢", ligue: "Brasileirão", hashtag: "Brasileirao", date: "2026-07-05T23:00:00", score: "3-1" },
+      typePari: "Over/Under", choix: "Over 2.5 buts", cote: 1.85, confiance: 3, premium: false,
+      analyse: "Choc du foot brésilien, deux formations offensives. Du spectacle attendu au Maracanã.",
+      statut: "gagne", likes: ["u_kader", "u_binta"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-05T10:00:00",
+    },
+    {
+      id: "p_028",
+      auteurId: "u_awa",
+      match: { equipeA: "Al-Nassr", logoA: "🟡", equipeB: "Al-Hilal", logoB: "🔵", ligue: "Saudi Pro League", hashtag: "SaudiProLeague", date: "2026-07-11T19:00:00" },
+      typePari: "1N2", choix: "1 (Al-Nassr gagne)", cote: 2.30, confiance: 3, premium: false,
+      analyse: "Le derby de Riyad avec Ronaldo côté Al-Nassr. Match ouvert, je tente le pari sur les locaux.",
+      statut: "en_cours", likes: ["u_yao"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-08T05:00:00",
+    },
+    {
+      id: "p_029",
+      auteurId: "u_yao",
+      match: { equipeA: "Raja Casablanca", logoA: "🟢", equipeB: "Wydad", logoB: "🔴", ligue: "Botola Pro", hashtag: "Botola", date: "2026-07-06T19:00:00", score: "1-1" },
+      typePari: "BTTS", choix: "Les deux équipes marquent — Oui", cote: 1.85, confiance: 3, premium: false,
+      analyse: "Le derby de Casablanca, toujours électrique. Les deux équipes se rendent coup pour coup.",
+      statut: "gagne", likes: ["u_awa", "u_kader"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-06T09:00:00",
+    },
+    {
+      id: "p_030",
+      auteurId: "u_kader",
+      match: { equipeA: "ASEC Mimosas", logoA: "🟡", equipeB: "Africa Sports", logoB: "🟢", ligue: "Ligue 1 CIV", hashtag: "Ligue1CIV", date: "2026-07-12T16:00:00" },
+      typePari: "1N2", choix: "1 (ASEC gagne)", cote: 1.65, confiance: 4, premium: true,
+      analyse: "Le derby d'Abidjan ! L'ASEC Mimosas, ultra-dominateur à domicile cette saison, reçoit un Africa Sports en reconstruction. Coup sûr local pour les Éléphants. 🇨🇮",
+      statut: "en_cours", likes: ["u_moi", "u_awa", "u_yao"], reposts: ["u_moi"], sauvegardes: ["u_moi"], commentaires: [],
+      date: "2026-07-08T04:30:00",
+    },
+    {
+      id: "p_031",
+      auteurId: "u_binta",
+      match: { equipeA: "Boca Juniors", logoA: "🔵", equipeB: "River Plate", logoB: "⚪", ligue: "Copa Libertadores", hashtag: "Libertadores", date: "2026-07-10T02:30:00" },
+      typePari: "Over/Under", choix: "Under 2.5 buts", cote: 1.70, confiance: 4, premium: false,
+      analyse: "Le Superclásico argentin en Libertadores : tension maximale, peu de buts, beaucoup d'engagement. Le Under 2.5 est mon choix.",
+      statut: "en_cours", likes: ["u_serge"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-08T02:00:00",
+    },
+    {
+      id: "p_032",
+      auteurId: "u_serge",
+      match: { equipeA: "Club América", logoA: "🟡", equipeB: "Chivas", logoB: "🔴", ligue: "Liga MX", hashtag: "LigaMX", date: "2026-07-04T04:00:00", score: "0-1" },
+      typePari: "1N2", choix: "1 (América gagne)", cote: 1.80, confiance: 3, premium: false,
+      analyse: "El Súper Clásico mexicain, América favori à domicile.",
+      statut: "perdu", likes: [], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-03T20:00:00",
+    },
   ],
 
   /* ---- NOTIFICATIONS ----------------------------------------------------- */
@@ -513,10 +623,53 @@ const mockData = {
   /* ---- TENDANCES (hashtags) --------------------------------------------- */
   tendances: [
     { tag: "CAN", posts: 1240, contexte: "Football • Afrique" },
-    { tag: "Ligue1", posts: 860, contexte: "Football • France" },
     { tag: "ChampionsLeague", posts: 2130, contexte: "Football • Europe" },
     { tag: "PremierLeague", posts: 1780, contexte: "Football • Angleterre" },
+    { tag: "LaLiga", posts: 1520, contexte: "Football • Espagne 🇪🇸" },
+    { tag: "SerieA", posts: 980, contexte: "Football • Italie 🇮🇹" },
+    { tag: "Bundesliga", posts: 910, contexte: "Football • Allemagne 🇩🇪" },
+    { tag: "Ligue1CIV", posts: 620, contexte: "Football • Côte d'Ivoire 🇨🇮" },
+    { tag: "SaudiProLeague", posts: 760, contexte: "Football • Arabie Saoudite 🇸🇦" },
     { tag: "Éléphants", posts: 540, contexte: "Côte d'Ivoire 🇨🇮" },
+  ],
+
+  /* ---- CHAMPIONNATS DU MONDE (catalogue mondial) -------------------------
+   * Catalogue structuré des compétitions couvertes, groupées par région.
+   * Le champ `nom` correspond exactement à `prediction.match.ligue` pour
+   * permettre le filtrage et l'affichage d'un drapeau/emoji par championnat.
+   * >>> Intégration : GET /api/championnats (table `leagues` en base). <<<
+   * --------------------------------------------------------------------- */
+  championnats: [
+    // --- Afrique 🌍 ---
+    { nom: "CAN", region: "Afrique", pays: "Afrique", emoji: "🌍", hashtag: "CAN" },
+    { nom: "Ligue 1 CIV", region: "Afrique", pays: "Côte d'Ivoire", emoji: "🇨🇮", hashtag: "Ligue1CIV" },
+    { nom: "Botola Pro", region: "Afrique", pays: "Maroc", emoji: "🇲🇦", hashtag: "Botola" },
+    { nom: "CAF Champions League", region: "Afrique", pays: "Afrique", emoji: "🏆", hashtag: "CAFCL" },
+    { nom: "Egyptian Premier League", region: "Afrique", pays: "Égypte", emoji: "🇪🇬", hashtag: "EgyptPL" },
+    { nom: "PSL", region: "Afrique", pays: "Afrique du Sud", emoji: "🇿🇦", hashtag: "PSL" },
+    // --- Europe 🇪🇺 ---
+    { nom: "Premier League", region: "Europe", pays: "Angleterre", emoji: "🏴", hashtag: "PremierLeague" },
+    { nom: "Ligue 1", region: "Europe", pays: "France", emoji: "🇫🇷", hashtag: "Ligue1" },
+    { nom: "La Liga", region: "Europe", pays: "Espagne", emoji: "🇪🇸", hashtag: "LaLiga" },
+    { nom: "Serie A", region: "Europe", pays: "Italie", emoji: "🇮🇹", hashtag: "SerieA" },
+    { nom: "Bundesliga", region: "Europe", pays: "Allemagne", emoji: "🇩🇪", hashtag: "Bundesliga" },
+    { nom: "Liga Portugal", region: "Europe", pays: "Portugal", emoji: "🇵🇹", hashtag: "LigaPortugal" },
+    { nom: "Eredivisie", region: "Europe", pays: "Pays-Bas", emoji: "🇳🇱", hashtag: "Eredivisie" },
+    { nom: "Champions League", region: "Europe", pays: "Europe", emoji: "⭐", hashtag: "ChampionsLeague" },
+    { nom: "Europa League", region: "Europe", pays: "Europe", emoji: "🟠", hashtag: "EuropaLeague" },
+    // --- Amériques 🌎 ---
+    { nom: "MLS", region: "Amériques", pays: "États-Unis", emoji: "🇺🇸", hashtag: "MLS" },
+    { nom: "Liga MX", region: "Amériques", pays: "Mexique", emoji: "🇲🇽", hashtag: "LigaMX" },
+    { nom: "Brasileirão", region: "Amériques", pays: "Brésil", emoji: "🇧🇷", hashtag: "Brasileirao" },
+    { nom: "Primera División", region: "Amériques", pays: "Argentine", emoji: "🇦🇷", hashtag: "PrimeraAR" },
+    { nom: "Copa Libertadores", region: "Amériques", pays: "Amérique du Sud", emoji: "🏆", hashtag: "Libertadores" },
+    // --- Asie & Moyen-Orient 🌏 ---
+    { nom: "Saudi Pro League", region: "Asie & Moyen-Orient", pays: "Arabie Saoudite", emoji: "🇸🇦", hashtag: "SaudiProLeague" },
+    { nom: "J1 League", region: "Asie & Moyen-Orient", pays: "Japon", emoji: "🇯🇵", hashtag: "J1League" },
+    { nom: "Qatar Stars League", region: "Asie & Moyen-Orient", pays: "Qatar", emoji: "🇶🇦", hashtag: "QSL" },
+    // --- International & autres 🏆 ---
+    { nom: "Coupe du Monde", region: "International", pays: "Monde", emoji: "🏆", hashtag: "CoupeDuMonde" },
+    { nom: "Tennis ATP", region: "International", pays: "Monde", emoji: "🎾", hashtag: "Tennis" },
   ],
 
   /* ---- DÉFIS / BATTLES --------------------------------------------------- */
@@ -535,6 +688,9 @@ const mockData = {
     { id: "L2", equipeA: "Côte d'Ivoire", logoA: "🇨🇮", equipeB: "Sénégal", logoB: "🇸🇳", ligue: "CAN", minute: 28, scoreA: 1, scoreB: 0 },
     { id: "L3", equipeA: "Real Madrid", logoA: "⚪", equipeB: "Bayern", logoB: "🔴", ligue: "Champions League", minute: 74, scoreA: 2, scoreB: 2 },
     { id: "L4", equipeA: "Maroc", logoA: "🇲🇦", equipeB: "Cameroun", logoB: "🇨🇲", ligue: "CAN", minute: 11, scoreA: 0, scoreB: 0 },
+    { id: "L5", equipeA: "Real Madrid", logoA: "⚪", equipeB: "Barcelone", logoB: "🔵", ligue: "La Liga", minute: 55, scoreA: 2, scoreB: 1 },
+    { id: "L6", equipeA: "Inter Miami", logoA: "🩷", equipeB: "LA Galaxy", logoB: "⚪", ligue: "MLS", minute: 39, scoreA: 1, scoreB: 0 },
+    { id: "L7", equipeA: "Al-Nassr", logoA: "🟡", equipeB: "Al-Hilal", logoB: "🔵", ligue: "Saudi Pro League", minute: 8, scoreA: 0, scoreB: 0 },
   ],
 
   /* ---- COUPONS COMBINÉS (innovation : « le combiné ») --------------------
@@ -813,6 +969,14 @@ async function getLive() {
 }
 
 /**
+ * GET /api/championnats — catalogue mondial des compétitions.
+ */
+async function getChampionnats() {
+  await wait(40);
+  return [...mockData.championnats];
+}
+
+/**
  * GET /api/coupons — tous les coupons combinés.
  */
 async function getCoupons() {
@@ -876,6 +1040,7 @@ window.API = {
   getBattles,
   getTrends,
   getLive,
+  getChampionnats,
   getCoupons,
   getUserCoupons,
   voteSondage,
