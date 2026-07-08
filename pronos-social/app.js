@@ -693,14 +693,207 @@ async function renderFeed() {
   setTop("Accueil", "Fil des comptes suivis");
   view().innerHTML = loaderHTML();
   const [preds, live] = await Promise.all([API.getFeed(), API.getLive()]);
+  const shell = `<div id="storiesBar" class="stories-bar"></div>` + liveTickerHTML(live);
   if (!preds.length) {
-    view().innerHTML = liveTickerHTML(live) + emptyHTML("📭", "Ton fil est vide", "Suis des pronostiqueurs pour voir leurs analyses ici.");
+    view().innerHTML = shell + emptyHTML("📭", "Ton fil est vide", "Suis des pronostiqueurs pour voir leurs analyses ici.");
     startLiveTicker();
+    renderStoriesBar();
     return;
   }
-  view().innerHTML = liveTickerHTML(live) + `<div class="feed">${preds.map((p) => predictionCardHTML(p)).join("")}</div>`;
+  view().innerHTML = shell + `<div class="feed">${preds.map((p) => predictionCardHTML(p)).join("")}</div>`;
   startLiveTicker();
+  renderStoriesBar();
   observeReveal();
+}
+
+/* -----------------------------------------------------------------------------
+ *  STORIES (murs éphémères, visibles seulement par les abonnés)
+ * --------------------------------------------------------------------------- */
+
+/** Avatar « plat » (sans data-nav), pour les anneaux de stories. */
+function avatarPlain(u, taille = "md") {
+  const bg = u.couleur ? `background:${u.couleur}22;border-color:${u.couleur}66` : "";
+  return `<span class="avatar ${taille}" style="${bg}">${u.avatar}</span>`;
+}
+
+/** Barre horizontale des stories en haut du fil. */
+async function renderStoriesBar() {
+  const bar = $("#storiesBar");
+  if (!bar) return;
+  const me = API.getCurrentUserSync();
+  const groups = await API.getStories();
+  const myGroup = groups.find((g) => g.user.id === me.id);
+  const others = groups.filter((g) => g.user.id !== me.id);
+
+  // Bouton « Ta story » (création).
+  let html = `<button class="story-item" data-storycreate>
+    <span class="story-ring add">${avatarPlain(me, "md")}<span class="story-plus">＋</span></span>
+    <span class="story-name">Ta story</span>
+  </button>`;
+  if (myGroup) html += storyItemHTML(myGroup, "Toi");
+  html += others.map((g) => storyItemHTML(g)).join("");
+  bar.innerHTML = html;
+}
+
+function storyItemHTML(g, nomForce) {
+  return `<button class="story-item" data-storyopen="${g.user.id}">
+    <span class="story-ring ${g.hasUnseen ? "unseen" : "seen"}">${avatarPlain(g.user, "md")}</span>
+    <span class="story-name">${esc(nomForce || g.user.pseudo)}</span>
+  </button>`;
+}
+
+/** Visionneuse plein écran des stories d'un auteur (progression auto). */
+let _storyTimer = null;
+async function openStoryViewer(userId) {
+  const groups = await API.getStories();
+  const grp = groups.find((g) => g.user.id === userId);
+  if (!grp || !grp.stories.length) return;
+  const u = grp.user;
+  const stories = grp.stories;
+  let idx = 0;
+  const DUREE = 5000;
+
+  const ov = document.createElement("div");
+  ov.className = "story-viewer";
+  document.body.appendChild(ov);
+
+  const close = () => { clearTimeout(_storyTimer); ov.remove(); renderStoriesBar(); };
+  const next = () => { if (idx < stories.length - 1) { idx++; render(); } else close(); };
+  const prev = () => { if (idx > 0) { idx--; render(); } };
+
+  function contenu(s) {
+    if (s.type === "pronostic" && s.predId) {
+      return `<div class="sv-pred">${sharedPredCardHTML(s.predId)}</div>
+        ${s.texte ? `<div class="sv-caption">${esc(s.texte)}</div>` : ""}`;
+    }
+    return `<div class="sv-text">${esc(s.texte)}</div>`;
+  }
+
+  function render() {
+    const s = stories[idx];
+    API.viewStory(s.id);
+    const barres = stories.map((_, i) =>
+      `<span class="sv-bar"><i class="${i < idx ? "done" : i === idx ? "run" : ""}" style="${i === idx ? `animation-duration:${DUREE}ms` : ""}"></i></span>`).join("");
+    ov.innerHTML = `
+      <div class="sv-frame" style="background:${s.couleur}">
+        <div class="sv-bars">${barres}</div>
+        <div class="sv-head">
+          <span class="sv-who" data-nav="#/profile/${u.id}">${avatarPlain(u, "sm")}
+            <b>${esc(u.nom)}</b> <span class="sv-time">${timeAgo(s.date)}</span></span>
+          <button class="sv-close" data-storyclose>✕</button>
+        </div>
+        <div class="sv-content">${contenu(s)}</div>
+        <button class="sv-zone left" data-storyprev aria-label="Précédent"></button>
+        <button class="sv-zone right" data-storynext aria-label="Suivant"></button>
+      </div>`;
+    clearTimeout(_storyTimer);
+    _storyTimer = setTimeout(next, DUREE);
+  }
+
+  ov.addEventListener("click", (e) => {
+    if (e.target.closest("[data-storyclose]")) return close();
+    const navEl = e.target.closest("[data-nav]");
+    if (navEl) { close(); location.hash = navEl.dataset.nav; return; }
+    if (e.target.closest("[data-storyprev]")) return prev();
+    if (e.target.closest("[data-storynext]")) return next();
+  });
+  render();
+}
+
+/** Modal de création d'une story (texte sur dégradé, ou partage d'un pronostic). */
+async function openCreateStory(mode = "texte") {
+  const me = API.getCurrentUserSync();
+  const mesPreds = API.mockData.predictions.filter((p) => p.auteurId === me.id).slice(0, 8);
+  let couleur = BANNIERES[0].grad;
+  let predId = mesPreds[0] ? mesPreds[0].id : null;
+
+  const modal = document.createElement("div");
+  modal.className = "modal-backdrop";
+  modal.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <div><div class="modal-title">➕ Nouvelle story</div>
+          <div class="modal-sub">Visible uniquement par tes abonnés · expire dans 24 h</div></div>
+        <button class="modal-x" data-modalclose>✕</button>
+      </div>
+      <div class="auth-tabs">
+        <button class="auth-tab ${mode === "texte" ? "active" : ""}" data-stmode="texte">✍️ Texte</button>
+        <button class="auth-tab ${mode === "pronostic" ? "active" : ""}" data-stmode="pronostic">🎯 Pronostic</button>
+      </div>
+      <div class="modal-body" id="stBody"></div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  const body = modal.querySelector("#stBody");
+
+  function renderBody() {
+    if (mode === "texte") {
+      body.innerHTML = `
+        <div class="story-preview" id="stPreview" style="background:${couleur}"><span id="stPrevText">Ton message…</span></div>
+        <div class="field"><label>Couleur de fond</label>
+          <div class="banner-picker" id="stBanner">
+            ${BANNIERES.map((b) => `<button type="button" class="bp-item ${b.grad === couleur ? "on" : ""}" data-grad="${b.grad}"></button>`).join("")}
+          </div>
+        </div>
+        <div class="field"><label>Ton texte</label><textarea id="stText" rows="3" maxlength="180" placeholder="Un message pour tes abonnés… #CAN"></textarea></div>
+        <button class="auth-submit" id="stPublish">Publier la story</button>`;
+      const ta = body.querySelector("#stText");
+      ta.addEventListener("input", () => { body.querySelector("#stPrevText").textContent = ta.value || "Ton message…"; });
+      body.querySelector("#stBanner").addEventListener("click", (e) => {
+        const it = e.target.closest("[data-grad]"); if (!it) return;
+        couleur = it.dataset.grad;
+        body.querySelector("#stPreview").style.background = couleur;
+        body.querySelectorAll("#stBanner .bp-item").forEach((x) => x.classList.toggle("on", x === it));
+      });
+      body.querySelector("#stPublish").addEventListener("click", async () => {
+        const texte = ta.value.trim();
+        if (!texte) { toast("Écris un message.", "err"); return; }
+        await API.createStory({ type: "texte", texte, couleur });
+        modal.remove(); toast("Story publiée ! 📸 Visible par tes abonnés.", "ok"); renderStoriesBar();
+      });
+    } else {
+      if (!mesPreds.length) {
+        body.innerHTML = `<p class="set-desc">Tu n'as pas encore publié de pronostic à partager. Publies-en un d'abord 🎯</p>`;
+        return;
+      }
+      body.innerHTML = `
+        <div class="field"><label>Choisis un de tes pronostics</label>
+          <div class="story-pred-list" id="stPredList">
+            ${mesPreds.map((p) => `<button type="button" class="story-pred-opt ${p.id === predId ? "on" : ""}" data-pred="${p.id}">
+              ${p.match.logoA} ${esc(p.match.equipeA)} vs ${esc(p.match.equipeB)} ${p.match.logoB}<span>${esc(p.choix)} · ${fmtCote(p.cote)}</span>
+            </button>`).join("")}
+          </div>
+        </div>
+        <div class="field"><label>Couleur de fond</label>
+          <div class="banner-picker" id="stBanner">
+            ${BANNIERES.map((b) => `<button type="button" class="bp-item ${b.grad === couleur ? "on" : ""}" data-grad="${b.grad}"></button>`).join("")}
+          </div>
+        </div>
+        <div class="field"><label>Légende (optionnel)</label><input id="stCaption" maxlength="120" placeholder="Mon analyse du jour…" /></div>
+        <button class="auth-submit" id="stPublish">Publier la story</button>`;
+      body.querySelector("#stPredList").addEventListener("click", (e) => {
+        const it = e.target.closest("[data-pred]"); if (!it) return;
+        predId = it.dataset.pred;
+        body.querySelectorAll(".story-pred-opt").forEach((x) => x.classList.toggle("on", x === it));
+      });
+      body.querySelector("#stBanner").addEventListener("click", (e) => {
+        const it = e.target.closest("[data-grad]"); if (!it) return;
+        couleur = it.dataset.grad;
+        body.querySelectorAll("#stBanner .bp-item").forEach((x) => x.classList.toggle("on", x === it));
+      });
+      body.querySelector("#stPublish").addEventListener("click", async () => {
+        await API.createStory({ type: "pronostic", predId, texte: body.querySelector("#stCaption").value.trim(), couleur });
+        modal.remove(); toast("Story publiée ! 📸 Visible par tes abonnés.", "ok"); renderStoriesBar();
+      });
+    }
+  }
+
+  modal.querySelectorAll("[data-stmode]").forEach((b) => b.addEventListener("click", () => {
+    mode = b.dataset.stmode;
+    modal.querySelectorAll("[data-stmode]").forEach((x) => x.classList.toggle("active", x === b));
+    renderBody();
+  }));
+  renderBody();
 }
 
 /* Timer du ticker « en direct » : fait progresser minute et score (simulation). */
@@ -2051,6 +2244,11 @@ document.addEventListener("click", async (e) => {
 
   // -- Éditer le profil (bouton sur son propre profil) --
   if (e.target.closest("[data-editprofile]")) { openEditProfile(); return; }
+
+  // -- Stories : créer / ouvrir (avant data-nav pour intercepter l'avatar) --
+  if (e.target.closest("[data-storycreate]")) { openCreateStory(); return; }
+  const storyOpen = e.target.closest("[data-storyopen]");
+  if (storyOpen) { openStoryViewer(storyOpen.dataset.storyopen); return; }
 
   // -- Navigation par data-nav (éléments non-<a>) --
   const nav = e.target.closest("[data-nav]");

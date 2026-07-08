@@ -1016,6 +1016,20 @@ _seedReactions("p_002", { "❤️": ["u_kader", "u_yao"], "😮": ["u_serge"] })
 _seedReactions("p_021", { "🔥": ["u_moi", "u_binta"] });
 
 /* -----------------------------------------------------------------------------
+ *  STORIES (murs éphémères, 24 h) — VISIBLES UNIQUEMENT PAR LES ABONNÉS.
+ *  type : 'texte' (fond dégradé + texte) | 'pronostic' (predId + légende).
+ *  Seeds datés « il y a quelques heures » relativement à l'horloge de démo.
+ * --------------------------------------------------------------------------- */
+const _hAgo = (h) => new Date(_baseNow - h * 3600 * 1000).toISOString();
+mockData.stories = [
+  { id: "st1", auteurId: "u_kader", type: "texte", texte: "Grosse journée CAN aujourd'hui 🔥 Mes coups sûrs arrivent, restez branchés !", couleur: "linear-gradient(135deg,#3d2f00,#FFB300)", date: _hAgo(2), vues: [] },
+  { id: "st2", auteurId: "u_kader", type: "pronostic", predId: "p_001", texte: "Mon analyse City–Arsenal 👇", couleur: "linear-gradient(135deg,#0b3d2e,#00C853)", date: _hAgo(1), vues: [] },
+  { id: "st3", auteurId: "u_awa", type: "texte", texte: "Value betting = patience 👑 On lâche rien pour la CAN 🇨🇮", couleur: "linear-gradient(135deg,#3d0f00,#FF3D00)", date: _hAgo(3), vues: [] },
+  { id: "st4", auteurId: "u_serge", type: "pronostic", predId: "p_010", texte: "Les stats parlent d'elles-mêmes 📊", couleur: "linear-gradient(135deg,#00204d,#2979FF)", date: _hAgo(5), vues: [] },
+  { id: "st5", auteurId: "u_yao", type: "texte", texte: "15 ans d'observation, un seul mot : discipline 🧙🏾", couleur: "linear-gradient(135deg,#00332c,#00BFA5)", date: _hAgo(6), vues: [] },
+];
+
+/* -----------------------------------------------------------------------------
  *  FONCTIONS API FACTICES (async)
  *  >>> Chacune correspondra à un endpoint REST PHP. <<<
  * --------------------------------------------------------------------------- */
@@ -1392,6 +1406,76 @@ async function sharePrediction(autreId, predId) {
   return m;
 }
 
+/* -----------------------------------------------------------------------------
+ *  STORIES — publication éphémère réservée aux abonnés.
+ * --------------------------------------------------------------------------- */
+
+// Une story est active pendant 24 h.
+function _storyActive(s) {
+  const ref = Math.max(Date.now(), _baseNow);
+  return ref - Date.parse(s.date) < 24 * 3600 * 1000;
+}
+
+/**
+ * GET /api/stories — stories visibles par l'utilisateur connecté.
+ * RÈGLE DE CONFIDENTIALITÉ : on ne voit QUE les stories des comptes que l'on
+ * suit (dont on est abonné) + les siennes. Regroupées par auteur.
+ * >>> En base : filtrage par relation d'abonnement + expiration serveur. <<<
+ */
+async function getStories() {
+  await wait(50);
+  const me = getCurrentUserSync();
+  if (!me) return [];
+  const visibles = new Set([me.id, ...me.abonnements]);
+  const actives = mockData.stories.filter((s) => _storyActive(s) && visibles.has(s.auteurId));
+
+  const parAuteur = {};
+  actives.forEach((s) => { (parAuteur[s.auteurId] = parAuteur[s.auteurId] || []).push(s); });
+
+  const groupes = Object.entries(parAuteur).map(([id, list]) => {
+    list.sort((a, b) => new Date(a.date) - new Date(b.date));
+    return {
+      user: mockData.users.find((u) => u.id === id),
+      stories: list,
+      hasUnseen: list.some((s) => !s.vues.includes(me.id)),
+    };
+  }).filter((g) => g.user);
+
+  // Ordre : moi d'abord, puis les non-vues, puis les plus récentes.
+  groupes.sort((a, b) => {
+    if (a.user.id === me.id) return -1;
+    if (b.user.id === me.id) return 1;
+    if (a.hasUnseen !== b.hasUnseen) return a.hasUnseen ? -1 : 1;
+    return new Date(b.stories[b.stories.length - 1].date) - new Date(a.stories[a.stories.length - 1].date);
+  });
+  return groupes;
+}
+
+/** POST /api/stories — publie une story (auteur = utilisateur connecté). */
+async function createStory(data) {
+  await wait();
+  const s = {
+    id: nextId("st"),
+    auteurId: mockData.currentUserId,
+    type: data.type === "pronostic" ? "pronostic" : "texte",
+    texte: data.texte || "",
+    couleur: data.couleur || "linear-gradient(135deg,#0b3d2e,#00C853)",
+    predId: data.predId || null,
+    date: nowISO(),
+    vues: [],
+  };
+  mockData.stories.push(s);
+  return s;
+}
+
+/** PATCH /api/stories/{id}/view — marque une story comme vue. */
+function viewStory(id) {
+  const s = mockData.stories.find((x) => x.id === id);
+  const me = mockData.currentUserId;
+  if (s && !s.vues.includes(me)) s.vues.push(me);
+  return s;
+}
+
 /**
  * POST /api/predictions/{id}/comments
  */
@@ -1701,5 +1785,8 @@ window.API = {
   outcomesFor,
   getMatchOdds,
   oddsAround,
+  getStories,
+  createStory,
+  viewStory,
   getCurrentUserSync,
 };

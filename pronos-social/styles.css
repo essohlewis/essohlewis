@@ -1488,3 +1488,81 @@ button.comp-row:hover { background: var(--bg-hover); }
 }
 .odds-selected b { color: var(--vert); font-size: 1.1rem; }
 .odds-selected span { color: var(--text-dim); font-size: 0.85rem; }
+
+/* =============================================================================
+ *  21. STORIES (murs éphémères réservés aux abonnés)
+ * ============================================================================= */
+.stories-bar {
+  display: flex; gap: 14px; overflow-x: auto; scrollbar-width: none;
+  padding: 14px 16px; border-bottom: 1px solid var(--border-soft);
+}
+.stories-bar::-webkit-scrollbar { height: 0; }
+.story-item {
+  flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  width: 68px; cursor: pointer;
+}
+.story-ring {
+  position: relative; padding: 3px; border-radius: 50%;
+  background: var(--border);
+}
+.story-ring.unseen { background: conic-gradient(from 45deg, #00c853, #ffb300, #ff3d00, #aa00ff, #00c853); }
+.story-ring.seen { background: var(--border); }
+.story-ring.add { background: var(--bg-elev-2); border: 2px dashed var(--border); padding: 1px; }
+.story-ring .avatar { border: 2px solid var(--bg); }
+.story-plus {
+  position: absolute; right: -2px; bottom: -2px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--accent-grad); color: #1a1200; font-weight: 800; font-size: 0.8rem;
+  display: grid; place-items: center; border: 2px solid var(--bg);
+}
+.story-name {
+  font-size: 0.72rem; color: var(--text-dim); max-width: 68px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;
+}
+
+/* --- Visionneuse plein écran --- */
+.story-viewer {
+  position: fixed; inset: 0; z-index: 3000;
+  background: rgba(0, 0, 0, 0.92); display: grid; place-items: center; padding: 12px;
+  animation: fadeUp 0.2s ease;
+}
+.sv-frame {
+  position: relative; width: min(430px, 100%); height: min(88vh, 760px);
+  border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow);
+}
+.sv-bars { position: absolute; top: 8px; left: 8px; right: 8px; z-index: 3; display: flex; gap: 4px; }
+.sv-bar { flex: 1; height: 3px; background: rgba(255, 255, 255, 0.35); border-radius: 3px; overflow: hidden; }
+.sv-bar i { display: block; height: 100%; width: 0; background: #fff; }
+.sv-bar i.done { width: 100%; }
+.sv-bar i.run { animation-name: svFill; animation-timing-function: linear; animation-fill-mode: forwards; }
+@keyframes svFill { from { width: 0; } to { width: 100%; } }
+.sv-head {
+  position: absolute; top: 18px; left: 8px; right: 8px; z-index: 3;
+  display: flex; align-items: center; justify-content: space-between; color: #fff;
+}
+.sv-who { display: flex; align-items: center; gap: 8px; cursor: pointer; text-shadow: 0 1px 4px rgba(0,0,0,.4); }
+.sv-who .avatar { border: 2px solid rgba(255,255,255,.7); }
+.sv-time { opacity: 0.85; font-size: 0.8rem; }
+.sv-close { color: #fff; font-size: 1.3rem; padding: 4px 8px; z-index: 4; position: relative; }
+.sv-content { height: 100%; display: grid; place-items: center; padding: 60px 24px 40px; }
+.sv-text { color: #fff; font-size: 1.6rem; font-weight: 800; text-align: center; line-height: 1.35; text-shadow: 0 2px 10px rgba(0,0,0,.35); }
+.sv-pred { display: grid; place-items: center; }
+.sv-pred .shared-pred { width: 280px; max-width: 80vw; }
+.sv-caption { color: #fff; text-align: center; font-weight: 600; margin-top: 14px; text-shadow: 0 2px 8px rgba(0,0,0,.4); }
+.sv-zone { position: absolute; top: 0; bottom: 0; z-index: 2; background: transparent; cursor: pointer; }
+.sv-zone.left { left: 0; width: 32%; }
+.sv-zone.right { right: 0; width: 68%; }
+
+/* --- Aperçu à la création --- */
+.story-preview {
+  min-height: 150px; border-radius: var(--r-md); display: grid; place-items: center;
+  padding: 20px; text-align: center; color: #fff; font-weight: 800; font-size: 1.15rem;
+  text-shadow: 0 2px 8px rgba(0,0,0,.35); margin-bottom: 14px; word-break: break-word;
+}
+.story-pred-list { display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto; }
+.story-pred-opt {
+  text-align: left; padding: 10px 12px; border-radius: var(--r-sm); font-weight: 700; font-size: 0.9rem;
+  border: 1px solid var(--border); background: var(--bg-elev-2); transition: all var(--tr);
+}
+.story-pred-opt span { display: block; font-size: 0.8rem; color: var(--text-dim); font-weight: 600; margin-top: 2px; }
+.story-pred-opt.on { border-color: var(--accent); background: var(--jaune-soft); }

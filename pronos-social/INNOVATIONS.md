@@ -220,6 +220,25 @@ comparateur (généré autour de la cote retenue pour les pronostics existants).
   (feed bookmakers / API odds). ⚠️ Affichage indicatif — la plateforme ne prend
   aucun pari.
 
+## 17. 📸 Stories (murs éphémères réservés aux abonnés)
+Les pronostiqueurs publient des **stories** (24 h) visibles **uniquement par leurs
+abonnés** — comme sur Instagram/WhatsApp :
+- **Barre de stories** en haut du fil : anneau **coloré** = story non vue, gris =
+  vue, « Ta story ＋ » pour publier. Seuls les comptes que l'on **suit** (et soi-même)
+  apparaissent — un non-abonné ne voit pas la story.
+- **Visionneuse plein écran** : barres de progression, **avance automatique** (5 s),
+  navigation par tap (gauche/droite), fermeture, marquage « vue ».
+- **Deux types de story** : texte sur **fond dégradé**, ou **partage d'un de ses
+  pronostics** (mini-carte + légende).
+
+- Données : `mockData.stories` (avec `vues[]` et expiration 24 h).
+- API : `getStories()` (filtrée par relation d'abonnement + expiration),
+  `createStory()`, `viewStory()`.
+- **Confidentialité** appliquée côté données : `getStories` ne renvoie que les
+  auteurs présents dans les abonnements de l'utilisateur (ou lui-même).
+- **Intégration** : côté serveur, filtrage par relation d'abonnement + purge des
+  stories expirées (job/TTL).
+
 ## 6. 🤖 Coach IA (analyse simulée)
 Sur le détail d'un pronostic, un panneau **Coach IA** rend un **indice de confiance
 (0–100)** et un **verdict** calculés par une heuristique combinant :
