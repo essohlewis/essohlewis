@@ -249,6 +249,13 @@ function buildChampIndex() {
 /** Emoji/drapeau d'un championnat à partir de son nom (défaut : 🏆). */
 function ligueEmoji(nom) { return (CHAMP_INDEX[nom] || {}).emoji || "🏆"; }
 
+/** Sport d'un championnat (football par défaut). */
+function champSport(nom) { return (CHAMP_INDEX[nom] || {}).sport || "Football"; }
+
+/** Emoji représentatif d'un sport (pour le filtre par sport). */
+const SPORT_EMOJI = { Football: "⚽", Basket: "🏀", Tennis: "🎾", "Formule 1": "🏎️", Rugby: "🏉", MMA: "🥊" };
+function sportEmoji(sport) { return SPORT_EMOJI[sport] || "🏅"; }
+
 /** Options <optgroup> du sélecteur de championnat, groupées par région. */
 function champOptionsHTML() {
   const regions = {};
@@ -644,8 +651,9 @@ function startLiveTicker() {
   }, 3000);
 }
 
-/* ---- 5.2 EXPLORER (championnats du monde + filtre) ---- */
-// Filtre de championnat courant + données mises en cache pour le re-rendu.
+/* ---- 5.2 EXPLORER (sport + championnats du monde + filtre) ---- */
+// Filtres courants (sport + championnat) + données mises en cache pour le re-rendu.
+let exploreSport = "tous";
 let exploreFilter = "tous";
 let exploreData = { preds: [], coupons: [], champs: [] };
 
@@ -656,23 +664,43 @@ async function renderExplore(preselect = null) {
     API.getAllPredictions(), API.getCoupons(), API.getChampionnats(),
   ]);
   exploreData = { preds, coupons, champs };
-  if (preselect) exploreFilter = preselect;
+  if (preselect) { exploreFilter = preselect; exploreSport = champSport(preselect); }
 
   view().innerHTML = `
+    <div class="sport-bar" id="sportBar">${sportBarHTML()}</div>
     <div class="champ-bar" id="champBar">${champBarHTML()}</div>
     <div id="exploreList"></div>`;
   renderExploreList();
 }
 
-/** Barre de filtres par championnat (regroupée par région, défilable). */
+/** Barre de filtres par SPORT (niveau supérieur). */
+function sportBarHTML() {
+  const { preds } = exploreData;
+  // Compte des pronostics par sport (via le championnat de chaque pronostic).
+  const counts = {};
+  preds.forEach((p) => { const s = champSport(p.match.ligue); counts[s] = (counts[s] || 0) + 1; });
+  const sports = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+
+  let chips = `<button class="sport-chip ${exploreSport === "tous" ? "active" : ""}" data-sport="tous">🌍 Tous les sports</button>`;
+  chips += sports.map((s) =>
+    `<button class="sport-chip ${exploreSport === s ? "active" : ""}" data-sport="${esc(s)}">${sportEmoji(s)} ${esc(s)} <span class="cc-n">${counts[s]}</span></button>`
+  ).join("");
+  return chips;
+}
+
+/** Barre de filtres par championnat (filtrée par sport, groupée par région). */
 function champBarHTML() {
   const { preds, champs } = exploreData;
   const counts = {};
   preds.forEach((p) => { counts[p.match.ligue] = (counts[p.match.ligue] || 0) + 1; });
 
-  // Chip « Tous » + une chip par championnat ayant au moins un pronostic.
-  const actifs = champs.filter((c) => counts[c.nom]);
-  const tous = `<button class="champ-chip ${exploreFilter === "tous" ? "active" : ""}" data-champ="tous">🌐 Tous <span class="cc-n">${preds.length}</span></button>`;
+  // Championnats ayant au moins un pronostic, filtrés par le sport sélectionné.
+  const actifs = champs.filter((c) => counts[c.nom] &&
+    (exploreSport === "tous" || champSport(c.nom) === exploreSport));
+  const totalSport = exploreSport === "tous"
+    ? preds.length
+    : preds.filter((p) => champSport(p.match.ligue) === exploreSport).length;
+  const tous = `<button class="champ-chip ${exploreFilter === "tous" ? "active" : ""}" data-champ="tous">🌐 Tous <span class="cc-n">${totalSport}</span></button>`;
 
   // On groupe visuellement par région (séparateurs).
   let chips = tous;
@@ -687,29 +715,109 @@ function champBarHTML() {
   return chips;
 }
 
-/** Rendu de la liste filtrée par le championnat sélectionné. */
+/** Rendu de la liste filtrée par sport puis par championnat. */
 function renderExploreList() {
   const box = $("#exploreList");
   if (!box) return;
   const { preds, coupons } = exploreData;
   const f = exploreFilter;
-  const fp = f === "tous" ? preds : preds.filter((p) => p.match.ligue === f);
-  // Les coupons couvrent plusieurs championnats : affichés seulement en vue « Tous ».
-  const fc = f === "tous" ? coupons : [];
+
+  // Filtrage : championnat précis > sinon sport > sinon tout.
+  let fp;
+  if (f !== "tous") fp = preds.filter((p) => p.match.ligue === f);
+  else if (exploreSport !== "tous") fp = preds.filter((p) => champSport(p.match.ligue) === exploreSport);
+  else fp = preds;
+
+  // Les coupons couvrent plusieurs championnats : affichés seulement en vue « Tous / Tous sports ».
+  const fc = (f === "tous" && exploreSport === "tous") ? coupons : [];
 
   let html = "";
   if (fc.length) {
     html += `<div class="section-title">🎟️ Coupons combinés à la une</div>
       <div class="feed">${fc.map((c) => couponCardHTML(c)).join("")}</div>`;
   }
-  const titre = f === "tous"
-    ? "🔥 Pronostics du moment"
-    : `${ligueEmoji(f)} ${esc(f)} — ${fp.length} pronostic${fp.length > 1 ? "s" : ""}`;
+  let titre;
+  if (f !== "tous") titre = `${ligueEmoji(f)} ${esc(f)} — ${fp.length} pronostic${fp.length > 1 ? "s" : ""}`;
+  else if (exploreSport !== "tous") titre = `${sportEmoji(exploreSport)} ${esc(exploreSport)} — ${fp.length} pronostic${fp.length > 1 ? "s" : ""}`;
+  else titre = "🔥 Pronostics du moment";
   html += `<div class="section-title">${titre}</div>`;
   html += fp.length
     ? `<div class="feed">${fp.map((p) => predictionCardHTML(p)).join("")}</div>`
-    : emptyHTML("🗒️", "Aucun pronostic", "Rien dans ce championnat pour l'instant.");
+    : emptyHTML("🗒️", "Aucun pronostic", "Rien ici pour l'instant.");
   box.innerHTML = html;
+  observeReveal();
+}
+
+/* ---- 5.2b PAGE DÉDIÉE D'UN CHAMPIONNAT (en-tête + classement + pronostics) ---- */
+async function renderChampionnatPage(nom) {
+  const champ = CHAMP_INDEX[nom];
+  setTop(nom, champ ? `${champ.pays} · ${champSport(nom)}` : "Championnat");
+  view().innerHTML = loaderHTML();
+  const preds = await API.getAllPredictions();
+  const list = preds.filter((p) => p.match.ligue === nom);
+
+  // Statistiques communautaires du championnat.
+  const resolus = list.filter((p) => p.statut === "gagne" || p.statut === "perdu");
+  const gagnes = resolus.filter((p) => p.statut === "gagne").length;
+  const enCours = list.filter((p) => p.statut === "en_cours").length;
+  const tauxComm = resolus.length ? Math.round((gagnes / resolus.length) * 100) : 0;
+
+  // Classement des pronostiqueurs SUR CE championnat (réussite puis volume).
+  const parUser = {};
+  list.forEach((p) => {
+    const u = (parUser[p.auteurId] = parUser[p.auteurId] || { total: 0, gagnes: 0, resolus: 0 });
+    u.total++;
+    if (p.statut === "gagne") { u.gagnes++; u.resolus++; }
+    else if (p.statut === "perdu") u.resolus++;
+  });
+  const classement = Object.entries(parUser)
+    .map(([id, v]) => ({ u: API.mockData.users.find((x) => x.id === id), v, pct: v.resolus ? Math.round((v.gagnes / v.resolus) * 100) : 0 }))
+    .sort((a, b) => b.pct - a.pct || b.v.total - a.v.total)
+    .slice(0, 5);
+
+  const emoji = ligueEmoji(nom);
+  // Méta : pays · région · sport, en évitant de répéter pays == région (ex. CAN).
+  let meta = "";
+  if (champ) {
+    const lieu = champ.pays === champ.region ? esc(champ.region) : `${esc(champ.pays)} · ${esc(champ.region)}`;
+    meta = `${lieu} · ${sportEmoji(champSport(nom))} ${esc(champSport(nom))}`;
+  }
+
+  view().innerHTML = `
+    <div class="champ-hero">
+      <div class="champ-hero-emoji">${emoji}</div>
+      <div class="champ-hero-info">
+        <div class="champ-hero-name">${esc(nom)}</div>
+        <div class="champ-hero-meta">${meta}</div>
+      </div>
+    </div>
+
+    <div class="champ-stats">
+      <div class="cs-cell"><div class="v">${list.length}</div><div class="l">Pronostics</div></div>
+      <div class="cs-cell"><div class="v live">${enCours}</div><div class="l">En cours</div></div>
+      <div class="cs-cell"><div class="v">${resolus.length}</div><div class="l">Résolus</div></div>
+      <div class="cs-cell"><div class="v win">${tauxComm}%</div><div class="l">Réussite comm.</div></div>
+    </div>
+
+    ${classement.length ? `
+      <div class="section-title">🏆 Meilleurs pronostiqueurs sur ${esc(nom)}</div>
+      ${classement.map(({ u, v, pct }, i) => `
+        <div class="lb-row" data-nav="#/profile/${u.id}">
+          <div class="lb-rank ${i < 3 ? "top" + (i + 1) : ""}">${i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}</div>
+          ${avatarHTML(u, "md")}
+          <div class="lb-info">
+            <div class="n">${esc(u.nom)} ${verifHTML(u.badge)}</div>
+            <div class="h">@${esc(u.pseudo)} · ${v.total} prono${v.total > 1 ? "s" : ""} · ${v.gagnes}/${v.resolus} gagnés</div>
+          </div>
+          <div class="lb-score"><div class="s">${pct}%</div><div class="ss">réussite</div></div>
+        </div>`).join("")}
+    ` : ""}
+
+    <div class="section-title">${emoji} Tous les pronostics — ${list.length}</div>
+    ${list.length
+      ? `<div class="feed">${list.map((p) => predictionCardHTML(p)).join("")}</div>`
+      : emptyHTML("🗒️", "Aucun pronostic", "Personne n'a encore publié sur ce championnat.")}
+  `;
   observeReveal();
 }
 
@@ -1518,6 +1626,18 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
+  // -- Filtre par sport (barre supérieure de l'Explorateur) --
+  const sportChip = e.target.closest("[data-sport]");
+  if (sportChip) {
+    exploreSport = sportChip.dataset.sport;
+    exploreFilter = "tous"; // on repart de « tous les championnats » du sport choisi
+    $$("#sportBar .sport-chip").forEach((c) => c.classList.toggle("active", c === sportChip));
+    const cb = $("#champBar");
+    if (cb) cb.innerHTML = champBarHTML(); // régénère les puces de championnat du sport
+    renderExploreList();
+    return;
+  }
+
   // -- Filtre par championnat (chips de l'Explorateur) --
   const champChip = e.target.closest("[data-champ]");
   if (champChip) {
@@ -1667,7 +1787,7 @@ async function router() {
 
   switch (route) {
     case "feed": setActiveNav("feed"); await renderFeed(); break;
-    case "explore": setActiveNav("explore"); await renderExplore("tous"); break;
+    case "explore": setActiveNav("explore"); exploreSport = "tous"; exploreFilter = "tous"; await renderExplore(); break;
     case "profile": setActiveNav(parts[1] === API.mockData.currentUserId ? "profile" : ""); await renderProfile(parts[1] || "u_moi"); break;
     case "prediction": setActiveNav(""); await renderPredictionDetail(parts[1]); break;
     case "leaderboard": setActiveNav("leaderboard"); await renderLeaderboard(); break;
@@ -1675,7 +1795,7 @@ async function router() {
     case "notifications": setActiveNav("notifications"); await renderNotifications(); break;
     case "search": setActiveNav("search"); await renderSearch(decodeURIComponent(parts[1] || "")); break;
     case "hashtag": setActiveNav(""); await renderHashtag(decodeURIComponent(parts[1] || "")); break;
-    case "championnat": setActiveNav("explore"); await renderExplore(decodeURIComponent(parts[1] || "tous")); break;
+    case "championnat": setActiveNav("explore"); await renderChampionnatPage(decodeURIComponent(parts[1] || "")); break;
     default: setActiveNav("feed"); await renderFeed();
   }
 }

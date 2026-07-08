@@ -66,10 +66,15 @@ chacune avec son **drapeau/emoji**, son pays et (hors football) son **sport** :
 - **Autres sports** : NBA 🏀, EuroLeague 🏀, Formule 1 🏎️, Tennis ATP 🎾, Tennis WTA 🎾, Top 14 (Rugby) 🏉, UFC (MMA) 🥊
 
 Concrètement dans l'app :
-- **Barre de filtres** défilable dans l'Explorateur : une puce par championnat
-  (avec compteur de pronostics), groupée par région, filtrant le fil en direct.
-- **Route dédiée** `#/championnat/:nom` (le nom de ligue sur chaque carte est
-  cliquable → ouvre l'Explorateur filtré sur ce championnat).
+- **Double filtre dans l'Explorateur** : une **barre par sport** (⚽ Football,
+  🏀 Basket, 🎾 Tennis, 🏎️ F1, 🏉 Rugby, 🥊 MMA) qui pilote une **barre par
+  championnat** (puce + compteur, groupée par région), filtrant le fil en direct.
+- **Page dédiée par championnat** (`#/championnat/:nom`) — le nom de ligue sur
+  chaque carte est cliquable et ouvre une vraie page : en-tête (drapeau, pays,
+  région, sport), **statistiques communautaires** (nb de pronostics, en cours,
+  résolus, taux de réussite de la communauté) et un **classement des meilleurs
+  pronostiqueurs sur ce championnat** (par taux de réussite), suivi de tous ses
+  pronostics.
 - **Drapeau du championnat** affiché sur chaque carte et chaque sélection de coupon.
 - **Formulaire de création** avec un menu déroulant groupé par région (`<optgroup>`).
 - **Multi-sports** : basket (NBA, EuroLeague), Formule 1, tennis (ATP/WTA), rugby
