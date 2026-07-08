@@ -32,6 +32,14 @@ const wait = (ms = NETWORK_DELAY) => new Promise((r) => setTimeout(r, ms));
 let _idCounter = 1000;
 const nextId = (prefix) => `${prefix}_${++_idCounter}`;
 
+// Horloge « virtuelle » monotone : garantit que tout contenu créé pendant la
+// session (message, commentaire, pronostic) porte un horodatage postérieur aux
+// données de démo (datées du 08/07/2026), quelle que soit l'heure réelle de la
+// machine. Évite qu'un nouvel élément se retrouve mal trié.
+let _seq = 0;
+const _baseNow = Math.max(Date.now(), Date.parse("2026-07-08T11:00:00Z"));
+const nowISO = () => new Date(_baseNow + (_seq += 1000)).toISOString();
+
 /* -----------------------------------------------------------------------------
  *  DONNÉES DE DÉMONSTRATION (mockData)
  *  Persistance « en mémoire » uniquement — AUCUN localStorage/sessionStorage.
@@ -731,6 +739,19 @@ const mockData = {
     { id: "n6", type: "badge", acteurId: null, cibleId: null, texte: "Vous avez atteint le badge Argent 🥈 !", lu: true, date: "2026-06-25T12:00:00" },
   ],
 
+  /* ---- MESSAGES DIRECTS (innovation : messagerie) -----------------------
+   * Chaque message : expéditeur (deId), destinataire (aId), texte, date, lu.
+   * >>> Intégration : table `messages` + endpoints /api/messages. <<<
+   * --------------------------------------------------------------------- */
+  messages: [
+    { id: "m1", deId: "u_kader", aId: "u_moi", texte: "Salut ! Tu as vu mon combiné du week-end ? 🎟️", date: "2026-07-08T08:10:00", lu: false },
+    { id: "m2", deId: "u_moi", aId: "u_kader", texte: "Oui je l'ai sauvegardé, gros potentiel 🔥", date: "2026-07-08T08:14:00", lu: true },
+    { id: "m3", deId: "u_kader", aId: "u_moi", texte: "Le Maroc c'est du solide, fais-moi confiance 🦁", date: "2026-07-08T08:20:00", lu: false },
+    { id: "m4", deId: "u_awa", aId: "u_moi", texte: "Merci pour le suivi 🙏 On se motive pour la CAN !", date: "2026-07-08T07:05:00", lu: false },
+    { id: "m5", deId: "u_moi", aId: "u_awa", texte: "Avec plaisir 👑 Tes analyses sont au top.", date: "2026-07-08T07:20:00", lu: true },
+    { id: "m6", deId: "u_serge", aId: "u_moi", texte: "On se fait un battle multi-ligues cette semaine ? ⚔️", date: "2026-07-07T21:30:00", lu: true },
+  ],
+
   /* ---- TENDANCES (hashtags) --------------------------------------------- */
   tendances: [
     { tag: "CAN", posts: 1240, contexte: "Football • Afrique" },
@@ -962,6 +983,85 @@ async function updateProfile(data) {
 }
 
 /**
+ * PATCH /api/users/me/password — changement de mot de passe (simulé).
+ */
+async function changePassword(actuel, nouveau) {
+  await wait();
+  const u = getCurrentUserSync();
+  if (!u) return { ok: false, error: "Non connecté." };
+  if (u.motDePasse !== actuel) return { ok: false, error: "Mot de passe actuel incorrect." };
+  if ((nouveau || "").length < 6) return { ok: false, error: "Nouveau mot de passe : 6 caractères minimum." };
+  u.motDePasse = nouveau;
+  return { ok: true };
+}
+
+/* -----------------------------------------------------------------------------
+ *  MESSAGERIE DIRECTE
+ * --------------------------------------------------------------------------- */
+
+/**
+ * GET /api/messages — liste des conversations de l'utilisateur connecté,
+ * regroupées par interlocuteur (dernier message + nombre de non-lus).
+ */
+async function getConversations() {
+  await wait();
+  const me = mockData.currentUserId;
+  const parInterloc = {};
+  mockData.messages
+    .filter((m) => m.deId === me || m.aId === me)
+    .forEach((m) => {
+      const autre = m.deId === me ? m.aId : m.deId;
+      const prev = parInterloc[autre];
+      if (!prev || new Date(m.date) > new Date(prev.lastDate)) {
+        parInterloc[autre] = { autreId: autre, dernier: m.texte, lastDate: m.date };
+      }
+    });
+  // Nombre de non-lus (messages reçus non lus) par interlocuteur.
+  const nonLus = {};
+  mockData.messages.forEach((m) => {
+    if (m.aId === me && !m.lu) nonLus[m.deId] = (nonLus[m.deId] || 0) + 1;
+  });
+  return Object.values(parInterloc)
+    .map((c) => ({
+      user: mockData.users.find((u) => u.id === c.autreId),
+      dernier: c.dernier, lastDate: c.lastDate, nonLus: nonLus[c.autreId] || 0,
+    }))
+    .filter((c) => c.user)
+    .sort((a, b) => new Date(b.lastDate) - new Date(a.lastDate));
+}
+
+/**
+ * GET /api/messages/{userId} — fil de discussion avec un interlocuteur.
+ * Marque au passage les messages reçus comme lus.
+ */
+async function getThread(autreId) {
+  await wait(50);
+  const me = mockData.currentUserId;
+  mockData.messages.forEach((m) => {
+    if (m.aId === me && m.deId === autreId) m.lu = true;
+  });
+  return mockData.messages
+    .filter((m) => (m.deId === me && m.aId === autreId) || (m.deId === autreId && m.aId === me))
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+
+/**
+ * POST /api/messages/{userId} — envoie un message.
+ */
+async function sendMessage(autreId, texte) {
+  await wait(50);
+  const m = { id: nextId("m"), deId: mockData.currentUserId, aId: autreId, texte, date: nowISO(), lu: true };
+  mockData.messages.push(m);
+  return m;
+}
+
+/** Nombre total de messages non lus (pour le badge de navigation). */
+function countUnreadMessages() {
+  const me = mockData.currentUserId;
+  return mockData.messages.filter((m) => m.aId === me && !m.lu).length;
+}
+
+/**
  * GET /api/feed
  * Renvoie le fil de pronostics des comptes suivis + le compte courant,
  * trié du plus récent au plus ancien.
@@ -1058,7 +1158,7 @@ async function createPrediction(data) {
     reposts: [],
     sauvegardes: [],
     commentaires: [],
-    date: new Date().toISOString(),
+    date: nowISO(),
   };
   mockData.predictions.unshift(pred);
   return pred;
@@ -1135,7 +1235,7 @@ async function addComment(id, texte) {
   await wait(60);
   const p = mockData.predictions.find((x) => x.id === id);
   if (!p) return null;
-  const c = { id: nextId("c"), auteurId: mockData.currentUserId, texte, date: new Date().toISOString() };
+  const c = { id: nextId("c"), auteurId: mockData.currentUserId, texte, date: nowISO() };
   p.commentaires.push(c);
   return c;
 }
@@ -1276,5 +1376,10 @@ window.API = {
   logout,
   switchAccount,
   updateProfile,
+  changePassword,
+  getConversations,
+  getThread,
+  sendMessage,
+  countUnreadMessages,
   getCurrentUserSync,
 };

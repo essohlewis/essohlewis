@@ -111,6 +111,41 @@ le fil, les profils ou la création de pronostics sans être connecté.
   `password_hash`), et la session gérée par **token (JWT)**. Jamais de mot de
   passe en clair côté client.
 
+## 8. 💬 Messagerie directe
+Conversations privées entre pronostiqueurs. Le bouton **« Message »** d'un profil
+ouvre le fil de discussion.
+
+- Liste des conversations (dernier message, heure, **badge de non-lus**).
+- Fil de discussion en bulles (les miennes à droite, celles de l'autre à gauche),
+  envoi en direct, marquage automatique comme lu, badge de non-lus dans la nav.
+- Données : `mockData.messages` · API : `getConversations()`, `getThread(id)`,
+  `sendMessage(id, texte)`, `countUnreadMessages()`.
+
+## 9. ⚙️ Paramètres
+Une page **Paramètres** (menu « Mon compte » → Paramètres) :
+- **Apparence** : thème clair/sombre + **couleur d'accent** personnalisable (5 teintes,
+  appliquée via variables CSS globales).
+- **Notifications** : interrupteurs par type (j'aime, abonnés, commentaires,
+  résolutions, reposts, badges) — ils **filtrent réellement** le fil de notifications
+  et le badge.
+- **Compte** : pseudo, email, **changement de mot de passe** (validé), déconnexion.
+- Logique : `renderSettings()`, `applyAccent()`, `state.notifPrefs`,
+  API `changePassword()`.
+
+## 10. 💰 Cagnotte virtuelle & Défi de la saison
+Gamification : chaque pronostiqueur dispose d'une **cagnotte virtuelle** (FCFA)
+calculée à partir de ses pronostics résolus (mise fixe fictive de 1 000 FCFA,
+départ 10 000 FCFA, gain = cote × mise).
+
+- Affichée sur le **profil** (avec variation ▲/▼ colorée).
+- **Widget « Défi de la saison »** dans la colonne latérale : classement des
+  meilleures cagnottes.
+- Calcul intégré à `computeStats()` (champ `cagnotte`).
+
+> Note technique : une **horloge virtuelle monotone** (`nowISO()`) garantit que
+> tout contenu créé pendant la session (message, commentaire, pronostic) est
+> toujours horodaté après les données de démo, quel que soit l'horaire de la machine.
+
 ## 6. 🤖 Coach IA (analyse simulée)
 Sur le détail d'un pronostic, un panneau **Coach IA** rend un **indice de confiance
 (0–100)** et un **verdict** calculés par une heuristique combinant :

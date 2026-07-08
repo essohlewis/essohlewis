@@ -37,9 +37,26 @@ const PALIERS_BADGE = [
 // État global léger (thème, cache de calculs).
 const state = {
   theme: "dark",
+  // Couleur d'accent personnalisable (Paramètres).
+  accent: "orange",
+  // Préférences de notifications (filtrent le fil de notifications).
+  notifPrefs: { like: true, follow: true, comment: true, gagne: true, repost: true, badge: true },
   // Historique de navigation pour le bouton « retour » mobile.
   history: [],
 };
+
+// Accents disponibles : { clé → couleur + dégradé }.
+const ACCENTS = {
+  orange: { c: "#ffb300", grad: "linear-gradient(135deg,#ffb300,#ff8f00)", label: "Doré" },
+  vert:   { c: "#00c853", grad: "linear-gradient(135deg,#00c853,#00bfa5)", label: "Vert" },
+  bleu:   { c: "#2979ff", grad: "linear-gradient(135deg,#2979ff,#00b0ff)", label: "Bleu" },
+  violet: { c: "#aa00ff", grad: "linear-gradient(135deg,#aa00ff,#7c4dff)", label: "Violet" },
+  rose:   { c: "#ff4081", grad: "linear-gradient(135deg,#ff4081,#f50057)", label: "Rose" },
+};
+
+// Mise fictive (FCFA) par pronostic pour la cagnotte virtuelle.
+const MISE_VIRTUELLE = 1000;
+const CAGNOTTE_DEPART = 10000;
 
 /* =============================================================================
  *  2. ALGORITHME TrustScore  ⭐ (fonctionnalité différenciante)
@@ -101,7 +118,7 @@ function computeStats(userId) {
       tauxReussite: 0,
       total: all.length, nbGagnes: 0, nbPerdus: 0, nbEnCours: enCours.length,
       streak: 0, streakType: null,
-      roi: 0, coteMoyenneGagnee: 0,
+      roi: 0, coteMoyenneGagnee: 0, cagnotte: CAGNOTTE_DEPART,
       forme: [], // sparkline
       parLigue: [],
       sportFavori: "—",
@@ -161,6 +178,10 @@ function computeStats(userId) {
   const gains = gagnes.reduce((s, p) => s + p.cote, 0);
   const roi = Math.round(((gains - nbResolus) / nbResolus) * 100);
 
+  // --- Cagnotte virtuelle (FCFA) : mise fixe par pronostic résolu ---
+  // Départ 10 000 FCFA ; chaque pari gagné rapporte cote×mise, sinon on perd la mise.
+  const cagnotte = Math.round(CAGNOTTE_DEPART + gains * MISE_VIRTUELLE - nbResolus * MISE_VIRTUELLE);
+
   // --- Sparkline « forme » : 12 derniers résolus (récent à droite) ---
   const forme = resolus.slice(-12).map((p) => (p.statut === "gagne" ? "g" : "p"));
 
@@ -177,7 +198,7 @@ function computeStats(userId) {
     trustScore, tauxReussite,
     total: all.length, nbGagnes, nbPerdus, nbEnCours: enCours.length, nbResolus,
     streak, streakType,
-    roi, coteMoyenneGagnee: coteMoyenneGagnee || 0,
+    roi, coteMoyenneGagnee: coteMoyenneGagnee || 0, cagnotte,
     forme, parLigue, sportFavori, badge,
     // Décomposition détaillée pour le modal de transparence du TrustScore.
     composantes: {
@@ -231,13 +252,19 @@ function esc(str = "") {
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
-/** Transforme les #hashtags en liens cliquables (après échappement). */
+/** Transforme les #hashtags en liens cliquables (après échappement).
+ *  Le « # » doit être en début de texte ou précédé d'un caractère non-mot ET
+ *  non-« & », afin de NE PAS matcher les entités HTML comme &#39; (apostrophe). */
 function linkifyHashtags(txt) {
-  return esc(txt).replace(/#(\w+)/g, '<a href="#/hashtag/$1" style="color:var(--accent);font-weight:600">#$1</a>');
+  return esc(txt).replace(/(^|[^&\w])#(\w+)/g,
+    (m, pre, tag) => `${pre}<a href="#/hashtag/${tag}" style="color:var(--accent);font-weight:600">#${tag}</a>`);
 }
 
 /** Formatage FCFA / cote. */
 function fmtCote(c) { return Number(c).toFixed(2); }
+
+/** Formate un montant en FCFA (ex. 12 500 FCFA). */
+function fmtFCFA(n) { return Math.round(n).toLocaleString("fr-FR") + " FCFA"; }
 
 /* --- Catalogue des championnats : index synchrone { nom → championnat } --- */
 // Ordre d'affichage des régions (barre de filtres + menu de création).
@@ -841,7 +868,7 @@ async function renderProfile(userId, tab = "tous") {
         <div class="profile-actions">
           ${isMe
             ? `<button class="btn" data-editprofile>✏️ Modifier le profil</button>`
-            : `<button class="btn btn-icon" data-msg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 9 9 0 01-4-.9L3 21l1.9-4.5A8.4 8.4 0 0121 11.5z"/></svg></button>
+            : `<button class="btn btn-icon" data-msg="${u.id}" title="Envoyer un message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 9 9 0 01-4-.9L3 21l1.9-4.5A8.4 8.4 0 0121 11.5z"/></svg></button>
                <button class="btn btn-follow ${suit ? "on" : ""}" data-follow="${u.id}"></button>`}
         </div>
       </div>
@@ -960,6 +987,14 @@ function perfBlockHTML(s, userId = "") {
     <div class="streak-line">
       <span class="flame">${s.streakType === "gagne" && s.streak > 1 ? "🔥" : "📊"}</span>
       <span>${streakTxt}</span>
+    </div>
+
+    <div class="cagnotte-line ${s.cagnotte >= CAGNOTTE_DEPART ? "up" : "down"}">
+      <div class="cg-left">💰 Cagnotte virtuelle de saison</div>
+      <div class="cg-right">
+        <span class="cg-val">${fmtFCFA(s.cagnotte)}</span>
+        <span class="cg-delta">${s.cagnotte >= CAGNOTTE_DEPART ? "▲" : "▼"} ${fmtFCFA(Math.abs(s.cagnotte - CAGNOTTE_DEPART))}</span>
+      </div>
     </div>
 
     <div class="sparkline">
@@ -1350,8 +1385,16 @@ function renderCreate() {
 async function renderNotifications() {
   setTop("Notifications", "");
   view().innerHTML = loaderHTML();
-  const notifs = await API.getNotifications();
+  let notifs = await API.getNotifications();
+  // Respecte les préférences de notifications (Paramètres).
+  notifs = notifs.filter((n) => state.notifPrefs[n.type] !== false);
   const ico = { like: "❤️", follow: "➕", comment: "💬", gagne: "🟢", repost: "🔁", badge: "🏅" };
+  if (!notifs.length) {
+    view().innerHTML = emptyHTML("🔕", "Aucune notification", "Ajuste tes préférences dans les Paramètres.");
+    API.mockData.notifications.forEach((n) => (n.lu = true));
+    updateNotifBadge();
+    return;
+  }
   view().innerHTML = notifs.map((n) => {
     const acteur = n.acteurId ? API.mockData.users.find((u) => u.id === n.acteurId) : null;
     const nav = n.cibleId && n.cibleId.startsWith("p_") ? `data-nav="#/prediction/${n.cibleId}"` :
@@ -1370,6 +1413,169 @@ async function renderNotifications() {
   // Marquer comme lues (met à jour le badge de nav).
   API.mockData.notifications.forEach((n) => (n.lu = true));
   updateNotifBadge();
+}
+
+/* ---- 5.7b MESSAGERIE : liste des conversations ---- */
+async function renderMessages() {
+  setTop("Messages", "Tes conversations");
+  view().innerHTML = loaderHTML();
+  const convs = await API.getConversations();
+  if (!convs.length) {
+    view().innerHTML = emptyHTML("💬", "Aucun message", "Va sur un profil et clique sur « Message » pour démarrer une conversation.");
+    return;
+  }
+  view().innerHTML = convs.map((c) => `
+    <div class="conv-row ${c.nonLus ? "unread" : ""}" data-nav="#/messages/${c.user.id}">
+      ${avatarHTML(c.user, "md")}
+      <div class="conv-main">
+        <div class="conv-top">
+          <span class="conv-name">${esc(c.user.nom)} ${verifHTML(c.user.badge)}</span>
+          <span class="conv-time">${timeAgo(c.lastDate)}</span>
+        </div>
+        <div class="conv-last">${esc(c.dernier)}</div>
+      </div>
+      ${c.nonLus ? `<span class="conv-badge">${c.nonLus}</span>` : ""}
+    </div>`).join("");
+  updateMsgBadge();
+}
+
+/* ---- 5.7c MESSAGERIE : fil de discussion ---- */
+async function renderThread(autreId) {
+  const autre = await API.getUser(autreId);
+  if (!autre) { view().innerHTML = emptyHTML("🤷🏾", "Utilisateur introuvable", ""); return; }
+  setTop(autre.nom, `@${autre.pseudo}`);
+  view().innerHTML = loaderHTML();
+  const msgs = await API.getThread(autreId);
+  const me = API.mockData.currentUserId;
+
+  view().innerHTML = `
+    <div class="thread-head" data-nav="#/profile/${autre.id}">
+      ${avatarHTML(autre, "sm")}
+      <div><div class="th-name">${esc(autre.nom)} ${verifHTML(autre.badge)}</div>
+        <div class="th-handle">@${esc(autre.pseudo)}</div></div>
+    </div>
+    <div class="thread-body" id="threadBody">${threadBubblesHTML(msgs, me)}</div>
+    <div class="thread-input">
+      <input id="msgInput" placeholder="Écris un message…" autocomplete="off" />
+      <button class="btn btn-primary" id="msgSend">Envoyer</button>
+    </div>`;
+
+  const body = $("#threadBody");
+  body.scrollTop = body.scrollHeight;
+  updateMsgBadge();
+
+  const envoyer = async () => {
+    const input = $("#msgInput");
+    const txt = input.value.trim();
+    if (!txt) return;
+    await API.sendMessage(autreId, txt);
+    input.value = "";
+    const fresh = await API.getThread(autreId);
+    body.innerHTML = threadBubblesHTML(fresh, me);
+    body.scrollTop = body.scrollHeight;
+  };
+  $("#msgSend").addEventListener("click", envoyer);
+  $("#msgInput").addEventListener("keydown", (e) => { if (e.key === "Enter") envoyer(); });
+  $("#msgInput").focus();
+}
+
+function threadBubblesHTML(msgs, me) {
+  if (!msgs.length) return `<div class="empty" style="padding:30px"><span>Envoie le premier message 👋</span></div>`;
+  return msgs.map((m) => `
+    <div class="bubble-row ${m.deId === me ? "mine" : "theirs"}">
+      <div class="bubble">${linkifyHashtags(m.texte)}<span class="bubble-time">${timeAgo(m.date)}</span></div>
+    </div>`).join("");
+}
+
+/* ---- 5.9 PARAMÈTRES ---- */
+function renderSettings() {
+  setTop("Paramètres", "Personnalise ton expérience");
+  const me = API.getCurrentUserSync();
+  const prefs = state.notifPrefs;
+  const prefLabels = { like: "❤️ J'aime", follow: "➕ Nouveaux abonnés", comment: "💬 Commentaires", gagne: "🟢 Pronostics résolus", repost: "🔁 Reposts", badge: "🏅 Badges" };
+
+  view().innerHTML = `
+    <div class="settings">
+      <div class="set-group">
+        <div class="set-title">🎨 Apparence</div>
+        <div class="set-row">
+          <div><b>Thème</b><div class="set-desc">Clair ou sombre</div></div>
+          <button class="btn" id="setTheme">${state.theme === "dark" ? "🌙 Sombre" : "☀️ Clair"}</button>
+        </div>
+        <div class="set-row">
+          <div><b>Couleur d'accent</b><div class="set-desc">La couleur des boutons et surbrillances</div></div>
+          <div class="accent-picker" id="accentPicker">
+            ${Object.entries(ACCENTS).map(([k, a]) => `<button class="acc-dot ${state.accent === k ? "on" : ""}" data-accent="${k}" title="${a.label}" style="background:${a.grad}"></button>`).join("")}
+          </div>
+        </div>
+      </div>
+
+      <div class="set-group">
+        <div class="set-title">🔔 Notifications</div>
+        ${Object.keys(prefLabels).map((k) => `
+          <div class="set-row">
+            <div>${prefLabels[k]}</div>
+            <div class="toggle-sw ${prefs[k] ? "on" : ""}" data-pref="${k}"></div>
+          </div>`).join("")}
+      </div>
+
+      <div class="set-group">
+        <div class="set-title">🔐 Compte</div>
+        <div class="set-row"><div><b>Pseudo</b></div><span class="set-desc">@${esc(me.pseudo)}</span></div>
+        <div class="set-row"><div><b>Email</b></div><span class="set-desc">${esc(me.email)}</span></div>
+        <form class="set-pw" id="pwForm">
+          <div class="set-title" style="font-size:.85rem">Changer le mot de passe</div>
+          <input id="pwOld" type="password" placeholder="Mot de passe actuel" />
+          <input id="pwNew" type="password" placeholder="Nouveau mot de passe (6 car. min.)" />
+          <div class="auth-error" id="pwError"></div>
+          <button type="submit" class="btn btn-primary">Mettre à jour</button>
+        </form>
+      </div>
+
+      <div class="set-group">
+        <div class="set-title">ℹ️ À propos</div>
+        <p class="set-desc" style="padding:4px 0">PronoStars — réseau social de partage d'analyses sportives (démo).
+          Aucun pari, aucun argent de jeu. Fait avec ❤️ pour la communauté ivoirienne 🇨🇮.</p>
+        <button class="btn" id="setLogout" style="color:var(--rouge)">🚪 Se déconnecter</button>
+      </div>
+    </div>`;
+
+  // Thème.
+  $("#setTheme").addEventListener("click", () => {
+    applyTheme(state.theme === "dark" ? "light" : "dark");
+    $("#setTheme").textContent = state.theme === "dark" ? "🌙 Sombre" : "☀️ Clair";
+  });
+  // Accent.
+  $("#accentPicker").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-accent]"); if (!b) return;
+    applyAccent(b.dataset.accent);
+    $$("#accentPicker .acc-dot").forEach((d) => d.classList.toggle("on", d === b));
+  });
+  // Préférences de notifications.
+  $$("[data-pref]").forEach((t) => t.addEventListener("click", () => {
+    const k = t.dataset.pref;
+    state.notifPrefs[k] = !state.notifPrefs[k];
+    t.classList.toggle("on", state.notifPrefs[k]);
+    updateNotifBadge();
+  }));
+  // Changement de mot de passe.
+  $("#pwForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const r = await API.changePassword($("#pwOld").value, $("#pwNew").value);
+    if (!r.ok) { $("#pwError").textContent = r.error; return; }
+    $("#pwOld").value = ""; $("#pwNew").value = ""; $("#pwError").textContent = "";
+    toast("Mot de passe mis à jour ✅", "ok");
+  });
+  // Déconnexion.
+  $("#setLogout").addEventListener("click", () => { API.logout(); toast("Déconnecté 👋", ""); showAuthGate(); });
+}
+
+/** Applique une couleur d'accent (variables CSS globales). */
+function applyAccent(key) {
+  state.accent = key;
+  const a = ACCENTS[key] || ACCENTS.orange;
+  document.documentElement.style.setProperty("--accent", a.c);
+  document.documentElement.style.setProperty("--accent-grad", a.grad);
 }
 
 /* ---- 5.8 RECHERCHE ---- */
@@ -1585,9 +1791,10 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
-  // -- Message (simulé) --
-  if (e.target.closest("[data-msg]")) {
-    toast("La messagerie arrive bientôt 💬", "");
+  // -- Ouvrir une conversation --
+  const msgBtn = e.target.closest("[data-msg]");
+  if (msgBtn) {
+    location.hash = `#/messages/${msgBtn.dataset.msg}`;
     return;
   }
 
@@ -1674,6 +1881,24 @@ async function renderAside() {
       </div>`).join("")}
     <div class="widget-more" data-nav="#/explore">Voir plus</div>`;
 
+  // Défi de la saison : classement par cagnotte virtuelle.
+  const saison = API.mockData.users
+    .map((u) => ({ u, s: computeStats(u.id) }))
+    .sort((a, b) => b.s.cagnotte - a.s.cagnotte)
+    .slice(0, 4);
+  $("#widgetSeason").innerHTML = `
+    <h3>💰 Défi de la saison</h3>
+    ${saison.map(({ u, s }, i) => `
+      <div class="widget-item" data-nav="#/profile/${u.id}" style="display:flex;align-items:center;gap:10px">
+        <span style="width:20px;font-weight:800;color:var(--text-dim)">${i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}</span>
+        <span>${avatarHTML(u, "sm")}</span>
+        <div style="flex:1;min-width:0">
+          <div class="t2" style="display:flex;align-items:center;gap:4px">${esc(u.pseudo)} ${verifHTML(u.badge)}</div>
+          <div class="t3">${fmtFCFA(s.cagnotte)}</div>
+        </div>
+      </div>`).join("")}
+    <div class="widget-more" data-nav="#/leaderboard">Voir le classement</div>`;
+
   updateSuggestions();
 
   // Battles.
@@ -1737,13 +1962,20 @@ function renderNavMe() {
 
 /** Met à jour la pastille de notifications non lues (nav + mobile). */
 function updateNotifBadge() {
-  const n = API.mockData.notifications.filter((x) => !x.lu).length;
+  const n = API.mockData.notifications.filter((x) => !x.lu && state.notifPrefs[x.type] !== false).length;
   [["#navNotifBadge"], ["#mobileNotifBadge"]].forEach(([sel]) => {
     const el = $(sel);
     if (!el) return;
     el.style.display = n ? "grid" : "none";
     el.textContent = n;
   });
+}
+
+/** Met à jour la pastille de messages non lus. */
+function updateMsgBadge() {
+  const n = API.countUnreadMessages();
+  const el = $("#navMsgBadge");
+  if (el) { el.style.display = n ? "grid" : "none"; el.textContent = n; }
 }
 
 /* -----------------------------------------------------------------------------
@@ -1790,8 +2022,10 @@ async function router() {
   window.scrollTo({ top: 0 });
 
   // Bouton retour mobile : visible dès qu'on n'est pas sur une vue racine.
-  const racines = ["feed", "explore", "leaderboard", "notifications", "search", "create"];
-  $("#backBtn").classList.toggle("show", !racines.includes(route));
+  const racines = ["feed", "explore", "leaderboard", "notifications", "search", "create", "messages"];
+  // La liste des messages est une racine, mais un fil de discussion ne l'est pas.
+  const estRacine = racines.includes(route) && !(route === "messages" && parts[1]);
+  $("#backBtn").classList.toggle("show", !estRacine);
 
   switch (route) {
     case "feed": setActiveNav("feed"); await renderFeed(); break;
@@ -1804,6 +2038,11 @@ async function router() {
     case "search": setActiveNav("search"); await renderSearch(decodeURIComponent(parts[1] || "")); break;
     case "hashtag": setActiveNav(""); await renderHashtag(decodeURIComponent(parts[1] || "")); break;
     case "championnat": setActiveNav("explore"); await renderChampionnatPage(decodeURIComponent(parts[1] || "")); break;
+    case "messages":
+      setActiveNav("messages");
+      if (parts[1]) await renderThread(parts[1]); else await renderMessages();
+      break;
+    case "settings": setActiveNav(""); renderSettings(); break;
     default: setActiveNav("feed"); await renderFeed();
   }
 }
@@ -1854,6 +2093,7 @@ function enterApp() {
   renderNavMe();
   renderAside();
   updateNotifBadge();
+  updateMsgBadge();
   if (!appStarted) { window.addEventListener("hashchange", router); appStarted = true; }
   if (!location.hash || location.hash === "#" || location.hash === "#/") {
     location.hash = "#/feed";
@@ -2035,6 +2275,8 @@ function openAccountMenu() {
       <div class="modal-body">
         <button class="acc-item" data-acc="profile">👤 Voir mon profil</button>
         <button class="acc-item" data-acc="edit">✏️ Modifier le profil</button>
+        <button class="acc-item" data-acc="messages">💬 Messages</button>
+        <button class="acc-item" data-acc="settings">⚙️ Paramètres</button>
         <div class="acc-sep">Changer de compte (démo)</div>
         <div class="acc-switch">
           ${autres.map((u) => `
@@ -2053,12 +2295,14 @@ function openAccountMenu() {
     const sw = e.target.closest("[data-switch]");
     if (sw) {
       const r = await API.switchAccount(sw.dataset.switch);
-      if (r.ok) { modal.remove(); renderNavMe(); renderAside(); toast(`Compte : @${r.user.pseudo}`, "ok"); location.hash = "#/feed"; router(); }
+      if (r.ok) { modal.remove(); renderNavMe(); renderAside(); updateNotifBadge(); updateMsgBadge(); toast(`Compte : @${r.user.pseudo}`, "ok"); location.hash = "#/feed"; router(); }
       return;
     }
     if (!acc) return;
     if (acc.dataset.acc === "profile") { modal.remove(); location.hash = `#/profile/${me.id}`; }
     else if (acc.dataset.acc === "edit") { modal.remove(); openEditProfile(); }
+    else if (acc.dataset.acc === "messages") { modal.remove(); location.hash = "#/messages"; }
+    else if (acc.dataset.acc === "settings") { modal.remove(); location.hash = "#/settings"; }
     else if (acc.dataset.acc === "logout") {
       modal.remove(); API.logout(); toast("Déconnecté. À bientôt 👋", ""); showAuthGate();
     }
