@@ -1,0 +1,1792 @@
+/* =============================================================================
+ *  api.js — Couche d'accès aux données (FACTICE / MOCK)
+ * =============================================================================
+ *  Ce fichier simule un backend. Toutes les fonctions sont `async` et renvoient
+ *  des Promesses afin de reproduire le comportement d'appels réseau réels.
+ *
+ *  >>> POINT D'INTÉGRATION BACKEND <<<
+ *  À terme, ces fonctions seront branchées sur une API REST développée en
+ *  PHP 8.2+ suivant une architecture MVC (PDO / MySQL) :
+ *     - Authentification par token (Bearer JWT ou token opaque en base).
+ *     - Endpoints REST : GET /api/feed, GET /api/users/{id},
+ *       GET /api/users/{id}/predictions?filter=..., POST /api/predictions,
+ *       POST /api/users/{id}/follow, POST /api/predictions/{id}/like,
+ *       GET /api/leaderboard?period=week|month
+ *     - Paiement Mobile Money (CinetPay / PayDunya) pour les fonctions premium
+ *       (Mode confiance, coups sûrs vérifiés, abonnements « Copie »).
+ *
+ *  Pour brancher le vrai backend : remplacer le corps de chaque fonction par un
+ *  `fetch()` vers l'endpoint correspondant, en conservant la même signature et
+ *  la même forme de données de retour.
+ * ============================================================================= */
+
+/* -----------------------------------------------------------------------------
+ *  Utilitaires de simulation
+ * --------------------------------------------------------------------------- */
+
+// Simule la latence réseau (ms) pour rendre l'UI réaliste (spinners, etc.).
+const NETWORK_DELAY = 120;
+const wait = (ms = NETWORK_DELAY) => new Promise((r) => setTimeout(r, ms));
+
+// Génère un identifiant unique simple (remplacé côté serveur par un AUTO_INCREMENT / UUID).
+let _idCounter = 1000;
+const nextId = (prefix) => `${prefix}_${++_idCounter}`;
+
+// Horloge « virtuelle » monotone : garantit que tout contenu créé pendant la
+// session (message, commentaire, pronostic) porte un horodatage postérieur aux
+// données de démo (datées du 08/07/2026), quelle que soit l'heure réelle de la
+// machine. Évite qu'un nouvel élément se retrouve mal trié.
+let _seq = 0;
+const _baseNow = Math.max(Date.now(), Date.parse("2026-07-08T11:00:00Z"));
+const nowISO = () => new Date(_baseNow + (_seq += 1000)).toISOString();
+
+// Générateur pseudo-aléatoire déterministe (mulberry32) + hash de chaîne (FNV-1a).
+// Utilisé pour générer des cotes STABLES par match/pari durant la session.
+function _hashStr(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function _rng(seed) {
+  let t = seed >>> 0;
+  return () => {
+    t += 0x6d2b79f5;
+    let x = Math.imul(t ^ (t >>> 15), t | 1);
+    x ^= x + Math.imul(x ^ (x >>> 7), x | 61);
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* -----------------------------------------------------------------------------
+ *  DONNÉES DE DÉMONSTRATION (mockData)
+ *  Persistance « en mémoire » uniquement — AUCUN localStorage/sessionStorage.
+ *  Les mutations (follow, like, nouveau pronostic…) modifient directement cet
+ *  objet, ce qui suffit pour l'aperçu front-end.
+ * --------------------------------------------------------------------------- */
+
+const mockData = {
+  // Identifiant de l'utilisateur connecté. `null` = personne (écran de connexion).
+  // Après connexion/inscription, il pointe vers l'utilisateur de la session.
+  currentUserId: null,
+
+  /* ---- UTILISATEURS ------------------------------------------------------ */
+  users: [
+    {
+      id: "u_moi",
+      pseudo: "toi_le_pro",
+      nom: "Mon Compte",
+      avatar: "🧑🏾‍💻",
+      couleur: "#00C853",
+      banniere: "linear-gradient(135deg,#0b3d2e,#00C853)",
+      bio: "Passionné de foot 🇨🇮 — je partage mes analyses, pas des paris. #Ligue1 #CAN",
+      sports: ["Football"],
+      inscription: "2024-01-15",
+      abonnes: ["u_kader", "u_awa"],
+      abonnements: ["u_kader", "u_awa", "u_serge"],
+      badge: "Pro",
+    },
+    {
+      id: "u_kader",
+      pseudo: "kader_analyste",
+      nom: "Kader Traoré",
+      avatar: "🦁",
+      couleur: "#FFB300",
+      banniere: "linear-gradient(135deg,#3d2f00,#FFB300)",
+      bio: "Analyste football ⚽ Abidjan. Spécialiste Premier League & LDC. Discipline > émotion.",
+      sports: ["Football", "Basket"],
+      inscription: "2023-08-02",
+      abonnes: ["u_moi", "u_awa", "u_serge", "u_binta", "u_yao"],
+      abonnements: ["u_awa", "u_serge"],
+      badge: "Vérifié",
+    },
+    {
+      id: "u_awa",
+      pseudo: "awa_pronos",
+      nom: "Awa Koné",
+      avatar: "👑",
+      couleur: "#FF3D00",
+      banniere: "linear-gradient(135deg,#3d0f00,#FF3D00)",
+      bio: "Reine des cotes 👑 Value betting only. CAN 2025, je suis prête. #TeamÉléphants",
+      sports: ["Football"],
+      inscription: "2023-11-20",
+      abonnes: ["u_moi", "u_kader", "u_yao"],
+      abonnements: ["u_kader"],
+      badge: "Étoile montante",
+    },
+    {
+      id: "u_serge",
+      pseudo: "serge_stats",
+      nom: "Serge N'Guessan",
+      avatar: "📊",
+      couleur: "#2979FF",
+      banniere: "linear-gradient(135deg,#00204d,#2979FF)",
+      bio: "Data + intuition. Over/Under & BTTS mon terrain de jeu. Yamoussoukro.",
+      sports: ["Football", "Tennis"],
+      inscription: "2024-03-10",
+      abonnes: ["u_moi", "u_kader", "u_binta"],
+      abonnements: ["u_kader", "u_awa"],
+      badge: "Pro",
+    },
+    {
+      id: "u_binta",
+      pseudo: "binta_ldc",
+      nom: "Binta Diallo",
+      avatar: "🌟",
+      couleur: "#AA00FF",
+      banniere: "linear-gradient(135deg,#2a004d,#AA00FF)",
+      bio: "Ligue des Champions = ma spécialité. Débutante mais affamée 🔥",
+      sports: ["Football"],
+      inscription: "2025-01-05",
+      abonnes: ["u_serge"],
+      abonnements: ["u_kader", "u_awa", "u_serge"],
+      badge: "Étoile montante",
+    },
+    {
+      id: "u_yao",
+      pseudo: "yao_le_sage",
+      nom: "Yao Kouassi",
+      avatar: "🧙🏾",
+      couleur: "#00BFA5",
+      banniere: "linear-gradient(135deg,#00332c,#00BFA5)",
+      bio: "15 ans d'observation du foot ivoirien. Patience et cotes sûres. #Éléphants",
+      sports: ["Football"],
+      inscription: "2022-05-18",
+      abonnes: ["u_awa", "u_kader"],
+      abonnements: ["u_kader"],
+      badge: "Vérifié",
+    },
+  ],
+
+  /* ---- PRONOSTICS -------------------------------------------------------- */
+  // statut : 'en_cours' | 'gagne' | 'perdu' | 'annule'
+  predictions: [
+    {
+      id: "p_001",
+      auteurId: "u_kader",
+      match: { equipeA: "Man City", logoA: "🔵", equipeB: "Arsenal", logoB: "🔴", ligue: "Premier League", hashtag: "PremierLeague", date: "2026-07-10T18:30:00" },
+      typePari: "1N2",
+      choix: "1 (Man City gagne)",
+      cote: 1.85,
+      confiance: 4,
+      premium: true,
+      analyse: "City intraitable à domicile cette saison (9 victoires sur 10). Arsenal joue sans son défenseur central titulaire, ce qui fragilise l'axe. Le milieu citizen devrait dominer la possession et créer les décalages. Value correcte sur le 1 sec.",
+      statut: "en_cours",
+      likes: ["u_moi", "u_awa"],
+      reposts: ["u_serge"],
+      sauvegardes: ["u_moi"],
+      commentaires: [
+        { id: "c1", auteurId: "u_awa", texte: "D'accord, mais attention aux contres d'Arsenal 👀", date: "2026-07-08T09:12:00" },
+        { id: "c2", auteurId: "u_serge", texte: "Les stats de possession te donnent raison. Je suis.", date: "2026-07-08T10:02:00" },
+      ],
+      date: "2026-07-08T08:00:00",
+    },
+    {
+      id: "p_002",
+      auteurId: "u_awa",
+      match: { equipeA: "Côte d'Ivoire", logoA: "🇨🇮", equipeB: "Sénégal", logoB: "🇸🇳", ligue: "CAN", hashtag: "CAN", date: "2026-07-12T20:00:00" },
+      typePari: "Over/Under",
+      choix: "Over 2.5 buts",
+      cote: 2.10,
+      confiance: 5,
+      premium: true,
+      analyse: "Choc au sommet ! Deux attaques de feu, deux défenses qui aiment jouer haut. Les confrontations récentes ont livré du spectacle (moyenne 3.2 buts). Je vise le Over 2.5 avec confiance maximale. Coup sûr de la journée.",
+      statut: "en_cours",
+      likes: ["u_moi", "u_kader", "u_yao", "u_serge"],
+      reposts: ["u_moi", "u_binta"],
+      sauvegardes: ["u_moi", "u_kader"],
+      commentaires: [
+        { id: "c3", auteurId: "u_yao", texte: "Le derby ouest-africain, ça va chauffer 🔥🔥", date: "2026-07-08T11:00:00" },
+      ],
+      // Sondage communautaire attaché au pronostic (innovation : vote de la communauté).
+      sondage: {
+        question: "Et toi, tu vois quoi pour ce choc ?",
+        options: [
+          { label: "Victoire Côte d'Ivoire 🇨🇮", votes: 142 },
+          { label: "Match nul", votes: 63 },
+          { label: "Victoire Sénégal 🇸🇳", votes: 118 },
+        ],
+        votants: [],
+      },
+      date: "2026-07-08T07:30:00",
+    },
+    {
+      id: "p_003",
+      auteurId: "u_serge",
+      match: { equipeA: "Real Madrid", logoA: "⚪", equipeB: "Bayern", logoB: "🔴", ligue: "Champions League", hashtag: "ChampionsLeague", date: "2026-07-09T21:00:00" },
+      typePari: "BTTS",
+      choix: "Les deux équipes marquent — Oui",
+      cote: 1.55,
+      confiance: 4,
+      premium: false,
+      analyse: "Deux machines offensives, historique de matchs ouverts. Le BTTS tombe presque systématiquement dans ce duel (7 des 8 dernières). Cote basse mais quasi automatique.",
+      statut: "en_cours",
+      likes: ["u_binta", "u_kader"],
+      reposts: [],
+      sauvegardes: ["u_binta"],
+      commentaires: [],
+      date: "2026-07-07T19:45:00",
+    },
+    {
+      id: "p_004",
+      auteurId: "u_kader",
+      match: { equipeA: "Liverpool", logoA: "🔴", equipeB: "Chelsea", logoB: "🔵", ligue: "Premier League", hashtag: "PremierLeague", date: "2026-07-05T17:00:00", score: "2-1" },
+      typePari: "1N2",
+      choix: "1 (Liverpool gagne)",
+      cote: 1.95,
+      confiance: 4,
+      premium: false,
+      analyse: "Anfield reste une forteresse. Chelsea irrégulier à l'extérieur. Je prends le 1.",
+      statut: "gagne",
+      likes: ["u_moi", "u_awa", "u_serge", "u_yao"],
+      reposts: ["u_awa"],
+      sauvegardes: [],
+      commentaires: [{ id: "c4", auteurId: "u_moi", texte: "Encore juste, chapeau 🎩", date: "2026-07-05T19:10:00" }],
+      date: "2026-07-05T09:00:00",
+    },
+    {
+      id: "p_005",
+      auteurId: "u_kader",
+      match: { equipeA: "PSG", logoA: "🔵", equipeB: "Marseille", logoB: "⚪", ligue: "Ligue 1", hashtag: "Ligue1", date: "2026-07-04T20:45:00", score: "3-0" },
+      typePari: "Over/Under",
+      choix: "Over 2.5 buts",
+      cote: 1.70,
+      confiance: 3,
+      premium: false,
+      analyse: "Le Classique livre presque toujours des buts. PSG en forme offensive.",
+      statut: "gagne",
+      likes: ["u_moi", "u_serge"],
+      reposts: [],
+      sauvegardes: [],
+      commentaires: [],
+      date: "2026-07-04T10:00:00",
+    },
+    {
+      id: "p_006",
+      auteurId: "u_kader",
+      match: { equipeA: "Tottenham", logoA: "⚪", equipeB: "Man United", logoB: "🔴", ligue: "Premier League", hashtag: "PremierLeague", date: "2026-07-02T18:00:00", score: "1-1" },
+      typePari: "1N2",
+      choix: "2 (Man United gagne)",
+      cote: 2.40,
+      confiance: 3,
+      premium: false,
+      analyse: "United en confiance, Tottenham fragile défensivement.",
+      statut: "perdu",
+      likes: ["u_binta"],
+      reposts: [],
+      sauvegardes: [],
+      commentaires: [],
+      date: "2026-07-02T09:30:00",
+    },
+    {
+      id: "p_007",
+      auteurId: "u_awa",
+      match: { equipeA: "Barcelone", logoA: "🔵", equipeB: "Atlético", logoB: "🔴", ligue: "Champions League", hashtag: "ChampionsLeague", date: "2026-07-03T21:00:00", score: "2-2" },
+      typePari: "BTTS",
+      choix: "Les deux équipes marquent — Oui",
+      cote: 1.80,
+      confiance: 4,
+      premium: false,
+      analyse: "Match ouvert attendu, les deux attaques sont en forme.",
+      statut: "gagne",
+      likes: ["u_moi", "u_kader", "u_serge"],
+      reposts: ["u_kader"],
+      sauvegardes: ["u_moi"],
+      commentaires: [],
+      date: "2026-07-03T11:00:00",
+    },
+    {
+      id: "p_008",
+      auteurId: "u_awa",
+      match: { equipeA: "Nigeria", logoA: "🇳🇬", equipeB: "Égypte", logoB: "🇪🇬", ligue: "CAN", hashtag: "CAN", date: "2026-07-01T20:00:00", score: "1-0" },
+      typePari: "1N2",
+      choix: "1 (Nigeria gagne)",
+      cote: 2.05,
+      confiance: 4,
+      premium: false,
+      analyse: "Les Super Eagles à domicile, très solides en ce moment.",
+      statut: "gagne",
+      likes: ["u_yao", "u_kader"],
+      reposts: [],
+      sauvegardes: [],
+      commentaires: [],
+      date: "2026-07-01T08:00:00",
+    },
+    {
+      id: "p_009",
+      auteurId: "u_awa",
+      match: { equipeA: "Lyon", logoA: "🔴", equipeB: "Monaco", logoB: "🔴", ligue: "Ligue 1", hashtag: "Ligue1", date: "2026-06-28T20:45:00", score: "0-1" },
+      typePari: "Over/Under",
+      choix: "Over 2.5 buts",
+      cote: 1.90,
+      confiance: 3,
+      premium: false,
+      analyse: "Deux équipes offensives, je table sur du spectacle.",
+      statut: "perdu",
+      likes: [],
+      reposts: [],
+      sauvegardes: [],
+      commentaires: [],
+      date: "2026-06-28T10:00:00",
+    },
+    {
+      id: "p_010",
+      auteurId: "u_serge",
+      match: { equipeA: "Inter", logoA: "🔵", equipeB: "Juventus", logoB: "⚪", ligue: "Champions League", hashtag: "ChampionsLeague", date: "2026-07-06T20:45:00", score: "2-0" },
+      typePari: "Under/Over",
+      choix: "Under 3.5 buts",
+      cote: 1.45,
+      confiance: 4,
+      premium: false,
+      analyse: "Derby d'Italie = prudence tactique. Peu de buts attendus.",
+      statut: "gagne",
+      likes: ["u_moi", "u_binta"],
+      reposts: [],
+      sauvegardes: [],
+      commentaires: [],
+      date: "2026-07-06T09:00:00",
+    },
+    {
+      id: "p_011",
+      auteurId: "u_serge",
+      match: { equipeA: "Napoli", logoA: "🔵", equipeB: "Roma", logoB: "🔴", ligue: "Champions League", hashtag: "ChampionsLeague", date: "2026-07-07T20:45:00", score: "1-1" },
+      typePari: "BTTS",
+      choix: "Les deux équipes marquent — Oui",
+      cote: 1.75,
+      confiance: 3,
+      premium: false,
+      analyse: "Deux formations qui marquent mais encaissent aussi.",
+      statut: "gagne",
+      likes: ["u_kader"],
+      reposts: [],
+      sauvegardes: [],
+      commentaires: [],
+      date: "2026-07-07T09:00:00",
+    },
+    {
+      id: "p_012",
+      auteurId: "u_serge",
+      match: { equipeA: "Djokovic", logoA: "🎾", equipeB: "Alcaraz", logoB: "🎾", ligue: "Tennis ATP", hashtag: "Tennis", date: "2026-07-11T14:00:00" },
+      typePari: "Vainqueur",
+      choix: "Alcaraz gagne",
+      cote: 1.65,
+      confiance: 3,
+      premium: false,
+      analyse: "Sur surface rapide, la fraîcheur d'Alcaraz fait la différence face à un Djokovic en fin de saison.",
+      statut: "en_cours",
+      likes: ["u_moi"],
+      reposts: [],
+      sauvegardes: [],
+      commentaires: [],
+      date: "2026-07-08T06:00:00",
+    },
+    {
+      id: "p_013",
+      auteurId: "u_binta",
+      match: { equipeA: "Dortmund", logoA: "🟡", equipeB: "Leipzig", logoB: "⚪", ligue: "Champions League", hashtag: "ChampionsLeague", date: "2026-07-04T18:30:00", score: "3-2" },
+      typePari: "Over/Under",
+      choix: "Over 2.5 buts",
+      cote: 1.60,
+      confiance: 4,
+      premium: false,
+      analyse: "Deux attaques allemandes explosives, du lourd attendu.",
+      statut: "gagne",
+      likes: ["u_serge", "u_awa"],
+      reposts: [],
+      sauvegardes: [],
+      commentaires: [],
+      date: "2026-07-04T08:00:00",
+    },
+    {
+      id: "p_014",
+      auteurId: "u_binta",
+      match: { equipeA: "Milan", logoA: "🔴", equipeB: "Porto", logoB: "🔵", ligue: "Champions League", hashtag: "ChampionsLeague", date: "2026-07-05T20:45:00", score: "0-0" },
+      typePari: "1N2",
+      choix: "1 (Milan gagne)",
+      cote: 1.70,
+      confiance: 3,
+      premium: false,
+      analyse: "Milan favori à San Siro, Porto en difficulté à l'extérieur.",
+      statut: "perdu",
+      likes: [],
+      reposts: [],
+      sauvegardes: [],
+      commentaires: [],
+      date: "2026-07-05T08:00:00",
+    },
+    {
+      id: "p_015",
+      auteurId: "u_yao",
+      match: { equipeA: "Maroc", logoA: "🇲🇦", equipeB: "Cameroun", logoB: "🇨🇲", ligue: "CAN", hashtag: "CAN", date: "2026-07-13T17:00:00" },
+      typePari: "1N2",
+      choix: "1 (Maroc gagne)",
+      cote: 1.90,
+      confiance: 4,
+      premium: true,
+      analyse: "Les Lions de l'Atlas, demi-finalistes en titre, dominent le jeu de position. Cameroun combatif mais moins collectif. Le Maroc devrait imposer son rythme. Coup sûr de mon week-end.",
+      statut: "en_cours",
+      likes: ["u_kader", "u_awa"],
+      reposts: [],
+      sauvegardes: ["u_moi"],
+      commentaires: [],
+      sondage: {
+        question: "Qui remporte ce duel de géants africains ?",
+        options: [
+          { label: "Victoire Maroc 🇲🇦", votes: 205 },
+          { label: "Match nul", votes: 71 },
+          { label: "Victoire Cameroun 🇨🇲", votes: 96 },
+        ],
+        votants: [],
+      },
+      date: "2026-07-08T05:30:00",
+    },
+    {
+      id: "p_016",
+      auteurId: "u_yao",
+      match: { equipeA: "Séville", logoA: "🔴", equipeB: "Valence", logoB: "🟠", ligue: "Ligue 1", hashtag: "Ligue1", date: "2026-06-30T20:00:00", score: "2-1" },
+      typePari: "1N2",
+      choix: "1 (Séville gagne)",
+      cote: 1.80,
+      confiance: 3,
+      premium: false,
+      analyse: "Séville solide à domicile en fin de saison.",
+      statut: "gagne",
+      likes: ["u_kader"],
+      reposts: [],
+      sauvegardes: [],
+      commentaires: [],
+      date: "2026-06-30T09:00:00",
+    },
+    {
+      id: "p_017",
+      auteurId: "u_yao",
+      match: { equipeA: "Ghana", logoA: "🇬🇭", equipeB: "Algérie", logoB: "🇩🇿", ligue: "CAN", hashtag: "CAN", date: "2026-06-27T20:00:00", score: "1-2" },
+      typePari: "Double chance",
+      choix: "1X (Ghana ou nul)",
+      cote: 1.50,
+      confiance: 3,
+      premium: false,
+      analyse: "Le Ghana joue à domicile, la double chance sécurise.",
+      statut: "perdu",
+      likes: [],
+      reposts: [],
+      sauvegardes: [],
+      commentaires: [],
+      date: "2026-06-27T08:00:00",
+    },
+    {
+      id: "p_018",
+      auteurId: "u_moi",
+      match: { equipeA: "Atalanta", logoA: "🔵", equipeB: "Fiorentina", logoB: "🟣", ligue: "Champions League", hashtag: "ChampionsLeague", date: "2026-07-09T18:30:00" },
+      typePari: "Over/Under",
+      choix: "Over 2.5 buts",
+      cote: 1.75,
+      confiance: 3,
+      premium: false,
+      analyse: "L'Atalanta joue toujours l'offensive à outrance. Match à buts probable.",
+      statut: "en_cours",
+      likes: ["u_kader"],
+      reposts: [],
+      sauvegardes: [],
+      commentaires: [],
+      date: "2026-07-08T04:00:00",
+    },
+    {
+      id: "p_019",
+      auteurId: "u_moi",
+      match: { equipeA: "Metz", logoA: "🔴", equipeB: "Lille", logoB: "🔴", ligue: "Ligue 1", hashtag: "Ligue1", date: "2026-06-29T15:00:00", score: "1-3" },
+      typePari: "1N2",
+      choix: "2 (Lille gagne)",
+      cote: 1.85,
+      confiance: 4,
+      premium: false,
+      analyse: "Lille bien supérieur sur le papier, Metz en difficulté.",
+      statut: "gagne",
+      likes: ["u_kader", "u_awa"],
+      reposts: [],
+      sauvegardes: [],
+      commentaires: [],
+      date: "2026-06-29T09:00:00",
+    },
+    {
+      id: "p_020",
+      auteurId: "u_moi",
+      match: { equipeA: "Brest", logoA: "🔴", equipeB: "Nice", logoB: "🔴", ligue: "Ligue 1", hashtag: "Ligue1", date: "2026-06-26T20:00:00", score: "0-2" },
+      typePari: "BTTS",
+      choix: "Les deux équipes marquent — Oui",
+      cote: 1.90,
+      confiance: 2,
+      premium: false,
+      analyse: "Pari un peu risqué sur les deux qui marquent.",
+      statut: "perdu",
+      likes: [],
+      reposts: [],
+      sauvegardes: [],
+      commentaires: [],
+      date: "2026-06-26T09:00:00",
+    },
+
+    /* ===== NOUVEAUX CHAMPIONNATS DU MONDE ENTIER ===== */
+    {
+      id: "p_021",
+      auteurId: "u_kader",
+      match: { equipeA: "Real Madrid", logoA: "⚪", equipeB: "Barcelone", logoB: "🔵", ligue: "La Liga", hashtag: "LaLiga", date: "2026-07-11T21:00:00" },
+      typePari: "BTTS", choix: "Les deux équipes marquent — Oui", cote: 1.60, confiance: 4, premium: true,
+      analyse: "El Clásico ! Les deux meilleures attaques d'Espagne, historique de matchs spectaculaires. Le BTTS est quasi une évidence dans ce choc au sommet de la Liga. Coup sûr.",
+      statut: "en_cours", likes: ["u_moi", "u_awa", "u_serge"], reposts: ["u_awa"], sauvegardes: ["u_moi"], commentaires: [],
+      date: "2026-07-08T07:00:00",
+    },
+    {
+      id: "p_022",
+      auteurId: "u_serge",
+      match: { equipeA: "Inter", logoA: "🔵", equipeB: "Milan", logoB: "🔴", ligue: "Serie A", hashtag: "SerieA", date: "2026-07-06T20:45:00", score: "2-1" },
+      typePari: "Over/Under", choix: "Under 3.5 buts", cote: 1.50, confiance: 3, premium: false,
+      analyse: "Derby della Madonnina serré et tactique. Peu de buts attendus.",
+      statut: "gagne", likes: ["u_kader", "u_moi"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-06T10:00:00",
+    },
+    {
+      id: "p_023",
+      auteurId: "u_awa",
+      match: { equipeA: "Bayern", logoA: "🔴", equipeB: "Dortmund", logoB: "🟡", ligue: "Bundesliga", hashtag: "Bundesliga", date: "2026-07-12T18:30:00" },
+      typePari: "Over/Under", choix: "Over 3.5 buts", cote: 2.20, confiance: 4, premium: false,
+      analyse: "Der Klassiker allemand livre toujours du grand spectacle. Deux attaques dévastatrices, défenses joueuses. Je vise le Over 3.5, cote de valeur.",
+      statut: "en_cours", likes: ["u_moi", "u_binta"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-08T06:30:00",
+    },
+    {
+      id: "p_024",
+      auteurId: "u_yao",
+      match: { equipeA: "Benfica", logoA: "🔴", equipeB: "Porto", logoB: "🔵", ligue: "Liga Portugal", hashtag: "LigaPortugal", date: "2026-07-04T21:15:00", score: "2-0" },
+      typePari: "1N2", choix: "1 (Benfica gagne)", cote: 1.95, confiance: 3, premium: false,
+      analyse: "O Clássico à la Luz, Benfica solide à domicile.",
+      statut: "gagne", likes: ["u_kader"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-04T09:00:00",
+    },
+    {
+      id: "p_025",
+      auteurId: "u_binta",
+      match: { equipeA: "Ajax", logoA: "🔴", equipeB: "PSV", logoB: "🔴", ligue: "Eredivisie", hashtag: "Eredivisie", date: "2026-07-03T16:30:00", score: "1-2" },
+      typePari: "1N2", choix: "1 (Ajax gagne)", cote: 2.05, confiance: 3, premium: false,
+      analyse: "De Topper à Amsterdam, je tente l'Ajax à domicile.",
+      statut: "perdu", likes: [], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-03T09:00:00",
+    },
+    {
+      id: "p_026",
+      auteurId: "u_moi",
+      match: { equipeA: "Inter Miami", logoA: "🩷", equipeB: "LA Galaxy", logoB: "⚪", ligue: "MLS", hashtag: "MLS", date: "2026-07-13T02:00:00" },
+      typePari: "1N2", choix: "1 (Inter Miami gagne)", cote: 1.75, confiance: 4, premium: false,
+      analyse: "Messi en feu à domicile, Inter Miami favori logique face à des Galaxy irréguliers.",
+      statut: "en_cours", likes: ["u_serge", "u_awa"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-08T03:30:00",
+    },
+    {
+      id: "p_027",
+      auteurId: "u_serge",
+      match: { equipeA: "Flamengo", logoA: "🔴", equipeB: "Palmeiras", logoB: "🟢", ligue: "Brasileirão", hashtag: "Brasileirao", date: "2026-07-05T23:00:00", score: "3-1" },
+      typePari: "Over/Under", choix: "Over 2.5 buts", cote: 1.85, confiance: 3, premium: false,
+      analyse: "Choc du foot brésilien, deux formations offensives. Du spectacle attendu au Maracanã.",
+      statut: "gagne", likes: ["u_kader", "u_binta"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-05T10:00:00",
+    },
+    {
+      id: "p_028",
+      auteurId: "u_awa",
+      match: { equipeA: "Al-Nassr", logoA: "🟡", equipeB: "Al-Hilal", logoB: "🔵", ligue: "Saudi Pro League", hashtag: "SaudiProLeague", date: "2026-07-11T19:00:00" },
+      typePari: "1N2", choix: "1 (Al-Nassr gagne)", cote: 2.30, confiance: 3, premium: false,
+      analyse: "Le derby de Riyad avec Ronaldo côté Al-Nassr. Match ouvert, je tente le pari sur les locaux.",
+      statut: "en_cours", likes: ["u_yao"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-08T05:00:00",
+    },
+    {
+      id: "p_029",
+      auteurId: "u_yao",
+      match: { equipeA: "Raja Casablanca", logoA: "🟢", equipeB: "Wydad", logoB: "🔴", ligue: "Botola Pro", hashtag: "Botola", date: "2026-07-06T19:00:00", score: "1-1" },
+      typePari: "BTTS", choix: "Les deux équipes marquent — Oui", cote: 1.85, confiance: 3, premium: false,
+      analyse: "Le derby de Casablanca, toujours électrique. Les deux équipes se rendent coup pour coup.",
+      statut: "gagne", likes: ["u_awa", "u_kader"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-06T09:00:00",
+    },
+    {
+      id: "p_030",
+      auteurId: "u_kader",
+      match: { equipeA: "ASEC Mimosas", logoA: "🟡", equipeB: "Africa Sports", logoB: "🟢", ligue: "Ligue 1 CIV", hashtag: "Ligue1CIV", date: "2026-07-12T16:00:00" },
+      typePari: "1N2", choix: "1 (ASEC gagne)", cote: 1.65, confiance: 4, premium: true,
+      analyse: "Le derby d'Abidjan ! L'ASEC Mimosas, ultra-dominateur à domicile cette saison, reçoit un Africa Sports en reconstruction. Coup sûr local pour les Éléphants. 🇨🇮",
+      statut: "en_cours", likes: ["u_moi", "u_awa", "u_yao"], reposts: ["u_moi"], sauvegardes: ["u_moi"], commentaires: [],
+      date: "2026-07-08T04:30:00",
+    },
+    {
+      id: "p_031",
+      auteurId: "u_binta",
+      match: { equipeA: "Boca Juniors", logoA: "🔵", equipeB: "River Plate", logoB: "⚪", ligue: "Copa Libertadores", hashtag: "Libertadores", date: "2026-07-10T02:30:00" },
+      typePari: "Over/Under", choix: "Under 2.5 buts", cote: 1.70, confiance: 4, premium: false,
+      analyse: "Le Superclásico argentin en Libertadores : tension maximale, peu de buts, beaucoup d'engagement. Le Under 2.5 est mon choix.",
+      statut: "en_cours", likes: ["u_serge"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-08T02:00:00",
+    },
+    {
+      id: "p_032",
+      auteurId: "u_serge",
+      match: { equipeA: "Club América", logoA: "🟡", equipeB: "Chivas", logoB: "🔴", ligue: "Liga MX", hashtag: "LigaMX", date: "2026-07-04T04:00:00", score: "0-1" },
+      typePari: "1N2", choix: "1 (América gagne)", cote: 1.80, confiance: 3, premium: false,
+      analyse: "El Súper Clásico mexicain, América favori à domicile.",
+      statut: "perdu", likes: [], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-03T20:00:00",
+    },
+
+    /* ===== AUTRES SPORTS & NOUVELLES COMPÉTITIONS ===== */
+    {
+      id: "p_033",
+      auteurId: "u_kader",
+      match: { equipeA: "Lakers", logoA: "🟣", equipeB: "Celtics", logoB: "🟢", ligue: "NBA", hashtag: "NBA", date: "2026-07-11T02:00:00" },
+      typePari: "Vainqueur", choix: "Victoire Lakers", cote: 1.90, confiance: 3, premium: false,
+      analyse: "Affiche mythique NBA. Les Lakers, portés par leur banc en feu, reçoivent des Celtics fatigués par un back-to-back. Léger avantage aux Angelinos.",
+      statut: "en_cours", likes: ["u_moi", "u_serge"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-08T03:00:00",
+    },
+    {
+      id: "p_034",
+      auteurId: "u_serge",
+      match: { equipeA: "Warriors", logoA: "🔵", equipeB: "Nuggets", logoB: "🟡", ligue: "NBA", hashtag: "NBA", date: "2026-07-05T03:30:00", score: "118-121" },
+      typePari: "Over/Under", choix: "Over 220.5 points", cote: 1.85, confiance: 4, premium: false,
+      analyse: "Deux attaques prolifiques, rythme élevé garanti. Le total de points devrait exploser.",
+      statut: "gagne", likes: ["u_kader"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-05T09:00:00",
+    },
+    {
+      id: "p_035",
+      auteurId: "u_awa",
+      match: { equipeA: "Verstappen", logoA: "🏎️", equipeB: "Norris", logoB: "🏁", ligue: "Formule 1", hashtag: "F1", date: "2026-07-12T15:00:00" },
+      typePari: "Vainqueur", choix: "Verstappen vainqueur du GP", cote: 1.70, confiance: 4, premium: false,
+      analyse: "Grand Prix sur circuit rapide qui convient parfaitement à la Red Bull. Verstappen part en pole et maîtrise ce tracé. Favori logique.",
+      statut: "en_cours", likes: ["u_moi", "u_binta"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-08T06:00:00",
+    },
+    {
+      id: "p_036",
+      auteurId: "u_yao",
+      match: { equipeA: "France", logoA: "🇫🇷", equipeB: "Espagne", logoB: "🇪🇸", ligue: "Ligue des Nations", hashtag: "LigueDesNations", date: "2026-07-13T20:45:00" },
+      typePari: "Double chance", choix: "X2 (nul ou Espagne)", cote: 1.60, confiance: 3, premium: false,
+      analyse: "Choc européen. L'Espagne, championne en titre, est très solide. La double chance sécurise face à des Bleus remaniés.",
+      statut: "en_cours", likes: ["u_kader"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-08T05:00:00",
+    },
+    {
+      id: "p_037",
+      auteurId: "u_kader",
+      match: { equipeA: "Galatasaray", logoA: "🟡", equipeB: "Fenerbahçe", logoB: "🔵", ligue: "Süper Lig", hashtag: "SuperLig", date: "2026-07-04T18:00:00", score: "2-2" },
+      typePari: "BTTS", choix: "Les deux équipes marquent — Oui", cote: 1.65, confiance: 3, premium: false,
+      analyse: "Le derby d'Istanbul, ambiance de folie. Les deux rivaux se rendent coup pour coup.",
+      statut: "gagne", likes: ["u_awa", "u_yao"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-04T09:00:00",
+    },
+    {
+      id: "p_038",
+      auteurId: "u_awa",
+      match: { equipeA: "Côte d'Ivoire", logoA: "🇨🇮", equipeB: "Nigeria", logoB: "🇳🇬", ligue: "CAN Féminine", hashtag: "CANFeminine", date: "2026-07-12T17:00:00" },
+      typePari: "1N2", choix: "1 (Côte d'Ivoire gagne)", cote: 2.15, confiance: 4, premium: true,
+      analyse: "Les Éléphantes à domicile, portées par leur public ! Face aux Super Falcons, elles ont les armes pour créer l'exploit. Coup de cœur et coup sûr. 🇨🇮",
+      statut: "en_cours", likes: ["u_moi", "u_yao", "u_kader"], reposts: ["u_moi"], sauvegardes: ["u_moi"], commentaires: [],
+      date: "2026-07-08T04:00:00",
+    },
+    {
+      id: "p_039",
+      auteurId: "u_serge",
+      match: { equipeA: "Toulouse", logoA: "🔴", equipeB: "La Rochelle", logoB: "🟡", ligue: "Top 14", hashtag: "Top14", date: "2026-07-05T21:05:00", score: "27-19" },
+      typePari: "Vainqueur", choix: "Victoire Toulouse", cote: 1.55, confiance: 4, premium: false,
+      analyse: "Choc du rugby français. Toulouse, injouable à domicile, part largement favori.",
+      statut: "gagne", likes: ["u_kader", "u_binta"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-05T10:00:00",
+    },
+    {
+      id: "p_040",
+      auteurId: "u_binta",
+      match: { equipeA: "Swiatek", logoA: "🎾", equipeB: "Sabalenka", logoB: "🎾", ligue: "Tennis WTA", hashtag: "TennisWTA", date: "2026-07-11T13:00:00" },
+      typePari: "Vainqueur", choix: "Swiatek gagne", cote: 1.80, confiance: 3, premium: false,
+      analyse: "Finale WTA de gala. Swiatek, plus régulière sur la durée, tient le choc face à la puissance de Sabalenka.",
+      statut: "en_cours", likes: ["u_awa"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-08T07:30:00",
+    },
+    {
+      id: "p_041",
+      auteurId: "u_yao",
+      match: { equipeA: "Enyimba", logoA: "🔴", equipeB: "Rivers United", logoB: "🔵", ligue: "NPFL", hashtag: "NPFL", date: "2026-07-04T16:00:00", score: "1-0" },
+      typePari: "1N2", choix: "1 (Enyimba gagne)", cote: 1.95, confiance: 3, premium: false,
+      analyse: "Le géant nigérian Enyimba, solide à domicile à Aba.",
+      statut: "gagne", likes: ["u_awa"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-04T09:00:00",
+    },
+    {
+      id: "p_042",
+      auteurId: "u_moi",
+      match: { equipeA: "Casa Sports", logoA: "🟢", equipeB: "Génération Foot", logoB: "🔵", ligue: "Ligue 1 Sénégal", hashtag: "Ligue1SN", date: "2026-07-12T17:30:00" },
+      typePari: "Over/Under", choix: "Under 2.5 buts", cote: 1.60, confiance: 3, premium: false,
+      analyse: "Championnat sénégalais souvent tactique et fermé. Le Under 2.5 est une valeur sûre ici.",
+      statut: "en_cours", likes: ["u_kader"], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-08T03:45:00",
+    },
+    {
+      id: "p_043",
+      auteurId: "u_serge",
+      match: { equipeA: "Real Madrid", logoA: "⚪", equipeB: "Panathinaïkos", logoB: "🟢", ligue: "EuroLeague", hashtag: "EuroLeague", date: "2026-07-03T20:00:00", score: "78-80" },
+      typePari: "Over/Under", choix: "Over 160.5 points", cote: 1.90, confiance: 3, premium: false,
+      analyse: "Basket européen de haut niveau, mais match défensif possible.",
+      statut: "perdu", likes: [], reposts: [], sauvegardes: [], commentaires: [],
+      date: "2026-07-03T11:00:00",
+    },
+    {
+      id: "p_044",
+      auteurId: "u_kader",
+      match: { equipeA: "Ngannou", logoA: "🥊", equipeB: "Jones", logoB: "🥋", ligue: "UFC", hashtag: "UFC", date: "2026-07-13T04:00:00" },
+      typePari: "Vainqueur", choix: "Victoire Ngannou par KO", cote: 2.10, confiance: 4, premium: true,
+      analyse: "Le super combat des lourds ! La puissance de frappe de Ngannou, fierté camerounaise, peut faire la différence à tout moment. Coup sûr sensation. 🌍",
+      statut: "en_cours", likes: ["u_moi", "u_awa", "u_yao"], reposts: ["u_awa"], sauvegardes: ["u_moi"], commentaires: [],
+      date: "2026-07-08T02:30:00",
+    },
+  ],
+
+  /* ---- NOTIFICATIONS ----------------------------------------------------- */
+  notifications: [
+    { id: "n1", type: "like", acteurId: "u_awa", cibleId: "p_018", texte: "a aimé votre pronostic", lu: false, date: "2026-07-08T09:30:00" },
+    { id: "n2", type: "follow", acteurId: "u_kader", cibleId: null, texte: "a commencé à vous suivre", lu: false, date: "2026-07-08T08:45:00" },
+    { id: "n3", type: "comment", acteurId: "u_serge", cibleId: "p_018", texte: "a commenté votre pronostic", lu: false, date: "2026-07-08T07:15:00" },
+    { id: "n4", type: "gagne", acteurId: null, cibleId: "p_019", texte: "Votre pronostic Metz–Lille est GAGNÉ ! 🟢", lu: true, date: "2026-06-29T17:00:00" },
+    { id: "n5", type: "repost", acteurId: "u_awa", cibleId: "p_019", texte: "a reposté votre pronostic", lu: true, date: "2026-06-29T18:00:00" },
+    { id: "n6", type: "badge", acteurId: null, cibleId: null, texte: "Vous avez atteint le badge Argent 🥈 !", lu: true, date: "2026-06-25T12:00:00" },
+  ],
+
+  /* ---- MESSAGES DIRECTS (innovation : messagerie) -----------------------
+   * Chaque message : expéditeur (deId), destinataire (aId), texte, date, lu.
+   * >>> Intégration : table `messages` + endpoints /api/messages. <<<
+   * --------------------------------------------------------------------- */
+  messages: [
+    { id: "m1", deId: "u_kader", aId: "u_moi", texte: "Salut ! Tu as vu mon combiné du week-end ? 🎟️", date: "2026-07-08T08:10:00", lu: false },
+    { id: "m2", deId: "u_moi", aId: "u_kader", texte: "Oui je l'ai sauvegardé, gros potentiel 🔥", date: "2026-07-08T08:14:00", lu: true },
+    { id: "m3", deId: "u_kader", aId: "u_moi", texte: "Le Maroc c'est du solide, fais-moi confiance 🦁", date: "2026-07-08T08:20:00", lu: false },
+    { id: "m4", deId: "u_awa", aId: "u_moi", texte: "Merci pour le suivi 🙏 On se motive pour la CAN !", date: "2026-07-08T07:05:00", lu: false },
+    { id: "m5", deId: "u_moi", aId: "u_awa", texte: "Avec plaisir 👑 Tes analyses sont au top.", date: "2026-07-08T07:20:00", lu: true },
+    { id: "m6", deId: "u_serge", aId: "u_moi", texte: "On se fait un battle multi-ligues cette semaine ? ⚔️", date: "2026-07-07T21:30:00", lu: true },
+  ],
+
+  /* ---- TENDANCES (hashtags) --------------------------------------------- */
+  tendances: [
+    { tag: "CAN", posts: 1240, contexte: "Football • Afrique" },
+    { tag: "ChampionsLeague", posts: 2130, contexte: "Football • Europe" },
+    { tag: "PremierLeague", posts: 1780, contexte: "Football • Angleterre" },
+    { tag: "LaLiga", posts: 1520, contexte: "Football • Espagne 🇪🇸" },
+    { tag: "SerieA", posts: 980, contexte: "Football • Italie 🇮🇹" },
+    { tag: "Bundesliga", posts: 910, contexte: "Football • Allemagne 🇩🇪" },
+    { tag: "Ligue1CIV", posts: 620, contexte: "Football • Côte d'Ivoire 🇨🇮" },
+    { tag: "SaudiProLeague", posts: 760, contexte: "Football • Arabie Saoudite 🇸🇦" },
+    { tag: "Éléphants", posts: 540, contexte: "Côte d'Ivoire 🇨🇮" },
+  ],
+
+  /* ---- CHAMPIONNATS DU MONDE (catalogue mondial) -------------------------
+   * Catalogue structuré des compétitions couvertes, groupées par région.
+   * Le champ `nom` correspond exactement à `prediction.match.ligue` pour
+   * permettre le filtrage et l'affichage d'un drapeau/emoji par championnat.
+   * >>> Intégration : GET /api/championnats (table `leagues` en base). <<<
+   * --------------------------------------------------------------------- */
+  championnats: [
+    // --- Afrique 🌍 ---
+    { nom: "CAN", region: "Afrique", pays: "Afrique", emoji: "🌍", hashtag: "CAN" },
+    { nom: "Ligue 1 CIV", region: "Afrique", pays: "Côte d'Ivoire", emoji: "🇨🇮", hashtag: "Ligue1CIV" },
+    { nom: "Botola Pro", region: "Afrique", pays: "Maroc", emoji: "🇲🇦", hashtag: "Botola" },
+    { nom: "CAF Champions League", region: "Afrique", pays: "Afrique", emoji: "🏆", hashtag: "CAFCL" },
+    { nom: "Egyptian Premier League", region: "Afrique", pays: "Égypte", emoji: "🇪🇬", hashtag: "EgyptPL" },
+    { nom: "PSL", region: "Afrique", pays: "Afrique du Sud", emoji: "🇿🇦", hashtag: "PSL" },
+    // --- Europe 🇪🇺 ---
+    { nom: "Premier League", region: "Europe", pays: "Angleterre", emoji: "🏴", hashtag: "PremierLeague" },
+    { nom: "Ligue 1", region: "Europe", pays: "France", emoji: "🇫🇷", hashtag: "Ligue1" },
+    { nom: "La Liga", region: "Europe", pays: "Espagne", emoji: "🇪🇸", hashtag: "LaLiga" },
+    { nom: "Serie A", region: "Europe", pays: "Italie", emoji: "🇮🇹", hashtag: "SerieA" },
+    { nom: "Bundesliga", region: "Europe", pays: "Allemagne", emoji: "🇩🇪", hashtag: "Bundesliga" },
+    { nom: "Liga Portugal", region: "Europe", pays: "Portugal", emoji: "🇵🇹", hashtag: "LigaPortugal" },
+    { nom: "Eredivisie", region: "Europe", pays: "Pays-Bas", emoji: "🇳🇱", hashtag: "Eredivisie" },
+    { nom: "Champions League", region: "Europe", pays: "Europe", emoji: "⭐", hashtag: "ChampionsLeague" },
+    { nom: "Europa League", region: "Europe", pays: "Europe", emoji: "🟠", hashtag: "EuropaLeague" },
+    // --- Amériques 🌎 ---
+    { nom: "MLS", region: "Amériques", pays: "États-Unis", emoji: "🇺🇸", hashtag: "MLS" },
+    { nom: "Liga MX", region: "Amériques", pays: "Mexique", emoji: "🇲🇽", hashtag: "LigaMX" },
+    { nom: "Brasileirão", region: "Amériques", pays: "Brésil", emoji: "🇧🇷", hashtag: "Brasileirao" },
+    { nom: "Primera División", region: "Amériques", pays: "Argentine", emoji: "🇦🇷", hashtag: "PrimeraAR" },
+    { nom: "Copa Libertadores", region: "Amériques", pays: "Amérique du Sud", emoji: "🏆", hashtag: "Libertadores" },
+    // --- Asie & Moyen-Orient 🌏 ---
+    { nom: "Saudi Pro League", region: "Asie & Moyen-Orient", pays: "Arabie Saoudite", emoji: "🇸🇦", hashtag: "SaudiProLeague" },
+    { nom: "J1 League", region: "Asie & Moyen-Orient", pays: "Japon", emoji: "🇯🇵", hashtag: "J1League" },
+    { nom: "Qatar Stars League", region: "Asie & Moyen-Orient", pays: "Qatar", emoji: "🇶🇦", hashtag: "QSL" },
+    // --- Afrique (ligues nationales supplémentaires) ---
+    { nom: "Ligue 1 Sénégal", region: "Afrique", pays: "Sénégal", emoji: "🇸🇳", hashtag: "Ligue1SN" },
+    { nom: "NPFL", region: "Afrique", pays: "Nigeria", emoji: "🇳🇬", hashtag: "NPFL" },
+    { nom: "Ligue 1 Algérie", region: "Afrique", pays: "Algérie", emoji: "🇩🇿", hashtag: "Ligue1DZ" },
+    { nom: "Ghana Premier League", region: "Afrique", pays: "Ghana", emoji: "🇬🇭", hashtag: "GhanaPL" },
+    { nom: "CAN Féminine", region: "Afrique", pays: "Afrique", emoji: "👩🏾‍🦱", hashtag: "CANFeminine" },
+    // --- Europe (ligues supplémentaires) ---
+    { nom: "Süper Lig", region: "Europe", pays: "Turquie", emoji: "🇹🇷", hashtag: "SuperLig" },
+    { nom: "Pro League", region: "Europe", pays: "Belgique", emoji: "🇧🇪", hashtag: "ProLeague" },
+    { nom: "Scottish Premiership", region: "Europe", pays: "Écosse", emoji: "🏴", hashtag: "ScottishPrem" },
+    // --- Amériques (ligues supplémentaires) ---
+    { nom: "Liga BetPlay", region: "Amériques", pays: "Colombie", emoji: "🇨🇴", hashtag: "LigaBetPlay" },
+    // --- Asie (ligues supplémentaires) ---
+    { nom: "Chinese Super League", region: "Asie & Moyen-Orient", pays: "Chine", emoji: "🇨🇳", hashtag: "CSL" },
+    { nom: "K League", region: "Asie & Moyen-Orient", pays: "Corée du Sud", emoji: "🇰🇷", hashtag: "KLeague" },
+    // --- International 🏆 ---
+    { nom: "Coupe du Monde", region: "International", pays: "Monde", emoji: "🏆", hashtag: "CoupeDuMonde" },
+    { nom: "Ligue des Nations", region: "International", pays: "Europe", emoji: "🌍", hashtag: "LigueDesNations" },
+    { nom: "Coupe du Monde des Clubs", region: "International", pays: "Monde", emoji: "🌐", hashtag: "MondialDesClubs" },
+    { nom: "Coupe du Monde Féminine", region: "International", pays: "Monde", emoji: "🏆", hashtag: "CDMFeminine" },
+    // --- Autres sports 🏀🎾🏎️ ---
+    { nom: "NBA", region: "Autres sports", pays: "États-Unis", emoji: "🏀", hashtag: "NBA", sport: "Basket" },
+    { nom: "EuroLeague", region: "Autres sports", pays: "Europe", emoji: "🏀", hashtag: "EuroLeague", sport: "Basket" },
+    { nom: "Formule 1", region: "Autres sports", pays: "Monde", emoji: "🏎️", hashtag: "F1", sport: "Formule 1" },
+    { nom: "Tennis ATP", region: "Autres sports", pays: "Monde", emoji: "🎾", hashtag: "Tennis", sport: "Tennis" },
+    { nom: "Tennis WTA", region: "Autres sports", pays: "Monde", emoji: "🎾", hashtag: "TennisWTA", sport: "Tennis" },
+    { nom: "Top 14", region: "Autres sports", pays: "France", emoji: "🏉", hashtag: "Top14", sport: "Rugby" },
+    { nom: "UFC", region: "Autres sports", pays: "Monde", emoji: "🥊", hashtag: "UFC", sport: "MMA" },
+  ],
+
+  /* ---- EFFECTIFS PAR CHAMPIONNAT (équipes / compétiteurs) ----------------
+   * Rosters proposés dans le formulaire de création. Chaque entrée : nom + logo
+   * (emoji). Les compétitions absentes basculent en saisie libre.
+   * >>> Intégration : table `teams` liée à `leagues`. <<<
+   * --------------------------------------------------------------------- */
+  equipes: {
+    "CAN": [
+      { n: "Côte d'Ivoire", l: "🇨🇮" }, { n: "Sénégal", l: "🇸🇳" }, { n: "Nigeria", l: "🇳🇬" }, { n: "Maroc", l: "🇲🇦" },
+      { n: "Égypte", l: "🇪🇬" }, { n: "Cameroun", l: "🇨🇲" }, { n: "Ghana", l: "🇬🇭" }, { n: "Algérie", l: "🇩🇿" },
+      { n: "Mali", l: "🇲🇱" }, { n: "Tunisie", l: "🇹🇳" }, { n: "Afrique du Sud", l: "🇿🇦" }, { n: "RD Congo", l: "🇨🇩" },
+    ],
+    "Ligue 1": [
+      { n: "PSG", l: "🔵" }, { n: "Marseille", l: "⚪" }, { n: "Monaco", l: "🔴" }, { n: "Lyon", l: "🔴" },
+      { n: "Lille", l: "🔴" }, { n: "Nice", l: "🔴" }, { n: "Lens", l: "🟡" }, { n: "Rennes", l: "🔴" },
+      { n: "Nantes", l: "🟡" }, { n: "Brest", l: "🔴" },
+    ],
+    "Premier League": [
+      { n: "Man City", l: "🔵" }, { n: "Arsenal", l: "🔴" }, { n: "Liverpool", l: "🔴" }, { n: "Chelsea", l: "🔵" },
+      { n: "Man United", l: "🔴" }, { n: "Tottenham", l: "⚪" }, { n: "Newcastle", l: "⚫" }, { n: "Aston Villa", l: "🟣" },
+      { n: "Brighton", l: "🔵" }, { n: "West Ham", l: "🟣" },
+    ],
+    "La Liga": [
+      { n: "Real Madrid", l: "⚪" }, { n: "Barcelone", l: "🔵" }, { n: "Atlético", l: "🔴" }, { n: "Séville", l: "🔴" },
+      { n: "Valence", l: "🟠" }, { n: "Villarreal", l: "🟡" }, { n: "Bétis", l: "🟢" }, { n: "Real Sociedad", l: "🔵" },
+      { n: "Athletic Bilbao", l: "🔴" }, { n: "Girona", l: "🔴" },
+    ],
+    "Serie A": [
+      { n: "Inter", l: "🔵" }, { n: "Milan", l: "🔴" }, { n: "Juventus", l: "⚪" }, { n: "Napoli", l: "🔵" },
+      { n: "Roma", l: "🔴" }, { n: "Lazio", l: "🔵" }, { n: "Atalanta", l: "🔵" }, { n: "Fiorentina", l: "🟣" }, { n: "Bologna", l: "🔴" },
+    ],
+    "Bundesliga": [
+      { n: "Bayern", l: "🔴" }, { n: "Dortmund", l: "🟡" }, { n: "Leipzig", l: "⚪" }, { n: "Leverkusen", l: "🔴" },
+      { n: "Francfort", l: "⚫" }, { n: "Stuttgart", l: "⚪" }, { n: "Wolfsburg", l: "🟢" }, { n: "M'gladbach", l: "⚫" },
+    ],
+    "Champions League": [
+      { n: "Real Madrid", l: "⚪" }, { n: "Man City", l: "🔵" }, { n: "Bayern", l: "🔴" }, { n: "PSG", l: "🔵" },
+      { n: "Barcelone", l: "🔵" }, { n: "Inter", l: "🔵" }, { n: "Liverpool", l: "🔴" }, { n: "Arsenal", l: "🔴" },
+      { n: "Dortmund", l: "🟡" }, { n: "Milan", l: "🔴" }, { n: "Atlético", l: "🔴" }, { n: "Porto", l: "🔵" },
+    ],
+    "Ligue 1 CIV": [
+      { n: "ASEC Mimosas", l: "🟡" }, { n: "Africa Sports", l: "🟢" }, { n: "Stade d'Abidjan", l: "🔵" }, { n: "SOA", l: "🔴" },
+      { n: "San Pédro", l: "🔵" }, { n: "SC Gagnoa", l: "🟢" }, { n: "Bouaké FC", l: "⚪" }, { n: "Denguélé", l: "🟠" },
+    ],
+    "Botola Pro": [
+      { n: "Raja Casablanca", l: "🟢" }, { n: "Wydad", l: "🔴" }, { n: "RS Berkane", l: "🟠" }, { n: "FAR Rabat", l: "⚫" },
+      { n: "Maghreb Fès", l: "🔴" }, { n: "MC Oujda", l: "🔴" },
+    ],
+    "MLS": [
+      { n: "Inter Miami", l: "🩷" }, { n: "LA Galaxy", l: "⚪" }, { n: "LAFC", l: "⚫" }, { n: "Seattle", l: "🟢" },
+      { n: "Atlanta", l: "🔴" }, { n: "NY Red Bulls", l: "🔴" },
+    ],
+    "Saudi Pro League": [
+      { n: "Al-Nassr", l: "🟡" }, { n: "Al-Hilal", l: "🔵" }, { n: "Al-Ittihad", l: "🟡" }, { n: "Al-Ahli", l: "🟢" }, { n: "Al-Ettifaq", l: "🔴" },
+    ],
+    "Brasileirão": [
+      { n: "Flamengo", l: "🔴" }, { n: "Palmeiras", l: "🟢" }, { n: "Corinthians", l: "⚫" }, { n: "São Paulo", l: "🔴" },
+      { n: "Fluminense", l: "🟢" }, { n: "Grêmio", l: "🔵" },
+    ],
+    "Süper Lig": [
+      { n: "Galatasaray", l: "🟡" }, { n: "Fenerbahçe", l: "🔵" }, { n: "Beşiktaş", l: "⚫" }, { n: "Trabzonspor", l: "🔴" },
+    ],
+    "NBA": [
+      { n: "Lakers", l: "🟣" }, { n: "Celtics", l: "🟢" }, { n: "Warriors", l: "🔵" }, { n: "Nuggets", l: "🟡" },
+      { n: "Bucks", l: "🟢" }, { n: "Suns", l: "🟠" }, { n: "Heat", l: "🔴" },
+    ],
+    "Formule 1": [
+      { n: "Verstappen", l: "🏎️" }, { n: "Norris", l: "🏁" }, { n: "Leclerc", l: "🔴" }, { n: "Hamilton", l: "⚫" },
+      { n: "Russell", l: "🔵" }, { n: "Piastri", l: "🟠" }, { n: "Sainz", l: "🔴" }, { n: "Pérez", l: "🔵" },
+    ],
+    "Tennis ATP": [
+      { n: "Alcaraz", l: "🎾" }, { n: "Djokovic", l: "🎾" }, { n: "Sinner", l: "🎾" }, { n: "Medvedev", l: "🎾" }, { n: "Zverev", l: "🎾" },
+    ],
+    "Tennis WTA": [
+      { n: "Swiatek", l: "🎾" }, { n: "Sabalenka", l: "🎾" }, { n: "Gauff", l: "🎾" }, { n: "Rybakina", l: "🎾" },
+    ],
+    "UFC": [
+      { n: "Ngannou", l: "🥊" }, { n: "Jones", l: "🥋" }, { n: "Adesanya", l: "🥊" }, { n: "Makhachev", l: "🥋" }, { n: "O'Malley", l: "🥊" },
+    ],
+  },
+
+  /* ---- BOOKMAKERS (comparateur de cotes) --------------------------------
+   * Plateformes de paris affichées à titre indicatif. Les cotes sont SIMULÉES.
+   * >>> Intégration : agrégateur de cotes (API odds / feed bookmakers). <<<
+   * --------------------------------------------------------------------- */
+  bookmakers: [
+    { id: "betclic", nom: "Betclic", c: "#e2001a" },
+    { id: "1xbet", nom: "1xBet", c: "#0a6cff" },
+    { id: "premierbet", nom: "Premier Bet", c: "#00a651" },
+    { id: "betway", nom: "Betway", c: "#00b13f" },
+    { id: "888starz", nom: "888starz", c: "#f4b400" },
+  ],
+
+  /* ---- DÉFIS / BATTLES --------------------------------------------------- */
+  battles: [
+    { id: "b1", aId: "u_kader", bId: "u_awa", journee: "Journée CAN", scoreA: 3, scoreB: 2, statut: "en_cours" },
+    { id: "b2", aId: "u_serge", bId: "u_yao", journee: "Multi-ligues", scoreA: 4, scoreB: 4, statut: "en_cours" },
+  ],
+
+  /* ---- MATCHS EN DIRECT (innovation : ticker temps réel) ----------------
+   * En production, ces données proviendraient d'un flux live (websocket ou
+   * polling d'une API de scores type Sportradar). Ici, app.js fait progresser
+   * la minute et le score via un timer pour simuler le direct.
+   * --------------------------------------------------------------------- */
+  liveMatches: [
+    { id: "L1", equipeA: "Man City", logoA: "🔵", equipeB: "Arsenal", logoB: "🔴", ligue: "Premier League", minute: 62, scoreA: 1, scoreB: 1 },
+    { id: "L2", equipeA: "Côte d'Ivoire", logoA: "🇨🇮", equipeB: "Sénégal", logoB: "🇸🇳", ligue: "CAN", minute: 28, scoreA: 1, scoreB: 0 },
+    { id: "L3", equipeA: "Real Madrid", logoA: "⚪", equipeB: "Bayern", logoB: "🔴", ligue: "Champions League", minute: 74, scoreA: 2, scoreB: 2 },
+    { id: "L4", equipeA: "Maroc", logoA: "🇲🇦", equipeB: "Cameroun", logoB: "🇨🇲", ligue: "CAN", minute: 11, scoreA: 0, scoreB: 0 },
+    { id: "L5", equipeA: "Real Madrid", logoA: "⚪", equipeB: "Barcelone", logoB: "🔵", ligue: "La Liga", minute: 55, scoreA: 2, scoreB: 1 },
+    { id: "L6", equipeA: "Inter Miami", logoA: "🩷", equipeB: "LA Galaxy", logoB: "⚪", ligue: "MLS", minute: 39, scoreA: 1, scoreB: 0 },
+    { id: "L7", equipeA: "Al-Nassr", logoA: "🟡", equipeB: "Al-Hilal", logoB: "🔵", ligue: "Saudi Pro League", minute: 8, scoreA: 0, scoreB: 0 },
+  ],
+
+  /* ---- COUPONS COMBINÉS (innovation : « le combiné ») --------------------
+   * Un coupon regroupe plusieurs sélections. La cote totale = produit des
+   * cotes. Le statut est dérivé : perdu si une sélection est perdue, gagné si
+   * toutes gagnées, en cours sinon. Très ancré dans la culture ouest-africaine.
+   * --------------------------------------------------------------------- */
+  coupons: [
+    {
+      id: "cp_1", auteurId: "u_kader", titre: "Combiné sûr du week-end 🔒", premium: true,
+      date: "2026-07-08T06:00:00", likes: ["u_moi", "u_awa", "u_serge"], reposts: ["u_awa"], sauvegardes: ["u_moi"],
+      selections: [
+        { equipeA: "Man City", equipeB: "Arsenal", ligue: "Premier League", choix: "Man City gagne", cote: 1.85, statut: "en_cours" },
+        { equipeA: "Real Madrid", equipeB: "Bayern", ligue: "Champions League", choix: "Les deux marquent", cote: 1.55, statut: "en_cours" },
+        { equipeA: "Maroc", equipeB: "Cameroun", ligue: "CAN", choix: "Maroc gagne", cote: 1.90, statut: "en_cours" },
+      ],
+    },
+    {
+      id: "cp_2", auteurId: "u_awa", titre: "Le triplé buts ⚡", premium: false,
+      date: "2026-07-05T10:00:00", likes: ["u_kader", "u_yao"], reposts: [], sauvegardes: [],
+      selections: [
+        { equipeA: "Liverpool", equipeB: "Chelsea", ligue: "Premier League", choix: "Over 2.5", cote: 1.80, statut: "gagne" },
+        { equipeA: "Barcelone", equipeB: "Atlético", ligue: "Champions League", choix: "BTTS Oui", cote: 1.80, statut: "gagne" },
+        { equipeA: "Nigeria", equipeB: "Égypte", ligue: "CAN", choix: "Nigeria gagne", cote: 2.05, statut: "gagne" },
+      ],
+    },
+    {
+      id: "cp_3", auteurId: "u_serge", titre: "Combiné prudence 3 matchs", premium: false,
+      date: "2026-07-04T09:00:00", likes: ["u_binta"], reposts: [], sauvegardes: [],
+      selections: [
+        { equipeA: "Inter", equipeB: "Juventus", ligue: "Champions League", choix: "Under 3.5", cote: 1.45, statut: "gagne" },
+        { equipeA: "PSG", equipeB: "Marseille", ligue: "Ligue 1", choix: "Over 2.5", cote: 1.70, statut: "gagne" },
+        { equipeA: "Tottenham", equipeB: "Man United", ligue: "Premier League", choix: "Man United gagne", cote: 2.40, statut: "perdu" },
+      ],
+    },
+  ],
+};
+
+/* -----------------------------------------------------------------------------
+ *  Identifiants de démonstration.
+ *  On injecte un email et un mot de passe par défaut sur chaque compte de démo
+ *  pour permettre la connexion. Mot de passe commun : « demo1234 ».
+ *  >>> En production : hachage (password_hash/Argon2) côté PHP, jamais en clair. <<<
+ * --------------------------------------------------------------------------- */
+mockData.users.forEach((u) => {
+  u.email = u.email || `${u.pseudo}@pronostars.ci`;
+  u.motDePasse = u.motDePasse || "demo1234";
+});
+
+// Quelques réactions emoji de démonstration.
+const _seedReactions = (id, obj) => {
+  const p = mockData.predictions.find((x) => x.id === id);
+  if (p) p.reactions = obj;
+};
+_seedReactions("p_001", { "🔥": ["u_awa", "u_serge"], "💯": ["u_moi"] });
+_seedReactions("p_002", { "❤️": ["u_kader", "u_yao"], "😮": ["u_serge"] });
+_seedReactions("p_021", { "🔥": ["u_moi", "u_binta"] });
+
+/* -----------------------------------------------------------------------------
+ *  STORIES (murs éphémères, 24 h) — VISIBLES UNIQUEMENT PAR LES ABONNÉS.
+ *  type : 'texte' (fond dégradé + texte) | 'pronostic' (predId + légende).
+ *  Seeds datés « il y a quelques heures » relativement à l'horloge de démo.
+ * --------------------------------------------------------------------------- */
+const _hAgo = (h) => new Date(_baseNow - h * 3600 * 1000).toISOString();
+mockData.stories = [
+  { id: "st1", auteurId: "u_kader", type: "texte", texte: "Grosse journée CAN aujourd'hui 🔥 Mes coups sûrs arrivent, restez branchés !", couleur: "linear-gradient(135deg,#3d2f00,#FFB300)", date: _hAgo(2), vues: [] },
+  { id: "st2", auteurId: "u_kader", type: "pronostic", predId: "p_001", texte: "Mon analyse City–Arsenal 👇", couleur: "linear-gradient(135deg,#0b3d2e,#00C853)", date: _hAgo(1), vues: [] },
+  { id: "st3", auteurId: "u_awa", type: "texte", texte: "Value betting = patience 👑 On lâche rien pour la CAN 🇨🇮", couleur: "linear-gradient(135deg,#3d0f00,#FF3D00)", date: _hAgo(3), vues: [] },
+  { id: "st4", auteurId: "u_serge", type: "pronostic", predId: "p_010", texte: "Les stats parlent d'elles-mêmes 📊", couleur: "linear-gradient(135deg,#00204d,#2979FF)", date: _hAgo(5), vues: [] },
+  { id: "st5", auteurId: "u_yao", type: "texte", texte: "15 ans d'observation, un seul mot : discipline 🧙🏾", couleur: "linear-gradient(135deg,#00332c,#00BFA5)", date: _hAgo(6), vues: [] },
+];
+
+/* -----------------------------------------------------------------------------
+ *  FONCTIONS API FACTICES (async)
+ *  >>> Chacune correspondra à un endpoint REST PHP. <<<
+ * --------------------------------------------------------------------------- */
+
+/**
+ * POST /api/auth/login — connexion par pseudo OU email + mot de passe.
+ * >>> En production : renvoie un token (JWT) stocké côté client. <<<
+ */
+async function login(identifiant, motDePasse) {
+  await wait();
+  const id = (identifiant || "").trim().toLowerCase();
+  const u = mockData.users.find(
+    (x) => x.pseudo.toLowerCase() === id || (x.email || "").toLowerCase() === id
+  );
+  if (!u) return { ok: false, error: "Aucun compte ne correspond à cet identifiant." };
+  if (u.motDePasse !== motDePasse) return { ok: false, error: "Mot de passe incorrect." };
+  mockData.currentUserId = u.id;
+  return { ok: true, user: u };
+}
+
+/**
+ * POST /api/auth/signup — création de compte.
+ */
+async function signup(data) {
+  await wait();
+  const pseudo = (data.pseudo || "").trim();
+  if (pseudo.length < 3) return { ok: false, error: "Le pseudo doit faire au moins 3 caractères." };
+  if (/\s/.test(pseudo)) return { ok: false, error: "Le pseudo ne doit pas contenir d'espace." };
+  if (mockData.users.some((u) => u.pseudo.toLowerCase() === pseudo.toLowerCase()))
+    return { ok: false, error: "Ce pseudo est déjà pris." };
+  if ((data.motDePasse || "").length < 6) return { ok: false, error: "Mot de passe : 6 caractères minimum." };
+
+  const u = {
+    id: nextId("u"),
+    pseudo,
+    nom: (data.nom || pseudo).trim(),
+    avatar: data.avatar || "🙂",
+    couleur: data.couleur || "#00C853",
+    banniere: data.banniere || "linear-gradient(135deg,#0b3d2e,#00C853)",
+    bio: data.bio || "Nouveau sur PronoStars 🎯 #Ligue1 #CAN",
+    sports: data.sports && data.sports.length ? data.sports : ["Football"],
+    inscription: new Date().toISOString().slice(0, 10),
+    abonnes: [],
+    abonnements: [],
+    badge: "Étoile montante",
+    email: (data.email || `${pseudo}@pronostars.ci`).trim(),
+    motDePasse: data.motDePasse,
+  };
+  mockData.users.push(u);
+  mockData.currentUserId = u.id;
+  return { ok: true, user: u };
+}
+
+/**
+ * POST /api/auth/logout — déconnexion (efface la session courante).
+ */
+function logout() {
+  mockData.currentUserId = null;
+}
+
+/**
+ * POST /api/auth/switch — bascule vers un autre compte (mode démo).
+ */
+async function switchAccount(id) {
+  await wait(50);
+  if (!mockData.users.some((u) => u.id === id)) return { ok: false };
+  mockData.currentUserId = id;
+  return { ok: true, user: getCurrentUserSync() };
+}
+
+/**
+ * PATCH /api/users/me — met à jour le profil de l'utilisateur connecté.
+ */
+async function updateProfile(data) {
+  await wait(60);
+  const u = getCurrentUserSync();
+  if (!u) return { ok: false };
+  ["nom", "bio", "avatar", "couleur", "banniere"].forEach((k) => {
+    if (data[k] != null && data[k] !== "") u[k] = data[k];
+  });
+  if (Array.isArray(data.sports) && data.sports.length) u.sports = data.sports;
+  return { ok: true, user: u };
+}
+
+/**
+ * PATCH /api/users/me/password — changement de mot de passe (simulé).
+ */
+async function changePassword(actuel, nouveau) {
+  await wait();
+  const u = getCurrentUserSync();
+  if (!u) return { ok: false, error: "Non connecté." };
+  if (u.motDePasse !== actuel) return { ok: false, error: "Mot de passe actuel incorrect." };
+  if ((nouveau || "").length < 6) return { ok: false, error: "Nouveau mot de passe : 6 caractères minimum." };
+  u.motDePasse = nouveau;
+  return { ok: true };
+}
+
+/* -----------------------------------------------------------------------------
+ *  MESSAGERIE DIRECTE
+ * --------------------------------------------------------------------------- */
+
+/**
+ * GET /api/messages — liste des conversations de l'utilisateur connecté,
+ * regroupées par interlocuteur (dernier message + nombre de non-lus).
+ */
+async function getConversations() {
+  await wait();
+  const me = mockData.currentUserId;
+  const parInterloc = {};
+  mockData.messages
+    .filter((m) => m.deId === me || m.aId === me)
+    .forEach((m) => {
+      const autre = m.deId === me ? m.aId : m.deId;
+      const prev = parInterloc[autre];
+      if (!prev || new Date(m.date) > new Date(prev.lastDate)) {
+        parInterloc[autre] = { autreId: autre, dernier: m.texte, lastDate: m.date };
+      }
+    });
+  // Nombre de non-lus (messages reçus non lus) par interlocuteur.
+  const nonLus = {};
+  mockData.messages.forEach((m) => {
+    if (m.aId === me && !m.lu) nonLus[m.deId] = (nonLus[m.deId] || 0) + 1;
+  });
+  return Object.values(parInterloc)
+    .map((c) => ({
+      user: mockData.users.find((u) => u.id === c.autreId),
+      dernier: c.dernier, lastDate: c.lastDate, nonLus: nonLus[c.autreId] || 0,
+    }))
+    .filter((c) => c.user)
+    .sort((a, b) => new Date(b.lastDate) - new Date(a.lastDate));
+}
+
+/**
+ * GET /api/messages/{userId} — fil de discussion avec un interlocuteur.
+ * Marque au passage les messages reçus comme lus.
+ */
+async function getThread(autreId) {
+  await wait(50);
+  const me = mockData.currentUserId;
+  mockData.messages.forEach((m) => {
+    if (m.aId === me && m.deId === autreId) m.lu = true;
+  });
+  return mockData.messages
+    .filter((m) => (m.deId === me && m.aId === autreId) || (m.deId === autreId && m.aId === me))
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+
+/**
+ * POST /api/messages/{userId} — envoie un message.
+ */
+async function sendMessage(autreId, texte) {
+  await wait(50);
+  const m = { id: nextId("m"), deId: mockData.currentUserId, aId: autreId, texte, date: nowISO(), lu: true };
+  mockData.messages.push(m);
+  return m;
+}
+
+/** Nombre total de messages non lus (pour le badge de navigation). */
+function countUnreadMessages() {
+  const me = mockData.currentUserId;
+  return mockData.messages.filter((m) => m.aId === me && !m.lu).length;
+}
+
+/**
+ * GET /api/feed
+ * Renvoie le fil de pronostics des comptes suivis + le compte courant,
+ * trié du plus récent au plus ancien.
+ */
+async function getFeed() {
+  await wait();
+  const me = getCurrentUserSync();
+  const visibles = new Set([me.id, ...me.abonnements]);
+  return mockData.predictions
+    .filter((p) => visibles.has(p.auteurId))
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+}
+
+/**
+ * GET /api/feed/all — Fil « Exploration » (tous les pronostics publics).
+ */
+async function getAllPredictions() {
+  await wait();
+  return [...mockData.predictions].sort((a, b) => new Date(b.date) - new Date(a.date));
+}
+
+/**
+ * GET /api/users/{id}
+ */
+async function getUser(id) {
+  await wait();
+  return mockData.users.find((u) => u.id === id) || null;
+}
+
+/**
+ * GET /api/users — tous les utilisateurs (pour recherche / classement).
+ */
+async function getAllUsers() {
+  await wait();
+  return [...mockData.users];
+}
+
+/**
+ * GET /api/users/{id}/predictions?filter=tous|en_cours|gagne|perdu|analyses|likes
+ */
+async function getUserPredictions(id, filter = "tous") {
+  await wait();
+  let list = mockData.predictions.filter((p) => p.auteurId === id);
+  switch (filter) {
+    case "en_cours":
+      list = list.filter((p) => p.statut === "en_cours");
+      break;
+    case "gagne":
+      list = list.filter((p) => p.statut === "gagne");
+      break;
+    case "perdu":
+      list = list.filter((p) => p.statut === "perdu");
+      break;
+    case "analyses":
+      // Les « analyses » : pronostics avec un argumentaire fourni (> 120 caractères).
+      list = list.filter((p) => (p.analyse || "").length > 120);
+      break;
+    case "likes":
+      // Pronostics likés par l'utilisateur (tous auteurs confondus).
+      list = mockData.predictions.filter((p) => p.likes.includes(id));
+      break;
+    default:
+      break; // 'tous'
+  }
+  return list.sort((a, b) => new Date(b.date) - new Date(a.date));
+}
+
+/**
+ * GET /api/predictions/{id}
+ */
+async function getPrediction(id) {
+  await wait();
+  return mockData.predictions.find((p) => p.id === id) || null;
+}
+
+/**
+ * POST /api/predictions
+ * Crée un pronostic et l'insère en tête de liste.
+ */
+async function createPrediction(data) {
+  await wait();
+  const pred = {
+    id: nextId("p"),
+    auteurId: mockData.currentUserId,
+    match: data.match,
+    typePari: data.typePari,
+    choix: data.choix,
+    cote: data.cote,
+    confiance: data.confiance,
+    premium: !!data.premium,
+    analyse: data.analyse,
+    bookmaker: data.bookmaker || null,
+    cotesComparees: data.cotesComparees || null,
+    statut: "en_cours",
+    likes: [],
+    reposts: [],
+    sauvegardes: [],
+    commentaires: [],
+    reactions: {},
+    date: nowISO(),
+  };
+  mockData.predictions.unshift(pred);
+  return pred;
+}
+
+/**
+ * POST /api/users/{id}/follow — bascule suivre / ne plus suivre.
+ * Renvoie le nouvel état (suivi: bool).
+ */
+async function toggleFollow(id) {
+  await wait(60);
+  const me = getCurrentUserSync();
+  const cible = mockData.users.find((u) => u.id === id);
+  if (!cible || id === me.id) return { suivi: false };
+  const i = me.abonnements.indexOf(id);
+  if (i >= 0) {
+    me.abonnements.splice(i, 1);
+    const j = cible.abonnes.indexOf(me.id);
+    if (j >= 0) cible.abonnes.splice(j, 1);
+    return { suivi: false };
+  } else {
+    me.abonnements.push(id);
+    cible.abonnes.push(me.id);
+    return { suivi: true };
+  }
+}
+
+/**
+ * POST /api/predictions/{id}/like — bascule le like.
+ */
+async function likePrediction(id) {
+  await wait(50);
+  const p = mockData.predictions.find((x) => x.id === id);
+  if (!p) return null;
+  const me = mockData.currentUserId;
+  const i = p.likes.indexOf(me);
+  if (i >= 0) p.likes.splice(i, 1);
+  else p.likes.push(me);
+  return p;
+}
+
+/**
+ * POST /api/predictions/{id}/repost — bascule le repost.
+ */
+async function repostPrediction(id) {
+  await wait(50);
+  const p = mockData.predictions.find((x) => x.id === id);
+  if (!p) return null;
+  const me = mockData.currentUserId;
+  const i = p.reposts.indexOf(me);
+  if (i >= 0) p.reposts.splice(i, 1);
+  else p.reposts.push(me);
+  return p;
+}
+
+/**
+ * POST /api/predictions/{id}/save — bascule la sauvegarde (signet).
+ */
+async function savePrediction(id) {
+  await wait(50);
+  const p = mockData.predictions.find((x) => x.id === id);
+  if (!p) return null;
+  const me = mockData.currentUserId;
+  const i = p.sauvegardes.indexOf(me);
+  if (i >= 0) p.sauvegardes.splice(i, 1);
+  else p.sauvegardes.push(me);
+  return p;
+}
+
+/* -----------------------------------------------------------------------------
+ *  Réactions emoji (une réaction par personne, sur pronostics et messages).
+ *  `reactions` : objet { "🔥": [userId, …], … }.
+ * --------------------------------------------------------------------------- */
+function _toggleReaction(cible, emoji) {
+  cible.reactions = cible.reactions || {};
+  const me = mockData.currentUserId;
+  const avait = (cible.reactions[emoji] || []).includes(me);
+  // Une seule réaction par personne : on retire l'utilisateur de toutes les autres.
+  Object.keys(cible.reactions).forEach((e) => {
+    cible.reactions[e] = cible.reactions[e].filter((u) => u !== me);
+  });
+  if (!avait) (cible.reactions[emoji] = cible.reactions[emoji] || []).push(me);
+  // Nettoyage des emojis sans réaction.
+  Object.keys(cible.reactions).forEach((e) => { if (!cible.reactions[e].length) delete cible.reactions[e]; });
+  return cible.reactions;
+}
+
+/** POST /api/predictions/{id}/react */
+async function reactPrediction(id, emoji) {
+  await wait(40);
+  const p = mockData.predictions.find((x) => x.id === id);
+  return p ? _toggleReaction(p, emoji) : null;
+}
+
+/** POST /api/messages/{id}/react */
+async function reactMessage(id, emoji) {
+  await wait(40);
+  const m = mockData.messages.find((x) => x.id === id);
+  return m ? _toggleReaction(m, emoji) : null;
+}
+
+/**
+ * POST /api/messages/{userId}/share — partage un pronostic dans une conversation.
+ * Le message porte `predId` et sera rendu comme une mini-carte de pronostic.
+ */
+async function sharePrediction(autreId, predId) {
+  await wait(50);
+  const m = { id: nextId("m"), deId: mockData.currentUserId, aId: autreId, texte: "", predId, date: nowISO(), lu: true };
+  mockData.messages.push(m);
+  return m;
+}
+
+/* -----------------------------------------------------------------------------
+ *  STORIES — publication éphémère réservée aux abonnés.
+ * --------------------------------------------------------------------------- */
+
+// Une story est active pendant 24 h.
+function _storyActive(s) {
+  const ref = Math.max(Date.now(), _baseNow);
+  return ref - Date.parse(s.date) < 24 * 3600 * 1000;
+}
+
+/**
+ * GET /api/stories — stories visibles par l'utilisateur connecté.
+ * RÈGLE DE CONFIDENTIALITÉ : on ne voit QUE les stories des comptes que l'on
+ * suit (dont on est abonné) + les siennes. Regroupées par auteur.
+ * >>> En base : filtrage par relation d'abonnement + expiration serveur. <<<
+ */
+async function getStories() {
+  await wait(50);
+  const me = getCurrentUserSync();
+  if (!me) return [];
+  const visibles = new Set([me.id, ...me.abonnements]);
+  const actives = mockData.stories.filter((s) => _storyActive(s) && visibles.has(s.auteurId));
+
+  const parAuteur = {};
+  actives.forEach((s) => { (parAuteur[s.auteurId] = parAuteur[s.auteurId] || []).push(s); });
+
+  const groupes = Object.entries(parAuteur).map(([id, list]) => {
+    list.sort((a, b) => new Date(a.date) - new Date(b.date));
+    return {
+      user: mockData.users.find((u) => u.id === id),
+      stories: list,
+      hasUnseen: list.some((s) => !s.vues.includes(me.id)),
+    };
+  }).filter((g) => g.user);
+
+  // Ordre : moi d'abord, puis les non-vues, puis les plus récentes.
+  groupes.sort((a, b) => {
+    if (a.user.id === me.id) return -1;
+    if (b.user.id === me.id) return 1;
+    if (a.hasUnseen !== b.hasUnseen) return a.hasUnseen ? -1 : 1;
+    return new Date(b.stories[b.stories.length - 1].date) - new Date(a.stories[a.stories.length - 1].date);
+  });
+  return groupes;
+}
+
+/** POST /api/stories — publie une story (auteur = utilisateur connecté). */
+async function createStory(data) {
+  await wait();
+  const s = {
+    id: nextId("st"),
+    auteurId: mockData.currentUserId,
+    type: data.type === "pronostic" ? "pronostic" : "texte",
+    texte: data.texte || "",
+    couleur: data.couleur || "linear-gradient(135deg,#0b3d2e,#00C853)",
+    predId: data.predId || null,
+    date: nowISO(),
+    vues: [],
+  };
+  mockData.stories.push(s);
+  return s;
+}
+
+/** PATCH /api/stories/{id}/view — marque une story comme vue. */
+function viewStory(id) {
+  const s = mockData.stories.find((x) => x.id === id);
+  const me = mockData.currentUserId;
+  if (s && !s.vues.includes(me)) s.vues.push(me);
+  return s;
+}
+
+/**
+ * POST /api/predictions/{id}/comments
+ */
+async function addComment(id, texte) {
+  await wait(60);
+  const p = mockData.predictions.find((x) => x.id === id);
+  if (!p) return null;
+  const c = { id: nextId("c"), auteurId: mockData.currentUserId, texte, date: nowISO() };
+  p.commentaires.push(c);
+  return c;
+}
+
+/**
+ * PATCH /api/predictions/{id}/resolve — résolution simulée (démo).
+ * Côté serveur : géré par un job / résultat officiel du match.
+ */
+async function resolvePrediction(id, resultat) {
+  await wait(60);
+  const p = mockData.predictions.find((x) => x.id === id);
+  if (!p) return null;
+  p.statut = resultat; // 'gagne' | 'perdu' | 'annule'
+  return p;
+}
+
+/**
+ * GET /api/leaderboard?period=week|month
+ * Le tri par TrustScore est calculé côté client (voir app.js) car il dépend de
+ * l'algorithme. En production, le score serait pré-calculé et stocké en base.
+ */
+async function getLeaderboard(period = "week") {
+  await wait();
+  // On renvoie simplement les utilisateurs ; app.js calcule et trie par TrustScore.
+  return { period, users: [...mockData.users] };
+}
+
+/**
+ * GET /api/notifications
+ */
+async function getNotifications() {
+  await wait();
+  return [...mockData.notifications].sort((a, b) => new Date(b.date) - new Date(a.date));
+}
+
+/**
+ * Insère une notification (utilisé par le flux temps réel simulé).
+ * >>> En production : poussée par le serveur via WebSocket / SSE. <<<
+ */
+function pushNotification(notif) {
+  mockData.notifications.unshift({ id: nextId("n"), lu: false, date: nowISO(), ...notif });
+}
+
+/**
+ * GET /api/battles — défis en cours.
+ */
+async function getBattles() {
+  await wait();
+  return [...mockData.battles];
+}
+
+/** GET /api/battles/{id} — un défi précis. */
+async function getBattle(id) {
+  await wait(50);
+  return mockData.battles.find((b) => b.id === id) || null;
+}
+
+/** GET /api/users/{id}/battles — défis impliquant un utilisateur. */
+async function getUserBattles(id) {
+  await wait(50);
+  return mockData.battles.filter((b) => b.aId === id || b.bId === id);
+}
+
+/**
+ * POST /api/battles — lance un défi contre un adversaire.
+ * statut : 'propose' (en attente) → 'en_cours' (accepté) → 'termine'.
+ */
+async function createBattle(adversaireId, journee) {
+  await wait();
+  const me = mockData.currentUserId;
+  if (adversaireId === me) return { ok: false, error: "Tu ne peux pas te défier toi-même." };
+  const b = {
+    id: nextId("b"), aId: me, bId: adversaireId,
+    journee: journee || "Défi de la journée", scoreA: 0, scoreB: 0,
+    statut: "propose", proposePar: me, date: nowISO(),
+  };
+  mockData.battles.unshift(b);
+  return { ok: true, battle: b };
+}
+
+/** PATCH /api/battles/{id}/accept — accepte un défi. */
+async function acceptBattle(id) {
+  await wait(50);
+  const b = mockData.battles.find((x) => x.id === id);
+  if (b) b.statut = "en_cours";
+  return b;
+}
+
+/** DELETE /api/battles/{id} — refuse/annule un défi. */
+async function declineBattle(id) {
+  await wait(50);
+  const i = mockData.battles.findIndex((x) => x.id === id);
+  if (i >= 0) mockData.battles.splice(i, 1);
+  return { ok: true };
+}
+
+/**
+ * PATCH /api/battles/{id}/advance — simulation démo : fait avancer le score
+ * (chaque « journée » ajoute des points aléatoires) et peut terminer le défi.
+ */
+async function advanceBattle(id, terminer = false) {
+  await wait(50);
+  const b = mockData.battles.find((x) => x.id === id);
+  if (!b) return null;
+  b.scoreA += Math.floor(Math.random() * 3);
+  b.scoreB += Math.floor(Math.random() * 3);
+  if (terminer) b.statut = "termine";
+  return b;
+}
+
+/**
+ * GET /api/trends — tendances / hashtags.
+ */
+async function getTrends() {
+  await wait();
+  return [...mockData.tendances];
+}
+
+/**
+ * GET /api/live — matchs en direct (ticker temps réel).
+ */
+async function getLive() {
+  await wait(40);
+  return [...mockData.liveMatches];
+}
+
+/**
+ * GET /api/championnats — catalogue mondial des compétitions.
+ */
+async function getChampionnats() {
+  await wait(40);
+  return [...mockData.championnats];
+}
+
+/**
+ * GET /api/championnats/{nom}/equipes — effectif d'un championnat.
+ * Renvoie [] si la compétition n'a pas de roster (→ saisie libre côté UI).
+ */
+async function getEquipes(championnat) {
+  await wait(40);
+  return (mockData.equipes[championnat] || []).slice();
+}
+
+/** GET /api/bookmakers — liste des plateformes du comparateur. */
+function getBookmakers() {
+  return mockData.bookmakers.slice();
+}
+
+/** Les issues possibles d'un type de pari, pour un match A vs B. */
+function outcomesFor(typePari, a, b) {
+  switch (typePari) {
+    case "1N2": return [`1 (${a})`, "Match nul", `2 (${b})`];
+    case "Over/Under": return ["Over 2.5 buts", "Under 2.5 buts"];
+    case "BTTS": return ["Les deux équipes marquent — Oui", "Les deux équipes marquent — Non"];
+    case "Double chance": return [`1X (${a} ou nul)`, "12 (pas de nul)", `X2 (nul ou ${b})`];
+    case "Vainqueur": return [`${a} gagne`, `${b} gagne`];
+    default: return [`${a} gagne`, `${b} gagne`];
+  }
+}
+
+// Cote « de base » plausible selon le type de pari et l'issue (déterministe via rng).
+function _baseCote(typePari, idx, rnd) {
+  const inRange = (lo, hi) => +(lo + rnd() * (hi - lo)).toFixed(2);
+  switch (typePari) {
+    case "1N2": return [inRange(1.6, 2.6), inRange(3.0, 3.9), inRange(2.3, 4.6)][idx];
+    case "Over/Under": return inRange(1.6, 2.1);
+    case "BTTS": return inRange(1.6, 2.05);
+    case "Double chance": return [inRange(1.25, 1.6), inRange(1.35, 1.9), inRange(1.35, 1.75)][idx];
+    default: return inRange(1.5, 2.6); // Vainqueur
+  }
+}
+
+/**
+ * GET /api/odds?match=A-B&type=... — comparateur de cotes multi-bookmakers.
+ * Renvoie, pour chaque issue du pari, la cote de chaque plateforme + la meilleure.
+ * Les cotes sont SIMULÉES mais STABLES (déterministes) pour un même match/pari.
+ */
+async function getMatchOdds(a, b, typePari) {
+  await wait(50);
+  const issues = outcomesFor(typePari, a, b);
+  return issues.map((label, idx) => {
+    const seedBase = _hashStr(`${a}|${b}|${typePari}|${label}`);
+    const base = _baseCote(typePari, idx, _rng(seedBase));
+    const cotes = mockData.bookmakers.map((bk) => {
+      const v = _rng(seedBase ^ _hashStr(bk.id))();
+      const variation = 0.95 + v * 0.13; // ±≈ 6 %
+      return { bookmaker: bk, cote: Math.max(1.05, +(base * variation).toFixed(2)) };
+    });
+    const best = Math.max(...cotes.map((c) => c.cote));
+    return { label, cotes, best };
+  });
+}
+
+/**
+ * Comparateur pour un pronostic EXISTANT : génère des cotes de bookmakers
+ * autour de la cote retenue (`p.cote` reste la référence).
+ */
+function oddsAround(cote, seedStr) {
+  const seed = _hashStr(seedStr || String(cote));
+  const cotes = mockData.bookmakers.map((bk) => {
+    const v = _rng(seed ^ _hashStr(bk.id))();
+    const variation = 0.95 + v * 0.12;
+    return { bookmaker: bk, cote: Math.max(1.05, +(cote * variation).toFixed(2)) };
+  });
+  const best = Math.max(...cotes.map((c) => c.cote));
+  return { cotes, best };
+}
+
+/**
+ * GET /api/coupons — tous les coupons combinés.
+ */
+async function getCoupons() {
+  await wait();
+  return [...mockData.coupons].sort((a, b) => new Date(b.date) - new Date(a.date));
+}
+
+/**
+ * GET /api/users/{id}/coupons — coupons d'un pronostiqueur.
+ */
+async function getUserCoupons(id) {
+  await wait();
+  return mockData.coupons
+    .filter((c) => c.auteurId === id)
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+}
+
+/**
+ * POST /api/predictions/{id}/vote — vote à un sondage communautaire.
+ * @param {string} predId
+ * @param {number} optionIndex
+ */
+async function voteSondage(predId, optionIndex) {
+  await wait(50);
+  const p = mockData.predictions.find((x) => x.id === predId);
+  if (!p || !p.sondage) return null;
+  const me = mockData.currentUserId;
+  if (p.sondage.votants.includes(me)) return p.sondage; // un seul vote par personne
+  const opt = p.sondage.options[optionIndex];
+  if (!opt) return p.sondage;
+  opt.votes++;
+  p.sondage.votants.push(me);
+  return p.sondage;
+}
+
+/* -----------------------------------------------------------------------------
+ *  Helpers synchrones (utilitaires internes, non exposés comme endpoints).
+ * --------------------------------------------------------------------------- */
+function getCurrentUserSync() {
+  return mockData.users.find((u) => u.id === mockData.currentUserId);
+}
+
+// Expose l'ensemble de l'« API » sur window pour app.js (pas de bundler).
+window.API = {
+  mockData,
+  getFeed,
+  getAllPredictions,
+  getUser,
+  getAllUsers,
+  getUserPredictions,
+  getPrediction,
+  createPrediction,
+  toggleFollow,
+  likePrediction,
+  repostPrediction,
+  savePrediction,
+  addComment,
+  resolvePrediction,
+  getLeaderboard,
+  getNotifications,
+  getBattles,
+  getTrends,
+  getLive,
+  getChampionnats,
+  getCoupons,
+  getUserCoupons,
+  voteSondage,
+  login,
+  signup,
+  logout,
+  switchAccount,
+  updateProfile,
+  changePassword,
+  getConversations,
+  getThread,
+  sendMessage,
+  countUnreadMessages,
+  getBattle,
+  getUserBattles,
+  createBattle,
+  acceptBattle,
+  declineBattle,
+  advanceBattle,
+  pushNotification,
+  reactPrediction,
+  reactMessage,
+  sharePrediction,
+  getEquipes,
+  getBookmakers,
+  outcomesFor,
+  getMatchOdds,
+  oddsAround,
+  getStories,
+  createStory,
+  viewStory,
+  getCurrentUserSync,
+};
