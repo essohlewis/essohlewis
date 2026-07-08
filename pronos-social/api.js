@@ -40,6 +40,23 @@ let _seq = 0;
 const _baseNow = Math.max(Date.now(), Date.parse("2026-07-08T11:00:00Z"));
 const nowISO = () => new Date(_baseNow + (_seq += 1000)).toISOString();
 
+// Générateur pseudo-aléatoire déterministe (mulberry32) + hash de chaîne (FNV-1a).
+// Utilisé pour générer des cotes STABLES par match/pari durant la session.
+function _hashStr(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function _rng(seed) {
+  let t = seed >>> 0;
+  return () => {
+    t += 0x6d2b79f5;
+    let x = Math.imul(t ^ (t >>> 15), t | 1);
+    x ^= x + Math.imul(x ^ (x >>> 7), x | 61);
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 /* -----------------------------------------------------------------------------
  *  DONNÉES DE DÉMONSTRATION (mockData)
  *  Persistance « en mémoire » uniquement — AUCUN localStorage/sessionStorage.
@@ -829,6 +846,98 @@ const mockData = {
     { nom: "UFC", region: "Autres sports", pays: "Monde", emoji: "🥊", hashtag: "UFC", sport: "MMA" },
   ],
 
+  /* ---- EFFECTIFS PAR CHAMPIONNAT (équipes / compétiteurs) ----------------
+   * Rosters proposés dans le formulaire de création. Chaque entrée : nom + logo
+   * (emoji). Les compétitions absentes basculent en saisie libre.
+   * >>> Intégration : table `teams` liée à `leagues`. <<<
+   * --------------------------------------------------------------------- */
+  equipes: {
+    "CAN": [
+      { n: "Côte d'Ivoire", l: "🇨🇮" }, { n: "Sénégal", l: "🇸🇳" }, { n: "Nigeria", l: "🇳🇬" }, { n: "Maroc", l: "🇲🇦" },
+      { n: "Égypte", l: "🇪🇬" }, { n: "Cameroun", l: "🇨🇲" }, { n: "Ghana", l: "🇬🇭" }, { n: "Algérie", l: "🇩🇿" },
+      { n: "Mali", l: "🇲🇱" }, { n: "Tunisie", l: "🇹🇳" }, { n: "Afrique du Sud", l: "🇿🇦" }, { n: "RD Congo", l: "🇨🇩" },
+    ],
+    "Ligue 1": [
+      { n: "PSG", l: "🔵" }, { n: "Marseille", l: "⚪" }, { n: "Monaco", l: "🔴" }, { n: "Lyon", l: "🔴" },
+      { n: "Lille", l: "🔴" }, { n: "Nice", l: "🔴" }, { n: "Lens", l: "🟡" }, { n: "Rennes", l: "🔴" },
+      { n: "Nantes", l: "🟡" }, { n: "Brest", l: "🔴" },
+    ],
+    "Premier League": [
+      { n: "Man City", l: "🔵" }, { n: "Arsenal", l: "🔴" }, { n: "Liverpool", l: "🔴" }, { n: "Chelsea", l: "🔵" },
+      { n: "Man United", l: "🔴" }, { n: "Tottenham", l: "⚪" }, { n: "Newcastle", l: "⚫" }, { n: "Aston Villa", l: "🟣" },
+      { n: "Brighton", l: "🔵" }, { n: "West Ham", l: "🟣" },
+    ],
+    "La Liga": [
+      { n: "Real Madrid", l: "⚪" }, { n: "Barcelone", l: "🔵" }, { n: "Atlético", l: "🔴" }, { n: "Séville", l: "🔴" },
+      { n: "Valence", l: "🟠" }, { n: "Villarreal", l: "🟡" }, { n: "Bétis", l: "🟢" }, { n: "Real Sociedad", l: "🔵" },
+      { n: "Athletic Bilbao", l: "🔴" }, { n: "Girona", l: "🔴" },
+    ],
+    "Serie A": [
+      { n: "Inter", l: "🔵" }, { n: "Milan", l: "🔴" }, { n: "Juventus", l: "⚪" }, { n: "Napoli", l: "🔵" },
+      { n: "Roma", l: "🔴" }, { n: "Lazio", l: "🔵" }, { n: "Atalanta", l: "🔵" }, { n: "Fiorentina", l: "🟣" }, { n: "Bologna", l: "🔴" },
+    ],
+    "Bundesliga": [
+      { n: "Bayern", l: "🔴" }, { n: "Dortmund", l: "🟡" }, { n: "Leipzig", l: "⚪" }, { n: "Leverkusen", l: "🔴" },
+      { n: "Francfort", l: "⚫" }, { n: "Stuttgart", l: "⚪" }, { n: "Wolfsburg", l: "🟢" }, { n: "M'gladbach", l: "⚫" },
+    ],
+    "Champions League": [
+      { n: "Real Madrid", l: "⚪" }, { n: "Man City", l: "🔵" }, { n: "Bayern", l: "🔴" }, { n: "PSG", l: "🔵" },
+      { n: "Barcelone", l: "🔵" }, { n: "Inter", l: "🔵" }, { n: "Liverpool", l: "🔴" }, { n: "Arsenal", l: "🔴" },
+      { n: "Dortmund", l: "🟡" }, { n: "Milan", l: "🔴" }, { n: "Atlético", l: "🔴" }, { n: "Porto", l: "🔵" },
+    ],
+    "Ligue 1 CIV": [
+      { n: "ASEC Mimosas", l: "🟡" }, { n: "Africa Sports", l: "🟢" }, { n: "Stade d'Abidjan", l: "🔵" }, { n: "SOA", l: "🔴" },
+      { n: "San Pédro", l: "🔵" }, { n: "SC Gagnoa", l: "🟢" }, { n: "Bouaké FC", l: "⚪" }, { n: "Denguélé", l: "🟠" },
+    ],
+    "Botola Pro": [
+      { n: "Raja Casablanca", l: "🟢" }, { n: "Wydad", l: "🔴" }, { n: "RS Berkane", l: "🟠" }, { n: "FAR Rabat", l: "⚫" },
+      { n: "Maghreb Fès", l: "🔴" }, { n: "MC Oujda", l: "🔴" },
+    ],
+    "MLS": [
+      { n: "Inter Miami", l: "🩷" }, { n: "LA Galaxy", l: "⚪" }, { n: "LAFC", l: "⚫" }, { n: "Seattle", l: "🟢" },
+      { n: "Atlanta", l: "🔴" }, { n: "NY Red Bulls", l: "🔴" },
+    ],
+    "Saudi Pro League": [
+      { n: "Al-Nassr", l: "🟡" }, { n: "Al-Hilal", l: "🔵" }, { n: "Al-Ittihad", l: "🟡" }, { n: "Al-Ahli", l: "🟢" }, { n: "Al-Ettifaq", l: "🔴" },
+    ],
+    "Brasileirão": [
+      { n: "Flamengo", l: "🔴" }, { n: "Palmeiras", l: "🟢" }, { n: "Corinthians", l: "⚫" }, { n: "São Paulo", l: "🔴" },
+      { n: "Fluminense", l: "🟢" }, { n: "Grêmio", l: "🔵" },
+    ],
+    "Süper Lig": [
+      { n: "Galatasaray", l: "🟡" }, { n: "Fenerbahçe", l: "🔵" }, { n: "Beşiktaş", l: "⚫" }, { n: "Trabzonspor", l: "🔴" },
+    ],
+    "NBA": [
+      { n: "Lakers", l: "🟣" }, { n: "Celtics", l: "🟢" }, { n: "Warriors", l: "🔵" }, { n: "Nuggets", l: "🟡" },
+      { n: "Bucks", l: "🟢" }, { n: "Suns", l: "🟠" }, { n: "Heat", l: "🔴" },
+    ],
+    "Formule 1": [
+      { n: "Verstappen", l: "🏎️" }, { n: "Norris", l: "🏁" }, { n: "Leclerc", l: "🔴" }, { n: "Hamilton", l: "⚫" },
+      { n: "Russell", l: "🔵" }, { n: "Piastri", l: "🟠" }, { n: "Sainz", l: "🔴" }, { n: "Pérez", l: "🔵" },
+    ],
+    "Tennis ATP": [
+      { n: "Alcaraz", l: "🎾" }, { n: "Djokovic", l: "🎾" }, { n: "Sinner", l: "🎾" }, { n: "Medvedev", l: "🎾" }, { n: "Zverev", l: "🎾" },
+    ],
+    "Tennis WTA": [
+      { n: "Swiatek", l: "🎾" }, { n: "Sabalenka", l: "🎾" }, { n: "Gauff", l: "🎾" }, { n: "Rybakina", l: "🎾" },
+    ],
+    "UFC": [
+      { n: "Ngannou", l: "🥊" }, { n: "Jones", l: "🥋" }, { n: "Adesanya", l: "🥊" }, { n: "Makhachev", l: "🥋" }, { n: "O'Malley", l: "🥊" },
+    ],
+  },
+
+  /* ---- BOOKMAKERS (comparateur de cotes) --------------------------------
+   * Plateformes de paris affichées à titre indicatif. Les cotes sont SIMULÉES.
+   * >>> Intégration : agrégateur de cotes (API odds / feed bookmakers). <<<
+   * --------------------------------------------------------------------- */
+  bookmakers: [
+    { id: "betclic", nom: "Betclic", c: "#e2001a" },
+    { id: "1xbet", nom: "1xBet", c: "#0a6cff" },
+    { id: "premierbet", nom: "Premier Bet", c: "#00a651" },
+    { id: "betway", nom: "Betway", c: "#00b13f" },
+    { id: "888starz", nom: "888starz", c: "#f4b400" },
+  ],
+
   /* ---- DÉFIS / BATTLES --------------------------------------------------- */
   battles: [
     { id: "b1", aId: "u_kader", bId: "u_awa", journee: "Journée CAN", scoreA: 3, scoreB: 2, statut: "en_cours" },
@@ -1162,11 +1271,14 @@ async function createPrediction(data) {
     confiance: data.confiance,
     premium: !!data.premium,
     analyse: data.analyse,
+    bookmaker: data.bookmaker || null,
+    cotesComparees: data.cotesComparees || null,
     statut: "en_cours",
     likes: [],
     reposts: [],
     sauvegardes: [],
     commentaires: [],
+    reactions: {},
     date: nowISO(),
   };
   mockData.predictions.unshift(pred);
@@ -1423,6 +1535,80 @@ async function getChampionnats() {
 }
 
 /**
+ * GET /api/championnats/{nom}/equipes — effectif d'un championnat.
+ * Renvoie [] si la compétition n'a pas de roster (→ saisie libre côté UI).
+ */
+async function getEquipes(championnat) {
+  await wait(40);
+  return (mockData.equipes[championnat] || []).slice();
+}
+
+/** GET /api/bookmakers — liste des plateformes du comparateur. */
+function getBookmakers() {
+  return mockData.bookmakers.slice();
+}
+
+/** Les issues possibles d'un type de pari, pour un match A vs B. */
+function outcomesFor(typePari, a, b) {
+  switch (typePari) {
+    case "1N2": return [`1 (${a})`, "Match nul", `2 (${b})`];
+    case "Over/Under": return ["Over 2.5 buts", "Under 2.5 buts"];
+    case "BTTS": return ["Les deux équipes marquent — Oui", "Les deux équipes marquent — Non"];
+    case "Double chance": return [`1X (${a} ou nul)`, "12 (pas de nul)", `X2 (nul ou ${b})`];
+    case "Vainqueur": return [`${a} gagne`, `${b} gagne`];
+    default: return [`${a} gagne`, `${b} gagne`];
+  }
+}
+
+// Cote « de base » plausible selon le type de pari et l'issue (déterministe via rng).
+function _baseCote(typePari, idx, rnd) {
+  const inRange = (lo, hi) => +(lo + rnd() * (hi - lo)).toFixed(2);
+  switch (typePari) {
+    case "1N2": return [inRange(1.6, 2.6), inRange(3.0, 3.9), inRange(2.3, 4.6)][idx];
+    case "Over/Under": return inRange(1.6, 2.1);
+    case "BTTS": return inRange(1.6, 2.05);
+    case "Double chance": return [inRange(1.25, 1.6), inRange(1.35, 1.9), inRange(1.35, 1.75)][idx];
+    default: return inRange(1.5, 2.6); // Vainqueur
+  }
+}
+
+/**
+ * GET /api/odds?match=A-B&type=... — comparateur de cotes multi-bookmakers.
+ * Renvoie, pour chaque issue du pari, la cote de chaque plateforme + la meilleure.
+ * Les cotes sont SIMULÉES mais STABLES (déterministes) pour un même match/pari.
+ */
+async function getMatchOdds(a, b, typePari) {
+  await wait(50);
+  const issues = outcomesFor(typePari, a, b);
+  return issues.map((label, idx) => {
+    const seedBase = _hashStr(`${a}|${b}|${typePari}|${label}`);
+    const base = _baseCote(typePari, idx, _rng(seedBase));
+    const cotes = mockData.bookmakers.map((bk) => {
+      const v = _rng(seedBase ^ _hashStr(bk.id))();
+      const variation = 0.95 + v * 0.13; // ±≈ 6 %
+      return { bookmaker: bk, cote: Math.max(1.05, +(base * variation).toFixed(2)) };
+    });
+    const best = Math.max(...cotes.map((c) => c.cote));
+    return { label, cotes, best };
+  });
+}
+
+/**
+ * Comparateur pour un pronostic EXISTANT : génère des cotes de bookmakers
+ * autour de la cote retenue (`p.cote` reste la référence).
+ */
+function oddsAround(cote, seedStr) {
+  const seed = _hashStr(seedStr || String(cote));
+  const cotes = mockData.bookmakers.map((bk) => {
+    const v = _rng(seed ^ _hashStr(bk.id))();
+    const variation = 0.95 + v * 0.12;
+    return { bookmaker: bk, cote: Math.max(1.05, +(cote * variation).toFixed(2)) };
+  });
+  const best = Math.max(...cotes.map((c) => c.cote));
+  return { cotes, best };
+}
+
+/**
  * GET /api/coupons — tous les coupons combinés.
  */
 async function getCoupons() {
@@ -1510,5 +1696,10 @@ window.API = {
   reactPrediction,
   reactMessage,
   sharePrediction,
+  getEquipes,
+  getBookmakers,
+  outcomesFor,
+  getMatchOdds,
+  oddsAround,
   getCurrentUserSync,
 };

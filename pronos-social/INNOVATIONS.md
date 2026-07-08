@@ -194,6 +194,32 @@ pronostic est envoyé dans le fil de discussion et **rendu en mini-carte**
 - API : `sharePrediction(userId, predId)` (message porteur d'un `predId`).
 - Rendu : `sharedPredCardHTML()` dans `threadBubblesHTML()`.
 
+## 16. 🧾 Composeur de match + comparateur de cotes (multi-bookmakers)
+Le formulaire de création guide un pronostic **crédible**, comme sur les vraies
+plateformes de paris :
+1. **Championnat / compétition** → la liste des **équipes/compétiteurs** de cette
+   compétition se charge automatiquement (menus déroulants avec drapeaux/logos ;
+   saisie libre pour les compétitions sans effectif). Les sports individuels
+   (F1, tennis, MMA) restreignent le type de pari à « Vainqueur ».
+2. **Date & heure** du match.
+3. **Type de pari** puis **issue** (1N2, Over/Under, BTTS, Double chance, Vainqueur).
+4. **Comparateur de cotes** : pour l'issue choisie, les cotes de plusieurs
+   plateformes — **Betclic, 1xBet, Premier Bet, Betway, 888starz** — s'affichent
+   avec la **meilleure cote mise en avant** ⭐. L'utilisateur sélectionne la
+   plateforme dont il prend la cote → « Cote retenue ».
+
+Le pronostic publié conserve le **bookmaker** (affiché sur la carte, près de la
+cote) et les **cotes comparées**. Chaque **détail de pronostic** affiche aussi un
+comparateur (généré autour de la cote retenue pour les pronostics existants).
+
+- Données : `mockData.equipes` (effectifs), `mockData.bookmakers`.
+- API : `getEquipes`, `getBookmakers`, `getMatchOdds`, `outcomesFor`, `oddsAround`.
+- Cotes **simulées mais déterministes** (générateur pseudo-aléatoire seedé) pour
+  rester stables durant la session.
+- **Intégration** : brancher `getMatchOdds` sur un agrégateur de cotes réel
+  (feed bookmakers / API odds). ⚠️ Affichage indicatif — la plateforme ne prend
+  aucun pari.
+
 ## 6. 🤖 Coach IA (analyse simulée)
 Sur le détail d'un pronostic, un panneau **Coach IA** rend un **indice de confiance
 (0–100)** et un **verdict** calculés par une heuristique combinant :

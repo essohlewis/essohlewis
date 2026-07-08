@@ -447,7 +447,7 @@ function predictionCardHTML(p, opts = {}) {
       <span class="bet-type">${esc(p.typePari)}</span>
       <span class="bet-choice">${esc(p.choix)}</span>
       ${starsHTML(p.confiance)}
-      <span class="bet-cote">${fmtCote(p.cote)}<small>COTE</small></span>
+      <span class="bet-cote">${fmtCote(p.cote)}<small>${p.bookmaker ? esc(p.bookmaker) : "COTE"}</small></span>
     </div>
 
     <p class="analyse ${clamp ? "clamp" : ""}" data-analyse>${linkifyHashtags(p.analyse)}</p>
@@ -629,6 +629,33 @@ function coachIAHTML(p) {
         <span class="ia-note">Analyse simulée à titre indicatif — pas un conseil de pari.</span>
       </div>
     </div>`;
+}
+
+/** Comparateur de cotes affiché sur le détail d'un pronostic. */
+function comparatorHTML(p) {
+  // Cotes enregistrées à la création, sinon générées autour de la cote retenue.
+  let cotes, best;
+  if (p.cotesComparees && p.cotesComparees.length) {
+    cotes = p.cotesComparees.map((c) => {
+      const bk = API.mockData.bookmakers.find((b) => b.nom === c.nom) || { nom: c.nom, c: "#888" };
+      return { bookmaker: bk, cote: c.cote };
+    });
+    best = Math.max(...cotes.map((c) => c.cote));
+  } else {
+    const gen = API.oddsAround(p.cote, p.id);
+    cotes = gen.cotes; best = gen.best;
+  }
+  const rows = cotes.slice().sort((a, b) => b.cote - a.cote).map((c) => `
+    <div class="comp-row ${c.cote === best ? "best" : ""} ${c.bookmaker.nom === p.bookmaker ? "chosen" : ""}">
+      <span class="comp-bk"><i style="background:${c.bookmaker.c}"></i>${esc(c.bookmaker.nom)}</span>
+      <span class="comp-cote">${fmtCote(c.cote)}</span>
+      ${c.cote === best ? `<span class="comp-best">⭐ Meilleure</span>` : (c.bookmaker.nom === p.bookmaker ? `<span class="comp-pick">Retenue</span>` : "")}
+    </div>`).join("");
+  return `<div class="comparator detail">
+    <div class="comp-title">💰 Cotes comparées — <b>${esc(p.choix)}</b></div>
+    ${rows}
+    <div class="comp-note">Cotes indicatives et simulées${p.bookmaker ? ` · pronostic pris chez <b>${esc(p.bookmaker)}</b>` : ""}.</div>
+  </div>`;
 }
 
 /** Ticker de matchs en direct (mis à jour par un timer). */
@@ -1184,6 +1211,8 @@ async function renderPredictionDetail(id) {
 
     <div style="padding:0 16px">${coachIAHTML(p)}</div>
 
+    <div style="padding:14px 16px 0">${comparatorHTML(p)}</div>
+
     ${p.sondage ? `<div style="padding:14px 16px 0">${pollHTML(p)}</div>` : ""}
 
     <div class="section-title">💬 Commentaires (${p.commentaires.length})</div>
@@ -1275,52 +1304,27 @@ async function renderLeaderboard(period = "week") {
 
 /* ---- 5.6 CRÉATION D'UN PRONOSTIC ---- */
 function renderCreate() {
-  setTop("Nouveau pronostic", "Partage ton analyse");
+  setTop("Nouveau pronostic", "Choisis le match, compare les cotes 📊");
   view().innerHTML = `
     <form class="form" id="createForm">
-      <div class="field row2">
-        <div class="field">
-          <label>Équipe A / Joueur A</label>
-          <input id="fEquipeA" placeholder="Ex. Côte d'Ivoire" required />
-        </div>
-        <div class="field">
-          <label>Équipe B / Joueur B</label>
-          <input id="fEquipeB" placeholder="Ex. Sénégal" required />
-        </div>
+      <div class="field">
+        <label>1️⃣ Championnat / compétition</label>
+        <select id="fLigue">${champOptionsHTML()}</select>
       </div>
 
-      <div class="field row2">
-        <div class="field">
-          <label>Championnat / compétition</label>
-          <select id="fLigue">${champOptionsHTML()}</select>
-        </div>
-        <div class="field">
-          <label>Date & heure du match</label>
-          <input id="fDate" type="datetime-local" required />
-        </div>
-      </div>
+      <div id="teamFields"><!-- équipes selon le championnat --></div>
 
-      <div class="field row2">
-        <div class="field">
-          <label>Type de pari</label>
-          <select id="fType">
-            <option>1N2</option>
-            <option>Over/Under</option>
-            <option>BTTS</option>
-            <option>Double chance</option>
-            <option>Vainqueur</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Cote</label>
-          <input id="fCote" type="number" step="0.01" min="1.01" placeholder="1.85" required />
-        </div>
+      <div class="field">
+        <label>📅 Date & heure du match</label>
+        <input id="fDate" type="datetime-local" required />
       </div>
 
       <div class="field">
-        <label>Ton pronostic (choix)</label>
-        <input id="fChoix" placeholder="Ex. Over 2.5 buts" required />
+        <label>2️⃣ Type de pari</label>
+        <select id="fType"></select>
       </div>
+
+      <div id="oddsBox" class="odds-box"><!-- issues + comparateur de cotes --></div>
 
       <div class="field">
         <label>Mise de confiance</label>
@@ -1343,62 +1347,158 @@ function renderCreate() {
       </div>
 
       <button type="submit" class="nav-cta" style="margin:6px 0 0">Publier le pronostic 🎯</button>
-      <p class="form-preview-note">Astuce : les #hashtags dans l'analyse deviennent cliquables.</p>
-    </form>
-  `;
+      <p class="form-preview-note">Cotes indicatives et simulées — comparées entre plusieurs plateformes.</p>
+    </form>`;
 
-  // Sélecteur d'étoiles.
-  let confiance = 3;
-  const paintStars = () => $$("#fConfiance button").forEach((b) =>
-    b.classList.toggle("on", +b.dataset.star <= confiance));
-  $("#fConfiance").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-star]"); if (!b) return;
-    confiance = +b.dataset.star; paintStars();
-  });
+  // --- État du formulaire ---
+  let confiance = 3, premium = false;
+  let teamA = null, teamB = null;      // { n, l }
+  let currentOdds = [];                // issues + cotes par bookmaker
+  let selIdx = -1;                     // issue sélectionnée
+  let selectedCote = null, selectedBk = null, selectedChoix = null;
+
+  const TYPES_FOOT = ["1N2", "Over/Under", "BTTS", "Double chance", "Vainqueur"];
+
+  // Étoiles de confiance.
+  const paintStars = () => $$("#fConfiance button").forEach((b) => b.classList.toggle("on", +b.dataset.star <= confiance));
+  $("#fConfiance").addEventListener("click", (e) => { const b = e.target.closest("[data-star]"); if (b) { confiance = +b.dataset.star; paintStars(); } });
   paintStars();
 
   // Toggle premium.
-  let premium = false;
-  $("#fPremium").addEventListener("click", () => {
-    premium = !premium;
-    $("#fPremium").classList.toggle("on", premium);
+  $("#fPremium").addEventListener("click", () => { premium = !premium; $("#fPremium").classList.toggle("on", premium); });
+
+  // Options de type de pari selon le sport.
+  function refreshTypeOptions() {
+    const sport = champSport($("#fLigue").value);
+    const types = sport === "Football" ? TYPES_FOOT : ["Vainqueur"];
+    $("#fType").innerHTML = types.map((t) => `<option>${t}</option>`).join("");
+  }
+
+  // Champs équipes : liste déroulante si un effectif existe, sinon saisie libre.
+  function refreshTeamFields() {
+    const nom = $("#fLigue").value;
+    const roster = API.mockData.equipes[nom] || [];
+    const box = $("#teamFields");
+    if (roster.length) {
+      const opts = () => `<option value="" disabled selected>Choisir…</option>` +
+        roster.map((e) => `<option value="${esc(e.n)}" data-logo="${e.l}">${e.l} ${esc(e.n)}</option>`).join("");
+      box.innerHTML = `<div class="field row2">
+        <div class="field"><label>Équipe / Joueur A</label><select id="fEquipeA" required>${opts()}</select></div>
+        <div class="field"><label>Équipe / Joueur B</label><select id="fEquipeB" required>${opts()}</select></div>
+      </div>`;
+    } else {
+      box.innerHTML = `<div class="field row2">
+        <div class="field"><label>Équipe / Joueur A</label><input id="fEquipeA" placeholder="Ex. Équipe A" required /></div>
+        <div class="field"><label>Équipe / Joueur B</label><input id="fEquipeB" placeholder="Ex. Équipe B" required /></div>
+      </div>`;
+    }
+    ["#fEquipeA", "#fEquipeB"].forEach((id) => {
+      const el = $(id);
+      el.addEventListener("change", refreshOdds);
+      if (el.tagName === "INPUT") el.addEventListener("input", refreshOdds);
+    });
+    refreshOdds();
+  }
+
+  function readTeam(id) {
+    const el = $(id); if (!el) return null;
+    if (el.tagName === "SELECT") {
+      const opt = el.selectedOptions[0];
+      return opt && opt.value ? { n: opt.value, l: opt.dataset.logo || "⚽" } : null;
+    }
+    const v = el.value.trim();
+    return v ? { n: v, l: "⚽" } : null;
+  }
+
+  // Recharge le comparateur de cotes en fonction des équipes + type.
+  async function refreshOdds() {
+    teamA = readTeam("#fEquipeA"); teamB = readTeam("#fEquipeB");
+    selIdx = -1; selectedCote = null; selectedBk = null; selectedChoix = null;
+    const box = $("#oddsBox");
+    if (!teamA || !teamB) { box.innerHTML = `<div class="odds-hint">📊 Choisis les deux équipes pour comparer les cotes des bookmakers.</div>`; return; }
+    if (teamA.n === teamB.n) { box.innerHTML = `<div class="odds-hint err">Choisis deux équipes différentes.</div>`; return; }
+    box.innerHTML = `<div class="odds-hint">Chargement des cotes…</div>`;
+    currentOdds = await API.getMatchOdds(teamA.n, teamB.n, $("#fType").value);
+    renderOddsBox();
+  }
+
+  function renderOddsBox() {
+    const box = $("#oddsBox");
+    const outcomes = currentOdds.map((o, i) =>
+      `<button type="button" class="outcome-pill ${i === selIdx ? "on" : ""}" data-outcome="${i}">${esc(o.label)}</button>`).join("");
+
+    let comp = "";
+    if (selIdx >= 0) {
+      const o = currentOdds[selIdx];
+      const rows = o.cotes.slice().sort((a, b) => b.cote - a.cote).map((c) => `
+        <button type="button" class="comp-row ${c.cote === o.best ? "best" : ""} ${selectedBk && selectedBk.id === c.bookmaker.id ? "chosen" : ""}" data-bk="${c.bookmaker.id}" data-cote="${c.cote}">
+          <span class="comp-bk"><i style="background:${c.bookmaker.c}"></i>${esc(c.bookmaker.nom)}</span>
+          <span class="comp-cote">${c.cote.toFixed(2)}</span>
+          ${c.cote === o.best ? `<span class="comp-best">⭐ Meilleure</span>` : `<span class="comp-pick">Choisir</span>`}
+        </button>`).join("");
+      comp = `<div class="comparator">
+        <div class="comp-title">💰 Cotes comparées — <b>${esc(o.label)}</b></div>
+        ${rows}
+        <div class="comp-note">Sélectionne la plateforme dont tu prends la cote.</div>
+      </div>`;
+    }
+
+    box.innerHTML = `
+      <div class="field"><label>3️⃣ Ton pronostic (issue)</label><div class="outcomes">${outcomes}</div></div>
+      ${comp}
+      ${selectedCote ? `<div class="odds-selected">✅ Cote retenue : <b>${selectedCote.toFixed(2)}</b> · ${esc(selectedBk.nom)}<br><span>« ${esc(selectedChoix)} »</span></div>` : ""}`;
+  }
+
+  // Clics dans le comparateur (délégation locale).
+  $("#oddsBox").addEventListener("click", (e) => {
+    const op = e.target.closest("[data-outcome]");
+    if (op) { selIdx = +op.dataset.outcome; selectedBk = null; selectedCote = null; selectedChoix = null; renderOddsBox(); return; }
+    const cr = e.target.closest("[data-bk]");
+    if (cr && selIdx >= 0) {
+      selectedBk = API.mockData.bookmakers.find((b) => b.id === cr.dataset.bk);
+      selectedCote = parseFloat(cr.dataset.cote);
+      selectedChoix = currentOdds[selIdx].label;
+      renderOddsBox();
+    }
   });
+
+  $("#fType").addEventListener("change", refreshOdds);
+  $("#fLigue").addEventListener("change", () => { refreshTypeOptions(); refreshTeamFields(); });
+
+  // Initialisation.
+  refreshTypeOptions();
+  refreshTeamFields();
 
   // Soumission.
   $("#createForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const equipeA = $("#fEquipeA").value.trim();
-    const equipeB = $("#fEquipeB").value.trim();
+    if (!teamA || !teamB) { toast("Choisis les deux équipes.", "err"); return; }
+    if (teamA.n === teamB.n) { toast("Choisis deux équipes différentes.", "err"); return; }
+    if (!selectedCote || !selectedChoix) { toast("Sélectionne une issue et une cote.", "err"); return; }
+
     const ligue = $("#fLigue").value;
     const dateVal = $("#fDate").value;
-    const cote = parseFloat($("#fCote").value);
-    const choix = $("#fChoix").value.trim();
     const analyse = $("#fAnalyse").value.trim() || "Pas d'analyse détaillée.";
-
-    if (!equipeA || !equipeB || !choix || !cote) {
-      toast("Merci de compléter les champs requis.", "err");
-      return;
-    }
-
-    // Emoji de logo par défaut selon la ligue (démo).
-    const logo = "⚽";
-    const hashtag = ligue.replace(/\s+/g, "");
+    const o = currentOdds[selIdx];
 
     await API.createPrediction({
       match: {
-        equipeA, equipeB, ligue,
-        logoA: logo, logoB: logo, hashtag,
+        equipeA: teamA.n, equipeB: teamB.n, ligue,
+        logoA: teamA.l, logoB: teamB.l,
+        hashtag: (CHAMP_INDEX[ligue] || {}).hashtag || ligue.replace(/\s+/g, ""),
         date: dateVal ? new Date(dateVal).toISOString() : new Date().toISOString(),
       },
       typePari: $("#fType").value,
-      choix, cote, confiance, premium, analyse,
+      choix: selectedChoix, cote: selectedCote, confiance, premium, analyse,
+      bookmaker: selectedBk.nom,
+      cotesComparees: o.cotes.map((c) => ({ nom: c.bookmaker.nom, cote: c.cote })),
     });
 
     toast("Pronostic publié ! 🎯 Il apparaît dans ton fil.", "ok");
     location.hash = "#/feed";
   });
 
-  // Pré-remplir la date avec « maintenant + 3h ».
+  // Pré-remplir la date avec « maintenant + 3 h ».
   const d = new Date(Date.now() + 3 * 3600 * 1000);
   d.setMinutes(0);
   $("#fDate").value = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
