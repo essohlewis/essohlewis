@@ -840,7 +840,7 @@ async function renderProfile(userId, tab = "tous") {
         ${avatarHTML(u, "xl")}
         <div class="profile-actions">
           ${isMe
-            ? `<a href="#/create" class="btn">✏️ Publier</a>`
+            ? `<button class="btn" data-editprofile>✏️ Modifier le profil</button>`
             : `<button class="btn btn-icon" data-msg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 9 9 0 01-4-.9L3 21l1.9-4.5A8.4 8.4 0 0121 11.5z"/></svg></button>
                <button class="btn btn-follow ${suit ? "on" : ""}" data-follow="${u.id}"></button>`}
         </div>
@@ -1467,6 +1467,12 @@ function emptyHTML(ico, titre, sous) {
  * --------------------------------------------------------------------------- */
 
 document.addEventListener("click", async (e) => {
+  // -- Menu « Mon compte » (bloc en bas de la nav de gauche) --
+  if (e.target.closest("#navMe")) { openAccountMenu(); return; }
+
+  // -- Éditer le profil (bouton sur son propre profil) --
+  if (e.target.closest("[data-editprofile]")) { openEditProfile(); return; }
+
   // -- Navigation par data-nav (éléments non-<a>) --
   const nav = e.target.closest("[data-nav]");
   if (nav && !e.target.closest("a")) {
@@ -1774,6 +1780,8 @@ function setActiveNav(route) {
 }
 
 async function router() {
+  // Garde : aucune vue n'est rendue tant que l'utilisateur n'est pas connecté.
+  if (!API.mockData.currentUserId) return;
   const hash = location.hash || "#/feed";
   const parts = hash.slice(2).split("/"); // ex. ["profile","u_kader"]
   const route = parts[0] || "feed";
@@ -1810,17 +1818,368 @@ $("#asideSearch").addEventListener("keydown", (e) => {
   }
 });
 
+/* =============================================================================
+ *  11. AUTHENTIFICATION — connexion / inscription / compte
+ * ========================================================================== */
+
+// Palette d'avatars (emoji) proposés à l'inscription et à l'édition de profil.
+const AVATARS = ["🙂", "🦁", "👑", "📊", "🌟", "🧙🏾", "⚽", "🔥", "🎯", "🐘", "🚀", "💎", "🥅", "🏆", "😎", "🧠"];
+// Bannières prédéfinies (dégradé + couleur d'accent associée).
+const BANNIERES = [
+  { grad: "linear-gradient(135deg,#0b3d2e,#00C853)", c: "#00C853" },
+  { grad: "linear-gradient(135deg,#3d2f00,#FFB300)", c: "#FFB300" },
+  { grad: "linear-gradient(135deg,#3d0f00,#FF3D00)", c: "#FF3D00" },
+  { grad: "linear-gradient(135deg,#00204d,#2979FF)", c: "#2979FF" },
+  { grad: "linear-gradient(135deg,#2a004d,#AA00FF)", c: "#AA00FF" },
+  { grad: "linear-gradient(135deg,#00332c,#00BFA5)", c: "#00BFA5" },
+];
+const SPORTS_DISPO = ["Football", "Basket", "Tennis", "Rugby", "MMA", "Formule 1"];
+
+let appStarted = false;
+
+/** Affiche le portail d'authentification et masque l'application. */
+function showAuthGate() {
+  document.getElementById("appRoot").hidden = true;
+  document.getElementById("mobileNav").hidden = true;
+  const gate = document.getElementById("authGate");
+  gate.hidden = false;
+  renderAuthGate();
+}
+
+/** Révèle l'application après connexion et initialise les vues. */
+function enterApp() {
+  document.getElementById("authGate").hidden = true;
+  document.getElementById("appRoot").hidden = false;
+  document.getElementById("mobileNav").hidden = false;
+  renderNavMe();
+  renderAside();
+  updateNotifBadge();
+  if (!appStarted) { window.addEventListener("hashchange", router); appStarted = true; }
+  if (!location.hash || location.hash === "#" || location.hash === "#/") {
+    location.hash = "#/feed";
+  }
+  router();
+}
+
+/** Construit l'écran de connexion / inscription. */
+function renderAuthGate(mode = "login") {
+  const gate = document.getElementById("authGate");
+  const demoUsers = API.mockData.users.slice(0, 6);
+
+  gate.innerHTML = `
+    <div class="auth-hero">
+      <div class="auth-brand"><span class="logo">🎯</span> Prono<span>Stars</span></div>
+      <h1 class="auth-title">Le réseau social des pronostiqueurs 🇨🇮</h1>
+      <p class="auth-sub">Partage tes analyses, gagne en crédibilité avec ton <b>TrustScore</b>,
+        suis les meilleurs experts et grimpe au classement. Football, basket, tennis, F1…</p>
+      <ul class="auth-feats">
+        <li>📈 Ton TrustScore et tes stats de performance en direct</li>
+        <li>🎟️ Coupons combinés & 🤖 Coach IA sur chaque pronostic</li>
+        <li>🌍 Championnats du monde entier, multi-sports</li>
+      </ul>
+      <p class="auth-warn">⚠️ Réseau social de partage d'analyses — aucun pari, aucun argent de jeu.</p>
+    </div>
+
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <button class="auth-tab ${mode === "login" ? "active" : ""}" data-authtab="login">Connexion</button>
+        <button class="auth-tab ${mode === "signup" ? "active" : ""}" data-authtab="signup">Inscription</button>
+      </div>
+      <div id="authFormBox">${mode === "login" ? loginFormHTML() : signupFormHTML()}</div>
+
+      <div class="auth-demo">
+        <div class="auth-demo-t">⚡ Ou explore avec un compte de démo :</div>
+        <div class="auth-demo-list">
+          ${demoUsers.map((u) => `
+            <button class="auth-demo-chip" data-demologin="${u.id}" title="Se connecter en tant que ${esc(u.nom)}">
+              <span class="ad-av" style="background:${u.couleur}22;border-color:${u.couleur}66">${u.avatar}</span>
+              <span>@${esc(u.pseudo)}</span>
+            </button>`).join("")}
+        </div>
+      </div>
+    </div>`;
+
+  wireAuthEvents();
+}
+
+function loginFormHTML() {
+  return `
+    <form class="auth-form" id="loginForm">
+      <div class="field">
+        <label>Pseudo ou email</label>
+        <input id="liId" placeholder="kader_analyste" autocomplete="username" required />
+      </div>
+      <div class="field">
+        <label>Mot de passe</label>
+        <input id="liPw" type="password" placeholder="••••••••" autocomplete="current-password" required />
+      </div>
+      <div class="auth-error" id="authError"></div>
+      <button type="submit" class="auth-submit">Se connecter</button>
+      <p class="auth-hint">💡 Comptes de démo : mot de passe <b>demo1234</b></p>
+    </form>`;
+}
+
+function signupFormHTML() {
+  return `
+    <form class="auth-form" id="signupForm">
+      <div class="field">
+        <label>Choisis ton avatar</label>
+        <div class="avatar-picker" id="suAvatar">
+          ${AVATARS.map((a, i) => `<button type="button" class="ap-item ${i === 0 ? "on" : ""}" data-av="${a}">${a}</button>`).join("")}
+        </div>
+      </div>
+      <div class="field row2">
+        <div class="field"><label>Pseudo</label><input id="suPseudo" placeholder="mon_pseudo" required /></div>
+        <div class="field"><label>Nom affiché</label><input id="suNom" placeholder="Ton nom" /></div>
+      </div>
+      <div class="field"><label>Email</label><input id="suEmail" type="email" placeholder="toi@exemple.ci" /></div>
+      <div class="field"><label>Mot de passe (6 car. min.)</label><input id="suPw" type="password" placeholder="••••••••" required /></div>
+      <div class="field">
+        <label>Sports favoris</label>
+        <div class="sports-picker" id="suSports">
+          ${SPORTS_DISPO.map((s, i) => `<button type="button" class="sp-item ${i === 0 ? "on" : ""}" data-sport="${s}">${sportEmoji(s)} ${s}</button>`).join("")}
+        </div>
+      </div>
+      <div class="field">
+        <label>Couleur de bannière</label>
+        <div class="banner-picker" id="suBanner">
+          ${BANNIERES.map((b, i) => `<button type="button" class="bp-item ${i === 0 ? "on" : ""}" data-grad="${b.grad}" data-c="${b.c}" style="background:${b.grad}"></button>`).join("")}
+        </div>
+      </div>
+      <div class="auth-error" id="authError"></div>
+      <button type="submit" class="auth-submit">Créer mon compte 🎯</button>
+    </form>`;
+}
+
+/** Attache les événements de l'écran d'authentification. */
+function wireAuthEvents() {
+  // Bascule connexion / inscription.
+  $$("[data-authtab]").forEach((b) => b.addEventListener("click", () => renderAuthGate(b.dataset.authtab)));
+
+  // Connexion démo en un clic.
+  $$("[data-demologin]").forEach((b) => b.addEventListener("click", async () => {
+    const r = await API.switchAccount(b.dataset.demologin);
+    if (r.ok) { toast(`Bienvenue @${r.user.pseudo} 👋`, "ok"); enterApp(); }
+  }));
+
+  // Formulaire de connexion.
+  const lf = $("#loginForm");
+  if (lf) lf.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const r = await API.login($("#liId").value, $("#liPw").value);
+    if (!r.ok) { $("#authError").textContent = r.error; return; }
+    toast(`Content de te revoir, ${esc(r.user.nom)} 👋`, "ok");
+    enterApp();
+  });
+
+  // Sélecteurs (avatar / sports / bannière) du formulaire d'inscription.
+  let avatar = AVATARS[0];
+  const sports = new Set([SPORTS_DISPO[0]]);
+  let banniere = BANNIERES[0].grad, couleur = BANNIERES[0].c;
+
+  const su = $("#signupForm");
+  if (su) {
+    $("#suAvatar").addEventListener("click", (e) => {
+      const it = e.target.closest("[data-av]"); if (!it) return;
+      avatar = it.dataset.av;
+      $$("#suAvatar .ap-item").forEach((x) => x.classList.toggle("on", x === it));
+    });
+    $("#suSports").addEventListener("click", (e) => {
+      const it = e.target.closest("[data-sport]"); if (!it) return;
+      const s = it.dataset.sport;
+      if (sports.has(s)) { if (sports.size > 1) sports.delete(s); } else sports.add(s);
+      $$("#suSports .sp-item").forEach((x) => x.classList.toggle("on", sports.has(x.dataset.sport)));
+    });
+    $("#suBanner").addEventListener("click", (e) => {
+      const it = e.target.closest("[data-grad]"); if (!it) return;
+      banniere = it.dataset.grad; couleur = it.dataset.c;
+      $$("#suBanner .bp-item").forEach((x) => x.classList.toggle("on", x === it));
+    });
+
+    su.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const r = await API.signup({
+        pseudo: $("#suPseudo").value, nom: $("#suNom").value, email: $("#suEmail").value,
+        motDePasse: $("#suPw").value, avatar, couleur, banniere, sports: [...sports],
+      });
+      if (!r.ok) { $("#authError").textContent = r.error; return; }
+      toast(`Compte créé — bienvenue @${r.user.pseudo} ! 🎉`, "ok");
+      enterApp();
+      openOnboarding(); // suggestion : suivre des experts
+    });
+  }
+}
+
 /* -----------------------------------------------------------------------------
- *  11. Amorçage (bootstrap)
+ *  Menu de compte + édition de profil + onboarding
+ * --------------------------------------------------------------------------- */
+
+/** Menu « Mon compte » (modal) : profil, édition, changement de compte, déconnexion. */
+function openAccountMenu() {
+  const me = API.getCurrentUserSync();
+  const autres = API.mockData.users.filter((u) => u.id !== me.id).slice(0, 6);
+  const modal = document.createElement("div");
+  modal.className = "modal-backdrop";
+  modal.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <div style="display:flex;align-items:center;gap:10px">
+          ${avatarHTML(me, "md")}
+          <div>
+            <div class="modal-title" style="font-size:1rem">${esc(me.nom)}</div>
+            <div class="modal-sub">@${esc(me.pseudo)}</div>
+          </div>
+        </div>
+        <button class="modal-x" data-modalclose>✕</button>
+      </div>
+      <div class="modal-body">
+        <button class="acc-item" data-acc="profile">👤 Voir mon profil</button>
+        <button class="acc-item" data-acc="edit">✏️ Modifier le profil</button>
+        <div class="acc-sep">Changer de compte (démo)</div>
+        <div class="acc-switch">
+          ${autres.map((u) => `
+            <button class="acc-switch-chip" data-switch="${u.id}">
+              <span class="ad-av" style="background:${u.couleur}22;border-color:${u.couleur}66">${u.avatar}</span>
+              <span>@${esc(u.pseudo)}</span>
+            </button>`).join("")}
+        </div>
+        <button class="acc-item danger" data-acc="logout">🚪 Se déconnecter</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  modal.addEventListener("click", async (e) => {
+    const acc = e.target.closest("[data-acc]");
+    const sw = e.target.closest("[data-switch]");
+    if (sw) {
+      const r = await API.switchAccount(sw.dataset.switch);
+      if (r.ok) { modal.remove(); renderNavMe(); renderAside(); toast(`Compte : @${r.user.pseudo}`, "ok"); location.hash = "#/feed"; router(); }
+      return;
+    }
+    if (!acc) return;
+    if (acc.dataset.acc === "profile") { modal.remove(); location.hash = `#/profile/${me.id}`; }
+    else if (acc.dataset.acc === "edit") { modal.remove(); openEditProfile(); }
+    else if (acc.dataset.acc === "logout") {
+      modal.remove(); API.logout(); toast("Déconnecté. À bientôt 👋", ""); showAuthGate();
+    }
+  });
+}
+
+/** Modal d'édition du profil de l'utilisateur connecté. */
+function openEditProfile() {
+  const me = API.getCurrentUserSync();
+  const sportsSel = new Set(me.sports);
+  let avatar = me.avatar, banniere = me.banniere, couleur = me.couleur;
+
+  const modal = document.createElement("div");
+  modal.className = "modal-backdrop";
+  modal.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <div><div class="modal-title">✏️ Modifier le profil</div><div class="modal-sub">@${esc(me.pseudo)}</div></div>
+        <button class="modal-x" data-modalclose>✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="editForm" class="auth-form">
+          <div class="field">
+            <label>Avatar</label>
+            <div class="avatar-picker" id="edAvatar">
+              ${AVATARS.map((a) => `<button type="button" class="ap-item ${a === avatar ? "on" : ""}" data-av="${a}">${a}</button>`).join("")}
+            </div>
+          </div>
+          <div class="field"><label>Nom affiché</label><input id="edNom" value="${esc(me.nom)}" /></div>
+          <div class="field"><label>Bio</label><textarea id="edBio" rows="3">${esc(me.bio)}</textarea></div>
+          <div class="field">
+            <label>Sports favoris</label>
+            <div class="sports-picker" id="edSports">
+              ${SPORTS_DISPO.map((s) => `<button type="button" class="sp-item ${sportsSel.has(s) ? "on" : ""}" data-sport="${s}">${sportEmoji(s)} ${s}</button>`).join("")}
+            </div>
+          </div>
+          <div class="field">
+            <label>Bannière</label>
+            <div class="banner-picker" id="edBanner">
+              ${BANNIERES.map((b) => `<button type="button" class="bp-item ${b.grad === banniere ? "on" : ""}" data-grad="${b.grad}" data-c="${b.c}" style="background:${b.grad}"></button>`).join("")}
+            </div>
+          </div>
+          <button type="submit" class="auth-submit">💾 Enregistrer</button>
+        </form>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  modal.querySelector("#edAvatar").addEventListener("click", (e) => {
+    const it = e.target.closest("[data-av]"); if (!it) return;
+    avatar = it.dataset.av;
+    modal.querySelectorAll("#edAvatar .ap-item").forEach((x) => x.classList.toggle("on", x === it));
+  });
+  modal.querySelector("#edSports").addEventListener("click", (e) => {
+    const it = e.target.closest("[data-sport]"); if (!it) return;
+    const s = it.dataset.sport;
+    if (sportsSel.has(s)) { if (sportsSel.size > 1) sportsSel.delete(s); } else sportsSel.add(s);
+    modal.querySelectorAll("#edSports .sp-item").forEach((x) => x.classList.toggle("on", sportsSel.has(x.dataset.sport)));
+  });
+  modal.querySelector("#edBanner").addEventListener("click", (e) => {
+    const it = e.target.closest("[data-grad]"); if (!it) return;
+    banniere = it.dataset.grad; couleur = it.dataset.c;
+    modal.querySelectorAll("#edBanner .bp-item").forEach((x) => x.classList.toggle("on", x === it));
+  });
+  modal.querySelector("#editForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    await API.updateProfile({
+      nom: modal.querySelector("#edNom").value.trim(),
+      bio: modal.querySelector("#edBio").value.trim(),
+      avatar, banniere, couleur, sports: [...sportsSel],
+    });
+    modal.remove();
+    renderNavMe();
+    toast("Profil mis à jour ✅", "ok");
+    router(); // rafraîchit la page profil si affichée
+  });
+}
+
+/** Onboarding après inscription : proposer de suivre des experts. */
+async function openOnboarding() {
+  const me = API.getCurrentUserSync();
+  const experts = API.mockData.users
+    .filter((u) => u.id !== me.id)
+    .map((u) => ({ u, s: computeStats(u.id) }))
+    .sort((a, b) => b.s.trustScore - a.s.trustScore)
+    .slice(0, 4);
+
+  const modal = document.createElement("div");
+  modal.className = "modal-backdrop";
+  modal.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <div><div class="modal-title">🎉 Bienvenue sur PronoStars !</div>
+          <div class="modal-sub">Suis quelques experts pour démarrer ton fil</div></div>
+        <button class="modal-x" data-modalclose>✕</button>
+      </div>
+      <div class="modal-body">
+        ${experts.map(({ u, s }) => `
+          <div class="lb-row" style="border:none;padding:8px 0">
+            ${avatarHTML(u, "md")}
+            <div class="lb-info">
+              <div class="n">${esc(u.nom)} ${verifHTML(u.badge)}</div>
+              <div class="h">@${esc(u.pseudo)} · TrustScore ${s.trustScore} ${s.badge.emoji}</div>
+            </div>
+            <button class="btn btn-follow" data-follow="${u.id}" style="padding:7px 14px"></button>
+          </div>`).join("")}
+        <button class="auth-submit" data-modalclose style="margin-top:10px">Commencer 🚀</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+/* -----------------------------------------------------------------------------
+ *  12. Amorçage (bootstrap)
  * --------------------------------------------------------------------------- */
 function boot() {
   applyTheme("dark");
   buildChampIndex();
-  renderNavMe();
-  renderAside();
-  updateNotifBadge();
-  window.addEventListener("hashchange", router);
-  router();
+  // L'application n'est révélée qu'après authentification.
+  if (API.mockData.currentUserId) enterApp();
+  else showAuthGate();
   console.log("%c🎯 PronoStars", "font-size:16px;font-weight:800;color:#00c853", "— prêt. Réseau social de pronostics (démo front).");
 }
 

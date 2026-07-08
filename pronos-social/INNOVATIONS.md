@@ -86,6 +86,31 @@ Concrètement dans l'app :
 - Données : `mockData.championnats` · API : `getChampionnats()`
 - Logique : `champBarHTML()`, `renderExploreList()`, `champOptionsHTML()`, `ligueEmoji()`.
 
+## 7. 🔐 Espace Connexion / Inscription + compte modifiable
+Un **portail d'authentification** protège désormais l'accès : impossible d'atteindre
+le fil, les profils ou la création de pronostics sans être connecté.
+
+- **Connexion** par pseudo **ou** email + mot de passe (comptes de démo :
+  mot de passe `demo1234`), avec messages d'erreur.
+- **Inscription** complète : choix d'**avatar** (emoji), pseudo/nom/email/mot de
+  passe (validés : unicité du pseudo, longueur du mot de passe), **sports favoris**
+  (multi-sélection) et **couleur de bannière**. Le nouveau compte est créé et
+  connecté immédiatement.
+- **Onboarding** après inscription : un modal propose de **suivre des experts**
+  (triés par TrustScore) pour peupler le fil.
+- **Édition du profil** (modal « Modifier le profil ») : avatar, nom, bio, sports,
+  bannière — mise à jour en direct du profil et de la barre latérale.
+- **Menu « Mon compte »** : voir/modifier le profil, **changer de compte** (démo,
+  bascule instantanée entre pronostiqueurs) et **se déconnecter**.
+
+- Données : `email` + `motDePasse` sur chaque compte · API : `login()`, `signup()`,
+  `logout()`, `switchAccount()`, `updateProfile()`.
+- Logique : `showAuthGate()` / `enterApp()` (portail), `renderAuthGate()`,
+  `openAccountMenu()`, `openEditProfile()`, `openOnboarding()`.
+- **Sécurité (production)** : le mot de passe sera **haché** (Argon2 via PHP
+  `password_hash`), et la session gérée par **token (JWT)**. Jamais de mot de
+  passe en clair côté client.
+
 ## 6. 🤖 Coach IA (analyse simulée)
 Sur le détail d'un pronostic, un panneau **Coach IA** rend un **indice de confiance
 (0–100)** et un **verdict** calculés par une heuristique combinant :

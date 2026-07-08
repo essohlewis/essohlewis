@@ -40,8 +40,9 @@ const nextId = (prefix) => `${prefix}_${++_idCounter}`;
  * --------------------------------------------------------------------------- */
 
 const mockData = {
-  // Identifiant de l'utilisateur connecté (session courante simulée).
-  currentUserId: "u_moi",
+  // Identifiant de l'utilisateur connecté. `null` = personne (écran de connexion).
+  // Après connexion/inscription, il pointe vers l'utilisateur de la session.
+  currentUserId: null,
 
   /* ---- UTILISATEURS ------------------------------------------------------ */
   users: [
@@ -865,9 +866,100 @@ const mockData = {
 };
 
 /* -----------------------------------------------------------------------------
+ *  Identifiants de démonstration.
+ *  On injecte un email et un mot de passe par défaut sur chaque compte de démo
+ *  pour permettre la connexion. Mot de passe commun : « demo1234 ».
+ *  >>> En production : hachage (password_hash/Argon2) côté PHP, jamais en clair. <<<
+ * --------------------------------------------------------------------------- */
+mockData.users.forEach((u) => {
+  u.email = u.email || `${u.pseudo}@pronostars.ci`;
+  u.motDePasse = u.motDePasse || "demo1234";
+});
+
+/* -----------------------------------------------------------------------------
  *  FONCTIONS API FACTICES (async)
  *  >>> Chacune correspondra à un endpoint REST PHP. <<<
  * --------------------------------------------------------------------------- */
+
+/**
+ * POST /api/auth/login — connexion par pseudo OU email + mot de passe.
+ * >>> En production : renvoie un token (JWT) stocké côté client. <<<
+ */
+async function login(identifiant, motDePasse) {
+  await wait();
+  const id = (identifiant || "").trim().toLowerCase();
+  const u = mockData.users.find(
+    (x) => x.pseudo.toLowerCase() === id || (x.email || "").toLowerCase() === id
+  );
+  if (!u) return { ok: false, error: "Aucun compte ne correspond à cet identifiant." };
+  if (u.motDePasse !== motDePasse) return { ok: false, error: "Mot de passe incorrect." };
+  mockData.currentUserId = u.id;
+  return { ok: true, user: u };
+}
+
+/**
+ * POST /api/auth/signup — création de compte.
+ */
+async function signup(data) {
+  await wait();
+  const pseudo = (data.pseudo || "").trim();
+  if (pseudo.length < 3) return { ok: false, error: "Le pseudo doit faire au moins 3 caractères." };
+  if (/\s/.test(pseudo)) return { ok: false, error: "Le pseudo ne doit pas contenir d'espace." };
+  if (mockData.users.some((u) => u.pseudo.toLowerCase() === pseudo.toLowerCase()))
+    return { ok: false, error: "Ce pseudo est déjà pris." };
+  if ((data.motDePasse || "").length < 6) return { ok: false, error: "Mot de passe : 6 caractères minimum." };
+
+  const u = {
+    id: nextId("u"),
+    pseudo,
+    nom: (data.nom || pseudo).trim(),
+    avatar: data.avatar || "🙂",
+    couleur: data.couleur || "#00C853",
+    banniere: data.banniere || "linear-gradient(135deg,#0b3d2e,#00C853)",
+    bio: data.bio || "Nouveau sur PronoStars 🎯 #Ligue1 #CAN",
+    sports: data.sports && data.sports.length ? data.sports : ["Football"],
+    inscription: new Date().toISOString().slice(0, 10),
+    abonnes: [],
+    abonnements: [],
+    badge: "Étoile montante",
+    email: (data.email || `${pseudo}@pronostars.ci`).trim(),
+    motDePasse: data.motDePasse,
+  };
+  mockData.users.push(u);
+  mockData.currentUserId = u.id;
+  return { ok: true, user: u };
+}
+
+/**
+ * POST /api/auth/logout — déconnexion (efface la session courante).
+ */
+function logout() {
+  mockData.currentUserId = null;
+}
+
+/**
+ * POST /api/auth/switch — bascule vers un autre compte (mode démo).
+ */
+async function switchAccount(id) {
+  await wait(50);
+  if (!mockData.users.some((u) => u.id === id)) return { ok: false };
+  mockData.currentUserId = id;
+  return { ok: true, user: getCurrentUserSync() };
+}
+
+/**
+ * PATCH /api/users/me — met à jour le profil de l'utilisateur connecté.
+ */
+async function updateProfile(data) {
+  await wait(60);
+  const u = getCurrentUserSync();
+  if (!u) return { ok: false };
+  ["nom", "bio", "avatar", "couleur", "banniere"].forEach((k) => {
+    if (data[k] != null && data[k] !== "") u[k] = data[k];
+  });
+  if (Array.isArray(data.sports) && data.sports.length) u.sports = data.sports;
+  return { ok: true, user: u };
+}
 
 /**
  * GET /api/feed
@@ -1179,5 +1271,10 @@ window.API = {
   getCoupons,
   getUserCoupons,
   voteSondage,
+  login,
+  signup,
+  logout,
+  switchAccount,
+  updateProfile,
   getCurrentUserSync,
 };

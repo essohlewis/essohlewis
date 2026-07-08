@@ -17,7 +17,12 @@
     Le contenu des vues est injecté dynamiquement par app.js dans #view.
     ===========================================================================
   -->
-  <div class="app">
+  <!-- ================= ÉCRAN D'AUTHENTIFICATION (connexion / inscription) =========
+       Affiché tant que l'utilisateur n'est pas connecté. Rempli par app.js.
+       L'application (#appRoot) reste masquée derrière ce portail. -->
+  <div id="authGate" class="auth-gate"></div>
+
+  <div class="app" id="appRoot" hidden>
 
     <!-- ================= COLONNE GAUCHE : NAVIGATION ================= -->
     <nav class="nav">
@@ -73,7 +78,7 @@
         <span>⇄</span>
       </button>
 
-      <a href="#/profile/u_moi" class="nav-me" id="navMe"><!-- rempli par app.js --></a>
+      <div class="nav-me" id="navMe" role="button" tabindex="0" title="Mon compte"><!-- rempli par app.js --></div>
     </nav>
 
     <!-- ================= COLONNE CENTRALE : VUES ================= -->
@@ -111,7 +116,7 @@
   </div>
 
   <!-- ================= BARRE DE NAVIGATION MOBILE (bas) ================= -->
-  <nav class="mobile-nav" id="mobileNav">
+  <nav class="mobile-nav" id="mobileNav" hidden>
     <a href="#/feed" data-route="feed">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
       <span>Accueil</span>

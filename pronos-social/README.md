@@ -22,6 +22,18 @@ n'importe quel serveur statique, ex. `python3 -m http.server`).
 | `app.js` | Logique SPA (routage par hash), rendu des vues, interactivité, **algorithme TrustScore**. |
 | `api.js` | Couche d'accès aux données **factice** (`mockData` + fonctions `async`) et **points d'intégration backend**. |
 
+## 🔐 Accès (connexion / inscription)
+
+L'application est protégée par un **écran de connexion / inscription**. Pour la démo :
+- **Connexion** avec un compte de démo (pseudo, ex. `kader_analyste`) et le mot de
+  passe **`demo1234`** — ou un clic sur l'un des comptes de démo proposés.
+- **Inscription** : crée un nouveau compte (avatar, pseudo, sports, bannière…) et
+  connecte immédiatement.
+- Ensuite : profil **modifiable**, publication de pronostics, changement de compte
+  et déconnexion depuis le menu « Mon compte ».
+
+> Persistance en mémoire uniquement : un rechargement de page réinitialise la session.
+
 ## 🧭 Vues (routage `#/...`)
 
 `#/feed` · `#/explore` · `#/profile/:id` · `#/prediction/:id` · `#/leaderboard` ·
