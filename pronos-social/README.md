@@ -42,9 +42,10 @@ La formule complète est documentée en commentaire dans `app.js` (section 2), e
 
 Ticker **« En direct »** temps réel, **coupons combinés** (cote totale + statut auto),
 **sondages communautaires** animés, **transparence du TrustScore** (modal de décomposition),
-**Coach IA** (analyse simulée) et un **catalogue de championnats du monde entier** (25+
-compétitions groupées par région, filtre par championnat dans l'Explorateur).
-Détails complets dans [`INNOVATIONS.md`](./INNOVATIONS.md).
+**Coach IA** (analyse simulée) et un **catalogue de championnats du monde entier et
+multi-sports** (40+ compétitions : football sur tous les continents, mais aussi NBA,
+Formule 1, tennis, rugby, MMA — groupées par région, filtre par championnat dans
+l'Explorateur). Détails complets dans [`INNOVATIONS.md`](./INNOVATIONS.md).
 
 ## 🔌 Intégration backend (à brancher)
 

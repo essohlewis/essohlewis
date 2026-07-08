@@ -54,16 +54,16 @@ boîte noire.
 
 - Logique : `openTrustModal(userId)`, alimenté par `computeStats().composantes`.
 
-## 5. 🌍 Championnats du monde entier
-Catalogue mondial de compétitions structuré et groupé par **région** (Afrique,
-Europe, Amériques, Asie & Moyen-Orient, International), chacune avec son
-**drapeau/emoji** et son pays :
+## 5. 🌍 Championnats du monde entier (multi-sports)
+Catalogue mondial de **40+ compétitions** structuré et groupé par **région**,
+chacune avec son **drapeau/emoji**, son pays et (hors football) son **sport** :
 
-- **Afrique** : CAN, Ligue 1 CIV 🇨🇮, Botola Pro 🇲🇦, CAF Champions League, Egyptian Premier League 🇪🇬, PSL 🇿🇦
-- **Europe** : Premier League, Ligue 1, La Liga 🇪🇸, Serie A 🇮🇹, Bundesliga 🇩🇪, Liga Portugal 🇵🇹, Eredivisie 🇳🇱, Champions League, Europa League
-- **Amériques** : MLS 🇺🇸, Liga MX 🇲🇽, Brasileirão 🇧🇷, Primera División 🇦🇷, Copa Libertadores
-- **Asie & Moyen-Orient** : Saudi Pro League 🇸🇦, J1 League 🇯🇵, Qatar Stars League 🇶🇦
-- **International** : Coupe du Monde, Tennis ATP
+- **Afrique** : CAN, CAN Féminine 👩🏾‍🦱, Ligue 1 CIV 🇨🇮, Botola Pro 🇲🇦, CAF Champions League, Egyptian Premier League 🇪🇬, PSL 🇿🇦, Ligue 1 Sénégal 🇸🇳, NPFL 🇳🇬, Ligue 1 Algérie 🇩🇿, Ghana Premier League 🇬🇭
+- **Europe** : Premier League, Ligue 1, La Liga 🇪🇸, Serie A 🇮🇹, Bundesliga 🇩🇪, Liga Portugal 🇵🇹, Eredivisie 🇳🇱, Champions League, Europa League, Süper Lig 🇹🇷, Pro League 🇧🇪, Scottish Premiership 🏴
+- **Amériques** : MLS 🇺🇸, Liga MX 🇲🇽, Brasileirão 🇧🇷, Primera División 🇦🇷, Copa Libertadores, Liga BetPlay 🇨🇴
+- **Asie & Moyen-Orient** : Saudi Pro League 🇸🇦, J1 League 🇯🇵, Qatar Stars League 🇶🇦, Chinese Super League 🇨🇳, K League 🇰🇷
+- **International** : Coupe du Monde, Coupe du Monde Féminine, Ligue des Nations, Coupe du Monde des Clubs
+- **Autres sports** : NBA 🏀, EuroLeague 🏀, Formule 1 🏎️, Tennis ATP 🎾, Tennis WTA 🎾, Top 14 (Rugby) 🏉, UFC (MMA) 🥊
 
 Concrètement dans l'app :
 - **Barre de filtres** défilable dans l'Explorateur : une puce par championnat
@@ -72,8 +72,11 @@ Concrètement dans l'app :
   cliquable → ouvre l'Explorateur filtré sur ce championnat).
 - **Drapeau du championnat** affiché sur chaque carte et chaque sélection de coupon.
 - **Formulaire de création** avec un menu déroulant groupé par région (`<optgroup>`).
-- Nouveaux pronostics de démo (El Clásico, Derby de Milan, Klassiker, Superclásico
-  argentin, derby de Casablanca, derby d'Abidjan ASEC–Africa, etc.).
+- **Multi-sports** : basket (NBA, EuroLeague), Formule 1, tennis (ATP/WTA), rugby
+  (Top 14), MMA (UFC) — les cartes s'adaptent (scores de basket, duels 1v1, etc.).
+- Nombreux pronostics de démo (El Clásico, Derby de Milan, Klassiker, Superclásico
+  argentin, derby de Casablanca, derby d'Abidjan ASEC–Africa, Lakers–Celtics,
+  GP de F1, CAN Féminine, Ngannou–Jones, etc.).
 
 - Données : `mockData.championnats` · API : `getChampionnats()`
 - Logique : `champBarHTML()`, `renderExploreList()`, `champOptionsHTML()`, `ligueEmoji()`.

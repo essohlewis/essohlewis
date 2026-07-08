@@ -240,6 +240,8 @@ function linkifyHashtags(txt) {
 function fmtCote(c) { return Number(c).toFixed(2); }
 
 /* --- Catalogue des championnats : index synchrone { nom → championnat } --- */
+// Ordre d'affichage des régions (barre de filtres + menu de création).
+const ORDRE_REGIONS = ["Afrique", "Europe", "Amériques", "Asie & Moyen-Orient", "International", "Autres sports"];
 const CHAMP_INDEX = {};
 function buildChampIndex() {
   API.mockData.championnats.forEach((c) => { CHAMP_INDEX[c.nom] = c; });
@@ -253,9 +255,8 @@ function champOptionsHTML() {
   API.mockData.championnats.forEach((c) => {
     (regions[c.region] = regions[c.region] || []).push(c);
   });
-  const ordre = ["Afrique", "Europe", "Amériques", "Asie & Moyen-Orient", "International"];
   let html = "";
-  ordre.forEach((r) => {
+  ORDRE_REGIONS.forEach((r) => {
     if (!regions[r]) return;
     html += `<optgroup label="${esc(r)}">` +
       regions[r].map((c) => `<option value="${esc(c.nom)}">${c.emoji} ${esc(c.nom)} (${esc(c.pays)})</option>`).join("") +
@@ -674,9 +675,8 @@ function champBarHTML() {
   const tous = `<button class="champ-chip ${exploreFilter === "tous" ? "active" : ""}" data-champ="tous">🌐 Tous <span class="cc-n">${preds.length}</span></button>`;
 
   // On groupe visuellement par région (séparateurs).
-  const ordreRegions = ["Afrique", "Europe", "Amériques", "Asie & Moyen-Orient", "International"];
   let chips = tous;
-  ordreRegions.forEach((region) => {
+  ORDRE_REGIONS.forEach((region) => {
     const dansRegion = actifs.filter((c) => c.region === region);
     if (!dansRegion.length) return;
     chips += `<span class="champ-sep">${region}</span>`;
