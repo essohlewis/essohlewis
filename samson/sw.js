@@ -1,5 +1,5 @@
 /* Samson — Service Worker (mise en cache pour jeu hors-ligne) */
-const CACHE = "samson-v7";
+const CACHE = "samson-v8";
 const ASSETS = [
   "./",
   "./index.html",

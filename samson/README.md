@@ -19,7 +19,7 @@ samson/
 ├── style.css     # thème clair/sombre, animations, responsive
 ├── game.js       # logique complète (modes, jokers, succès, stats…)
 ├── data.js       # 53 énigmes (SVG + noms), modes, succès, rangs
-├── culture.js    # 158 questions de culture (14 matières, tous continents)
+├── culture.js    # 255 questions de culture (20 matières, tous continents)
 ├── manifest.json # métadonnées PWA
 ├── sw.js         # service worker (jeu hors-ligne)
 └── icon.svg      # icône de l'application
@@ -31,7 +31,7 @@ samson/
 |------|-------------|
 | 🗺️ **Parcours** | 4 paliers (Facile, Moyen, Difficile, Expert), étoiles à gagner. |
 | 📅 **Défi du jour** | 8 énigmes déterministes, identiques pour tous le même jour, avec **série quotidienne** 🔥. |
-| 🎓 **Culture & Matières** | **Quiz éducatif** : 14 matières (littérature, histoire, philosophie, informatique, économie, géographie, sciences, arts, maths, sport, religions, langues, civisme, enfants) — avec des figures de **tous les continents**. |
+| 🎓 **Culture & Matières** | **Quiz éducatif** : 20 matières et 255 questions (littérature, histoire, philosophie, informatique, économie, géographie, sciences, arts, maths, sport, religions, langues, civisme, enfants, astronomie, santé, cuisine, inventions, faune & flore, métiers) — avec des figures de **tous les continents**. |
 | 📝 **Examen noté /20** | Évaluation scolaire par matière (une seule tentative, sans indice), puis un **bulletin** : note sur 20, mention, appréciation et **correction détaillée** de chaque question. |
 | ♾️ **Survie** | Enchaînement infini, 3 vies, difficulté et temps qui se durcissent. |
 | ⏱️ **Contre-la-montre** | 90 secondes chrono : marquer un maximum, chaque bonne réponse ajoute du temps. |
@@ -42,10 +42,11 @@ samson/
 
 ## 🎓 Mode « Culture & Matières »
 
-Un véritable quiz éducatif **pour tout âge**, avec **158 questions** réparties en **14 matières** :
+Un véritable quiz éducatif **pour tout âge**, avec **255 questions** réparties en **20 matières** :
 📖 Littérature · 🏛️ Histoire · 🧠 Philosophie · 💻 Informatique · 💰 Économie · 🌍 Géographie ·
 🔬 Sciences · 🎨 Arts & Musique · 🔢 Mathématiques · ⚽ Sport · 🕊️ Religions & cultures ·
-🗣️ Langues · ⚖️ Civisme · 🧒 Pour enfants.
+🗣️ Langues · ⚖️ Civisme · 🧒 Pour enfants · 🪐 Astronomie · 🩺 Santé & Corps ·
+🍲 Cuisine du monde · 💡 Inventions · 🦒 Faune & Flore · 👷 Métiers.
 
 Le contenu met en avant la **diversité de tous les continents** (Afrique, Asie, Amérique,
 Europe, Océanie) : Chinua Achebe, Mariama Bâ, Soundiata Keïta, Mansa Moussa, Cheikh Anta
