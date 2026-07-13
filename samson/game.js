@@ -24,7 +24,7 @@
     tiers: {}, modeBest: {}, categories: {}, achievements: {},
     leaderboard: [], dailyStreak: 0, lastDailyDate: "", dailyDone: "",
     survieBest: 0, chronoBest: 0, custom: [], xp: 0, finishedDomains: [], examBest: {},
-    sound: true, theme: "light", kbd: "azerty", anim: true, name: "Joueur", answerMode: "letters"
+    sound: true, theme: "light", kbd: "azerty", anim: true, name: "Joueur", answerMode: "letters", palette: "indigo"
   };
   const store = {
     data: JSON.parse(JSON.stringify(DEFAULTS)),
@@ -90,8 +90,19 @@
   }
   const confirmAsk = (message, okText) => modalAsk({ message, okText: okText || "Confirmer" });
 
-  /* ---------- Thème / son / animations ---------- */
-  function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); $("#themeBtn").textContent = t === "dark" ? "☀️" : "🌙"; store.data.theme = t; store.save(); }
+  /* ---------- Thème / son / animations / palette ---------- */
+  function applyPalette(id) {
+    const t = SAMSON_THEMES.find(x => x.id === id) || SAMSON_THEMES[0];
+    const dark = document.documentElement.getAttribute("data-theme") === "dark";
+    const r = document.documentElement.style;
+    r.setProperty("--primary", dark ? t.primaryDark : t.primary);
+    r.setProperty("--primary-dark", dark ? t.primaryDark : t.text);
+    r.setProperty("--accent", t.accent);
+    r.setProperty("--bg-grad-1", dark ? t.dg1 : t.g1);
+    r.setProperty("--bg-grad-2", dark ? t.dg2 : t.g2);
+    const meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.content = t.primary;
+  }
+  function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); $("#themeBtn").textContent = t === "dark" ? "☀️" : "🌙"; store.data.theme = t; store.save(); applyPalette(store.data.palette); }
   function applySound() { audio.on = store.data.sound; $("#soundBtn").textContent = audio.on ? "🔊" : "🔇"; }
   function applyAnim() { document.documentElement.classList.toggle("no-anim", !store.data.anim); }
   applyTheme(store.data.theme || "light"); applySound(); applyAnim();
@@ -1014,6 +1025,22 @@
     $("#setName").value = store.data.name || "";
     setSeg("segKbd", store.data.kbd); setSeg("segSound", store.data.sound ? "on" : "off"); setSeg("segAnim", store.data.anim ? "on" : "off");
     setSeg("segAnswer", store.data.answerMode || "letters");
+    buildPaletteSwatches();
+  }
+  function buildPaletteSwatches() {
+    const row = $("#paletteRow"); if (!row) return; row.innerHTML = "";
+    SAMSON_THEMES.forEach(t => {
+      const b = document.createElement("button"); b.type = "button";
+      b.className = "swatch" + (store.data.palette === t.id ? " active" : "");
+      b.style.background = `linear-gradient(135deg, ${t.primary}, ${t.accent})`;
+      b.title = t.name; b.setAttribute("aria-label", "Thème " + t.name);
+      b.addEventListener("click", () => {
+        store.data.palette = t.id; store.save(); applyPalette(t.id);
+        $$("#paletteRow .swatch").forEach(s => s.classList.remove("active")); b.classList.add("active");
+        audio.key();
+      });
+      row.appendChild(b);
+    });
   }
   function setSeg(id, val) { $$("#" + id + " button").forEach(b => b.classList.toggle("active", b.dataset.v === val)); }
   $("#setName").addEventListener("input", e => { store.data.name = e.target.value.trim() || "Joueur"; store.save(); });

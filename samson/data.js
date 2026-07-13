@@ -543,6 +543,16 @@ const SAMSON_MODES = [
   { id: "custom",   label: "Mes énigmes",     icon: "🎨", desc: "Crée et joue tes propres devinettes avec des emojis.", color: "#a855f7" }
 ];
 
+/* Thèmes de couleurs (palette d'accent, en plus du clair/sombre) */
+const SAMSON_THEMES = [
+  { id: "indigo", name: "Indigo", primary: "#6366f1", primaryDark: "#818cf8", text: "#4338ca", accent: "#ec4899", g1: "#c7d2fe", g2: "#fbcfe8", dg1: "#1e1b4b", dg2: "#312e5f" },
+  { id: "ocean",  name: "Océan",  primary: "#0ea5e9", primaryDark: "#38bdf8", text: "#0369a1", accent: "#06b6d4", g1: "#bae6fd", g2: "#a5f3fc", dg1: "#0c4a6e", dg2: "#164e63" },
+  { id: "forest", name: "Forêt",  primary: "#16a34a", primaryDark: "#4ade80", text: "#15803d", accent: "#84cc16", g1: "#bbf7d0", g2: "#d9f99d", dg1: "#14532d", dg2: "#1a2e05" },
+  { id: "sunset", name: "Sunset", primary: "#f97316", primaryDark: "#fb923c", text: "#c2410c", accent: "#ef4444", g1: "#fed7aa", g2: "#fecaca", dg1: "#7c2d12", dg2: "#7f1d1d" },
+  { id: "grape",  name: "Raisin", primary: "#a855f7", primaryDark: "#c084fc", text: "#7e22ce", accent: "#d946ef", g1: "#e9d5ff", g2: "#f5d0fe", dg1: "#3b0764", dg2: "#4a044e" },
+  { id: "rose",   name: "Rose",   primary: "#e11d48", primaryDark: "#fb7185", text: "#be123c", accent: "#f43f5e", g1: "#fecdd3", g2: "#fbcfe8", dg1: "#4c0519", dg2: "#500724" }
+];
+
 /* Rangs du joueur (progression par points d'expérience) */
 const SAMSON_RANKS = [
   { min: 0,     icon: "🥚", name: "Débutant" },
@@ -587,5 +597,5 @@ const SAMSON_CATEGORIES = [
 ];
 
 if (typeof module !== "undefined") {
-  module.exports = { SAMSON_PUZZLES, SAMSON_TIERS, SAMSON_MODES, SAMSON_ACHIEVEMENTS, SAMSON_CATEGORIES, SAMSON_RANKS };
+  module.exports = { SAMSON_PUZZLES, SAMSON_TIERS, SAMSON_MODES, SAMSON_ACHIEVEMENTS, SAMSON_CATEGORIES, SAMSON_RANKS, SAMSON_THEMES };
 }

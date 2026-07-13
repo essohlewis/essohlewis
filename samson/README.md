@@ -85,11 +85,12 @@ avec une notification à chaque niveau supérieur.
 - **20 succès / trophées** débloquables avec notifications animées.
 - **Statistiques** détaillées : parties, précision, combo record, catégorie favorite…
 - **Classement local** : les 10 meilleures parties tous modes confondus.
-- **Réglages** : mode de réponse (Lettres / QCM), nom du joueur, clavier **AZERTY/QWERTY**, sons, animations, réinitialisation.
+- **Réglages** : mode de réponse (Lettres / QCM), thème de couleur, nom du joueur, clavier **AZERTY/QWERTY**, sons, animations, réinitialisation.
 - **Clavier virtuel** intégré pour mobile.
 - **Partage du résultat** (Web Share API ou copie dans le presse-papiers).
 - **Effets sonores** générés via la Web Audio API + **confettis** (canvas).
-- **Thème clair / sombre** et **sauvegarde locale** de toute la progression.
+- **Thème clair / sombre** + **6 thèmes de couleurs** au choix (Indigo, Océan, Forêt,
+  Sunset, Raisin, Rose), et **sauvegarde locale** de toute la progression.
 - **PWA** installable et jouable **hors-ligne**.
 - **Responsive**, **accessible** (ARIA) et respect de `prefers-reduced-motion`.
 

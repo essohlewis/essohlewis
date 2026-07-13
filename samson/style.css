@@ -384,6 +384,14 @@ h1.title { font-size: 26px; margin-bottom: 4px; }
   font-weight: 700; font-size: 13px; cursor: pointer; font-family: var(--font);
 }
 .seg button.active { background: var(--primary); color: #fff; }
+.palette-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.swatch {
+  width: 30px; height: 30px; border-radius: 50%; cursor: pointer; padding: 0;
+  border: 3px solid transparent; box-shadow: 0 0 0 1px var(--border); transition: transform .12s;
+}
+.swatch:hover { transform: scale(1.12); }
+.swatch.active { border-color: var(--text); transform: scale(1.12); }
+
 .btn.danger { color: var(--danger); border-color: var(--danger); }
 .btn.danger:hover { background: var(--danger); color: #fff; }
 
