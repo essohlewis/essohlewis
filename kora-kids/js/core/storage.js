@@ -142,6 +142,17 @@ export function todayMinutes(p = getActive()) {
 export function getSettings() { return state.settings; }
 export function setSettings(patch) { Object.assign(state.settings, patch); persist(); }
 
+/* ---------- Mes musiques (compositions du balafon) ---------- */
+export function saveMusique(seq, instrument) {
+  const p = getActive(); if (!p || !seq || !seq.length) return [];
+  p.musiques = p.musiques || [];
+  p.musiques.unshift({ date: new Date().toISOString().slice(0, 10), instrument, seq });
+  p.musiques = p.musiques.slice(0, 8);        // garde les 8 dernières
+  persist();
+  return p.musiques;
+}
+export function getMusiques(p = getActive()) { return (p && p.musiques) || []; }
+
 /* ---------- Réinitialisation ---------- */
 export function resetProgress() {
   state.profiles.forEach(p => { p.etoiles = {}; p.accessoires = []; p.sessions = []; });
@@ -153,5 +164,6 @@ export default {
   getProfiles, addProfile, updateProfile, removeProfile, setActive, getActive,
   addStars, totalStars, starsFor, nextUnlock, logSession, todayMinutes,
   getSettings, setSettings, resetProgress, resetAll,
-  ACCESSOIRES, isUnlocked, getWorn, isWorn, toggleWorn, takeJustUnlocked
+  ACCESSOIRES, isUnlocked, getWorn, isWorn, toggleWorn, takeJustUnlocked,
+  saveMusique, getMusiques
 };

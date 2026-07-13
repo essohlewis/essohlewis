@@ -69,16 +69,35 @@
   animation: pop 500ms var(--t-med);
 }
 
-/* ---------- Le Balafon (musique) ---------- */
-.balafon-stage { gap: var(--sp-3); }
-.balafon-consigne { font-size: clamp(16px, 2.6vw, 22px); font-weight: 800; min-height: 40px;
-  display: flex; align-items: center; gap: 14px; }
+/* ---------- Le Balafon (studio de musique) ---------- */
+.balafon-stage { gap: 10px; overflow-y: auto; justify-content: flex-start; padding-top: 4px; }
+.inst-bar { flex-wrap: wrap; }
+.inst-bar button { font-size: clamp(13px, 2vw, 17px); }
+.balafon-consigne { font-size: clamp(15px, 2.4vw, 21px); font-weight: 800; min-height: 44px;
+  display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
 .balafon-consigne .mel-name { color: var(--primary); }
+.mini-pill { min-height: 48px; padding: 0 16px; font-size: clamp(14px, 2vw, 18px); }
+.mini-pill.on { background: var(--alert); color: #fff; }
+.groove-btn.on { background: var(--success); color: #fff; }
+
+/* Partition visuelle (mélodie) + « mes musiques » */
+.score-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; min-height: 28px; }
+.score-dot { width: 20px; height: 20px; border-radius: 50%; opacity: .45; transition: transform var(--t-fast), opacity var(--t-fast); box-shadow: var(--shadow); }
+.score-dot.done { opacity: 1; }
+.score-dot.next { opacity: 1; transform: scale(1.4); box-shadow: 0 0 0 3px #fff, 0 0 12px 3px currentColor; animation: glow-pulse 900ms ease-in-out infinite; }
+.mm-label { font-weight: 800; font-size: 15px; color: var(--ink-soft); }
+.mm-chip { background: var(--surface); border-radius: 20px; padding: 8px 16px; font-weight: 900; box-shadow: var(--shadow); font-size: 16px; }
+
 .balafon {
   display: flex; align-items: flex-end; justify-content: center; gap: clamp(6px, 1.6vw, 16px);
-  height: clamp(180px, 40vh, 300px); width: 100%; max-width: 760px;
+  height: clamp(140px, 32vh, 260px); width: 100%; max-width: 760px; flex: 0 0 auto;
 }
+.balafon-bottom { display: flex; align-items: center; gap: clamp(16px, 4vw, 40px); flex-wrap: wrap; justify-content: center; }
+.note-ripple { position: absolute; left: 50%; top: 30%; width: 20px; height: 20px; border-radius: 50%;
+  transform: translate(-50%, -50%); opacity: .8; pointer-events: none; animation: note-rip 500ms ease-out forwards; }
+@keyframes note-rip { to { transform: translate(-50%, -50%) scale(6); opacity: 0; } }
 .bar {
+  position: relative; overflow: hidden;
   flex: 1; max-width: 84px; min-width: 30px; border-radius: 14px;
   background: var(--bc); box-shadow: var(--shadow); align-self: flex-end;
   border-bottom: 8px solid rgba(0,0,0,.18);

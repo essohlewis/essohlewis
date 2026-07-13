@@ -92,21 +92,44 @@ export function play(id, { volume } = {}) {
   }
 }
 
-/* Note pitchée percussive (balafon/marimba) — timbre bois : fondamentale +
-   octave, attaque rapide, décroissance exponentielle. Toujours harmonieux. */
-export function note(freq, { dur = 0.7, type = "triangle", volume = 1 } = {}) {
+/* Note pitchée, plusieurs timbres d'instruments ouest-africains.
+   timbre : "balafon" (bois), "kalimba" (métal pincé), "flute" (souffle),
+   "kora" (corde pincée). Toujours harmonieux (pas de sons agressifs). */
+export function note(freq, { timbre = "balafon", volume = 1 } = {}) {
   if (muted) return;
   const c = ac(), t = c.currentTime, g = gain(volume * volSfx);
-  const mk = (f, mul, ty) => {
+  // Voix élémentaire : oscillateur + enveloppe exponentielle.
+  const voice = (f, ty, peak, dur, attack = 0.008, filter) => {
     const o = c.createOscillator(); o.type = ty; o.frequency.value = f;
     const eg = c.createGain();
     eg.gain.setValueAtTime(0.0001, t);
-    eg.gain.exponentialRampToValueAtTime(mul, t + 0.008);
+    eg.gain.exponentialRampToValueAtTime(peak, t + attack);
     eg.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(eg).connect(g); o.start(t); o.stop(t + dur + 0.02);
+    let node = o;
+    if (filter) { const bf = c.createBiquadFilter(); bf.type = "lowpass"; bf.frequency.value = filter; o.connect(bf); node = bf; }
+    node.connect(eg).connect(g); o.start(t); o.stop(t + dur + 0.03);
+    return o;
   };
-  mk(freq, 1, type);
-  mk(freq * 2, 0.32, "sine");        // harmonique = brillance du bois
+  switch (timbre) {
+    case "kalimba":                    // métal pincé, brillant, court
+      voice(freq, "sine", 1, 0.55);
+      voice(freq * 3, "sine", 0.22, 0.4);
+      break;
+    case "flute":                      // souffle doux, attaque lente + vibrato
+      { const o = voice(freq, "sine", 0.9, 1.0, 0.06);
+        const lfo = c.createOscillator(); lfo.frequency.value = 5.5;
+        const lg = c.createGain(); lg.gain.value = 3.5;
+        lfo.connect(lg).connect(o.frequency); lfo.start(t); lfo.stop(t + 1.03);
+        voice(freq * 2, "sine", 0.15, 0.9, 0.06); }
+      break;
+    case "kora":                       // corde pincée (harpe-luth), filtrée
+      voice(freq, "sawtooth", 0.8, 0.85, 0.006, freq * 6);
+      voice(freq * 2, "triangle", 0.25, 0.7);
+      break;
+    default:                           // balafon : bois, fondamentale + octave
+      voice(freq, "triangle", 1, 0.7);
+      voice(freq * 2, "sine", 0.32, 0.55);
+  }
 }
 
 /* Percussion type djembé : "basse" (grave, chute de hauteur) ou "aigu" (claque). */

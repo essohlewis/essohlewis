@@ -40,9 +40,12 @@ fonctionne entièrement hors-ligne** et s'installe comme une application
   5. **Memory Pagne** — paires, dos en motifs wax.
   6. **Puzzle Progressif** — 4 / 9 / 16 pièces, image en filigrane.
 - **2 ateliers créatifs** (innovation, sans échec possible) :
-  7. **🎵 Le Balafon** — instrument ouest-africain interactif synthétisé en
-     Web Audio, en gamme **pentatonique** (aucune fausse note). Mode libre +
-     mode « suis la mélodie » (comptines) + djembés.
+  7. **🎵 Le Balafon** — mini-studio de musique synthétisé en Web Audio, en
+     gamme **pentatonique** (aucune fausse note). **4 instruments** au timbre
+     distinct (Balafon, Kalimba, Flûte, Kora), **accompagnement rythmique**
+     (groove djembé), **mode Compose** (enregistre ta mélodie, écoute-la en
+     boucle, garde-la dans « mes musiques ») et **mode Mélodie** avec
+     **partition visuelle** (on voit les notes à venir) + djembés.
   8. **🎨 Mon Pagne** — coloriage de motifs africains (wax, masque, soleil,
      tortue) au tap ; œuvres enregistrées dans une galerie par enfant.
 - **⭐ Défi du jour** : une activité mise en avant chaque jour sur la carte
