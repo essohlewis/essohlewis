@@ -64,6 +64,9 @@ avec une notification à chaque niveau supérieur.
 
 ## ✨ Fonctionnalités & innovations
 
+- **Accueil centré sur les matières** : à l'ouverture, l'utilisateur voit directement les
+  matières en **cartes « paysage »** pour en choisir une et jouer, avec les **règles bien
+  placées** en haut. Les autres modes de jeu sont regroupés sur un écran « 🎮 Modes ».
 - **Deux modes de réponse au choix** : **✍️ Remplir** (compléter les cases lettre par lettre)
   ou **🔘 QCM** (4 propositions). Un sélecteur est disponible **directement pendant le jeu**
   (bascule instantanée) et dans les réglages ; la préférence est mémorisée.

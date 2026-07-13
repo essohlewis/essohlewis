@@ -109,10 +109,22 @@
 
   /* ---------- Accueil ---------- */
   function refreshHome() {
-    $("#home-best").textContent = store.data.best;
-    $("#home-stars").textContent = store.data.totalStars;
-    $("#home-daily").textContent = store.data.dailyStreak + "🔥";
     renderRankBanner();
+    buildHomeSubjects();
+  }
+  function buildHomeSubjects() {
+    const grid = $("#homeSubjects"); if (!grid) return; grid.innerHTML = "";
+    SAMSON_DOMAINS.forEach(dom => {
+      const count = SAMSON_QUIZ.filter(q => q.domain === dom.id).length;
+      const card = document.createElement("button");
+      card.className = "subject-card"; card.type = "button";
+      card.style.setProperty("--sc", dom.color);
+      card.innerHTML = `<span class="sc-ico">${dom.icon}</span>
+        <span class="sc-meta"><span class="sc-name">${dom.label}</span>
+        <span class="sc-count">${count} questions</span></span>`;
+      card.addEventListener("click", () => { audio.ensure(); startMode("culture", { domain: dom.id }); });
+      grid.appendChild(card);
+    });
   }
   function currentRank(xp) {
     let rank = SAMSON_RANKS[0], idx = 0;
@@ -1122,13 +1134,15 @@
   $("#examSetupBack").addEventListener("click", () => screens.show("home"));
   $("#examRetry").addEventListener("click", () => startExam(game.examDomain));
   $("#examOther").addEventListener("click", () => { buildExamGrid(); screens.show("exam"); });
-  $("#examHome").addEventListener("click", () => { refreshHome(); buildModeGrid(); screens.show("home"); });
+  $("#examHome").addEventListener("click", () => { refreshHome(); screens.show("home"); });
+  $("#modesBtn").addEventListener("click", () => { buildModeGrid(); screens.show("modes"); });
+  $("#modesBack").addEventListener("click", () => { refreshHome(); screens.show("home"); });
   $("#examShare").addEventListener("click", async () => {
     const text = `📝 Samson — Examen « ${examDomainLabel()} »\nMa note : ${$("#gradeNote").textContent}/20 — ${$("#bulletinTitle").textContent}\nÀ toi de faire mieux ! 🎓`;
     try { if (navigator.share) await navigator.share({ title: "Samson", text }); else { await copyText(text); toast("📋 Note copiée !"); } }
     catch (e) { try { await copyText(text); toast("📋 Note copiée !"); } catch (_) { toast("Partage indisponible"); } }
   });
-  $("#edBack").addEventListener("click", () => { refreshHome(); buildModeGrid(); screens.show("home"); });
+  $("#edBack").addEventListener("click", () => { refreshHome(); screens.show("home"); });
   $("#replayBtn").addEventListener("click", () => {
     if (game.duo) startMode("duo");
     else if (game.mode === "parcours") startMode("parcours", { tier: game.tier });
@@ -1136,12 +1150,12 @@
     else if (game.mode === "culture") startMode("culture", { domain: game.domain });
     else startMode(game.mode);
   });
-  $("#homeBtn").addEventListener("click", () => { refreshHome(); buildModeGrid(); screens.show("home"); });
+  $("#homeBtn").addEventListener("click", () => { refreshHome(); screens.show("home"); });
   $("#quitBtn").addEventListener("click", async () => {
     const ok = await confirmAsk("Quitter la partie en cours ?", "Quitter");
     if (!ok) return;
     if (game.mode === "zen" && !game.ended && game.correct > 0) { endGame(true); return; }
-    game.ended = true; stopTimer(); refreshHome(); buildModeGrid(); screens.show("home");
+    game.ended = true; stopTimer(); refreshHome(); screens.show("home");
   });
 
   /* ---------- PWA (installation / hors-ligne) ---------- */
@@ -1153,6 +1167,6 @@
   window.SAMSON_DEBUG = { answer: () => (game.current ? game.current.name : null), state: () => ({ score: game.score, index: game.index, lives: game.lives, correct: game.correct, mode: game.mode }), start: (m, o) => startMode(m, o), exam: (d) => startExam(d) };
 
   /* ---------- Init ---------- */
-  buildKeyboard(); buildModeGrid(); refreshHome();
+  buildKeyboard(); refreshHome();
   console.log("%c🧩 Samson prêt à jouer !", "color:#6366f1;font-weight:bold;font-size:14px");
 })();
