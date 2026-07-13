@@ -1,0 +1,60 @@
+/* Grilles, conteneurs, safe-areas — KORA KIDS */
+
+#app {
+  position: fixed; inset: 0;
+  padding: var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l);
+  display: flex; flex-direction: column;
+}
+
+/* Chaque scène occupe tout l'espace et se superpose pour les transitions */
+.scene {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  padding: clamp(12px, 3vh, 28px);
+  opacity: 0; transform: translateY(12px);
+  pointer-events: none;
+  transition: opacity var(--t-med), transform var(--t-med);
+  overflow: hidden;
+}
+.scene.is-active { opacity: 1; transform: none; pointer-events: auto; }
+
+/* En-tête de scène : bouton retour + titre iconique + étoiles.
+   Opaque et au-dessus de la zone de jeu : le bouton retour reste toujours
+   cliquable même si le contenu d'un jeu déborde vers le haut. */
+.scene-head {
+  display: flex; align-items: center; gap: var(--sp-3);
+  margin-bottom: var(--sp-3); min-height: var(--tap);
+  flex: 0 0 auto; position: relative; z-index: 5;
+  background: var(--bg); border-radius: var(--radius);
+}
+.scene-head .spacer { flex: 1; }
+
+/* Zone de jeu centrale */
+.stage {
+  flex: 1 1 auto; position: relative; z-index: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: var(--sp-4); min-height: 0; overflow: hidden;
+}
+
+/* Grilles de choix adaptatives */
+.choice-grid {
+  display: grid; gap: clamp(12px, 2.5vw, 28px);
+  width: 100%; max-width: 1100px;
+  place-content: center; place-items: center;
+}
+.choice-grid[data-n="2"] { grid-template-columns: repeat(2, 1fr); }
+.choice-grid[data-n="3"] { grid-template-columns: repeat(3, 1fr); }
+.choice-grid[data-n="4"] { grid-template-columns: repeat(2, 1fr); }
+.choice-grid[data-n="6"] { grid-template-columns: repeat(3, 1fr); }
+@media (min-width: 760px) {
+  .choice-grid[data-n="4"] { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* Motif wax en filigrane */
+.wax-bg {
+  position: absolute; inset: 0; z-index: 0;
+  opacity: .06; pointer-events: none;
+  background-repeat: repeat; background-size: 180px;
+}
+.scene > * { position: relative; z-index: 1; }

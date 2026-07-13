@@ -1,0 +1,83 @@
+/* ============================================================
+   KORA KIDS — Jetons de design (couleurs, espacements, rayons)
+   ============================================================ */
+
+/* Police embarquée en local (jamais de CDN). Déposez le fichier .woff2 dans
+   assets/fonts/ puis décommentez ce bloc. Sans fichier, la police système
+   ronde de secours (voir --font) est utilisée. */
+/*
+@font-face {
+  font-family: "Kora";
+  src: url("../assets/fonts/kora.woff2") format("woff2");
+  font-weight: 400 800;
+  font-display: swap;
+}
+*/
+
+:root {
+  /* Palette */
+  --c-soleil:    #FF9F1C;
+  --c-feuille:   #2EC4B6;
+  --c-hibiscus:  #E71D36;
+  --c-ivoire:    #FDFCF7;
+  --c-nuit:      #1B2432;
+  --c-sable:     #F2E9DC;
+  --c-or:        #FFD166;
+
+  /* Rôles sémantiques (mode clair par défaut) */
+  --bg:       var(--c-ivoire);
+  --surface:  var(--c-sable);
+  --ink:      var(--c-nuit);
+  --ink-soft: #4a5568;
+  --primary:  var(--c-soleil);
+  --success:  var(--c-feuille);
+  --alert:    var(--c-hibiscus);
+  --reward:   var(--c-or);
+  --on-primary: #fff;
+
+  /* Rayons */
+  --radius:    24px;
+  --radius-lg: 40px;
+  --radius-sm: 14px;
+
+  /* Espacements */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 16px;
+  --sp-4: 24px;
+  --sp-5: 40px;
+  --sp-6: 64px;
+
+  /* Cibles tactiles */
+  --tap:       64px;   /* minimum absolu */
+  --tap-big:  100px;   /* petits (2-3 ans) */
+
+  /* Typo */
+  --font: "Kora", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --txt-parent: 20px;
+  --txt-enfant: 28px;
+
+  /* Ombres douces */
+  --shadow:    0 8px 20px rgba(27,36,50,.14);
+  --shadow-lg: 0 16px 40px rgba(27,36,50,.20);
+
+  /* Transitions */
+  --t-fast: 90ms ease;
+  --t-med:  220ms cubic-bezier(.2,.9,.3,1.2);
+
+  /* Safe areas */
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+}
+
+/* Mode soir */
+:root[data-theme="sombre"] {
+  --bg:       var(--c-nuit);
+  --surface:  #2a3547;
+  --ink:      var(--c-ivoire);
+  --ink-soft: #b9c2d0;
+  --shadow:    0 8px 20px rgba(0,0,0,.4);
+  --shadow-lg: 0 16px 40px rgba(0,0,0,.5);
+}

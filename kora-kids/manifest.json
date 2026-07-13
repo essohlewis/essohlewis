@@ -1,0 +1,19 @@
+{
+  "name": "KORA KIDS",
+  "short_name": "KORA KIDS",
+  "description": "Jeu éducatif ivoirien pour enfants de 2 à 7 ans. Fonctionne hors-ligne, sans pub, sans collecte.",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#1B2432",
+  "theme_color": "#FF9F1C",
+  "categories": ["education", "kids", "games"],
+  "icons": [
+    { "src": "assets/img/ui/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "assets/img/ui/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "assets/img/ui/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

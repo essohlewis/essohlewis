@@ -1,0 +1,135 @@
+/* Boutons, cartes, modales, étoiles — KORA KIDS */
+
+/* ---- Boutons ronds d'action (retour, rejouer, son, parent) ---- */
+.btn-round {
+  width: var(--tap); height: var(--tap);
+  min-width: var(--tap); border-radius: 50%;
+  background: var(--surface); color: var(--ink);
+  box-shadow: var(--shadow);
+  display: grid; place-items: center;
+  transition: transform var(--t-fast), background var(--t-fast);
+}
+.btn-round svg { width: 56%; height: 56%; }
+.btn-round:active { transform: scale(.9); }
+.btn-round.primary { background: var(--primary); color: var(--on-primary); }
+.btn-round.big { width: var(--tap-big); height: var(--tap-big); }
+.btn-round.small { width: 48px; height: 48px; }
+
+/* ---- Gros bouton pilule ---- */
+.btn-pill {
+  min-height: var(--tap); padding: 0 var(--sp-5);
+  border-radius: var(--radius-lg);
+  background: var(--primary); color: var(--on-primary);
+  font-size: var(--txt-enfant); font-weight: 800;
+  box-shadow: var(--shadow); display: inline-flex;
+  align-items: center; gap: var(--sp-2);
+  transition: transform var(--t-fast);
+}
+.btn-pill.ghost { background: var(--surface); color: var(--ink); }
+.btn-pill:active { transform: scale(.96); }
+
+/* ---- Carte de choix (animal, forme, lettre…) ---- */
+.card {
+  --size: clamp(96px, 22vw, 190px);
+  width: var(--size); height: var(--size);
+  min-width: var(--tap-big); min-height: var(--tap-big);
+  background: var(--surface); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 10px;
+  display: grid; place-items: center;
+  transition: transform var(--t-med), box-shadow var(--t-med);
+  will-change: transform;
+}
+.card svg, .card img { width: 100%; height: 100%; }
+.card:active { transform: scale(.94); }
+.card.correct { animation: pop 600ms var(--t-med); box-shadow: 0 0 0 6px var(--success), var(--shadow-lg); }
+.card.wrong   { animation: shake 500ms ease; }
+.card.dim     { opacity: .35; filter: grayscale(.4); }
+
+/* ---- Titre iconique de scène ---- */
+.scene-title {
+  font-size: clamp(22px, 4vw, 34px); font-weight: 900;
+  display: flex; align-items: center; gap: var(--sp-2);
+}
+
+/* ---- Compteur d'étoiles ---- */
+.star-count {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--surface); border-radius: var(--radius-lg);
+  padding: 8px 18px; font-size: var(--txt-enfant); font-weight: 900;
+  box-shadow: var(--shadow); color: var(--ink);
+}
+.star-count svg { width: 34px; height: 34px; }
+
+/* ---- Consigne (bulle) ---- */
+.prompt-bubble {
+  background: var(--surface); border-radius: var(--radius);
+  padding: var(--sp-3) var(--sp-4); box-shadow: var(--shadow);
+  font-size: clamp(20px, 3.4vw, 30px); font-weight: 800;
+  display: flex; align-items: center; gap: var(--sp-3);
+  max-width: 900px; text-align: center;
+}
+.prompt-bubble .speak-btn {
+  width: 56px; height: 56px; min-width: 56px; border-radius: 50%;
+  background: var(--primary); color: #fff; display: grid; place-items: center;
+}
+.prompt-bubble .speak-btn svg { width: 28px; height: 28px; }
+
+/* ---- Modale ---- */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(27,36,50,.55); backdrop-filter: blur(3px);
+  display: grid; place-items: center; padding: var(--sp-4);
+  opacity: 0; pointer-events: none; transition: opacity var(--t-med);
+}
+.modal-backdrop.open { opacity: 1; pointer-events: auto; }
+.modal {
+  background: var(--bg); color: var(--ink);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+  padding: var(--sp-5); max-width: 560px; width: 100%;
+  transform: scale(.9); transition: transform var(--t-med);
+  max-height: 90vh; overflow: auto;
+}
+.modal-backdrop.open .modal { transform: scale(1); }
+
+/* ---- Étoile qui tombe (récompense) ---- */
+.falling-star {
+  position: absolute; top: -60px; width: 46px; height: 46px;
+  will-change: transform; color: var(--reward);
+  animation: fall linear forwards;
+}
+
+/* ---- Cadenas doux ---- */
+.locked { position: relative; }
+.locked::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  background: rgba(27,36,50,.28);
+}
+.lock-badge {
+  position: absolute; right: 6px; top: 6px; z-index: 2;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--bg); color: var(--ink-soft);
+  display: grid; place-items: center; box-shadow: var(--shadow);
+}
+.lock-badge svg { width: 22px; height: 22px; }
+
+/* ---- Barre de chargement (installation) ---- */
+.loader { position: fixed; inset: 0; background: var(--c-nuit); color: #fff;
+  display: grid; place-items: center; z-index: 100; gap: 20px; transition: opacity .4s; }
+.loader.hide { opacity: 0; pointer-events: none; }
+.loader-inner { display: grid; gap: 22px; justify-items: center; width: min(80vw, 340px); }
+.loader-bar { width: 100%; height: 20px; border-radius: 10px; background: rgba(255,255,255,.18); overflow: hidden; }
+.loader-fill { height: 100%; width: 0; background: var(--c-soleil); transition: width .3s; }
+.loader h1 { font-size: 40px; letter-spacing: 1px; }
+.loader p { font-size: 20px; opacity: .85; }
+
+/* ============ Animations ============ */
+@keyframes pop   { 0%{transform:scale(1)} 40%{transform:scale(1.18)} 70%{transform:scale(.96)} 100%{transform:scale(1)} }
+@keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(6px)} }
+@keyframes fall  { to { transform: translateY(112vh) rotate(320deg); } }
+@keyframes bob   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-14px)} }
+.bob { animation: bob 1.6s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .001ms !important; animation-iteration-count: 1 !important;
+      transition-duration: .001ms !important; scroll-behavior: auto !important; }
+}

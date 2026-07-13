@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "paliers": {
+    "petit":  { "label": "Petit", "age": "2-3", "choix": 2, "tap": 100, "jeux": ["animaux", "formes", "puzzle"] },
+    "moyen":  { "label": "Moyen", "age": "4-5", "choix": 4, "tap": 80,  "jeux": ["animaux", "formes", "puzzle", "alphabet", "memory", "marche"] },
+    "grand":  { "label": "Grand", "age": "6-7", "choix": 6, "tap": 64,  "jeux": ["animaux", "formes", "puzzle", "alphabet", "memory", "marche"] }
+  },
+  "jeux": {
+    "animaux":  { "nom": "Sons & Animaux", "couleur": "#FF9F1C", "palierMin": "petit" },
+    "formes":   { "nom": "Formes & Couleurs", "couleur": "#2EC4B6", "palierMin": "petit" },
+    "puzzle":   { "nom": "Puzzle", "couleur": "#6A4C93", "palierMin": "petit" },
+    "alphabet": { "nom": "Alphabet Kora", "couleur": "#E71D36", "palierMin": "moyen" },
+    "memory":   { "nom": "Memory Pagne", "couleur": "#FFD166", "palierMin": "moyen" },
+    "marche":   { "nom": "Le Marché", "couleur": "#2EC4B6", "palierMin": "moyen" }
+  },
+  "manche": { "questions": 8 },
+  "difficulte": {
+    "animaux": { "petit": 2, "moyen": 4, "grand": 6 },
+    "memory":  { "petit": 6, "moyen": 6, "grand": 12, "defi": 16 },
+    "puzzle":  { "petit": 4, "moyen": 9, "grand": 16 }
+  }
+}

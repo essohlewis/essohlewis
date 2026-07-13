@@ -1,0 +1,16 @@
+{
+  "produits": [
+    { "id": "mangue",   "nom": "la mangue",       "art": "mangue",   "prix": 50 },
+    { "id": "banane",   "nom": "la banane",       "art": "banane",   "prix": 50 },
+    { "id": "attieke",  "nom": "l'attiéké",       "art": "attieke",  "prix": 200 },
+    { "id": "alloco",   "nom": "l'alloco",        "art": "alloco",   "prix": 100 },
+    { "id": "igname",   "nom": "l'igname",        "art": "igname",   "prix": 200 },
+    { "id": "arachides","nom": "les arachides",   "art": "arachides","prix": 25 },
+    { "id": "tomate",   "nom": "la tomate",       "art": "tomate",   "prix": 25 },
+    { "id": "piment",   "nom": "le piment",       "art": "piment",   "prix": 25 },
+    { "id": "poisson",  "nom": "le poisson fumé", "art": "poisson",  "prix": 500 },
+    { "id": "pain",     "nom": "le pain",         "art": "pain",     "prix": 100 }
+  ],
+  "coupures": [25, 50, 100, 200, 500, 1000],
+  "prixRonds": [25, 50, 100, 200, 500]
+}

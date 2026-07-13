@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#FF9F1C">
+  <meta name="description" content="KORA KIDS — jeu éducatif ivoirien pour enfants de 2 à 7 ans. Hors-ligne, sans pub.">
+  <title>KORA KIDS</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="assets/img/ui/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/img/ui/icon-192.png">
+
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/scenes.css">
+</head>
+<body>
+  <!-- Écran d'installation (seul moment nécessitant potentiellement le réseau) -->
+  <div class="loader" id="loader">
+    <div class="loader-inner">
+      <h1>KORA KIDS</h1>
+      <div class="loader-bar"><div class="loader-fill" id="loaderFill"></div></div>
+      <p id="loaderTxt">Installation… 0 %</p>
+    </div>
+  </div>
+
+  <!-- Conteneur de scènes -->
+  <main id="app" aria-live="polite"></main>
+
+  <!-- Écran fin de session (minuteur) -->
+  <div class="session-end hide" id="sessionEnd">
+    <div style="font-size:72px">🌙</div>
+    <h1>C'est fini pour aujourd'hui !</h1>
+    <p style="font-size:22px;opacity:.85">À demain sur KORA KIDS 👋</p>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

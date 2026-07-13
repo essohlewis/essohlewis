@@ -1,0 +1,22 @@
+[
+  { "id": "elephant",    "nom": "L'éléphant",   "art": "elephant",    "palier": ["petit", "moyen", "grand"] },
+  { "id": "lion",        "nom": "Le lion",      "art": "lion",        "palier": ["petit", "moyen", "grand"] },
+  { "id": "agouti",      "nom": "L'agouti",     "art": "agouti",      "palier": ["moyen", "grand"] },
+  { "id": "coq",         "nom": "Le coq",       "art": "coq",         "palier": ["petit", "moyen", "grand"] },
+  { "id": "chevre",      "nom": "La chèvre",    "art": "chevre",      "palier": ["petit", "moyen", "grand"] },
+  { "id": "mouton",      "nom": "Le mouton",    "art": "mouton",      "palier": ["petit", "moyen", "grand"] },
+  { "id": "hippopotame", "nom": "L'hippopotame","art": "hippopotame", "palier": ["moyen", "grand"] },
+  { "id": "crocodile",   "nom": "Le crocodile", "art": "crocodile",   "palier": ["moyen", "grand"] },
+  { "id": "singe",       "nom": "Le singe",     "art": "singe",       "palier": ["petit", "moyen", "grand"] },
+  { "id": "perroquet",   "nom": "Le perroquet", "art": "perroquet",   "palier": ["moyen", "grand"] },
+  { "id": "poisson",     "nom": "Le poisson",   "art": "poisson",     "palier": ["petit", "moyen", "grand"] },
+  { "id": "tortue",      "nom": "La tortue",    "art": "tortue",      "palier": ["petit", "moyen", "grand"] },
+  { "id": "serpent",     "nom": "Le serpent",   "art": "serpent",     "palier": ["moyen", "grand"] },
+  { "id": "panthere",    "nom": "La panthère",  "art": "panthere",    "palier": ["moyen", "grand"] },
+  { "id": "buffle",      "nom": "Le buffle",    "art": "buffle",      "palier": ["moyen", "grand"] },
+  { "id": "canard",      "nom": "Le canard",    "art": "canard",      "palier": ["petit", "moyen", "grand"] },
+  { "id": "chien",       "nom": "Le chien",     "art": "chien",       "palier": ["petit", "moyen", "grand"] },
+  { "id": "chat",        "nom": "Le chat",      "art": "chat",        "palier": ["petit", "moyen", "grand"] },
+  { "id": "ane",         "nom": "L'âne",        "art": "ane",         "palier": ["moyen", "grand"] },
+  { "id": "pintade",     "nom": "La pintade",   "art": "pintade",     "palier": ["moyen", "grand"] }
+]
