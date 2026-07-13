@@ -1,5 +1,5 @@
 /* =============================================================
-   SAMSON — Logique du jeu
+   SAMSON — Logique du jeu (modes, jokers, succès, stats, PWA)
    ============================================================= */
 (function () {
   "use strict";
@@ -8,27 +8,38 @@
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
-  const shuffle = (arr) => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-  // Normalise pour comparer : minuscules, sans accents, sans espaces superflus
   const norm = (s) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+  const isLetter = (c) => /[a-zA-ZÀ-ÿ0-9]/.test(c);
+  const todayStr = () => new Date().toISOString().slice(0, 10);
+  const shuffle = (arr) => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  function mulberry32(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function shuffleSeeded(arr, rnd) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
   /* ---------- Stockage local ---------- */
-  const STORE_KEY = "samson.save.v1";
+  const STORE_KEY = "samson.save.v2";
+  const DEFAULTS = {
+    best: 0, totalStars: 0, bestCombo: 0, gamesPlayed: 0, wins: 0,
+    totalCorrect: 0, totalAttempts: 0, totalScore: 0,
+    tiers: {}, modeBest: {}, categories: {}, achievements: {},
+    leaderboard: [], dailyStreak: 0, lastDailyDate: "", dailyDone: "",
+    survieBest: 0, chronoBest: 0,
+    sound: true, theme: "light", kbd: "azerty", anim: true, name: "Joueur"
+  };
   const store = {
-    data: { best: 0, totalStars: 0, bestStreak: 0, tiers: {}, sound: true, theme: "light" },
-    load() { try { const r = JSON.parse(localStorage.getItem(STORE_KEY)); if (r) this.data = Object.assign(this.data, r); } catch (e) {} },
-    save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(this.data)); } catch (e) {} }
+    data: JSON.parse(JSON.stringify(DEFAULTS)),
+    load() { try { const r = JSON.parse(localStorage.getItem(STORE_KEY)); if (r) this.data = Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), r); } catch (e) {} },
+    save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(this.data)); } catch (e) {} },
+    reset() { this.data = JSON.parse(JSON.stringify(DEFAULTS)); this.save(); }
   };
   store.load();
 
-  /* ---------- Audio (Web Audio API, sons générés) ---------- */
+  /* ---------- Audio (Web Audio API) ---------- */
   const audio = {
     ctx: null, on: store.data.sound,
     ensure() { if (!this.ctx) { try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } },
     beep(freq, dur = 0.12, type = "sine", vol = 0.15) {
       if (!this.on) return; this.ensure(); if (!this.ctx) return;
-      const t = this.ctx.currentTime;
-      const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+      const t = this.ctx.currentTime, o = this.ctx.createOscillator(), g = this.ctx.createGain();
       o.type = type; o.frequency.value = freq;
       g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.01);
       g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
@@ -39,53 +50,66 @@
     tick() { this.beep(1200, .04, "square", .05); },
     win() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => this.beep(f, .18, "triangle"), i * 120)); },
     lose() { [440, 330, 220].forEach((f, i) => setTimeout(() => this.beep(f, .22, "sawtooth", .1), i * 160)); },
-    key() { this.beep(520, .03, "square", .04); }
+    key() { this.beep(520, .03, "square", .04); },
+    power() { this.beep(700, .08, "sine"); setTimeout(() => this.beep(1000, .1, "sine"), 70); }
   };
 
   /* ---------- Écrans ---------- */
-  const screens = {
-    show(id) {
-      $$(".screen").forEach(s => s.classList.remove("active"));
-      $("#screen-" + id).classList.add("active");
-    }
-  };
+  const screens = { show(id) { $$(".screen").forEach(s => s.classList.remove("active")); $("#screen-" + id).classList.add("active"); } };
 
   /* ---------- Toast ---------- */
   let toastT;
-  function toast(msg) {
-    const el = $("#toast"); el.textContent = msg; el.classList.add("show");
-    clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("show"), 1900);
-  }
+  function toast(msg) { const el = $("#toast"); el.textContent = msg; el.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("show"), 1900); }
 
-  /* ---------- Thème & son ---------- */
-  function applyTheme(t) {
-    document.documentElement.setAttribute("data-theme", t);
-    $("#themeBtn").textContent = t === "dark" ? "☀️" : "🌙";
-    store.data.theme = t; store.save();
-  }
-  applyTheme(store.data.theme || "light");
-  $("#themeBtn").addEventListener("click", () => applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark"));
-
+  /* ---------- Thème / son / animations ---------- */
+  function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); $("#themeBtn").textContent = t === "dark" ? "☀️" : "🌙"; store.data.theme = t; store.save(); }
   function applySound() { audio.on = store.data.sound; $("#soundBtn").textContent = audio.on ? "🔊" : "🔇"; }
-  applySound();
+  function applyAnim() { document.documentElement.classList.toggle("no-anim", !store.data.anim); }
+  applyTheme(store.data.theme || "light"); applySound(); applyAnim();
+  $("#themeBtn").addEventListener("click", () => applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark"));
   $("#soundBtn").addEventListener("click", () => { store.data.sound = !store.data.sound; store.save(); applySound(); if (audio.on) audio.key(); });
 
   /* ---------- État de la partie ---------- */
-  const game = {
-    tier: null, queue: [], index: 0, score: 0, lives: 3,
-    combo: 0, maxCombo: 0, correct: 0, attempts: 0, revealed: 0,
-    hintsLeft: 0, timer: null, timeLeft: 0, timeMax: 0, current: null, mask: [], boxes: []
-  };
+  let game = {};
+  function resetRunStats() {
+    Object.assign(game, {
+      index: 0, score: 0, combo: 0, maxCombo: 0, correct: 0, attempts: 0,
+      revealedThisPuzzle: 0, hintsUsedGame: 0, solvedCats: {}, ended: false
+    });
+  }
 
-  /* ---------- Accueil : stats ---------- */
+  /* ---------- Accueil ---------- */
   function refreshHome() {
     $("#home-best").textContent = store.data.best;
     $("#home-stars").textContent = store.data.totalStars;
-    $("#home-streak").textContent = store.data.bestStreak;
+    $("#home-daily").textContent = store.data.dailyStreak + "🔥";
   }
-  refreshHome();
+  function buildModeGrid() {
+    const grid = $("#modeGrid"); grid.innerHTML = "";
+    SAMSON_MODES.forEach(m => {
+      const card = document.createElement("button");
+      card.className = "mode-card"; card.type = "button";
+      let badge = "";
+      if (m.id === "daily") badge = store.data.dailyDone === todayStr()
+        ? `<span class="m-badge done">FAIT ✓</span>` : `<span class="m-badge new">DU JOUR</span>`;
+      const best = store.data.modeBest[m.id];
+      card.innerHTML = `<span class="m-bar" style="background:${m.color}"></span>${badge}
+        <span class="m-ico">${m.icon}</span><h3>${m.label}</h3><p>${m.desc}</p>
+        ${best ? `<p style="color:${m.color};font-weight:800">Record : ${best}</p>` : ""}`;
+      card.addEventListener("click", () => { audio.ensure(); onModeClick(m.id); });
+      grid.appendChild(card);
+    });
+  }
 
-  /* ---------- Choix de niveau ---------- */
+  function onModeClick(id) {
+    if (id === "parcours") { buildTierGrid(); screens.show("levels"); return; }
+    if (id === "daily" && store.data.dailyDone === todayStr()) {
+      if (!confirm("Tu as déjà fait le défi du jour. Rejouer pour t'entraîner (sans compter la série) ?")) return;
+    }
+    startMode(id);
+  }
+
+  /* ---------- Choix parcours ---------- */
   function buildTierGrid() {
     const grid = $("#tierGrid"); grid.innerHTML = "";
     SAMSON_TIERS.forEach(tier => {
@@ -93,111 +117,159 @@
       const stars = saved.stars || 0;
       const card = document.createElement("button");
       card.className = "tier-card"; card.type = "button";
-      card.innerHTML = `
-        <span class="bar" style="background:${tier.color}"></span>
+      card.innerHTML = `<span class="bar" style="background:${tier.color}"></span>
         <span class="tier-icon">${tier.icon}</span>
-        <span class="tier-meta">
-          <h3>${tier.label}</h3>
-          <p>${tier.time}s · ${tier.hints} indice(s) · ${Math.round(tier.revealRatio * 100)}% offert</p>
-          <span class="tier-stars">${"★".repeat(stars)}${"☆".repeat(3 - stars)} ${saved.best ? "· record " + saved.best : ""}</span>
-        </span>`;
-      card.addEventListener("click", () => startGame(tier));
+        <span class="tier-meta"><h3>${tier.label}</h3>
+        <p>${tier.time}s · ${tier.hints} indice(s) · ${Math.round(tier.revealRatio * 100)}% offert</p>
+        <span class="tier-stars">${"★".repeat(stars)}${"☆".repeat(3 - stars)} ${saved.best ? "· record " + saved.best : ""}</span></span>`;
+      card.addEventListener("click", () => { audio.ensure(); startMode("parcours", tier); });
       grid.appendChild(card);
     });
   }
 
-  /* ---------- Démarrage d'une partie ---------- */
-  function startGame(tier) {
-    game.tier = tier;
-    let pool = SAMSON_PUZZLES.slice(tier.range[0], tier.range[1]);
-    if (tier.shuffleAll) pool = SAMSON_PUZZLES.slice();
-    game.queue = shuffle(pool);
-    game.index = 0; game.score = 0; game.lives = 3; game.combo = 0; game.maxCombo = 0;
-    game.correct = 0; game.attempts = 0; game.hintsLeft = tier.hints;
+  /* ---------- Sélection des énigmes par mode ---------- */
+  function byLevel(l) { return SAMSON_PUZZLES.filter(p => p.level === l); }
+  function dailyQueue() {
+    let seed = 0; for (const c of todayStr()) seed = (seed * 31 + c.charCodeAt(0)) >>> 0;
+    const rnd = mulberry32(seed || 1);
+    return [
+      ...shuffleSeeded(byLevel(1), rnd).slice(0, 3),
+      ...shuffleSeeded(byLevel(2), rnd).slice(0, 3),
+      ...shuffleSeeded(byLevel(3), rnd).slice(0, 2)
+    ];
+  }
+
+  /* ---------- Démarrage d'un mode ---------- */
+  function startMode(mode, tier) {
+    game = { mode, tier: tier || null };
+    resetRunStats();
+    game.lives = 3; game.useLives = true; game.totalMode = false; game.ramp = false;
+    game.duo = null;
+
+    if (mode === "parcours") {
+      game.queue = shuffle(SAMSON_PUZZLES.filter(p => tier.levels.includes(p.level)));
+      game.revealRatio = tier.revealRatio; game.timePerQ = tier.time;
+      game.jk = { hint: tier.hints, time: tier.id === "expert" ? 0 : 1, fifty: tier.id === "expert" ? 0 : 1 };
+    } else if (mode === "daily") {
+      game.queue = dailyQueue();
+      game.revealRatio = 0.3; game.timePerQ = 45;
+      game.jk = { hint: 2, time: 1, fifty: 1 };
+    } else if (mode === "survie") {
+      game.queue = shuffle(SAMSON_PUZZLES);
+      game.revealRatio = 0.4; game.timePerQ = 40; game.ramp = true;
+      game.jk = { hint: 3, time: 2, fifty: 1 };
+    } else if (mode === "chrono") {
+      game.queue = shuffle(SAMSON_PUZZLES).concat(shuffle(SAMSON_PUZZLES));
+      game.revealRatio = 0.3; game.useLives = false; game.totalMode = true;
+      game.totalMax = 90; game.totalLeft = 90;
+      game.jk = { hint: 3, time: 2, fifty: 1 };
+    } else if (mode === "duo") {
+      game.useLives = false;
+      game.revealRatio = 0.35; game.timePerQ = 40;
+      const q = shuffle(SAMSON_PUZZLES).slice(0, 6);
+      game.duo = { queue: q, player: 1, scores: [0, 0], names: [store.data.name || "Joueur 1", "Joueur 2"] };
+      game.queue = q;
+      game.jk = { hint: 2, time: 1, fifty: 1 };
+    }
+    game.jkBase = Object.assign({}, game.jk);
+
     screens.show("play");
+    if (game.totalMode) startTotalTimer();
+    setupHud();
     loadPuzzle();
   }
 
-  /* ---------- Construction du masque de lettres ---------- */
+  function setupHud() {
+    const m = game.mode;
+    const lbl = $("#hud-mode-lbl"), lvl = $("#hud-level"), livesWrap = $("#hud-lives-wrap"), duo = $("#duoBanner");
+    livesWrap.style.display = game.useLives ? "" : "none";
+    if (m === "survie" || m === "chrono") { lbl.textContent = "Trouvés"; }
+    else { lbl.textContent = "Niveau"; }
+    if (game.duo) {
+      duo.style.display = "block";
+      updateDuoBanner();
+    } else duo.style.display = "none";
+    updateHud();
+  }
+  function updateDuoBanner() {
+    const d = game.duo; if (!d) return;
+    $("#duoBanner").innerHTML = `👤 ${d.names[d.player - 1]} joue · ${d.names[0]}: ${d.scores[0]} — ${d.names[1]}: ${d.scores[1]}`;
+  }
+  function updateHud() {
+    if (game.mode === "survie" || game.mode === "chrono") $("#hud-level").textContent = game.correct;
+    else $("#hud-level").textContent = `${game.index + 1}/${game.queue.length}`;
+    $("#hud-score").textContent = game.score;
+    if (game.useLives) $("#hud-lives").textContent = "❤️".repeat(Math.max(0, game.lives)) + "🖤".repeat(3 - Math.max(0, game.lives));
+  }
+
+  /* ---------- Paramètres dynamiques (survie) ---------- */
+  function puzzleParams() {
+    if (game.mode === "survie") {
+      const step = Math.floor(game.correct / 4);
+      return { ratio: clamp(0.4 - step * 0.08, 0, 0.4), time: clamp(40 - step * 3, 18, 40) };
+    }
+    return { ratio: game.revealRatio, time: game.timePerQ };
+  }
+
+  /* ---------- Masque de lettres ---------- */
   function buildMask(name, ratio) {
-    // positions des lettres alphanumériques
     const chars = [...name];
-    const letterIdx = chars.map((c, i) => /[a-zA-ZÀ-ÿ0-9]/.test(c) ? i : -1).filter(i => i >= 0);
+    const letterIdx = chars.map((c, i) => isLetter(c) ? i : -1).filter(i => i >= 0);
     const revealCount = Math.floor(letterIdx.length * ratio);
     const toReveal = new Set(shuffle(letterIdx).slice(0, revealCount));
-    return chars.map((c, i) => ({
-      char: c,
-      isLetter: /[a-zA-ZÀ-ÿ0-9]/.test(c),
-      given: /[a-zA-ZÀ-ÿ0-9]/.test(c) ? toReveal.has(i) : true // séparateurs = donnés
-    }));
+    return chars.map((c, i) => ({ char: c, isLetter: isLetter(c), given: isLetter(c) ? toReveal.has(i) : true }));
   }
 
   /* ---------- Chargement d'une énigme ---------- */
   function loadPuzzle() {
+    // survie : rallonge la file si besoin
+    if (game.mode === "survie" && game.index >= game.queue.length - 1) game.queue = game.queue.concat(shuffle(SAMSON_PUZZLES));
     const p = game.queue[game.index];
-    game.current = p;
-    game.revealed = 0;
+    game.current = p; game.revealedThisPuzzle = 0;
+    const params = puzzleParams();
 
-    $("#hud-level").textContent = `${game.index + 1}/${game.queue.length}`;
-    $("#hud-score").textContent = game.score;
-    $("#hud-lives").textContent = "❤️".repeat(game.lives) + "🖤".repeat(3 - game.lives);
-    $("#hintCount").textContent = game.hintsLeft;
-    $("#hintBtn").disabled = game.hintsLeft <= 0;
+    updateHud();
     $("#catTag").textContent = p.category || "objet";
     $("#imgHolder").innerHTML = p.svg;
     const ht = $("#hintText"); ht.textContent = "💡 " + (p.hint || ""); ht.classList.remove("show");
     $("#feedback").textContent = ""; $("#feedback").className = "feedback";
 
-    game.mask = buildMask(p.name, game.tier.revealRatio);
+    game.mask = buildMask(p.name, params.ratio);
     renderBoxes();
-    startTimer();
+    renderJokers();
+    if (!game.totalMode) startQuestionTimer(params.time);
+    else updateTimerBar();
     focusFirstEmpty();
   }
 
-  /* ---------- Rendu des cases lettres ---------- */
+  /* ---------- Cases lettres ---------- */
   function renderBoxes() {
     const wrap = $("#answerBoxes"); wrap.innerHTML = ""; game.boxes = [];
     let group = document.createElement("div"); group.className = "word-group";
-
     game.mask.forEach((m, i) => {
-      if (!m.isLetter && (m.char === " ")) {
-        // espace = fin de groupe visuel
+      if (!m.isLetter && m.char === " ") {
         wrap.appendChild(group);
         const sp = document.createElement("div"); sp.className = "sep"; sp.textContent = "·"; wrap.appendChild(sp);
-        group = document.createElement("div"); group.className = "word-group";
-        game.boxes.push(null);
-        return;
+        group = document.createElement("div"); group.className = "word-group"; game.boxes.push(null); return;
       }
       if (!m.isLetter) {
-        // séparateur type tiret / apostrophe
-        const sp = document.createElement("div"); sp.className = "sep"; sp.textContent = m.char; group.appendChild(sp);
-        game.boxes.push(null);
-        return;
+        const sp = document.createElement("div"); sp.className = "sep"; sp.textContent = m.char; group.appendChild(sp); game.boxes.push(null); return;
       }
       const inp = document.createElement("input");
       inp.className = "letter-box"; inp.maxLength = 1; inp.dataset.i = i;
-      inp.setAttribute("aria-label", "lettre " + (i + 1));
-      inp.autocapitalize = "characters"; inp.inputMode = "text";
+      inp.setAttribute("aria-label", "lettre " + (i + 1)); inp.autocapitalize = "characters"; inp.inputMode = "text";
       if (m.given) { inp.value = m.char; inp.classList.add("given"); inp.readOnly = true; inp.tabIndex = -1; }
       else { inp.addEventListener("input", onLetterInput); inp.addEventListener("keydown", onLetterKey); }
-      group.appendChild(inp);
-      game.boxes.push(inp);
+      group.appendChild(inp); game.boxes.push(inp);
     });
     wrap.appendChild(group);
   }
-
   function editableBoxes() { return game.boxes.filter(b => b && !b.readOnly); }
-
-  function focusFirstEmpty() {
-    const b = editableBoxes().find(x => !x.value) || editableBoxes()[0];
-    if (b) b.focus();
-  }
-
+  function focusFirstEmpty() { const b = editableBoxes().find(x => !x.value) || editableBoxes()[0]; if (b) b.focus(); }
   function onLetterInput(e) {
     const box = e.target;
     box.value = box.value.replace(/[^a-zA-ZÀ-ÿ0-9]/g, "").slice(0, 1);
-    if (box.value) { box.classList.add("filled"); audio.key(); nextBox(box); }
-    else box.classList.remove("filled");
+    if (box.value) { box.classList.add("filled"); audio.key(); nextBox(box); } else box.classList.remove("filled");
   }
   function onLetterKey(e) {
     const box = e.target;
@@ -206,65 +278,81 @@
     else if (e.key === "ArrowRight") { e.preventDefault(); nextBox(box); }
     else if (e.key === "Enter") { e.preventDefault(); submit(); }
   }
-  function nextBox(box) {
-    const list = editableBoxes(); const idx = list.indexOf(box);
-    for (let i = idx + 1; i < list.length; i++) { list[i].focus(); return; }
-  }
-  function prevBox(box) {
-    const list = editableBoxes(); const idx = list.indexOf(box);
-    for (let i = idx - 1; i >= 0; i--) { list[i].value = ""; list[i].classList.remove("filled"); list[i].focus(); return; }
-  }
+  function nextBox(box) { const l = editableBoxes(), i = l.indexOf(box); for (let k = i + 1; k < l.length; k++) { l[k].focus(); return; } }
+  function prevBox(box) { const l = editableBoxes(), i = l.indexOf(box); for (let k = i - 1; k >= 0; k--) { l[k].value = ""; l[k].classList.remove("filled"); l[k].focus(); return; } }
 
-  /* ---------- Timer ---------- */
-  function startTimer() {
-    stopTimer();
-    game.timeMax = game.tier.time; game.timeLeft = game.tier.time;
-    updateTimerBar();
+  /* ---------- Timers ---------- */
+  function startQuestionTimer(time) {
+    stopTimer(); game.timeMax = time; game.timeLeft = time; updateTimerBar();
     game.timer = setInterval(() => {
-      game.timeLeft--;
-      updateTimerBar();
+      game.timeLeft--; updateTimerBar();
       if (game.timeLeft <= 5 && game.timeLeft > 0) audio.tick();
       if (game.timeLeft <= 0) { stopTimer(); timeOut(); }
+    }, 1000);
+  }
+  function startTotalTimer() {
+    stopTimer();
+    game.timer = setInterval(() => {
+      if (game.ended) return;
+      game.totalLeft--; updateTimerBar();
+      if (game.totalLeft <= 5 && game.totalLeft > 0) audio.tick();
+      if (game.totalLeft <= 0) { stopTimer(); endGame(true); }
     }, 1000);
   }
   function stopTimer() { if (game.timer) { clearInterval(game.timer); game.timer = null; } }
   function updateTimerBar() {
     const bar = $("#timerBar");
-    const pct = clamp(game.timeLeft / game.timeMax * 100, 0, 100);
-    bar.style.width = pct + "%";
-    bar.classList.toggle("low", pct < 30);
+    const pct = game.totalMode ? clamp(game.totalLeft / game.totalMax * 100, 0, 100) : clamp(game.timeLeft / game.timeMax * 100, 0, 100);
+    bar.style.width = pct + "%"; bar.classList.toggle("low", pct < 30);
   }
 
-  /* ---------- Indice ---------- */
-  $("#hintBtn").addEventListener("click", () => {
-    if (game.hintsLeft <= 0) return;
-    // révèle la première case éditable vide, sinon montre l'indice texte
+  /* ---------- Jokers ---------- */
+  function renderJokers() {
+    $("#cntHint").textContent = game.jk.hint;
+    $("#cntTime").textContent = game.jk.time;
+    $("#cntFifty").textContent = game.jk.fifty;
+    $("#jkHint").disabled = game.jk.hint <= 0;
+    $("#jkTime").disabled = game.jk.time <= 0;
+    $("#jkFifty").disabled = game.jk.fifty <= 0 || editableBoxes().filter(b => !b.value).length <= 1;
+  }
+  $("#jkHint").addEventListener("click", () => {
+    if (game.jk.hint <= 0) return;
     const empty = editableBoxes().find(b => !b.value);
-    game.hintsLeft--; $("#hintCount").textContent = game.hintsLeft; $("#hintBtn").disabled = game.hintsLeft <= 0;
-    game.revealed++;
-    if (empty) {
-      const i = +empty.dataset.i;
-      empty.value = game.mask[i].char; empty.classList.add("filled");
-      empty.style.animation = "pop .3s";
-      toast("💡 Une lettre révélée !");
-    } else {
-      $("#hintText").classList.add("show");
-      toast("💡 Voici un indice");
-    }
-    audio.beep(500, .1, "sine");
+    game.jk.hint--; game.hintsUsedGame++; game.revealedThisPuzzle++;
+    if (empty) { empty.value = game.mask[+empty.dataset.i].char; empty.classList.add("filled"); toast("💡 Lettre révélée"); }
+    else { $("#hintText").classList.add("show"); toast("💡 Indice affiché"); }
+    audio.power(); renderJokers(); focusFirstEmpty();
   });
+  $("#jkTime").addEventListener("click", () => {
+    if (game.jk.time <= 0) return;
+    game.jk.time--;
+    if (game.totalMode) { game.totalLeft = Math.min(game.totalMax, game.totalLeft + 10); }
+    else { game.timeLeft = game.timeLeft + 10; game.timeMax = Math.max(game.timeMax, game.timeLeft); }
+    updateTimerBar(); toast("❄️ +10 secondes"); audio.power(); renderJokers();
+  });
+  $("#jkFifty").addEventListener("click", () => {
+    if (game.jk.fifty <= 0) return;
+    const empties = editableBoxes().filter(b => !b.value);
+    if (empties.length <= 1) return;
+    game.jk.fifty--;
+    const n = Math.ceil(empties.length / 2);
+    shuffle(empties).slice(0, n).forEach(b => { b.value = game.mask[+b.dataset.i].char; b.classList.add("filled"); });
+    game.revealedThisPuzzle += n;
+    toast("🎯 Moitié révélée !"); audio.power(); renderJokers(); focusFirstEmpty();
+  });
+  $("#jkSkip").addEventListener("click", () => { game.combo = 0; hideCombo(); toast("Énigme passée"); nextPuzzle(); });
 
   /* ---------- Clavier virtuel ---------- */
   function buildKeyboard() {
-    const rows = ["AZERTYUIOP", "QSDFGHJKLM", "WXCVBN"];
+    const layouts = {
+      azerty: ["AZERTYUIOP", "QSDFGHJKLM", "WXCVBN"],
+      qwerty: ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"]
+    };
+    const rows = layouts[store.data.kbd] || layouts.azerty;
     const kb = $("#keyboard"); kb.innerHTML = "";
     rows.forEach(r => {
       const row = document.createElement("div"); row.className = "kbd-row";
-      [...r].forEach(ch => {
-        const k = document.createElement("button"); k.type = "button"; k.className = "key"; k.textContent = ch;
-        k.addEventListener("click", () => typeChar(ch));
-        row.appendChild(k);
-      });
+      [...r].forEach(ch => { const k = document.createElement("button"); k.type = "button"; k.className = "key"; k.textContent = ch; k.addEventListener("click", () => typeChar(ch)); row.appendChild(k); });
       kb.appendChild(row);
     });
     const last = document.createElement("div"); last.className = "kbd-row";
@@ -276,179 +364,291 @@
   }
   function typeChar(ch) {
     let box = document.activeElement;
-    if (!box || !box.classList || !box.classList.contains("letter-box") || box.readOnly || box.value)
-      box = editableBoxes().find(b => !b.value);
-    if (!box) return;
-    box.value = ch; box.classList.add("filled"); audio.key(); nextBox(box);
+    if (!box || !box.classList || !box.classList.contains("letter-box") || box.readOnly || box.value) box = editableBoxes().find(b => !b.value);
+    if (!box) return; box.value = ch; box.classList.add("filled"); audio.key(); nextBox(box);
   }
   $("#kbdToggle").addEventListener("click", () => {
     const kb = $("#keyboard"); const show = kb.style.display === "none";
-    kb.style.display = show ? "grid" : "none";
-    $("#kbdToggle").textContent = show ? "⌨️ Masquer le clavier" : "⌨️ Afficher le clavier";
+    kb.style.display = show ? "grid" : "none"; $("#kbdToggle").textContent = show ? "⌨️ Masquer le clavier" : "⌨️ Afficher le clavier";
   });
-  buildKeyboard();
 
   /* ---------- Validation ---------- */
   $("#answerForm").addEventListener("submit", e => { e.preventDefault(); submit(); });
   $("#submitBtn").addEventListener("click", submit);
-
-  function currentGuess() {
-    return game.mask.map((m, i) => {
-      if (!m.isLetter) return m.char;
-      const box = game.boxes[i];
-      return box ? (box.value || " ") : m.char;
-    }).join("");
-  }
-
-  function isCorrect(guess) {
-    const answers = [game.current.name, ...(game.current.alias || [])].map(norm);
-    return answers.includes(norm(guess));
-  }
-
+  function currentGuess() { return game.mask.map((m, i) => { if (!m.isLetter) return m.char; const b = game.boxes[i]; return b ? (b.value || " ") : m.char; }).join(""); }
+  function isCorrect(guess) { const ans = [game.current.name, ...(game.current.alias || [])].map(norm); return ans.includes(norm(guess)); }
   function submit() {
-    if (!game.current) return;
+    if (!game.current || game.ended) return;
     const empty = editableBoxes().find(b => !b.value);
     if (empty) { toast("Complète toutes les cases !"); empty.focus(); shakeBoxes(); return; }
     game.attempts++;
-    const guess = currentGuess();
-    if (isCorrect(guess)) onCorrect();
-    else onWrong();
+    if (isCorrect(currentGuess())) onCorrect(); else onWrong();
   }
-
-  function shakeBoxes() {
-    editableBoxes().forEach(b => { b.classList.remove("wrong"); void b.offsetWidth; b.classList.add("wrong"); });
-    setTimeout(() => editableBoxes().forEach(b => b.classList.remove("wrong")), 450);
-  }
+  function shakeBoxes() { editableBoxes().forEach(b => { b.classList.remove("wrong"); void b.offsetWidth; b.classList.add("wrong"); }); setTimeout(() => editableBoxes().forEach(b => b.classList.remove("wrong")), 450); }
 
   function onCorrect() {
-    stopTimer();
-    game.correct++;
-    game.combo++;
-    game.maxCombo = Math.max(game.maxCombo, game.combo);
-    // Calcul du score : base + bonus temps + bonus combo - coût indices
-    const timeBonus = Math.round(game.timeLeft * 4);
+    if (!game.totalMode) stopTimer();
+    game.correct++; game.combo++; game.maxCombo = Math.max(game.maxCombo, game.combo);
+    const cat = game.current.category || "objet"; game.solvedCats[cat] = (game.solvedCats[cat] || 0) + 1;
+    const timeBonus = game.totalMode ? 40 : Math.round(game.timeLeft * 4);
     const comboMult = 1 + (game.combo - 1) * 0.25;
-    const hintPenalty = game.revealed * 25;
-    const gained = Math.max(20, Math.round((100 + timeBonus) * comboMult) - hintPenalty);
+    const gained = Math.max(20, Math.round((100 + timeBonus) * comboMult) - game.revealedThisPuzzle * 25);
     game.score += gained;
-
-    $("#hud-score").textContent = game.score;
+    if (game.totalMode) { game.totalLeft = Math.min(game.totalMax, game.totalLeft + 4); }
+    updateHud(); if (game.duo) { game.duo.scores[game.duo.player - 1] = game.score; updateDuoBanner(); }
     game.boxes.forEach(b => { if (b) b.classList.add("correct"); });
     const fb = $("#feedback"); fb.textContent = `✔ Bravo ! +${gained} points`; fb.className = "feedback good";
-    showCombo();
-    audio.good();
+    showCombo(); audio.good();
     if (game.combo >= 3) popConfetti(28);
-
-    setTimeout(nextPuzzle, 1100);
+    checkLiveAchievements();
+    setTimeout(nextPuzzle, 1000);
   }
 
   function onWrong() {
-    game.combo = 0; hideCombo();
-    game.lives--;
-    $("#hud-lives").textContent = "❤️".repeat(Math.max(0, game.lives)) + "🖤".repeat(3 - Math.max(0, game.lives));
-    shakeBoxes(); audio.bad();
+    game.combo = 0; hideCombo(); audio.bad(); shakeBoxes();
     const fb = $("#feedback"); fb.textContent = "✘ Raté, réessaie !"; fb.className = "feedback bad";
-    if (game.lives <= 0) { setTimeout(() => endGame(false), 700); }
+    if (game.totalMode) { game.totalLeft = Math.max(0, game.totalLeft - 3); updateTimerBar(); return; }
+    if (game.useLives) {
+      game.lives--; updateHud();
+      if (game.lives <= 0) setTimeout(() => endGame(false), 700);
+    }
   }
 
   function timeOut() {
-    game.combo = 0; hideCombo(); game.lives--; game.attempts++;
-    $("#hud-lives").textContent = "❤️".repeat(Math.max(0, game.lives)) + "🖤".repeat(3 - Math.max(0, game.lives));
-    audio.bad();
+    if (game.totalMode) return;
+    game.combo = 0; hideCombo(); game.attempts++; audio.bad();
     const fb = $("#feedback"); fb.textContent = `⏱ Temps écoulé ! C'était « ${game.current.name} »`; fb.className = "feedback bad";
-    // révèle la réponse
     game.mask.forEach((m, i) => { const b = game.boxes[i]; if (b) { b.value = m.char; b.classList.add("wrong"); } });
-    if (game.lives <= 0) setTimeout(() => endGame(false), 1300);
-    else setTimeout(nextPuzzle, 1500);
+    if (game.useLives) {
+      game.lives--; updateHud();
+      if (game.lives <= 0) { setTimeout(() => endGame(false), 1300); return; }
+    }
+    setTimeout(nextPuzzle, 1500);
   }
 
-  /* ---------- Combo UI ---------- */
-  function showCombo() {
-    const f = $("#comboFlag");
-    if (game.combo >= 2) { f.textContent = `🔥 Combo x${game.combo}`; f.classList.add("show"); }
-    else hideCombo();
-  }
+  function showCombo() { const f = $("#comboFlag"); if (game.combo >= 2) { f.textContent = `🔥 Combo x${game.combo}`; f.classList.add("show"); } else hideCombo(); }
   function hideCombo() { $("#comboFlag").classList.remove("show"); }
 
   /* ---------- Progression ---------- */
-  $("#skipBtn").addEventListener("click", () => {
-    game.combo = 0; hideCombo();
-    toast("Question passée");
-    nextPuzzle();
+  function nextPuzzle() {
+    if (game.ended) return;
+    game.index++;
+    // Fin de la file
+    if (game.mode !== "survie" && game.index >= game.queue.length) {
+      if (game.duo && game.duo.player === 1) { endDuoRun(); return; }
+      endGame(true); return;
+    }
+    loadPuzzle();
+  }
+
+  function endDuoRun() {
+    game.duo.scores[0] = game.score;
+    $("#handoverTitle").textContent = `Au tour de ${game.duo.names[1]} !`;
+    $("#handoverMsg").textContent = `${game.duo.names[0]} a marqué ${game.score} points. Passe l'appareil 😉`;
+    screens.show("handover");
+  }
+  $("#handoverGo").addEventListener("click", () => {
+    game.duo.player = 2;
+    resetRunStats();
+    game.jk = Object.assign({}, game.jkBase);
+    game.queue = game.duo.queue;
+    screens.show("play"); setupHud(); loadPuzzle();
   });
 
-  function nextPuzzle() {
-    game.index++;
-    if (game.index >= game.queue.length) { endGame(true); return; }
-    loadPuzzle();
+  /* ---------- Succès ---------- */
+  function unlock(id) {
+    if (store.data.achievements[id]) return;
+    store.data.achievements[id] = true; store.save();
+    const a = SAMSON_ACHIEVEMENTS.find(x => x.id === id); if (!a) return;
+    const el = $("#achToast");
+    el.innerHTML = `<span class="at-ico">${a.icon}</span><div><b>Succès débloqué !</b><span>${a.name} — ${a.desc}</span></div>`;
+    el.classList.add("show"); audio.win(); popConfetti(40);
+    setTimeout(() => el.classList.remove("show"), 3200);
+  }
+  function checkLiveAchievements() {
+    if (game.maxCombo >= 5) unlock("combo5");
+    if (game.maxCombo >= 10) unlock("combo10");
+    if (game.mode === "survie" && game.correct >= 15) unlock("survivor");
   }
 
   /* ---------- Fin de partie ---------- */
   function endGame(finished) {
-    stopTimer();
+    if (game.ended) return; game.ended = true; stopTimer();
+
+    // DUO : comparaison des deux joueurs
+    if (game.duo) { game.duo.scores[1] = game.score; return showDuoResult(); }
+
     const acc = game.attempts ? Math.round(game.correct / game.attempts * 100) : 0;
-    // Étoiles : basé sur précision + complétion
     let stars = 0;
-    if (finished) {
-      if (acc >= 90) stars = 3; else if (acc >= 65) stars = 2; else stars = 1;
+    if (game.mode === "parcours" || game.mode === "daily") {
+      if (finished) stars = acc >= 90 ? 3 : acc >= 65 ? 2 : 1;
+      else stars = game.correct >= game.queue.length / 2 ? 1 : 0;
     } else {
-      stars = game.correct >= game.queue.length / 2 ? 1 : 0;
+      stars = game.score >= 2500 ? 3 : game.score >= 1200 ? 2 : game.score >= 400 ? 1 : 0;
     }
 
-    // Sauvegarde
-    const tid = game.tier.id;
-    const prev = store.data.tiers[tid] || { stars: 0, best: 0 };
-    store.data.tiers[tid] = { stars: Math.max(prev.stars, stars), best: Math.max(prev.best, game.score) };
-    store.data.best = Math.max(store.data.best, game.score);
-    store.data.bestStreak = Math.max(store.data.bestStreak, game.maxCombo);
-    store.data.totalStars = Object.values(store.data.tiers).reduce((s, t) => s + (t.stars || 0), 0);
-    store.save();
-    refreshHome();
+    // --- Statistiques ---
+    const d = store.data;
+    d.gamesPlayed++; d.totalCorrect += game.correct; d.totalAttempts += game.attempts;
+    d.totalScore += game.score; d.bestCombo = Math.max(d.bestCombo, game.maxCombo);
+    const isNewBest = game.score > (d.best || 0); d.best = Math.max(d.best, game.score);
+    Object.keys(game.solvedCats).forEach(c => d.categories[c] = (d.categories[c] || 0) + game.solvedCats[c]);
+    const modeWasBest = game.score > (d.modeBest[game.mode] || 0);
+    d.modeBest[game.mode] = Math.max(d.modeBest[game.mode] || 0, game.score);
 
-    // UI résultats
+    if (game.mode === "parcours") {
+      const prev = d.tiers[game.tier.id] || { stars: 0, best: 0 };
+      d.tiers[game.tier.id] = { stars: Math.max(prev.stars, stars), best: Math.max(prev.best, game.score) };
+      d.totalStars = Object.values(d.tiers).reduce((s, t) => s + (t.stars || 0), 0);
+      if (finished && stars === 3) unlock("perfect");
+      if (finished && game.tier.id === "expert") unlock("expert");
+    }
+    if (game.mode === "survie") d.survieBest = Math.max(d.survieBest, game.correct);
+    if (game.mode === "chrono") d.chronoBest = Math.max(d.chronoBest, game.correct);
+    if (game.mode === "daily" && finished) {
+      unlock("daily");
+      if (d.dailyDone !== todayStr()) {
+        const y = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+        d.dailyStreak = (d.lastDailyDate === y) ? d.dailyStreak + 1 : 1;
+        d.lastDailyDate = todayStr(); d.dailyDone = todayStr();
+        if (d.dailyStreak >= 3) unlock("streak3");
+      }
+    }
+    if (finished) { d.wins++; unlock("first_win"); if (game.hintsUsedGame === 0) unlock("nohint"); }
+    if (game.score >= 1000) unlock("score1000");
+    if (game.score >= 5000) unlock("score5000");
+    if (d.gamesPlayed >= 10) unlock("played10");
+
+    // Classement
+    if (game.score > 0) {
+      d.leaderboard.push({ name: d.name || "Joueur", score: game.score, mode: game.mode, date: todayStr() });
+      d.leaderboard.sort((a, b) => b.score - a.score); d.leaderboard = d.leaderboard.slice(0, 10);
+    }
+    store.save(); refreshHome();
+
+    // --- Affichage ---
     $("#res-score").textContent = game.score;
-    $("#res-correct").textContent = `${game.correct}/${game.queue.length}`;
+    $("#res-correct").textContent = (game.mode === "survie" || game.mode === "chrono") ? game.correct : `${game.correct}/${game.queue.length}`;
     $("#res-combo").textContent = "x" + game.maxCombo;
     $("#res-acc").textContent = acc + "%";
     $("#resultStars").textContent = "⭐".repeat(stars) + "☆".repeat(3 - stars);
+    $("#newRecord").style.display = (isNewBest || modeWasBest) ? "block" : "none";
 
-    if (finished && stars === 3) {
-      $("#resultIcon").textContent = "🏆"; $("#resultTitle").textContent = "Parcours parfait !";
-      $("#resultMsg").textContent = "Incroyable, Samson est fier de toi ! 🎉"; audio.win(); popConfetti(160);
-    } else if (finished) {
-      $("#resultIcon").textContent = "🎉"; $("#resultTitle").textContent = "Parcours terminé !";
-      $("#resultMsg").textContent = "Belle partie, continue à progresser !"; audio.win(); popConfetti(90);
-    } else {
-      $("#resultIcon").textContent = "💥"; $("#resultTitle").textContent = "Plus de vies !";
-      $("#resultMsg").textContent = "Ce n'est que partie remise. Réessaie !"; audio.lose();
-    }
+    let icon = "🎉", title = "Partie terminée !", msg = "Belle partie, continue à progresser !";
+    if (!finished && game.useLives) { icon = "💥"; title = "Plus de vies !"; msg = "Ce n'est que partie remise. Réessaie !"; }
+    else if (game.mode === "chrono") { icon = "⏱️"; title = "Temps écoulé !"; msg = `${game.correct} bonne(s) réponse(s) en 90 secondes !`; }
+    else if (game.mode === "survie") { icon = "♾️"; title = "Fin de la survie"; msg = `Tu as tenu ${game.correct} énigme(s) !`; }
+    else if (stars === 3) { icon = "🏆"; title = "Sans faute !"; msg = "Incroyable, Samson est fier de toi ! 🎉"; }
+    $("#resultIcon").textContent = icon; $("#resultTitle").textContent = title; $("#resultMsg").textContent = msg;
+    (finished || game.score > 0) ? audio.win() : audio.lose();
+    if (finished || stars >= 2) popConfetti(stars === 3 ? 160 : 90);
     screens.show("result");
   }
 
+  function showDuoResult() {
+    const d = game.duo; store.data.gamesPlayed++; store.save(); refreshHome();
+    const [s1, s2] = d.scores; const win = s1 === s2 ? null : (s1 > s2 ? 0 : 1);
+    $("#resultIcon").textContent = win === null ? "🤝" : "🏆";
+    $("#resultTitle").textContent = win === null ? "Égalité !" : `${d.names[win]} gagne !`;
+    $("#resultStars").textContent = `${d.names[0]} ${s1} — ${s2} ${d.names[1]}`;
+    $("#resultMsg").textContent = win === null ? "Superbe duel, à refaire !" : "Bien joué au vainqueur 🎉";
+    $("#res-score").textContent = Math.max(s1, s2);
+    $("#res-correct").textContent = `${s1} vs ${s2}`;
+    $("#res-combo").textContent = "—"; $("#res-acc").textContent = "—";
+    $("#newRecord").style.display = "none";
+    audio.win(); popConfetti(120); screens.show("result");
+  }
+
+  /* ---------- Partage ---------- */
+  $("#shareBtn").addEventListener("click", async () => {
+    let text;
+    if (game.duo) text = `🧩 Samson — Duo\n${game.duo.names[0]} ${game.duo.scores[0]} — ${game.duo.scores[1]} ${game.duo.names[1]}`;
+    else {
+      const modeLabel = (SAMSON_MODES.find(m => m.id === game.mode) || {}).label || "Samson";
+      text = `🧩 Samson — ${modeLabel}\nScore : ${game.score} · Combo x${game.maxCombo}\n${$("#resultStars").textContent}\nÀ toi de battre mon score !`;
+    }
+    try {
+      if (navigator.share) { await navigator.share({ title: "Samson", text }); }
+      else { await navigator.clipboard.writeText(text); toast("📋 Résultat copié !"); }
+    } catch (e) {
+      try { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); toast("📋 Résultat copié !"); }
+      catch (_) { toast("Partage indisponible"); }
+    }
+  });
+
+  /* ---------- Statistiques ---------- */
+  function showStats() {
+    const d = store.data;
+    const winRate = d.gamesPlayed ? Math.round(d.wins / d.gamesPlayed * 100) : 0;
+    const acc = d.totalAttempts ? Math.round(d.totalCorrect / d.totalAttempts * 100) : 0;
+    let favCat = "—", favN = 0; Object.entries(d.categories).forEach(([c, n]) => { if (n > favN) { favN = n; favCat = c; } });
+    $("#statsHello").textContent = `Salut ${d.name || "Joueur"} ! Voici ton bilan.`;
+    $("#statsGrid").innerHTML = [
+      ["Parties", d.gamesPlayed], ["Meilleur score", d.best],
+      ["Précision", acc + "%"], ["Combo record", "x" + d.bestCombo],
+      ["Bonnes réponses", d.totalCorrect], ["Catégorie favorite", favCat]
+    ].map(([l, v]) => `<div class="result-cell"><b>${v}</b><span>${l}</span></div>`).join("");
+    const tiersHtml = SAMSON_TIERS.map(t => {
+      const s = (d.tiers[t.id] || {}).stars || 0;
+      return `<div class="mini-row"><span>${t.icon} ${t.label}</span><span class="stars">${"★".repeat(s)}${"☆".repeat(3 - s)}</span></div>`;
+    }).join("");
+    const modeHtml = SAMSON_MODES.filter(m => d.modeBest[m.id]).map(m =>
+      `<div class="mini-row"><span>${m.icon} ${m.label}</span><span>${d.modeBest[m.id]} pts</span></div>`).join("");
+    $("#statsTiers").innerHTML = tiersHtml + modeHtml;
+    screens.show("stats");
+  }
+
+  /* ---------- Succès ---------- */
+  function showAch() {
+    const done = SAMSON_ACHIEVEMENTS.filter(a => store.data.achievements[a.id]).length;
+    $("#achCount").textContent = done; $("#achTotal").textContent = SAMSON_ACHIEVEMENTS.length;
+    $("#achList").innerHTML = SAMSON_ACHIEVEMENTS.map(a => {
+      const got = store.data.achievements[a.id];
+      return `<div class="ach-item ${got ? "" : "locked"}"><span class="a-ico">${a.icon}</span>
+        <span class="a-meta"><h4>${a.name}</h4><p>${a.desc}</p></span>
+        <span class="a-check">${got ? "✅" : "🔒"}</span></div>`;
+    }).join("");
+    screens.show("ach");
+  }
+
+  /* ---------- Classement ---------- */
+  function showBoard() {
+    const lb = store.data.leaderboard || [];
+    $("#boardList").innerHTML = lb.length ? lb.map((e, i) => {
+      const m = SAMSON_MODES.find(x => x.id === e.mode);
+      return `<div class="board-row ${i === 0 ? "top1" : ""}"><span class="rank">${i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "#" + (i + 1)}</span>
+        <span><b>${e.name}</b><br><span class="b-mode">${m ? m.icon + " " + m.label : e.mode} · ${e.date}</span></span>
+        <span></span><span class="b-score">${e.score}</span></div>`;
+    }).join("") : `<div class="board-empty">Aucun score encore. À toi de jouer ! 🎮</div>`;
+    screens.show("board");
+  }
+
+  /* ---------- Réglages ---------- */
+  function initSettings() {
+    $("#setName").value = store.data.name || "";
+    setSeg("segKbd", store.data.kbd); setSeg("segSound", store.data.sound ? "on" : "off"); setSeg("segAnim", store.data.anim ? "on" : "off");
+  }
+  function setSeg(id, val) { $$("#" + id + " button").forEach(b => b.classList.toggle("active", b.dataset.v === val)); }
+  $("#setName").addEventListener("input", e => { store.data.name = e.target.value.trim() || "Joueur"; store.save(); });
+  $("#segKbd").addEventListener("click", e => { if (e.target.dataset.v) { store.data.kbd = e.target.dataset.v; store.save(); setSeg("segKbd", e.target.dataset.v); buildKeyboard(); } });
+  $("#segSound").addEventListener("click", e => { if (e.target.dataset.v) { store.data.sound = e.target.dataset.v === "on"; store.save(); applySound(); setSeg("segSound", e.target.dataset.v); } });
+  $("#segAnim").addEventListener("click", e => { if (e.target.dataset.v) { store.data.anim = e.target.dataset.v === "on"; store.save(); applyAnim(); setSeg("segAnim", e.target.dataset.v); } });
+  $("#resetBtn").addEventListener("click", () => { if (confirm("Effacer toute ta progression (scores, succès, réglages) ?")) { store.reset(); location.reload(); } });
+
   /* ---------- Confetti ---------- */
   const confetti = (() => {
-    const cv = $("#confetti"); const ctx = cv.getContext("2d");
-    let parts = [], raf = null;
+    const cv = $("#confetti"); const ctx = cv.getContext("2d"); let parts = [], raf = null;
     function resize() { cv.width = innerWidth; cv.height = innerHeight; }
     addEventListener("resize", resize); resize();
     const COLORS = ["#6366f1", "#ec4899", "#f59e0b", "#22c55e", "#38bdf8", "#f43f5e"];
     function burst(n) {
-      for (let i = 0; i < n; i++) parts.push({
-        x: innerWidth / 2 + (Math.random() - .5) * 120, y: innerHeight / 3,
-        vx: (Math.random() - .5) * 9, vy: Math.random() * -10 - 3,
-        g: .28 + Math.random() * .1, s: 5 + Math.random() * 7,
-        rot: Math.random() * 6, vr: (Math.random() - .5) * .3,
-        c: COLORS[Math.floor(Math.random() * COLORS.length)], life: 120
-      });
+      if (!store.data.anim) return;
+      for (let i = 0; i < n; i++) parts.push({ x: innerWidth / 2 + (Math.random() - .5) * 120, y: innerHeight / 3, vx: (Math.random() - .5) * 9, vy: Math.random() * -10 - 3, g: .28 + Math.random() * .1, s: 5 + Math.random() * 7, rot: Math.random() * 6, vr: (Math.random() - .5) * .3, c: COLORS[Math.floor(Math.random() * COLORS.length)], life: 120 });
       if (!raf) loop();
     }
     function loop() {
       ctx.clearRect(0, 0, cv.width, cv.height);
-      parts.forEach(p => {
-        p.vy += p.g; p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life--;
-        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.c;
-        ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * .6); ctx.restore();
-      });
+      parts.forEach(p => { p.vy += p.g; p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life--; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * .6); ctx.restore(); });
       parts = parts.filter(p => p.life > 0 && p.y < cv.height + 30);
       if (parts.length) raf = requestAnimationFrame(loop); else { raf = null; ctx.clearRect(0, 0, cv.width, cv.height); }
     }
@@ -457,22 +657,30 @@
   function popConfetti(n) { confetti.burst(n); }
 
   /* ---------- Navigation ---------- */
-  $("#playBtn").addEventListener("click", () => { audio.ensure(); buildTierGrid(); screens.show("levels"); });
   $("#howBtn").addEventListener("click", () => screens.show("help"));
-  $("#helpBack").addEventListener("click", () => { buildTierGrid(); screens.show("levels"); });
+  $("#helpBack").addEventListener("click", () => { refreshHome(); screens.show("home"); });
   $("#backHome").addEventListener("click", () => { refreshHome(); screens.show("home"); });
-  $("#replayBtn").addEventListener("click", () => startGame(game.tier));
-  $("#otherBtn").addEventListener("click", () => { buildTierGrid(); screens.show("levels"); });
-  $("#homeBtn").addEventListener("click", () => { refreshHome(); screens.show("home"); });
-  $("#quitBtn").addEventListener("click", () => {
-    if (confirm("Quitter la partie en cours ?")) { stopTimer(); refreshHome(); screens.show("home"); }
-  });
+  $("#statsBtn").addEventListener("click", showStats);
+  $("#statsBack").addEventListener("click", () => screens.show("home"));
+  $("#achBtn").addEventListener("click", showAch);
+  $("#achBack").addEventListener("click", () => screens.show("home"));
+  $("#boardBtn").addEventListener("click", showBoard);
+  $("#boardBack").addEventListener("click", () => screens.show("home"));
+  $("#setBtn").addEventListener("click", () => { initSettings(); screens.show("settings"); });
+  $("#setBack").addEventListener("click", () => screens.show("home"));
+  $("#replayBtn").addEventListener("click", () => { if (game.duo) startMode("duo"); else if (game.mode === "parcours") startMode("parcours", game.tier); else startMode(game.mode); });
+  $("#homeBtn").addEventListener("click", () => { refreshHome(); buildModeGrid(); screens.show("home"); });
+  $("#quitBtn").addEventListener("click", () => { if (confirm("Quitter la partie en cours ?")) { game.ended = true; stopTimer(); refreshHome(); buildModeGrid(); screens.show("home"); } });
 
-  // Empêche le zoom involontaire sur double-tap des boutons mobiles / focus initial
-  window.addEventListener("keydown", e => { if (e.key === "Enter" && $("#screen-play").classList.contains("active")) { /* géré par les cases */ } });
+  /* ---------- PWA (installation / hors-ligne) ---------- */
+  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.protocol === "http:")) {
+    window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+  }
 
-  // Petit accesseur de debug (utile pour les tests automatisés, sans effet sur le jeu)
-  window.SAMSON_DEBUG = { answer: () => (game.current ? game.current.name : null), state: () => ({ score: game.score, index: game.index, lives: game.lives }) };
+  /* ---------- Debug (tests automatisés) ---------- */
+  window.SAMSON_DEBUG = { answer: () => (game.current ? game.current.name : null), state: () => ({ score: game.score, index: game.index, lives: game.lives, correct: game.correct, mode: game.mode }), start: (m, t) => startMode(m, t) };
 
+  /* ---------- Init ---------- */
+  buildKeyboard(); buildModeGrid(); refreshHome();
   console.log("%c🧩 Samson prêt à jouer !", "color:#6366f1;font-weight:bold;font-size:14px");
 })();

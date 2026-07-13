@@ -1,64 +1,70 @@
 # 🧩 Samson — Jeu de devinette d'images
 
 **Samson** est un jeu web où l'on doit **deviner** ou **compléter** le nom de l'objet
-affiché à l'image, selon le niveau du parcours choisi. 100 % **HTML / CSS / JavaScript**,
-sans aucune dépendance externe ni connexion réseau.
+affiché à l'image, selon le niveau. 100 % **HTML / CSS / JavaScript**, **sans aucune
+dépendance externe** ni connexion réseau — et installable comme une application (PWA).
 
 ## ▶️ Lancer le jeu
 
-Ouvrez simplement `index.html` dans un navigateur. C'est tout !
+Ouvrez `index.html` dans un navigateur. Pour activer l'installation PWA et le mode
+hors-ligne (service worker), servez le dossier via un petit serveur local, par ex. :
+
+```bash
+cd samson && python3 -m http.server 8000   # puis ouvrez http://localhost:8000
+```
 
 ```
 samson/
-├── index.html   # structure et écrans
-├── style.css    # thème clair/sombre, animations, responsive
-├── game.js      # logique complète du jeu
-└── data.js      # énigmes (illustrations SVG + noms) et paliers
+├── index.html    # structure et écrans
+├── style.css     # thème clair/sombre, animations, responsive
+├── game.js       # logique complète (modes, jokers, succès, stats…)
+├── data.js       # 48 énigmes (SVG + noms), modes, succès
+├── manifest.json # métadonnées PWA
+├── sw.js         # service worker (jeu hors-ligne)
+└── icon.svg      # icône de l'application
 ```
 
-## 🎮 Principe
+## 🎮 5 modes de jeu
 
-1. Une **illustration** apparaît avec sa catégorie.
-2. Des **cases lettres** s'affichent : certaines sont déjà offertes (moins il y en a,
-   plus le niveau est difficile), les autres sont à compléter.
-3. Vous écrivez votre réponse (clavier physique **ou** clavier virtuel intégré).
-4. Validez pour marquer des points !
+| Mode | Description |
+|------|-------------|
+| 🗺️ **Parcours** | 4 paliers (Facile, Moyen, Difficile, Expert), étoiles à gagner. |
+| 📅 **Défi du jour** | 8 énigmes déterministes, identiques pour tous le même jour, avec **série quotidienne** 🔥. |
+| ♾️ **Survie** | Enchaînement infini, 3 vies, difficulté et temps qui se durcissent. |
+| ⏱️ **Contre-la-montre** | 90 secondes chrono : marquer un maximum, chaque bonne réponse ajoute du temps. |
+| 👥 **Duo** | 2 joueurs à tour de rôle (avec écran de passation), le meilleur score gagne. |
 
 ## ✨ Fonctionnalités & innovations
 
-- **4 parcours de difficulté** : Facile 🌱 · Moyen ⚡ · Difficile 🔥 · Expert 👑
-  (le pourcentage de lettres offertes, le temps et les indices diminuent à chaque palier).
-- **Mécanique « écrire ou compléter »** : des lettres sont pré-remplies selon le niveau.
-- **Illustrations vectorielles SVG** dessinées à la main (aucune image externe).
-- **Système de score dynamique** : bonus de temps + **multiplicateur de combo** en
-  enchaînant les bonnes réponses, moins le coût des indices utilisés.
-- **Vies** ❤️, **minuteur** avec barre de progression et alerte de temps.
-- **Indices** : révèle une lettre ou affiche un indice textuel.
-- **Clavier virtuel AZERTY** intégré pour mobile.
-- **Effets sonores** générés à la volée via la Web Audio API (activables/désactivables).
-- **Confettis** animés (canvas) sur les combos et les victoires.
-- **Thème clair / sombre** avec mémorisation.
-- **Sauvegarde locale** (localStorage) : meilleur score, étoiles par parcours, série record.
-- **Écran de résultats** avec étoiles, précision et meilleur combo.
-- **Responsive**, **accessible** (labels ARIA) et respect de `prefers-reduced-motion`.
+- **Mécanique « écrire ou compléter »** : cases lettres pré-remplies selon le niveau.
+- **48 illustrations vectorielles SVG** dessinées à la main (aucune image externe).
+- **3 jokers** : 💡 révéler une lettre · ❄️ +10 secondes · 🎯 dévoiler la moitié du mot.
+- **Score dynamique** : bonus de temps + **multiplicateur de combo** − coût des jokers.
+- **Vies** ❤️, **minuteur** (par question ou global selon le mode) avec alerte.
+- **12 succès / trophées** débloquables avec notifications animées.
+- **Statistiques** détaillées : parties, précision, combo record, catégorie favorite…
+- **Classement local** : les 10 meilleures parties tous modes confondus.
+- **Réglages** : nom du joueur, clavier **AZERTY/QWERTY**, sons, animations, réinitialisation.
+- **Clavier virtuel** intégré pour mobile.
+- **Partage du résultat** (Web Share API ou copie dans le presse-papiers).
+- **Effets sonores** générés via la Web Audio API + **confettis** (canvas).
+- **Thème clair / sombre** et **sauvegarde locale** de toute la progression.
+- **PWA** installable et jouable **hors-ligne**.
+- **Responsive**, **accessible** (ARIA) et respect de `prefers-reduced-motion`.
 
 ## 🧠 Comparaison des réponses
 
-Les accents, la casse et les espaces superflus sont ignorés lors de la validation
-(`Étoile`, `etoile`, `ETOILE` sont tous acceptés), et des réponses alternatives
-(`alias`) sont prévues pour certaines énigmes.
+Accents, casse et espaces sont ignorés (`Étoile` = `etoile` = `ETOILE`), et des
+réponses alternatives (`alias`) sont acceptées (ex. `hibou` pour `Chouette`).
 
 ## ➕ Ajouter une énigme
 
-Ajoutez un objet dans `SAMSON_PUZZLES` (fichier `data.js`) :
+Ajoutez un objet dans `SAMSON_PUZZLES` (`data.js`) avec un `level` de 1 (facile) à 3 (difficile) :
 
 ```js
 {
-  id: "cadeau",
-  name: "Cadeau",
-  alias: ["present"],
-  hint: "On l'offre pour un anniversaire.",
-  category: "objet",
+  id: "cadeau", name: "Cadeau", alias: ["present"], level: 1,
+  hint: "On l'offre pour un anniversaire.", category: "objet",
   svg: `<svg viewBox="0 0 200 200">...</svg>`
 }
 ```

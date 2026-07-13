@@ -7,6 +7,7 @@
   <meta name="theme-color" content="#6366f1">
   <title>Samson · Jeu de devinette d'images</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧩</text></svg>">
+  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -37,20 +38,27 @@
           <text x="100" y="98" font-size="40" text-anchor="middle" fill="#4338ca" font-weight="bold">?</text>
         </svg>
       </div>
-      <h1 class="title">Bienvenue dans Samson 🎉</h1>
-      <p class="subtitle">Regarde l'image, puis <b>devine</b> ou <b>complète</b> le nom de l'objet. Plus le niveau est élevé, moins il y a d'indices !</p>
+      <h1 class="title">Samson 🧩</h1>
+      <p class="subtitle">Regarde l'image, puis <b>devine</b> ou <b>complète</b> le nom de l'objet. Choisis ton mode de jeu !</p>
 
       <div class="stat-row">
         <div class="stat-chip"><b id="home-best">0</b><span>Meilleur score</span></div>
         <div class="stat-chip"><b id="home-stars">0</b><span>Étoiles</span></div>
-        <div class="stat-chip"><b id="home-streak">0</b><span>Série record</span></div>
+        <div class="stat-chip"><b id="home-daily">0🔥</b><span>Série jour</span></div>
       </div>
 
-      <button class="btn primary" id="playBtn">▶ Jouer</button>
-      <button class="btn ghost" id="howBtn">❔ Comment jouer</button>
+      <div class="mode-grid" id="modeGrid"></div>
+
+      <div class="quick-links">
+        <button class="chip-btn" id="statsBtn">📊 Stats</button>
+        <button class="chip-btn" id="achBtn">🏅 Succès</button>
+        <button class="chip-btn" id="boardBtn">🏆 Classement</button>
+        <button class="chip-btn" id="setBtn">⚙️ Réglages</button>
+        <button class="chip-btn" id="howBtn">❔ Aide</button>
+      </div>
     </section>
 
-    <!-- ============ CHOIX DU NIVEAU ============ -->
+    <!-- ============ CHOIX DU NIVEAU (parcours) ============ -->
     <section class="screen" id="screen-levels">
       <h1 class="title">Choisis ton parcours</h1>
       <p class="subtitle">Chaque palier ajoute du défi : moins de lettres offertes, moins de temps, moins d'indices.</p>
@@ -61,11 +69,13 @@
     <!-- ============ JEU ============ -->
     <section class="screen" id="screen-play">
       <div class="hud">
-        <div class="hud-item"><span class="lbl">Niveau</span><span id="hud-level">1/12</span></div>
+        <div class="hud-item"><span class="lbl" id="hud-mode-lbl">Niveau</span><span id="hud-level">1/12</span></div>
         <div class="hud-item"><span class="lbl">Score</span><span id="hud-score">0</span></div>
-        <div class="hud-item"><span class="lbl">Vies</span><span class="hearts" id="hud-lives">❤️❤️❤️</span></div>
+        <div class="hud-item" id="hud-lives-wrap"><span class="lbl">Vies</span><span class="hearts" id="hud-lives">❤️❤️❤️</span></div>
       </div>
       <div class="timer-wrap"><div class="timer-bar" id="timerBar"></div></div>
+
+      <div id="duoBanner" class="duo-banner" style="display:none"></div>
 
       <div class="image-stage">
         <span class="category-tag" id="catTag">objet</span>
@@ -82,11 +92,15 @@
       </form>
       <div class="feedback" id="feedback"></div>
 
-      <div class="controls">
-        <button class="btn ghost" id="hintBtn" style="flex:1">💡 Indice (<span id="hintCount">3</span>)</button>
-        <button class="btn ghost" id="skipBtn" style="flex:1">⏭ Passer</button>
-        <button class="btn primary" id="submitBtn" style="flex:1.4">✔ Valider</button>
+      <!-- Jokers -->
+      <div class="jokers" id="jokers">
+        <button class="joker" id="jkHint" type="button" title="Révéler une lettre">💡<b id="cntHint">3</b></button>
+        <button class="joker" id="jkTime" type="button" title="+10 secondes">❄️<b id="cntTime">1</b></button>
+        <button class="joker" id="jkFifty" type="button" title="Révéler la moitié des lettres">🎯<b id="cntFifty">1</b></button>
+        <button class="joker" id="jkSkip" type="button" title="Passer cette énigme">⏭</button>
       </div>
+
+      <button class="btn primary" id="submitBtn" style="margin-top:12px">✔ Valider</button>
 
       <div class="kbd-toggle"><button id="kbdToggle" type="button">⌨️ Afficher le clavier</button></div>
       <div class="kbd" id="keyboard" style="display:none"></div>
@@ -94,10 +108,18 @@
       <button class="btn ghost" id="quitBtn" style="margin-top:14px">✕ Quitter la partie</button>
     </section>
 
+    <!-- ============ HANDOVER DUO ============ -->
+    <section class="screen" id="screen-handover">
+      <div class="result-icon">🎮</div>
+      <h1 class="title" style="text-align:center" id="handoverTitle">Au tour du Joueur 2 !</h1>
+      <p class="subtitle" style="text-align:center" id="handoverMsg">Passe l'appareil sans regarder les réponses 😉</p>
+      <button class="btn primary" id="handoverGo">Je suis prêt ▶</button>
+    </section>
+
     <!-- ============ RÉSULTATS ============ -->
     <section class="screen" id="screen-result">
       <div class="result-icon" id="resultIcon">🏆</div>
-      <h1 class="title" style="text-align:center" id="resultTitle">Parcours terminé !</h1>
+      <h1 class="title" style="text-align:center" id="resultTitle">Partie terminée !</h1>
       <div class="stars-big" id="resultStars">⭐⭐⭐</div>
       <p class="subtitle" style="text-align:center" id="resultMsg">Superbe performance !</p>
 
@@ -108,20 +130,80 @@
         <div class="result-cell"><b id="res-acc">0%</b><span>Précision</span></div>
       </div>
 
-      <button class="btn primary" id="replayBtn">🔁 Rejouer ce parcours</button>
-      <button class="btn ghost" id="otherBtn">🎚 Autre parcours</button>
+      <div id="newRecord" class="record-badge" style="display:none">🥇 Nouveau record !</div>
+
+      <button class="btn primary" id="replayBtn">🔁 Rejouer</button>
+      <button class="btn ghost" id="shareBtn">📤 Partager le résultat</button>
       <button class="btn ghost" id="homeBtn">🏠 Accueil</button>
     </section>
 
-    <!-- ============ AIDE (modale simple) ============ -->
+    <!-- ============ STATISTIQUES ============ -->
+    <section class="screen" id="screen-stats">
+      <h1 class="title">📊 Statistiques</h1>
+      <p class="subtitle" id="statsHello">Continue à jouer pour progresser !</p>
+      <div class="result-grid" id="statsGrid"></div>
+      <h3 class="section-h">Étoiles par parcours</h3>
+      <div id="statsTiers" class="mini-list"></div>
+      <button class="btn ghost" id="statsBack" style="margin-top:16px">← Retour</button>
+    </section>
+
+    <!-- ============ SUCCÈS ============ -->
+    <section class="screen" id="screen-ach">
+      <h1 class="title">🏅 Succès</h1>
+      <p class="subtitle"><span id="achCount">0</span> / <span id="achTotal">0</span> débloqués</p>
+      <div id="achList" class="ach-list"></div>
+      <button class="btn ghost" id="achBack" style="margin-top:16px">← Retour</button>
+    </section>
+
+    <!-- ============ CLASSEMENT ============ -->
+    <section class="screen" id="screen-board">
+      <h1 class="title">🏆 Classement local</h1>
+      <p class="subtitle">Tes 10 meilleures parties, tous modes confondus.</p>
+      <div id="boardList" class="board-list"></div>
+      <button class="btn ghost" id="boardBack" style="margin-top:16px">← Retour</button>
+    </section>
+
+    <!-- ============ RÉGLAGES ============ -->
+    <section class="screen" id="screen-settings">
+      <h1 class="title">⚙️ Réglages</h1>
+      <div class="setting-row">
+        <label for="setName">Nom du joueur</label>
+        <input id="setName" class="text-input" maxlength="14" placeholder="Joueur">
+      </div>
+      <div class="setting-row">
+        <span>Disposition du clavier</span>
+        <div class="seg" id="segKbd">
+          <button data-v="azerty" class="active">AZERTY</button>
+          <button data-v="qwerty">QWERTY</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <span>Sons</span>
+        <div class="seg" id="segSound">
+          <button data-v="on" class="active">Activés</button>
+          <button data-v="off">Coupés</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <span>Animations</span>
+        <div class="seg" id="segAnim">
+          <button data-v="on" class="active">Activées</button>
+          <button data-v="off">Réduites</button>
+        </div>
+      </div>
+      <button class="btn ghost danger" id="resetBtn" style="margin-top:16px">🗑️ Réinitialiser la progression</button>
+      <button class="btn ghost" id="setBack" style="margin-top:10px">← Retour</button>
+    </section>
+
+    <!-- ============ AIDE ============ -->
     <section class="screen" id="screen-help">
       <h1 class="title">Comment jouer 🕹️</h1>
       <p class="subtitle">Samson te montre une image. À toi de trouver le mot !</p>
       <div style="display:grid;gap:12px">
         <div class="tier-card"><div class="tier-icon">🖼️</div><div class="tier-meta"><h3>Observe</h3><p>Une illustration apparaît avec sa catégorie.</p></div></div>
-        <div class="tier-card"><div class="tier-icon">⌨️</div><div class="tier-meta"><h3>Écris ou complète</h3><p>Remplis les cases. Certaines lettres sont déjà offertes selon le niveau.</p></div></div>
-        <div class="tier-card"><div class="tier-icon">💡</div><div class="tier-meta"><h3>Indices</h3><p>Bloqué ? Révèle une lettre ou lis l'indice (ça coûte des points).</p></div></div>
-        <div class="tier-card"><div class="tier-icon">🔥</div><div class="tier-meta"><h3>Combos & temps</h3><p>Enchaîne les bonnes réponses vite pour multiplier tes points !</p></div></div>
+        <div class="tier-card"><div class="tier-icon">⌨️</div><div class="tier-meta"><h3>Écris ou complète</h3><p>Remplis les cases. Certaines lettres sont offertes selon le niveau.</p></div></div>
+        <div class="tier-card"><div class="tier-icon">🎯</div><div class="tier-meta"><h3>Jokers</h3><p>💡 révèle une lettre · ❄️ ajoute du temps · 🎯 dévoile la moitié du mot.</p></div></div>
+        <div class="tier-card"><div class="tier-icon">🔥</div><div class="tier-meta"><h3>Combos & modes</h3><p>Enchaîne vite pour multiplier tes points. Essaie tous les modes !</p></div></div>
       </div>
       <button class="btn primary" id="helpBack" style="margin-top:18px">Compris, jouons !</button>
     </section>
@@ -130,6 +212,7 @@
   </main>
 
   <div class="toast" id="toast"></div>
+  <div class="ach-toast" id="achToast"></div>
 
   <script src="data.js"></script>
   <script src="game.js"></script>

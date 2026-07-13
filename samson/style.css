@@ -237,6 +237,122 @@ h1.title { font-size: 26px; margin-bottom: 4px; }
 
 .footer-note { text-align: center; font-size: 12px; color: var(--muted); margin-top: 16px; }
 
+/* ---------------- Mode grid (accueil) ---------------- */
+.mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.mode-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left;
+  padding: 15px; border-radius: 18px; cursor: pointer; border: 1px solid var(--border);
+  background: var(--card-soft); transition: transform .15s, box-shadow .2s; position: relative; overflow: hidden;
+}
+.mode-card:first-child { grid-column: 1 / -1; }
+.mode-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.mode-card .m-ico { font-size: 26px; }
+.mode-card h3 { font-size: 16px; }
+.mode-card p { font-size: 12px; color: var(--text-soft); line-height: 1.35; }
+.mode-card .m-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; }
+.mode-card .m-badge { position: absolute; top: 10px; right: 10px; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 99px; }
+.m-badge.done { background: var(--success); color: #fff; }
+.m-badge.new { background: var(--accent); color: #fff; }
+
+.quick-links { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.chip-btn {
+  background: var(--card-soft); border: 1px solid var(--border); color: var(--text-soft);
+  padding: 8px 12px; border-radius: 99px; font-size: 13px; font-weight: 700; cursor: pointer;
+  font-family: var(--font); transition: background .2s, transform .12s;
+}
+.chip-btn:hover { background: var(--primary); color: #fff; transform: translateY(-1px); }
+
+/* ---------------- Jokers ---------------- */
+.jokers { display: flex; gap: 8px; }
+.joker {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px;
+  padding: 12px 4px; border-radius: 14px; border: 1px solid var(--border);
+  background: var(--card-soft); color: var(--text); font-size: 18px; cursor: pointer;
+  font-family: var(--font); transition: transform .12s, background .2s, opacity .2s;
+}
+.joker b { font-size: 12px; background: var(--primary); color: #fff; border-radius: 99px; padding: 1px 6px; }
+.joker:hover:not(:disabled) { transform: translateY(-2px); background: var(--card); }
+.joker:disabled { opacity: .35; cursor: not-allowed; }
+
+/* ---------------- Duo ---------------- */
+.duo-banner {
+  text-align: center; font-weight: 800; padding: 8px; border-radius: 12px; margin-bottom: 12px;
+  background: linear-gradient(120deg, #14b8a6, #6366f1); color: #fff;
+}
+
+/* ---------------- Sections / listes ---------------- */
+.section-h { margin: 18px 0 10px; font-size: 15px; color: var(--text-soft); }
+.mini-list { display: grid; gap: 8px; }
+.mini-row {
+  display: flex; align-items: center; justify-content: space-between; padding: 12px 14px;
+  background: var(--card-soft); border: 1px solid var(--border); border-radius: 14px; font-weight: 700;
+}
+.mini-row .stars { color: var(--warning); letter-spacing: 2px; }
+
+.ach-list { display: grid; gap: 10px; }
+.ach-item {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  background: var(--card-soft); border: 1px solid var(--border); border-radius: 16px;
+}
+.ach-item.locked { opacity: .5; filter: grayscale(1); }
+.ach-item .a-ico { font-size: 28px; width: 44px; text-align: center; }
+.ach-item .a-meta h4 { font-size: 15px; }
+.ach-item .a-meta p { font-size: 12px; color: var(--text-soft); }
+.ach-item .a-check { margin-left: auto; font-size: 18px; }
+
+.board-list { display: grid; gap: 8px; }
+.board-row {
+  display: grid; grid-template-columns: 32px 1fr auto auto; align-items: center; gap: 10px;
+  padding: 11px 14px; background: var(--card-soft); border: 1px solid var(--border); border-radius: 14px;
+}
+.board-row .rank { font-weight: 800; color: var(--muted); }
+.board-row.top1 { background: linear-gradient(120deg, rgba(251,191,36,.25), transparent); border-color: var(--warning); }
+.board-row .b-score { font-weight: 800; color: var(--primary-dark); }
+.board-row .b-mode { font-size: 11px; color: var(--muted); }
+.board-empty { text-align: center; color: var(--muted); padding: 24px; }
+
+/* ---------------- Réglages ---------------- */
+.setting-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 14px; background: var(--card-soft); border: 1px solid var(--border);
+  border-radius: 14px; margin-bottom: 10px; font-weight: 600; flex-wrap: wrap;
+}
+.text-input {
+  border: 1px solid var(--border); background: var(--card); color: var(--text);
+  padding: 8px 12px; border-radius: 10px; font-family: var(--font); font-size: 14px; width: 140px;
+}
+.text-input:focus { outline: none; border-color: var(--primary); }
+.seg { display: inline-flex; background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.seg button {
+  border: none; background: transparent; color: var(--text-soft); padding: 8px 12px;
+  font-weight: 700; font-size: 13px; cursor: pointer; font-family: var(--font);
+}
+.seg button.active { background: var(--primary); color: #fff; }
+.btn.danger { color: var(--danger); border-color: var(--danger); }
+.btn.danger:hover { background: var(--danger); color: #fff; }
+
+.record-badge {
+  text-align: center; font-weight: 800; color: #78350f; background: var(--warning);
+  padding: 10px; border-radius: 12px; margin-bottom: 14px; animation: pop .5s;
+}
+
+/* ---------------- Toast succès ---------------- */
+.ach-toast {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-140%);
+  display: flex; align-items: center; gap: 10px; background: var(--card); color: var(--text);
+  border: 1px solid var(--border); border-left: 5px solid var(--warning);
+  padding: 12px 18px; border-radius: 14px; box-shadow: var(--shadow); z-index: 80; max-width: 90vw;
+  transition: transform .4s cubic-bezier(.2,1.3,.4,1);
+}
+.ach-toast.show { transform: translateX(-50%) translateY(0); }
+.ach-toast .at-ico { font-size: 26px; }
+.ach-toast b { display: block; font-size: 14px; }
+.ach-toast span { font-size: 12px; color: var(--text-soft); }
+
+@media (max-width: 420px) {
+  .mode-grid { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 420px) {
   .letter-box { width: 34px; height: 42px; font-size: 18px; }
   h1.title { font-size: 22px; }
@@ -245,3 +361,4 @@ h1.title { font-size: 26px; margin-bottom: 4px; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+:root.no-anim * { animation: none !important; transition: none !important; }
