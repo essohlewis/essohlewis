@@ -24,7 +24,7 @@ samson/
 └── icon.svg      # icône de l'application
 ```
 
-## 🎮 5 modes de jeu
+## 🎮 7 modes de jeu
 
 | Mode | Description |
 |------|-------------|
@@ -33,15 +33,18 @@ samson/
 | ♾️ **Survie** | Enchaînement infini, 3 vies, difficulté et temps qui se durcissent. |
 | ⏱️ **Contre-la-montre** | 90 secondes chrono : marquer un maximum, chaque bonne réponse ajoute du temps. |
 | 👥 **Duo** | 2 joueurs à tour de rôle (avec écran de passation), le meilleur score gagne. |
+| 🎯 **Par thème** | Joue une seule catégorie : animaux, nature ou objets. |
+| 🎨 **Mes énigmes** | **Crée tes propres devinettes** (mot + emoji + indice) et joue-les ! |
 
 ## ✨ Fonctionnalités & innovations
 
 - **Mécanique « écrire ou compléter »** : cases lettres pré-remplies selon le niveau.
-- **48 illustrations vectorielles SVG** dessinées à la main (aucune image externe).
+- **53 illustrations vectorielles SVG** dessinées à la main (aucune image externe).
 - **3 jokers** : 💡 révéler une lettre · ❄️ +10 secondes · 🎯 dévoiler la moitié du mot.
+- **Éditeur d'énigmes** : crée tes propres devinettes avec un emoji comme image, stockées localement.
 - **Score dynamique** : bonus de temps + **multiplicateur de combo** − coût des jokers.
 - **Vies** ❤️, **minuteur** (par question ou global selon le mode) avec alerte.
-- **12 succès / trophées** débloquables avec notifications animées.
+- **14 succès / trophées** débloquables avec notifications animées.
 - **Statistiques** détaillées : parties, précision, combo record, catégorie favorite…
 - **Classement local** : les 10 meilleures parties tous modes confondus.
 - **Réglages** : nom du joueur, clavier **AZERTY/QWERTY**, sons, animations, réinitialisation.

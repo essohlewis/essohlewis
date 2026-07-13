@@ -22,7 +22,7 @@
     totalCorrect: 0, totalAttempts: 0, totalScore: 0,
     tiers: {}, modeBest: {}, categories: {}, achievements: {},
     leaderboard: [], dailyStreak: 0, lastDailyDate: "", dailyDone: "",
-    survieBest: 0, chronoBest: 0,
+    survieBest: 0, chronoBest: 0, custom: [],
     sound: true, theme: "light", kbd: "azerty", anim: true, name: "Joueur"
   };
   const store = {
@@ -103,6 +103,8 @@
 
   function onModeClick(id) {
     if (id === "parcours") { buildTierGrid(); screens.show("levels"); return; }
+    if (id === "category") { buildCatGrid(); screens.show("category"); return; }
+    if (id === "custom") { showEditor(); return; }
     if (id === "daily" && store.data.dailyDone === todayStr()) {
       if (!confirm("Tu as déjà fait le défi du jour. Rejouer pour t'entraîner (sans compter la série) ?")) return;
     }
@@ -122,7 +124,22 @@
         <span class="tier-meta"><h3>${tier.label}</h3>
         <p>${tier.time}s · ${tier.hints} indice(s) · ${Math.round(tier.revealRatio * 100)}% offert</p>
         <span class="tier-stars">${"★".repeat(stars)}${"☆".repeat(3 - stars)} ${saved.best ? "· record " + saved.best : ""}</span></span>`;
-      card.addEventListener("click", () => { audio.ensure(); startMode("parcours", tier); });
+      card.addEventListener("click", () => { audio.ensure(); startMode("parcours", { tier }); });
+      grid.appendChild(card);
+    });
+  }
+
+  /* ---------- Choix du thème (mode « Par thème ») ---------- */
+  function buildCatGrid() {
+    const grid = $("#catGrid"); grid.innerHTML = "";
+    SAMSON_CATEGORIES.forEach(cat => {
+      const count = SAMSON_PUZZLES.filter(p => p.category === cat.id).length;
+      const card = document.createElement("button");
+      card.className = "tier-card"; card.type = "button";
+      card.innerHTML = `<span class="bar" style="background:${cat.color}"></span>
+        <span class="tier-icon">${cat.icon}</span>
+        <span class="tier-meta"><h3>${cat.label}</h3><p>${count} image(s) à deviner</p></span>`;
+      card.addEventListener("click", () => { audio.ensure(); startMode("category", { category: cat.id }); });
       grid.appendChild(card);
     });
   }
@@ -140,16 +157,28 @@
   }
 
   /* ---------- Démarrage d'un mode ---------- */
-  function startMode(mode, tier) {
-    game = { mode, tier: tier || null };
+  function startMode(mode, opts) {
+    opts = opts || {};
+    game = { mode, tier: opts.tier || null, catFilter: opts.category || null };
     resetRunStats();
     game.lives = 3; game.useLives = true; game.totalMode = false; game.ramp = false;
     game.duo = null;
 
     if (mode === "parcours") {
+      const tier = game.tier;
       game.queue = shuffle(SAMSON_PUZZLES.filter(p => tier.levels.includes(p.level)));
       game.revealRatio = tier.revealRatio; game.timePerQ = tier.time;
       game.jk = { hint: tier.hints, time: tier.id === "expert" ? 0 : 1, fifty: tier.id === "expert" ? 0 : 1 };
+    } else if (mode === "category") {
+      game.queue = shuffle(SAMSON_PUZZLES.filter(p => p.category === game.catFilter));
+      game.revealRatio = 0.35; game.timePerQ = 45;
+      game.jk = { hint: 2, time: 1, fifty: 1 };
+    } else if (mode === "custom") {
+      const list = store.data.custom || [];
+      if (!list.length) { toast("Crée d'abord une énigme !"); showEditor(); return; }
+      game.queue = shuffle(list.map(c => ({ id: c.id, name: c.name, hint: c.hint, category: c.category, emoji: c.emoji })));
+      game.revealRatio = 0.35; game.timePerQ = 45;
+      game.jk = { hint: 3, time: 1, fifty: 1 };
     } else if (mode === "daily") {
       game.queue = dailyQueue();
       game.revealRatio = 0.3; game.timePerQ = 45;
@@ -230,7 +259,7 @@
 
     updateHud();
     $("#catTag").textContent = p.category || "objet";
-    $("#imgHolder").innerHTML = p.svg;
+    $("#imgHolder").innerHTML = p.svg ? p.svg : `<div class="emoji-img">${p.emoji || "❓"}</div>`;
     const ht = $("#hintText"); ht.textContent = "💡 " + (p.hint || ""); ht.classList.remove("show");
     $("#feedback").textContent = ""; $("#feedback").className = "feedback";
 
@@ -505,6 +534,7 @@
     }
     if (game.mode === "survie") d.survieBest = Math.max(d.survieBest, game.correct);
     if (game.mode === "chrono") d.chronoBest = Math.max(d.chronoBest, game.correct);
+    if (game.mode === "category" && finished) unlock("themed");
     if (game.mode === "daily" && finished) {
       unlock("daily");
       if (d.dailyDone !== todayStr()) {
@@ -635,6 +665,37 @@
   $("#segAnim").addEventListener("click", e => { if (e.target.dataset.v) { store.data.anim = e.target.dataset.v === "on"; store.save(); applyAnim(); setSeg("segAnim", e.target.dataset.v); } });
   $("#resetBtn").addEventListener("click", () => { if (confirm("Effacer toute ta progression (scores, succès, réglages) ?")) { store.reset(); location.reload(); } });
 
+  /* ---------- Éditeur d'énigmes personnalisées ---------- */
+  const QUICK_EMOJIS = ["🐉", "🍕", "🚀", "🎸", "🦄", "🍎", "⚽", "🌵", "🐧", "🎈", "🚗", "🌈", "🐱", "🍔", "🎃", "⚡", "🐢", "🌻", "🎁", "🔑"];
+  function buildEmojiQuick() {
+    const wrap = $("#emojiQuick"); wrap.innerHTML = "";
+    QUICK_EMOJIS.forEach(e => { const b = document.createElement("button"); b.type = "button"; b.textContent = e; b.addEventListener("click", () => { $("#edEmoji").value = e; }); wrap.appendChild(b); });
+  }
+  function showEditor() { buildEmojiQuick(); renderCustomList(); screens.show("editor"); }
+  function editorCat() { const a = $("#edCat button.active"); return a ? a.dataset.v : "objet"; }
+  $("#edCat").addEventListener("click", e => { if (e.target.dataset.v) { $$("#edCat button").forEach(b => b.classList.toggle("active", b === e.target)); } });
+  function renderCustomList() {
+    const list = store.data.custom || [];
+    $("#edCount").textContent = list.length;
+    $("#edPlay").disabled = list.length === 0;
+    $("#edList").innerHTML = list.length ? list.map(c =>
+      `<div class="mini-row"><span>${c.emoji || "❓"} <b>${c.name}</b></span><button class="del-btn" data-del="${c.id}" title="Supprimer">🗑️</button></div>`
+    ).join("") : `<div class="mini-empty">Aucune énigme pour l'instant. Ajoute-en une ci-dessus ! 🎨</div>`;
+    $$("#edList .del-btn").forEach(b => b.addEventListener("click", () => {
+      store.data.custom = store.data.custom.filter(x => x.id !== b.dataset.del); store.save(); renderCustomList();
+    }));
+  }
+  $("#edAdd").addEventListener("click", () => {
+    const name = $("#edName").value.trim();
+    if (!/[a-zA-ZÀ-ÿ0-9]/.test(name)) { toast("Entre un mot valide 🙂"); $("#edName").focus(); return; }
+    const puzzle = { id: "c" + Date.now(), name, hint: $("#edHint").value.trim(), category: editorCat(), emoji: ($("#edEmoji").value.trim() || "🖼️") };
+    store.data.custom = store.data.custom || []; store.data.custom.push(puzzle); store.save();
+    unlock("creator"); audio.good();
+    $("#edName").value = ""; $("#edHint").value = ""; $("#edEmoji").value = "🖼️";
+    renderCustomList(); toast("✅ Énigme ajoutée !");
+  });
+  $("#edPlay").addEventListener("click", () => { audio.ensure(); startMode("custom"); });
+
   /* ---------- Confetti ---------- */
   const confetti = (() => {
     const cv = $("#confetti"); const ctx = cv.getContext("2d"); let parts = [], raf = null;
@@ -668,7 +729,14 @@
   $("#boardBack").addEventListener("click", () => screens.show("home"));
   $("#setBtn").addEventListener("click", () => { initSettings(); screens.show("settings"); });
   $("#setBack").addEventListener("click", () => screens.show("home"));
-  $("#replayBtn").addEventListener("click", () => { if (game.duo) startMode("duo"); else if (game.mode === "parcours") startMode("parcours", game.tier); else startMode(game.mode); });
+  $("#catBack").addEventListener("click", () => screens.show("home"));
+  $("#edBack").addEventListener("click", () => { refreshHome(); buildModeGrid(); screens.show("home"); });
+  $("#replayBtn").addEventListener("click", () => {
+    if (game.duo) startMode("duo");
+    else if (game.mode === "parcours") startMode("parcours", { tier: game.tier });
+    else if (game.mode === "category") startMode("category", { category: game.catFilter });
+    else startMode(game.mode);
+  });
   $("#homeBtn").addEventListener("click", () => { refreshHome(); buildModeGrid(); screens.show("home"); });
   $("#quitBtn").addEventListener("click", () => { if (confirm("Quitter la partie en cours ?")) { game.ended = true; stopTimer(); refreshHome(); buildModeGrid(); screens.show("home"); } });
 
@@ -678,7 +746,7 @@
   }
 
   /* ---------- Debug (tests automatisés) ---------- */
-  window.SAMSON_DEBUG = { answer: () => (game.current ? game.current.name : null), state: () => ({ score: game.score, index: game.index, lives: game.lives, correct: game.correct, mode: game.mode }), start: (m, t) => startMode(m, t) };
+  window.SAMSON_DEBUG = { answer: () => (game.current ? game.current.name : null), state: () => ({ score: game.score, index: game.index, lives: game.lives, correct: game.correct, mode: game.mode }), start: (m, o) => startMode(m, o) };
 
   /* ---------- Init ---------- */
   buildKeyboard(); buildModeGrid(); refreshHome();

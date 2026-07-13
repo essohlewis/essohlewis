@@ -195,6 +195,40 @@
       <button class="btn ghost" id="setBack" style="margin-top:10px">← Retour</button>
     </section>
 
+    <!-- ============ PAR THÈME ============ -->
+    <section class="screen" id="screen-category">
+      <h1 class="title">🎯 Jouer par thème</h1>
+      <p class="subtitle">Choisis une catégorie et devine uniquement ces images.</p>
+      <div class="tier-grid" id="catGrid"></div>
+      <button class="btn ghost" id="catBack" style="margin-top:16px">← Retour</button>
+    </section>
+
+    <!-- ============ ÉDITEUR (Mes énigmes) ============ -->
+    <section class="screen" id="screen-editor">
+      <h1 class="title">🎨 Mes énigmes</h1>
+      <p class="subtitle">Crée tes propres devinettes avec un emoji comme image.</p>
+      <div class="editor-form">
+        <label class="ed-label">Image (emoji)</label>
+        <input id="edEmoji" class="text-input" maxlength="4" value="🖼️" aria-label="Emoji de l'énigme">
+        <div class="emoji-quick" id="emojiQuick"></div>
+        <label class="ed-label">Mot à deviner</label>
+        <input id="edName" class="text-input wide" maxlength="20" placeholder="Ex : Dragon">
+        <label class="ed-label">Indice (facultatif)</label>
+        <input id="edHint" class="text-input wide" maxlength="60" placeholder="Ex : Il crache du feu">
+        <label class="ed-label">Catégorie</label>
+        <div class="seg" id="edCat">
+          <button type="button" data-v="objet" class="active">Objet</button>
+          <button type="button" data-v="animal">Animal</button>
+          <button type="button" data-v="nature">Nature</button>
+        </div>
+        <button class="btn primary" id="edAdd" style="margin-top:14px">➕ Ajouter l'énigme</button>
+      </div>
+      <h3 class="section-h">Ma collection (<span id="edCount">0</span>)</h3>
+      <div id="edList" class="mini-list"></div>
+      <button class="btn primary" id="edPlay" style="margin-top:12px">▶ Jouer mes énigmes</button>
+      <button class="btn ghost" id="edBack" style="margin-top:10px">← Retour</button>
+    </section>
+
     <!-- ============ AIDE ============ -->
     <section class="screen" id="screen-help">
       <h1 class="title">Comment jouer 🕹️</h1>

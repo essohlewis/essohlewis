@@ -349,6 +349,23 @@ h1.title { font-size: 26px; margin-bottom: 4px; }
 .ach-toast b { display: block; font-size: 14px; }
 .ach-toast span { font-size: 12px; color: var(--text-soft); }
 
+/* ---------------- Emoji image (énigmes personnalisées) ---------------- */
+.emoji-img { font-size: 104px; line-height: 1; animation: pop .5s cubic-bezier(.2,1.4,.4,1); }
+
+/* ---------------- Éditeur ---------------- */
+.editor-form { display: grid; gap: 6px; background: var(--card-soft); border: 1px solid var(--border); border-radius: 18px; padding: 16px; }
+.ed-label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 6px; }
+.text-input.wide { width: 100%; }
+.emoji-quick { display: flex; flex-wrap: wrap; gap: 6px; }
+.emoji-quick button {
+  font-size: 22px; width: 40px; height: 40px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--card); transition: transform .1s, background .15s;
+}
+.emoji-quick button:hover { transform: translateY(-2px); background: var(--primary); }
+.mini-row .del-btn { background: none; border: none; cursor: pointer; font-size: 18px; opacity: .7; }
+.mini-row .del-btn:hover { opacity: 1; }
+.mini-empty { text-align: center; color: var(--muted); padding: 14px; font-weight: 600; }
+
 @media (max-width: 420px) {
   .mode-grid { grid-template-columns: 1fr; }
 }

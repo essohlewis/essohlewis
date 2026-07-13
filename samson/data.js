@@ -458,6 +458,66 @@ const SAMSON_PUZZLES = [
       <circle cx="120" cy="112" r="44" fill="#f59e0b" stroke="#92400e" stroke-width="5"/>
       <path d="M120 112 a22 22 0 1 0 22 22" fill="none" stroke="#92400e" stroke-width="6"/>
     </svg>`
+  },
+  {
+    id: "banane", name: "Banane", level: 1, hint: "Fruit jaune que le singe adore.", category: "nature",
+    svg: `<svg viewBox="0 0 200 200" aria-hidden="true">
+      <path d="M46 66 C56 140 150 156 172 118 C150 138 92 122 76 62 C70 56 52 58 46 66 Z"
+        fill="#facc15" stroke="#ca8a04" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M172 118 q12 -2 9 9 q-9 5 -13 -3 Z" fill="#78350f"/>
+      <path d="M46 66 q-8 -8 -2 -16 q10 4 12 12 Z" fill="#78350f"/>
+    </svg>`
+  },
+  {
+    id: "carotte", name: "Carotte", level: 1, hint: "Légume orange qui plaît au lapin.", category: "nature",
+    svg: `<svg viewBox="0 0 200 200" aria-hidden="true">
+      <path d="M100 72 L130 158 L100 180 L70 158 Z" fill="#f97316" stroke="#c2410c" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M82 108 l16 6 M90 130 l16 6 M98 152 l12 5" stroke="#c2410c" stroke-width="3"/>
+      <path d="M100 72 q-22 -32 -36 -30 q6 22 26 28 M100 72 q0 -36 0 -42 q16 16 8 36 M100 72 q22 -32 36 -30 q-6 22 -26 28"
+        fill="#22c55e" stroke="#15803d" stroke-width="3"/>
+    </svg>`
+  },
+  {
+    id: "velo", name: "Vélo", alias: ["velo", "bicyclette"], level: 2, hint: "Deux roues et des pédales.", category: "objet",
+    svg: `<svg viewBox="0 0 200 200" aria-hidden="true">
+      <circle cx="54" cy="132" r="30" fill="none" stroke="#334155" stroke-width="6"/>
+      <circle cx="146" cy="132" r="30" fill="none" stroke="#334155" stroke-width="6"/>
+      <path d="M54 132 L92 132 L118 84 L146 132 M92 132 L74 84 L118 84" fill="none" stroke="#ef4444" stroke-width="5" stroke-linejoin="round"/>
+      <line x1="74" y1="84" x2="60" y2="84" stroke="#334155" stroke-width="5" stroke-linecap="round"/>
+      <path d="M118 84 L118 68 L134 68" fill="none" stroke="#334155" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="92" cy="132" r="6" fill="#334155"/>
+    </svg>`
+  },
+  {
+    id: "abeille", name: "Abeille", level: 2, hint: "Elle butine et fait du miel.", category: "animal",
+    svg: `<svg viewBox="0 0 200 200" aria-hidden="true">
+      <ellipse cx="108" cy="110" rx="46" ry="34" fill="#fbbf24" stroke="#92400e" stroke-width="5"/>
+      <path d="M96 80 v60 M120 84 v52" stroke="#0f172a" stroke-width="8"/>
+      <ellipse cx="84" cy="88" rx="26" ry="15" transform="rotate(-28 84 88)" fill="#e0f2fe" fill-opacity=".85" stroke="#94a3b8" stroke-width="3"/>
+      <ellipse cx="84" cy="130" rx="26" ry="15" transform="rotate(28 84 130)" fill="#e0f2fe" fill-opacity=".85" stroke="#94a3b8" stroke-width="3"/>
+      <circle cx="148" cy="100" r="5" fill="#0f172a"/>
+      <path d="M154 84 q10 -10 4 -18 M160 92 q12 -6 12 -16" fill="none" stroke="#0f172a" stroke-width="3" stroke-linecap="round"/>
+    </svg>`
+  },
+  {
+    id: "tortue", name: "Tortue", level: 2, hint: "Lente, elle porte une carapace.", category: "animal",
+    svg: `<svg viewBox="0 0 200 200" aria-hidden="true">
+      <ellipse cx="96" cy="112" rx="56" ry="40" fill="#16a34a" stroke="#166534" stroke-width="5"/>
+      <path d="M96 76 v72 M60 96 L132 128 M60 128 L132 96" stroke="#166534" stroke-width="3"/>
+      <circle cx="160" cy="104" r="16" fill="#22c55e" stroke="#166534" stroke-width="4"/>
+      <circle cx="165" cy="100" r="3" fill="#0f172a"/>
+      <path d="M60 148 l-8 16 M132 148 l8 16" stroke="#166534" stroke-width="8" stroke-linecap="round"/>
+    </svg>`
+  },
+  {
+    id: "baleine", name: "Baleine", level: 3, hint: "Le plus grand animal de la mer.", category: "animal",
+    svg: `<svg viewBox="0 0 200 200" aria-hidden="true">
+      <path d="M32 110 C40 74 120 74 148 104 L172 92 L164 116 L172 140 L148 128 C120 150 40 150 32 110 Z"
+        fill="#38bdf8" stroke="#0369a1" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M34 116 q58 22 112 6" fill="none" stroke="#7dd3fc" stroke-width="4"/>
+      <circle cx="62" cy="102" r="5" fill="#0c4a6e"/>
+      <path d="M66 74 q-8 -22 -20 -28 q4 18 12 26" fill="#7dd3fc" stroke="#0369a1" stroke-width="2"/>
+    </svg>`
   }
 ];
 
@@ -475,7 +535,9 @@ const SAMSON_MODES = [
   { id: "daily",    label: "Défi du jour",    icon: "📅", desc: "8 énigmes uniques, les mêmes pour tous aujourd'hui.", color: "#ec4899" },
   { id: "survie",   label: "Survie",          icon: "♾️", desc: "Enchaîne sans fin, 3 vies, difficulté croissante.", color: "#ef4444" },
   { id: "chrono",   label: "Contre-la-montre", icon: "⏱️", desc: "90 secondes : trouve-en un maximum !", color: "#f59e0b" },
-  { id: "duo",      label: "Duo",             icon: "👥", desc: "2 joueurs à tour de rôle, le meilleur gagne.", color: "#14b8a6" }
+  { id: "duo",      label: "Duo",             icon: "👥", desc: "2 joueurs à tour de rôle, le meilleur gagne.", color: "#14b8a6" },
+  { id: "category", label: "Par thème",       icon: "🎯", desc: "Joue une seule catégorie : animaux, nature ou objets.", color: "#0ea5e9" },
+  { id: "custom",   label: "Mes énigmes",     icon: "🎨", desc: "Crée et joue tes propres devinettes avec des emojis.", color: "#a855f7" }
 ];
 
 /* Succès / trophées débloquables */
@@ -491,9 +553,18 @@ const SAMSON_ACHIEVEMENTS = [
   { id: "daily",       icon: "📅", name: "Fidèle",            desc: "Réussir un Défi du jour." },
   { id: "streak3",     icon: "📆", name: "Assidu",            desc: "3 jours de suite (série quotidienne)." },
   { id: "survivor",    icon: "🛡️", name: "Survivant",         desc: "15 bonnes réponses en mode Survie." },
-  { id: "played10",    icon: "🎮", name: "Joueur régulier",   desc: "Jouer 10 parties." }
+  { id: "played10",    icon: "🎮", name: "Joueur régulier",   desc: "Jouer 10 parties." },
+  { id: "creator",     icon: "🎨", name: "Créateur",          desc: "Créer une énigme personnalisée." },
+  { id: "themed",      icon: "🧭", name: "Thématicien",       desc: "Terminer une partie « Par thème »." }
+];
+
+/* Catégories jouables (mode « Par thème ») */
+const SAMSON_CATEGORIES = [
+  { id: "animal", label: "Animaux", icon: "🐾", color: "#f59e0b" },
+  { id: "nature", label: "Nature",  icon: "🌿", color: "#22c55e" },
+  { id: "objet",  label: "Objets",  icon: "📦", color: "#6366f1" }
 ];
 
 if (typeof module !== "undefined") {
-  module.exports = { SAMSON_PUZZLES, SAMSON_TIERS, SAMSON_MODES, SAMSON_ACHIEVEMENTS };
+  module.exports = { SAMSON_PUZZLES, SAMSON_TIERS, SAMSON_MODES, SAMSON_ACHIEVEMENTS, SAMSON_CATEGORIES };
 }
