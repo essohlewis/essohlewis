@@ -92,6 +92,7 @@
       <form id="answerForm" autocomplete="off">
         <div class="answer" id="answerBoxes" aria-label="Zone de réponse"></div>
       </form>
+      <div class="choices" id="answerChoices" style="display:none" aria-label="Choix de réponse"></div>
       <div class="feedback" id="feedback"></div>
 
       <!-- Jokers -->
@@ -172,6 +173,13 @@
       <div class="setting-row">
         <label for="setName">Nom du joueur</label>
         <input id="setName" class="text-input" maxlength="14" placeholder="Joueur">
+      </div>
+      <div class="setting-row">
+        <span>Mode de réponse</span>
+        <div class="seg" id="segAnswer">
+          <button data-v="letters" class="active">Lettres</button>
+          <button data-v="qcm">Choix multiples</button>
+        </div>
       </div>
       <div class="setting-row">
         <span>Disposition du clavier</span>

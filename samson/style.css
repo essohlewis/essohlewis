@@ -178,12 +178,12 @@ h1.title { font-size: 26px; margin-bottom: 4px; }
 .hint-text.show { opacity: 1; transform: none; }
 
 /* ---------------- Letter boxes ---------------- */
-.answer { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 8px; }
-.word-group { display: flex; gap: 6px; }
+.answer { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 8px; --box: 40px; }
+.word-group { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
 .letter-box {
-  width: 40px; height: 48px; border-radius: 12px; border: 2px solid var(--border);
-  background: var(--card); text-align: center; font-size: 22px; font-weight: 800;
-  color: var(--text); text-transform: uppercase; font-family: var(--font);
+  width: var(--box); height: calc(var(--box) * 1.18); border-radius: 12px; border: 2px solid var(--border);
+  background: var(--card); text-align: center; font-size: calc(var(--box) * .5); font-weight: 800;
+  color: var(--text); text-transform: uppercase; font-family: var(--font); padding: 0;
   transition: border-color .15s, transform .1s, background .2s;
 }
 .letter-box:focus { outline: none; border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 6px 14px -6px var(--primary); }
@@ -191,7 +191,20 @@ h1.title { font-size: 26px; margin-bottom: 4px; }
 .letter-box.filled { border-color: var(--primary); }
 .letter-box.correct { background: var(--success); color: #fff; border-color: var(--success); animation: pop .3s; }
 .letter-box.wrong { background: var(--danger); color: #fff; border-color: var(--danger); animation: shake .4s; }
-.sep { width: 12px; display: grid; place-items: center; color: var(--muted); font-weight: 800; }
+.sep { width: 12px; display: grid; place-items: center; color: var(--muted); font-weight: 800; align-self: center; }
+
+/* ---------------- Choix multiples (QCM) ---------------- */
+.choices { display: grid; gap: 10px; margin-bottom: 8px; }
+.choice {
+  padding: 15px 14px; border-radius: 14px; border: 2px solid var(--border); background: var(--card);
+  color: var(--text); font-size: 16px; font-weight: 700; cursor: pointer; font-family: var(--font);
+  text-align: center; transition: transform .1s, background .2s, border-color .2s; word-break: break-word;
+}
+.choice:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--primary); box-shadow: 0 8px 18px -12px var(--primary); }
+.choice:disabled { cursor: default; }
+.choice.correct { background: var(--success); color: #fff; border-color: var(--success); animation: pop .3s; }
+.choice.wrong { background: var(--danger); color: #fff; border-color: var(--danger); animation: shake .4s; }
+.choice.removed { opacity: .3; text-decoration: line-through; }
 @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
 
 .feedback { text-align: center; min-height: 22px; font-weight: 700; margin: 6px 0 12px; font-size: 14px; }
@@ -407,7 +420,6 @@ h1.title { font-size: 26px; margin-bottom: 4px; }
 }
 
 @media (max-width: 420px) {
-  .letter-box { width: 34px; height: 42px; font-size: 18px; }
   h1.title { font-size: 22px; }
   .image-stage svg { width: 150px; height: 150px; }
 }

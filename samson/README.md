@@ -62,7 +62,11 @@ avec une notification à chaque niveau supérieur.
 
 ## ✨ Fonctionnalités & innovations
 
+- **Deux modes de réponse au choix** (dans les réglages) : **Lettres** (compléter les cases)
+  ou **Choix multiples (QCM)** avec 4 propositions à sélectionner.
 - **Mécanique « écrire ou compléter »** : cases lettres pré-remplies selon le niveau.
+- **Affichage responsive** : la taille des cases s'adapte automatiquement à l'écran du
+  téléphone (les mots longs restent lisibles, sans débordement).
 - **53 illustrations vectorielles SVG** dessinées à la main (aucune image externe).
 - **3 jokers** : 💡 révéler une lettre · ❄️ +10 secondes · 🎯 dévoiler la moitié du mot.
 - **Éditeur d'énigmes** : crée tes propres devinettes avec un emoji comme image, stockées localement.
@@ -73,7 +77,7 @@ avec une notification à chaque niveau supérieur.
 - **18 succès / trophées** débloquables avec notifications animées.
 - **Statistiques** détaillées : parties, précision, combo record, catégorie favorite…
 - **Classement local** : les 10 meilleures parties tous modes confondus.
-- **Réglages** : nom du joueur, clavier **AZERTY/QWERTY**, sons, animations, réinitialisation.
+- **Réglages** : mode de réponse (Lettres / QCM), nom du joueur, clavier **AZERTY/QWERTY**, sons, animations, réinitialisation.
 - **Clavier virtuel** intégré pour mobile.
 - **Partage du résultat** (Web Share API ou copie dans le presse-papiers).
 - **Effets sonores** générés via la Web Audio API + **confettis** (canvas).

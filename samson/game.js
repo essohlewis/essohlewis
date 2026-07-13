@@ -23,7 +23,7 @@
     tiers: {}, modeBest: {}, categories: {}, achievements: {},
     leaderboard: [], dailyStreak: 0, lastDailyDate: "", dailyDone: "",
     survieBest: 0, chronoBest: 0, custom: [], xp: 0, finishedDomains: [],
-    sound: true, theme: "light", kbd: "azerty", anim: true, name: "Joueur"
+    sound: true, theme: "light", kbd: "azerty", anim: true, name: "Joueur", answerMode: "letters"
   };
   const store = {
     data: JSON.parse(JSON.stringify(DEFAULTS)),
@@ -285,6 +285,8 @@
       game.jk = { hint: 2, time: 1, fifty: 1 };
     }
     game.jkBase = Object.assign({}, game.jk);
+    game.answerMode = store.data.answerMode || "letters";
+    game.optionPool = (mode === "culture") ? SAMSON_QUIZ : (mode === "custom") ? (store.data.custom || []) : SAMSON_PUZZLES;
 
     screens.show("play");
     if (game.totalMode) startTotalTimer();
@@ -355,13 +357,27 @@
     const ht = $("#hintText"); ht.textContent = "💡 " + (p.hint || ""); ht.classList.remove("show");
     $("#feedback").textContent = ""; $("#feedback").className = "feedback";
 
-    game.mask = buildMask(p.name, params.ratio);
-    renderBoxes();
+    game.locked = false;
+    const qcm = game.answerMode === "qcm";
+    $("#answerBoxes").style.display = qcm ? "none" : "";
+    $("#answerChoices").style.display = qcm ? "" : "none";
+    $("#submitBtn").style.display = qcm ? "none" : "";
+    $(".kbd-toggle").style.display = qcm ? "none" : "";
+    if (qcm) { $("#keyboard").style.display = "none"; }
+
+    if (qcm) {
+      game.mask = []; game.boxes = [];
+      renderChoices();
+    } else {
+      game.mask = buildMask(p.name, params.ratio);
+      renderBoxes();
+      sizeBoxes();
+    }
     renderJokers();
     if (game.noTimer) { /* pas de minuteur en mode Zen */ }
     else if (!game.totalMode) startQuestionTimer(params.time);
     else updateTimerBar();
-    focusFirstEmpty();
+    if (!qcm) focusFirstEmpty();
   }
 
   /* ---------- Cases lettres ---------- */
@@ -388,6 +404,61 @@
   }
   function editableBoxes() { return game.boxes.filter(b => b && !b.readOnly); }
   function focusFirstEmpty() { const b = editableBoxes().find(x => !x.value) || editableBoxes()[0]; if (b) b.focus(); }
+
+  /* Dimensionne les cases selon la largeur disponible (responsive, mots longs) */
+  function sizeBoxes() {
+    const wrap = $("#answerBoxes");
+    let run = 0, maxRun = 1;
+    game.mask.forEach(m => { if (m.isLetter) { run++; if (run > maxRun) maxRun = run; } else run = 0; });
+    const avail = (wrap.clientWidth || 320) - 2;
+    const gap = 6;
+    let size = Math.floor((avail - (maxRun - 1) * gap) / maxRun);
+    size = clamp(size, 18, 44);
+    wrap.style.setProperty("--box", size + "px");
+  }
+  window.addEventListener("resize", () => {
+    if ($("#screen-play").classList.contains("active") && game.answerMode !== "qcm" && game.mask && game.mask.length) sizeBoxes();
+  });
+
+  /* Génère des propositions plausibles pour le mode QCM */
+  function pickDistractors(p, n) {
+    const key = p.domain ? "domain" : "category";
+    const pool = (game.optionPool || SAMSON_PUZZLES).filter(x => x.name && norm(x.name) !== norm(p.name));
+    const same = shuffle(pool.filter(x => x[key] && p[key] && x[key] === p[key]));
+    const rest = shuffle(pool.filter(x => !(x[key] && p[key] && x[key] === p[key])));
+    const chosen = [], seen = new Set([norm(p.name)]);
+    for (const x of same.concat(rest)) {
+      const nm = norm(x.name);
+      if (seen.has(nm)) continue;
+      seen.add(nm); chosen.push(x.name);
+      if (chosen.length >= n) break;
+    }
+    return chosen;
+  }
+  function renderChoices() {
+    const wrap = $("#answerChoices"); wrap.innerHTML = ""; game.choiceBtns = [];
+    const opts = shuffle([game.current.name].concat(pickDistractors(game.current, 3)));
+    opts.forEach(name => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "choice"; b.textContent = name;
+      b.addEventListener("click", () => handleChoice(b, name));
+      wrap.appendChild(b); game.choiceBtns.push(b);
+    });
+  }
+  function handleChoice(btn, name) {
+    if (game.locked || game.ended) return;
+    game.locked = true;
+    if (!game.totalMode) stopTimer();
+    game.attempts++;
+    game.choiceBtns.forEach(b => b.disabled = true);
+    renderJokers();
+    if (isCorrect(name)) { btn.classList.add("correct"); onCorrect(); }
+    else {
+      btn.classList.add("wrong");
+      const good = game.choiceBtns.find(b => isCorrect(b.textContent));
+      if (good) good.classList.add("correct");
+      onWrong();
+    }
+  }
   function onLetterInput(e) {
     const box = e.target;
     box.value = box.value.replace(/[^a-zA-ZÀ-ÿ0-9]/g, "").slice(0, 1);
@@ -431,15 +502,20 @@
   /* ---------- Jokers ---------- */
   function renderJokers() {
     const disp = n => n >= 99 ? "∞" : n;
+    const locked = !!game.locked;
     $("#cntHint").textContent = disp(game.jk.hint);
     $("#cntTime").textContent = disp(game.jk.time);
     $("#cntFifty").textContent = disp(game.jk.fifty);
-    $("#jkHint").disabled = game.jk.hint <= 0;
-    $("#jkTime").disabled = game.jk.time <= 0;
-    $("#jkFifty").disabled = game.jk.fifty <= 0 || editableBoxes().filter(b => !b.value).length <= 1;
+    $("#jkHint").disabled = locked || game.jk.hint <= 0;
+    $("#jkTime").disabled = locked || game.jk.time <= 0;
+    $("#jkSkip").disabled = locked;
+    let fiftyRoom;
+    if (game.answerMode === "qcm") fiftyRoom = (game.choiceBtns || []).filter(b => !b.disabled && !isCorrect(b.textContent)).length > 1;
+    else fiftyRoom = editableBoxes().filter(b => !b.value).length > 1;
+    $("#jkFifty").disabled = locked || game.jk.fifty <= 0 || !fiftyRoom;
   }
   $("#jkHint").addEventListener("click", () => {
-    if (game.jk.hint <= 0) return;
+    if (game.jk.hint <= 0 || game.locked) return;
     const empty = editableBoxes().find(b => !b.value);
     if (game.jk.hint < 99) game.jk.hint--;
     game.hintsUsedGame++; game.revealedThisPuzzle++;
@@ -448,14 +524,22 @@
     audio.power(); renderJokers(); focusFirstEmpty();
   });
   $("#jkTime").addEventListener("click", () => {
-    if (game.jk.time <= 0) return;
+    if (game.jk.time <= 0 || game.locked) return;
     game.jk.time--;
     if (game.totalMode) { game.totalLeft = Math.min(game.totalMax, game.totalLeft + 10); }
     else { game.timeLeft = game.timeLeft + 10; game.timeMax = Math.max(game.timeMax, game.timeLeft); }
     updateTimerBar(); toast("❄️ +10 secondes"); audio.power(); renderJokers();
   });
   $("#jkFifty").addEventListener("click", () => {
-    if (game.jk.fifty <= 0) return;
+    if (game.jk.fifty <= 0 || game.locked) return;
+    if (game.answerMode === "qcm") {
+      const wrong = (game.choiceBtns || []).filter(b => !b.disabled && !isCorrect(b.textContent));
+      if (wrong.length <= 1) return;
+      if (game.jk.fifty < 99) game.jk.fifty--;
+      shuffle(wrong).slice(0, Math.ceil(wrong.length / 2)).forEach(b => { b.disabled = true; b.classList.add("removed"); });
+      toast("🎯 Options réduites !"); audio.power(); renderJokers();
+      return;
+    }
     const empties = editableBoxes().filter(b => !b.value);
     if (empties.length <= 1) return;
     if (game.jk.fifty < 99) game.jk.fifty--;
@@ -464,13 +548,17 @@
     game.revealedThisPuzzle += n;
     toast("🎯 Moitié révélée !"); audio.power(); renderJokers(); focusFirstEmpty();
   });
-  $("#jkSkip").addEventListener("click", () => { game.combo = 0; hideCombo(); toast("Énigme passée"); nextPuzzle(); });
+  $("#jkSkip").addEventListener("click", () => { if (game.locked) return; game.combo = 0; hideCombo(); toast("Énigme passée"); nextPuzzle(); });
 
   /* Bouton « Révéler la réponse » (mode Zen) */
   $("#revealBtn").addEventListener("click", () => {
-    if (game.ended || !game.current) return;
-    stopTimer(); game.combo = 0; hideCombo();
-    game.mask.forEach((m, i) => { const b = game.boxes[i]; if (b) { b.value = m.char; b.classList.add("given"); } });
+    if (game.ended || !game.current || game.locked) return;
+    game.locked = true; stopTimer(); game.combo = 0; hideCombo();
+    if (game.answerMode === "qcm") {
+      (game.choiceBtns || []).forEach(b => { b.disabled = true; if (isCorrect(b.textContent)) b.classList.add("correct"); });
+    } else {
+      game.mask.forEach((m, i) => { const b = game.boxes[i]; if (b) { b.value = m.char; b.classList.add("given"); } });
+    }
     const fb = $("#feedback"); fb.textContent = `👁️ La réponse était « ${game.current.name} »`; fb.className = "feedback";
     setTimeout(nextPuzzle, 1300);
   });
@@ -511,7 +599,7 @@
   function currentGuess() { return game.mask.map((m, i) => { if (!m.isLetter) return m.char; const b = game.boxes[i]; return b ? (b.value || " ") : m.char; }).join(""); }
   function isCorrect(guess) { const ans = [game.current.name, ...(game.current.alias || [])].map(norm); return ans.includes(norm(guess)); }
   function submit() {
-    if (!game.current || game.ended) return;
+    if (!game.current || game.ended || game.answerMode === "qcm") return;
     const empty = editableBoxes().find(b => !b.value);
     if (empty) { toast("Complète toutes les cases !"); empty.focus(); shakeBoxes(); return; }
     game.attempts++;
@@ -529,7 +617,7 @@
     game.score += gained;
     if (game.totalMode) { game.totalLeft = Math.min(game.totalMax, game.totalLeft + 4); }
     updateHud(); if (game.duo) { game.duo.scores[game.duo.player - 1] = game.score; updateDuoBanner(); }
-    game.boxes.forEach(b => { if (b) b.classList.add("correct"); });
+    if (game.answerMode !== "qcm") game.boxes.forEach(b => { if (b) b.classList.add("correct"); });
     const fb = $("#feedback"); fb.textContent = `✔ Bravo ! +${gained} points`; fb.className = "feedback good";
     showCombo(); audio.good();
     if (game.combo >= 3) popConfetti(28);
@@ -538,20 +626,32 @@
   }
 
   function onWrong() {
-    game.combo = 0; hideCombo(); audio.bad(); shakeBoxes();
-    const fb = $("#feedback"); fb.textContent = "✘ Raté, réessaie !"; fb.className = "feedback bad";
-    if (game.totalMode) { game.totalLeft = Math.max(0, game.totalLeft - 3); updateTimerBar(); return; }
+    const qcm = game.answerMode === "qcm";
+    game.combo = 0; hideCombo(); audio.bad();
+    const fb = $("#feedback");
+    if (qcm) { fb.textContent = `✘ Non… c'était « ${game.current.name} »`; fb.className = "feedback bad"; }
+    else { fb.textContent = "✘ Raté, réessaie !"; fb.className = "feedback bad"; shakeBoxes(); }
+    if (game.totalMode) {
+      game.totalLeft = Math.max(0, game.totalLeft - 3); updateTimerBar();
+      if (qcm) setTimeout(nextPuzzle, 1100);
+      return;
+    }
     if (game.useLives) {
       game.lives--; updateHud();
-      if (game.lives <= 0) setTimeout(() => endGame(false), 700);
+      if (game.lives <= 0) { setTimeout(() => endGame(false), 900); return; }
     }
+    if (qcm) setTimeout(nextPuzzle, 1100);
   }
 
   function timeOut() {
     if (game.totalMode) return;
-    game.combo = 0; hideCombo(); game.attempts++; audio.bad();
+    game.combo = 0; hideCombo(); game.attempts++; audio.bad(); game.locked = true;
     const fb = $("#feedback"); fb.textContent = `⏱ Temps écoulé ! C'était « ${game.current.name} »`; fb.className = "feedback bad";
-    game.mask.forEach((m, i) => { const b = game.boxes[i]; if (b) { b.value = m.char; b.classList.add("wrong"); } });
+    if (game.answerMode === "qcm") {
+      (game.choiceBtns || []).forEach(b => { b.disabled = true; if (isCorrect(b.textContent)) b.classList.add("correct"); });
+    } else {
+      game.mask.forEach((m, i) => { const b = game.boxes[i]; if (b) { b.value = m.char; b.classList.add("wrong"); } });
+    }
     if (game.useLives) {
       game.lives--; updateHud();
       if (game.lives <= 0) { setTimeout(() => endGame(false), 1300); return; }
@@ -772,12 +872,14 @@
   function initSettings() {
     $("#setName").value = store.data.name || "";
     setSeg("segKbd", store.data.kbd); setSeg("segSound", store.data.sound ? "on" : "off"); setSeg("segAnim", store.data.anim ? "on" : "off");
+    setSeg("segAnswer", store.data.answerMode || "letters");
   }
   function setSeg(id, val) { $$("#" + id + " button").forEach(b => b.classList.toggle("active", b.dataset.v === val)); }
   $("#setName").addEventListener("input", e => { store.data.name = e.target.value.trim() || "Joueur"; store.save(); });
   $("#segKbd").addEventListener("click", e => { if (e.target.dataset.v) { store.data.kbd = e.target.dataset.v; store.save(); setSeg("segKbd", e.target.dataset.v); buildKeyboard(); } });
   $("#segSound").addEventListener("click", e => { if (e.target.dataset.v) { store.data.sound = e.target.dataset.v === "on"; store.save(); applySound(); setSeg("segSound", e.target.dataset.v); } });
   $("#segAnim").addEventListener("click", e => { if (e.target.dataset.v) { store.data.anim = e.target.dataset.v === "on"; store.save(); applyAnim(); setSeg("segAnim", e.target.dataset.v); } });
+  $("#segAnswer").addEventListener("click", e => { if (e.target.dataset.v) { store.data.answerMode = e.target.dataset.v; store.save(); setSeg("segAnswer", e.target.dataset.v); } });
   $("#resetBtn").addEventListener("click", async () => {
     const ok = await confirmAsk("Effacer toute ta progression (scores, succès, réglages) ?", "Effacer");
     if (ok) { store.reset(); location.reload(); }
