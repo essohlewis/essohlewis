@@ -92,6 +92,43 @@ export function play(id, { volume } = {}) {
   }
 }
 
+/* Note pitchée percussive (balafon/marimba) — timbre bois : fondamentale +
+   octave, attaque rapide, décroissance exponentielle. Toujours harmonieux. */
+export function note(freq, { dur = 0.7, type = "triangle", volume = 1 } = {}) {
+  if (muted) return;
+  const c = ac(), t = c.currentTime, g = gain(volume * volSfx);
+  const mk = (f, mul, ty) => {
+    const o = c.createOscillator(); o.type = ty; o.frequency.value = f;
+    const eg = c.createGain();
+    eg.gain.setValueAtTime(0.0001, t);
+    eg.gain.exponentialRampToValueAtTime(mul, t + 0.008);
+    eg.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(eg).connect(g); o.start(t); o.stop(t + dur + 0.02);
+  };
+  mk(freq, 1, type);
+  mk(freq * 2, 0.32, "sine");        // harmonique = brillance du bois
+}
+
+/* Percussion type djembé : "basse" (grave, chute de hauteur) ou "aigu" (claque). */
+export function drum(kind = "basse") {
+  if (muted) return;
+  const c = ac(), t = c.currentTime, g = gain(0.9 * volSfx);
+  if (kind === "basse") {
+    const o = c.createOscillator(); o.type = "sine";
+    o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(60, t + 0.18);
+    const eg = c.createGain(); eg.gain.setValueAtTime(1, t); eg.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+    o.connect(eg).connect(g); o.start(t); o.stop(t + 0.32);
+  } else {
+    // claque : bruit filtré court
+    const n = 0.12, buf = c.createBuffer(1, c.sampleRate * n, c.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+    const src = c.createBufferSource(); src.buffer = buf;
+    const hp = c.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 900;
+    src.connect(hp).connect(g); src.start(t);
+  }
+}
+
 /* Consigne vocale. Coupe toujours la voix précédente.
    - speak(text)            → prononce la phrase via SpeechSynthesis.
    - speak(text, { id })    → si un vrai fichier voix "voix-<id>" est chargé,
@@ -130,4 +167,4 @@ export function setVolumes({ voix, sfx }) {
 }
 export function isMuted() { return muted; }
 
-export default { load, play, speak, stopAll, clearVoix, setMuted, setVolumes, unlock, isMuted };
+export default { load, play, speak, note, drum, stopAll, clearVoix, setMuted, setVolumes, unlock, isMuted };

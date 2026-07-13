@@ -19,8 +19,10 @@ import puzzle from "./games/puzzle.js";
 import alphabet from "./games/alphabet.js";
 import memory from "./games/memory.js";
 import marche from "./games/marche.js";
+import balafon from "./games/balafon.js";
+import coloriage from "./games/coloriage.js";
 
-const GAMES = { animaux, formes, puzzle, alphabet, memory, marche };
+const GAMES = { animaux, formes, puzzle, alphabet, memory, marche, balafon, coloriage };
 
 /* ---------- Enregistrement des scènes ---------- */
 Router.register("home", home);

@@ -11,7 +11,9 @@
     "puzzle":   { "nom": "Puzzle", "couleur": "#6A4C93", "palierMin": "petit" },
     "alphabet": { "nom": "Alphabet Kora", "couleur": "#E71D36", "palierMin": "moyen" },
     "memory":   { "nom": "Memory Pagne", "couleur": "#FFD166", "palierMin": "moyen" },
-    "marche":   { "nom": "Le Marché", "couleur": "#2EC4B6", "palierMin": "moyen" }
+    "marche":   { "nom": "Le Marché", "couleur": "#2EC4B6", "palierMin": "moyen" },
+    "balafon":  { "nom": "Le Balafon", "couleur": "#8d5a34", "palierMin": "petit" },
+    "coloriage":{ "nom": "Mon Pagne", "couleur": "#E71D36", "palierMin": "petit" }
   },
   "manche": { "questions": 8 },
   "difficulte": {

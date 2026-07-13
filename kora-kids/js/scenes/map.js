@@ -9,6 +9,13 @@ import Router from "../core/router.js";
 
 const PALIER_ORDER = { petit: 0, moyen: 1, grand: 2 };
 
+/* Nombre stable dérivé de la date du jour (pour le « défi du jour »). */
+function dayHash() {
+  const d = new Date().toISOString().slice(0, 10);
+  let h = 0; for (let i = 0; i < d.length; i++) h = (h * 31 + d.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
 export default async function map(scene, _params, { go }) {
   scene.classList.add("map");
   const cfg = await fetch("js/data/config.json").then(r => r.json());
@@ -40,16 +47,24 @@ export default async function map(scene, _params, { go }) {
   stage.appendChild(village);
   scene.appendChild(stage);
 
-  const order = ["animaux", "formes", "puzzle", "alphabet", "memory", "marche"];
+  const order = ["animaux", "formes", "puzzle", "alphabet", "memory", "marche", "balafon", "coloriage"];
   const playerLevel = PALIER_ORDER[profile.palier];
+
+  // Défi du jour : une activité mise en avant, déterministe selon la date
+  // (aucune notification, aucun streak culpabilisant — juste un joli repère).
+  const daily = order[dayHash() % order.length];
 
   order.forEach((gameId) => {
     const g = cfg.jeux[gameId];
     const locked = PALIER_ORDER[g.palierMin] > playerLevel;   // cadenas doux, non bloquant
 
     const btn = document.createElement("button");
-    btn.className = "hut" + (locked ? " locked" : "");
-    btn.setAttribute("aria-label", g.nom);
+    btn.className = "hut" + (locked ? " locked" : "") + (gameId === daily ? " daily" : "");
+    btn.setAttribute("aria-label", g.nom + (gameId === daily ? " — défi du jour" : ""));
+    if (gameId === daily) {
+      const ribbon = document.createElement("div"); ribbon.className = "daily-ribbon";
+      ribbon.textContent = "⭐ du jour"; btn.appendChild(ribbon);
+    }
     btn.appendChild(hut(g.couleur));
 
     if (locked) {

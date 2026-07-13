@@ -39,6 +39,15 @@ fonctionne entièrement hors-ligne** et s'installe comme une application
   4. **Formes & Couleurs** — encastrement, tri par couleur, intrus.
   5. **Memory Pagne** — paires, dos en motifs wax.
   6. **Puzzle Progressif** — 4 / 9 / 16 pièces, image en filigrane.
+- **2 ateliers créatifs** (innovation, sans échec possible) :
+  7. **🎵 Le Balafon** — instrument ouest-africain interactif synthétisé en
+     Web Audio, en gamme **pentatonique** (aucune fausse note). Mode libre +
+     mode « suis la mélodie » (comptines) + djembés.
+  8. **🎨 Mon Pagne** — coloriage de motifs africains (wax, masque, soleil,
+     tortue) au tap ; œuvres enregistrées dans une galerie par enfant.
+- **⭐ Défi du jour** : une activité mise en avant chaque jour sur la carte
+  (déterministe selon la date) — **sans notification ni streak culpabilisant**,
+  juste un repère doux qui donne envie de revenir.
 - **Espace parent verrouillé** : profils (CRUD), tableau de progression,
   réglages (volumes, mode soir, minuteur de session), réinitialisation.
 - **Récompenses** : étoiles + **garde-robe d'avatar** — l'enfant habille son
