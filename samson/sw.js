@@ -1,10 +1,11 @@
 /* Samson — Service Worker (mise en cache pour jeu hors-ligne) */
-const CACHE = "samson-v2";
+const CACHE = "samson-v3";
 const ASSETS = [
   "./",
   "./index.html",
   "./style.css",
   "./data.js",
+  "./culture.js",
   "./game.js",
   "./manifest.json",
   "./icon.svg"

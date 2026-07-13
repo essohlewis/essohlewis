@@ -533,6 +533,7 @@ const SAMSON_TIERS = [
 const SAMSON_MODES = [
   { id: "parcours", label: "Parcours",        icon: "🗺️", desc: "Progresse à travers 4 paliers de difficulté.", color: "#6366f1" },
   { id: "daily",    label: "Défi du jour",    icon: "📅", desc: "8 énigmes uniques, les mêmes pour tous aujourd'hui.", color: "#ec4899" },
+  { id: "culture",  label: "Culture & Matières", icon: "🎓", desc: "Histoire, littérature, sciences, informatique… tous continents.", color: "#f97316" },
   { id: "survie",   label: "Survie",          icon: "♾️", desc: "Enchaîne sans fin, 3 vies, difficulté croissante.", color: "#ef4444" },
   { id: "chrono",   label: "Contre-la-montre", icon: "⏱️", desc: "90 secondes : trouve-en un maximum !", color: "#f59e0b" },
   { id: "duo",      label: "Duo",             icon: "👥", desc: "2 joueurs à tour de rôle, le meilleur gagne.", color: "#14b8a6" },
@@ -570,7 +571,9 @@ const SAMSON_ACHIEVEMENTS = [
   { id: "creator",     icon: "🎨", name: "Créateur",          desc: "Créer une énigme personnalisée." },
   { id: "themed",      icon: "🧭", name: "Thématicien",       desc: "Terminer une partie « Par thème »." },
   { id: "collector",   icon: "📚", name: "Collectionneur",    desc: "Avoir 5 énigmes personnalisées." },
-  { id: "rankExpert",  icon: "🎖️", name: "Vétéran",           desc: "Atteindre le rang Expert." }
+  { id: "rankExpert",  icon: "🎖️", name: "Vétéran",           desc: "Atteindre le rang Expert." },
+  { id: "scholar",     icon: "🎓", name: "Érudit",            desc: "Terminer une matière en mode Culture." },
+  { id: "polyglot",    icon: "🌐", name: "Tête bien faite",   desc: "Terminer 3 matières différentes." }
 ];
 
 /* Catégories jouables (mode « Par thème ») */

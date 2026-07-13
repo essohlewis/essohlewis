@@ -22,7 +22,7 @@
     totalCorrect: 0, totalAttempts: 0, totalScore: 0,
     tiers: {}, modeBest: {}, categories: {}, achievements: {},
     leaderboard: [], dailyStreak: 0, lastDailyDate: "", dailyDone: "",
-    survieBest: 0, chronoBest: 0, custom: [], xp: 0,
+    survieBest: 0, chronoBest: 0, custom: [], xp: 0, finishedDomains: [],
     sound: true, theme: "light", kbd: "azerty", anim: true, name: "Joueur"
   };
   const store = {
@@ -131,6 +131,7 @@
 
   function onModeClick(id) {
     if (id === "parcours") { buildTierGrid(); screens.show("levels"); return; }
+    if (id === "culture") { buildDomainGrid(); screens.show("domains"); return; }
     if (id === "category") { buildCatGrid(); screens.show("category"); return; }
     if (id === "custom") { showEditor(); return; }
     if (id === "daily" && store.data.dailyDone === todayStr()) {
@@ -172,6 +173,23 @@
     });
   }
 
+  /* ---------- Choix de la matière (mode « Culture & Matières ») ---------- */
+  function buildDomainGrid() {
+    const grid = $("#domainGrid"); grid.innerHTML = "";
+    SAMSON_DOMAINS.forEach(dom => {
+      const count = SAMSON_QUIZ.filter(q => q.domain === dom.id).length;
+      const done = (store.data.finishedDomains || []).includes(dom.id);
+      const card = document.createElement("button");
+      card.className = "tier-card"; card.type = "button";
+      card.innerHTML = `<span class="bar" style="background:${dom.color}"></span>
+        <span class="tier-icon">${dom.icon}</span>
+        <span class="tier-meta"><h3>${dom.label} ${done ? "✅" : ""}</h3>
+        <p>${dom.desc}</p><span class="tier-stars">${count} question(s)</span></span>`;
+      card.addEventListener("click", () => { audio.ensure(); startMode("culture", { domain: dom.id }); });
+      grid.appendChild(card);
+    });
+  }
+
   /* ---------- Sélection des énigmes par mode ---------- */
   function byLevel(l) { return SAMSON_PUZZLES.filter(p => p.level === l); }
   function dailyQueue() {
@@ -201,6 +219,11 @@
       game.queue = shuffle(SAMSON_PUZZLES.filter(p => p.category === game.catFilter));
       game.revealRatio = 0.35; game.timePerQ = 45;
       game.jk = { hint: 2, time: 1, fifty: 1 };
+    } else if (mode === "culture") {
+      game.domain = opts.domain;
+      game.queue = shuffle(SAMSON_QUIZ.filter(q => q.domain === game.domain));
+      game.revealRatio = 0.4; game.timePerQ = 60;
+      game.jk = { hint: 3, time: 2, fifty: 2 };
     } else if (mode === "custom") {
       const list = store.data.custom || [];
       if (!list.length) { toast("Crée d'abord une énigme !"); showEditor(); return; }
@@ -292,8 +315,14 @@
     const params = puzzleParams();
 
     updateHud();
-    $("#catTag").textContent = p.category || "objet";
-    $("#imgHolder").innerHTML = p.svg ? p.svg : `<div class="emoji-img">${p.emoji || "❓"}</div>`;
+    if (p.prompt) {
+      const dom = SAMSON_DOMAINS.find(d => d.id === p.domain);
+      $("#catTag").textContent = (dom ? dom.label : p.domain || "") + (p.region ? " · " + p.region : "");
+      $("#imgHolder").innerHTML = `<div class="quiz-card"><div class="quiz-emoji">${p.emoji || "❓"}</div><div class="quiz-q">${p.prompt}</div></div>`;
+    } else {
+      $("#catTag").textContent = p.category || "objet";
+      $("#imgHolder").innerHTML = p.svg ? p.svg : `<div class="emoji-img">${p.emoji || "❓"}</div>`;
+    }
     const ht = $("#hintText"); ht.textContent = "💡 " + (p.hint || ""); ht.classList.remove("show");
     $("#feedback").textContent = ""; $("#feedback").className = "feedback";
 
@@ -464,7 +493,7 @@
   function onCorrect() {
     if (!game.totalMode) stopTimer();
     game.correct++; game.combo++; game.maxCombo = Math.max(game.maxCombo, game.combo);
-    const cat = game.current.category || "objet"; game.solvedCats[cat] = (game.solvedCats[cat] || 0) + 1;
+    const cat = game.current.category || game.current.domain || "objet"; game.solvedCats[cat] = (game.solvedCats[cat] || 0) + 1;
     const timeBonus = game.noTimer ? 20 : game.totalMode ? 40 : Math.round(game.timeLeft * 4);
     const comboMult = 1 + (game.combo - 1) * 0.25;
     const gained = Math.max(20, Math.round((100 + timeBonus) * comboMult) - game.revealedThisPuzzle * 25);
@@ -581,6 +610,11 @@
     if (game.mode === "survie") d.survieBest = Math.max(d.survieBest, game.correct);
     if (game.mode === "chrono") d.chronoBest = Math.max(d.chronoBest, game.correct);
     if (game.mode === "category" && finished) unlock("themed");
+    if (game.mode === "culture" && finished) {
+      unlock("scholar");
+      if (!d.finishedDomains.includes(game.domain)) d.finishedDomains.push(game.domain);
+      if (d.finishedDomains.length >= 3) unlock("polyglot");
+    }
     if (game.mode === "daily" && finished) {
       unlock("daily");
       if (d.dailyDone !== todayStr()) {
@@ -821,11 +855,13 @@
   $("#setBtn").addEventListener("click", () => { initSettings(); screens.show("settings"); });
   $("#setBack").addEventListener("click", () => screens.show("home"));
   $("#catBack").addEventListener("click", () => screens.show("home"));
+  $("#domainsBack").addEventListener("click", () => screens.show("home"));
   $("#edBack").addEventListener("click", () => { refreshHome(); buildModeGrid(); screens.show("home"); });
   $("#replayBtn").addEventListener("click", () => {
     if (game.duo) startMode("duo");
     else if (game.mode === "parcours") startMode("parcours", { tier: game.tier });
     else if (game.mode === "category") startMode("category", { category: game.catFilter });
+    else if (game.mode === "culture") startMode("culture", { domain: game.domain });
     else startMode(game.mode);
   });
   $("#homeBtn").addEventListener("click", () => { refreshHome(); buildModeGrid(); screens.show("home"); });
