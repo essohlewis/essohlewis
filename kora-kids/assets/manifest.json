@@ -4,8 +4,9 @@
   "voix": {
     "fr": []
   },
-  "_voix_exemple": { "fr": ["agouti", "lettre-A"], "dioula": ["agouti"] },
-  "_voix_chemin": "assets/audio/voix/<langue>/<id>.mp3  (ex. assets/audio/voix/fr/agouti.mp3, assets/audio/voix/fr/lettre-A.mp3)",
+  "_voix_exemple": { "fr": ["agouti", "lettre-A", "nombre-3", "forme-rond", "couleur-rouge", "mangue"], "dioula": ["agouti"] },
+  "_voix_ids": "Conventions d'id de voix : <animal> (lion, agouti…) ; lettre-<L> (lettre-A…) ; nombre-<n> (nombre-0 à nombre-10) ; forme-<f> (forme-rond, forme-carre, forme-triangle, forme-etoile, forme-coeur, forme-croissant) ; couleur-<c> (couleur-rouge, couleur-vert, couleur-jaune, couleur-orange) ; <produit> (mangue, banane, attieke…). Un même id sert à tous les jeux qui l'emploient.",
+  "_voix_chemin": "assets/audio/voix/<langue>/<id>.mp3  (ex. assets/audio/voix/fr/agouti.mp3, assets/audio/voix/fr/lettre-A.mp3, assets/audio/voix/fr/nombre-3.mp3)",
 
   "cris": [],
   "_cris_exemple": ["lion", "elephant"],

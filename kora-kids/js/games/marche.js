@@ -4,6 +4,7 @@
 import Audio from "../core/audio.js";
 import Store from "../core/storage.js";
 import { produce, money, icon } from "../core/art.js";
+import { voixManifest, imageFor } from "../core/assets.js";
 import { onTap, makeDraggable } from "../core/input.js";
 import { gameHead, prompt, correct, soft, finishRound, shuffle, pick, rand } from "./shell.js";
 
@@ -11,6 +12,10 @@ export default async function marche(scene, _p, { go }) {
   const data = await fetch("js/data/marche.json").then(r => r.json());
   const profile = Store.getActive();
   const palier = (profile && profile.palier) || "moyen";
+
+  // Précharge voix des produits + nombres (fichiers si déclarés, sinon TTS).
+  const nombres = Array.from({ length: 11 }, (_, i) => "nombre-" + i);
+  voixManifest([...data.produits.map(p => p.id), ...nombres]).then(m => Audio.load(m));
 
   const ui = gameHead(scene, "🛒 Le marché", go);
   const stage = document.createElement("div"); stage.className = "stage";
@@ -51,7 +56,7 @@ function niveau1(stage, data, onWin) {
   let count = 0;
   for (let i = 0; i < target + 2; i++) {                    // quelques fruits en trop, sans pénalité
     const p = document.createElement("div"); p.className = "produit draggable";
-    p.appendChild(produce(prod.art)); p.style.transform = "translate(0,0)";
+    p.appendChild(imageFor(prod, "marche") || produce(prod.art)); p.style.transform = "translate(0,0)";
     etal.appendChild(p);
     makeDraggable(p, {
       targets, snapRadius: 90,
@@ -59,8 +64,9 @@ function niveau1(stage, data, onWin) {
         if (hot && count < target) {
           count++;
           p.style.transition = "transform .2s, opacity .2s"; p.style.opacity = ".0"; p.style.pointerEvents = "none";
-          total.textContent = count; Audio.play("star"); Audio.speak(String(count));
-          if (count === target) { correct(basket); Audio.speak(`Bravo ! ${target} !`); onWin(); }
+          total.textContent = count; Audio.play("star");
+          Audio.speak(String(count), { id: "nombre-" + count });   // comptage à voix haute
+          if (count === target) { correct(basket); Audio.speak(`Bravo ! ${target} !`, { id: "nombre-" + target }); onWin(); }
           return true;
         }
         return false;
@@ -78,7 +84,7 @@ function niveau2(stage, data, onWin) {
 
   const layout = document.createElement("div"); layout.className = "marche-layout";
   const show = document.createElement("div"); show.style.cssText = "display:flex;gap:12px;justify-content:center;flex-wrap:wrap";
-  for (let i = 0; i < qte; i++) { const d = document.createElement("div"); d.className = "produit"; d.appendChild(produce(prod.art)); show.appendChild(d); }
+  for (let i = 0; i < qte; i++) { const d = document.createElement("div"); d.className = "produit"; d.appendChild(imageFor(prod, "marche") || produce(prod.art)); show.appendChild(d); }
   const grid = document.createElement("div"); grid.className = "choice-grid"; grid.dataset.n = 3;
   layout.append(show, grid); stage.appendChild(layout);
 

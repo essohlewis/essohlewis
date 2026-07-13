@@ -5,6 +5,7 @@
 import Audio from "../core/audio.js";
 import Store from "../core/storage.js";
 import { shape, icon } from "../core/art.js";
+import { voixManifest } from "../core/assets.js";
 import { onTap, makeDraggable } from "../core/input.js";
 import { gameHead, prompt, correct, soft, finishRound, shuffle, pick, rand } from "./shell.js";
 
@@ -21,6 +22,9 @@ const COLORS = [
 export default async function formes(scene, _p, { go }) {
   const profile = Store.getActive();
   const palier = (profile && profile.palier) || "petit";
+
+  // Précharge la voix des formes et des couleurs (fichiers sinon TTS).
+  voixManifest([...SHAPES.map(s => "forme-" + s.id), ...COLORS.map(c => "couleur-" + c.id)]).then(m => Audio.load(m));
 
   const ui = gameHead(scene, "🔷 Formes & couleurs", go);
   const stage = document.createElement("div"); stage.className = "stage";
@@ -74,7 +78,7 @@ function encastre(stage, palier, onWin) {
           const t = getTr(piece);
           piece.style.transform = `translate(${t.x + (hr.left - pr.left)}px, ${t.y + (hr.top - pr.top)}px)`;
           piece.style.pointerEvents = "none";
-          correct(piece, k.nom);
+          correct(piece, k.nom, { id: "forme-" + k.id });
           if (++placed === kinds.length) onWin();
           return true;
         }
@@ -114,8 +118,8 @@ function tri(stage, palier, onWin) {
         if (hot && it.ok) {
           piece.style.transition = "transform .2s, opacity .2s";
           piece.style.opacity = "0"; piece.style.pointerEvents = "none";
-          correct(piece);
-          if (++done === good) onWin();
+          if (++done === good) { correct(piece, "Bravo !", { id: "couleur-" + color.id }); onWin(); }
+          else correct(piece);
           return true;
         }
         return false;
