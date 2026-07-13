@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="description" content="Samson — le jeu de devinette d'images. Devine ou complète le nom de l'objet selon ton niveau !">
+  <meta name="theme-color" content="#6366f1">
+  <title>Samson · Jeu de devinette d'images</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧩</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="confetti" aria-hidden="true"></canvas>
+
+  <main class="app" role="application" aria-label="Jeu Samson">
+    <!-- Header -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">🧩</div>
+        <div>SAMSON<small>DEVINE L'IMAGE</small></div>
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="soundBtn" title="Son" aria-label="Activer/désactiver le son">🔊</button>
+        <button class="icon-btn" id="themeBtn" title="Thème" aria-label="Changer de thème">🌙</button>
+      </div>
+    </header>
+
+    <!-- ============ ACCUEIL ============ -->
+    <section class="screen active" id="screen-home">
+      <div class="hero-art">
+        <svg viewBox="0 0 200 200" aria-hidden="true">
+          <rect x="34" y="46" width="132" height="96" rx="14" fill="#6366f1"/>
+          <rect x="46" y="58" width="108" height="60" rx="8" fill="#c7d2fe"/>
+          <circle cx="78" cy="86" r="12" fill="#fbbf24"/>
+          <path d="M110 108 L126 82 L146 108 Z" fill="#22c55e"/>
+          <rect x="70" y="150" width="60" height="10" rx="5" fill="#a5b4fc"/>
+          <text x="100" y="98" font-size="40" text-anchor="middle" fill="#4338ca" font-weight="bold">?</text>
+        </svg>
+      </div>
+      <h1 class="title">Bienvenue dans Samson 🎉</h1>
+      <p class="subtitle">Regarde l'image, puis <b>devine</b> ou <b>complète</b> le nom de l'objet. Plus le niveau est élevé, moins il y a d'indices !</p>
+
+      <div class="stat-row">
+        <div class="stat-chip"><b id="home-best">0</b><span>Meilleur score</span></div>
+        <div class="stat-chip"><b id="home-stars">0</b><span>Étoiles</span></div>
+        <div class="stat-chip"><b id="home-streak">0</b><span>Série record</span></div>
+      </div>
+
+      <button class="btn primary" id="playBtn">▶ Jouer</button>
+      <button class="btn ghost" id="howBtn">❔ Comment jouer</button>
+    </section>
+
+    <!-- ============ CHOIX DU NIVEAU ============ -->
+    <section class="screen" id="screen-levels">
+      <h1 class="title">Choisis ton parcours</h1>
+      <p class="subtitle">Chaque palier ajoute du défi : moins de lettres offertes, moins de temps, moins d'indices.</p>
+      <div class="tier-grid" id="tierGrid"></div>
+      <button class="btn ghost" id="backHome" style="margin-top:16px">← Retour</button>
+    </section>
+
+    <!-- ============ JEU ============ -->
+    <section class="screen" id="screen-play">
+      <div class="hud">
+        <div class="hud-item"><span class="lbl">Niveau</span><span id="hud-level">1/12</span></div>
+        <div class="hud-item"><span class="lbl">Score</span><span id="hud-score">0</span></div>
+        <div class="hud-item"><span class="lbl">Vies</span><span class="hearts" id="hud-lives">❤️❤️❤️</span></div>
+      </div>
+      <div class="timer-wrap"><div class="timer-bar" id="timerBar"></div></div>
+
+      <div class="image-stage">
+        <span class="category-tag" id="catTag">objet</span>
+        <div id="imgHolder"></div>
+        <div class="hint-text" id="hintText"></div>
+      </div>
+
+      <div style="text-align:center;margin-bottom:8px">
+        <span class="combo-flag" id="comboFlag">🔥 Combo x1</span>
+      </div>
+
+      <form id="answerForm" autocomplete="off">
+        <div class="answer" id="answerBoxes" aria-label="Zone de réponse"></div>
+      </form>
+      <div class="feedback" id="feedback"></div>
+
+      <div class="controls">
+        <button class="btn ghost" id="hintBtn" style="flex:1">💡 Indice (<span id="hintCount">3</span>)</button>
+        <button class="btn ghost" id="skipBtn" style="flex:1">⏭ Passer</button>
+        <button class="btn primary" id="submitBtn" style="flex:1.4">✔ Valider</button>
+      </div>
+
+      <div class="kbd-toggle"><button id="kbdToggle" type="button">⌨️ Afficher le clavier</button></div>
+      <div class="kbd" id="keyboard" style="display:none"></div>
+
+      <button class="btn ghost" id="quitBtn" style="margin-top:14px">✕ Quitter la partie</button>
+    </section>
+
+    <!-- ============ RÉSULTATS ============ -->
+    <section class="screen" id="screen-result">
+      <div class="result-icon" id="resultIcon">🏆</div>
+      <h1 class="title" style="text-align:center" id="resultTitle">Parcours terminé !</h1>
+      <div class="stars-big" id="resultStars">⭐⭐⭐</div>
+      <p class="subtitle" style="text-align:center" id="resultMsg">Superbe performance !</p>
+
+      <div class="result-grid">
+        <div class="result-cell"><b id="res-score">0</b><span>Score</span></div>
+        <div class="result-cell"><b id="res-correct">0</b><span>Bonnes réponses</span></div>
+        <div class="result-cell"><b id="res-combo">0</b><span>Meilleur combo</span></div>
+        <div class="result-cell"><b id="res-acc">0%</b><span>Précision</span></div>
+      </div>
+
+      <button class="btn primary" id="replayBtn">🔁 Rejouer ce parcours</button>
+      <button class="btn ghost" id="otherBtn">🎚 Autre parcours</button>
+      <button class="btn ghost" id="homeBtn">🏠 Accueil</button>
+    </section>
+
+    <!-- ============ AIDE (modale simple) ============ -->
+    <section class="screen" id="screen-help">
+      <h1 class="title">Comment jouer 🕹️</h1>
+      <p class="subtitle">Samson te montre une image. À toi de trouver le mot !</p>
+      <div style="display:grid;gap:12px">
+        <div class="tier-card"><div class="tier-icon">🖼️</div><div class="tier-meta"><h3>Observe</h3><p>Une illustration apparaît avec sa catégorie.</p></div></div>
+        <div class="tier-card"><div class="tier-icon">⌨️</div><div class="tier-meta"><h3>Écris ou complète</h3><p>Remplis les cases. Certaines lettres sont déjà offertes selon le niveau.</p></div></div>
+        <div class="tier-card"><div class="tier-icon">💡</div><div class="tier-meta"><h3>Indices</h3><p>Bloqué ? Révèle une lettre ou lis l'indice (ça coûte des points).</p></div></div>
+        <div class="tier-card"><div class="tier-icon">🔥</div><div class="tier-meta"><h3>Combos & temps</h3><p>Enchaîne les bonnes réponses vite pour multiplier tes points !</p></div></div>
+      </div>
+      <button class="btn primary" id="helpBack" style="margin-top:18px">Compris, jouons !</button>
+    </section>
+
+    <div class="footer-note">Samson · 100% HTML · CSS · JavaScript — sans dépendance</div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="data.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
