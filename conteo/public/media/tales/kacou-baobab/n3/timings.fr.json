@@ -1,0 +1,359 @@
+{
+    "lang": "fr",
+    "words": [
+        {
+            "w": "Il",
+            "start": 0.4,
+            "end": 0.7,
+            "page": 1
+        },
+        {
+            "w": "était",
+            "start": 0.75,
+            "end": 1.23,
+            "page": 1
+        },
+        {
+            "w": "une",
+            "start": 1.28,
+            "end": 1.64,
+            "page": 1
+        },
+        {
+            "w": "fois,",
+            "start": 1.69,
+            "end": 2.17,
+            "page": 1
+        },
+        {
+            "w": "au",
+            "start": 2.22,
+            "end": 2.52,
+            "page": 1
+        },
+        {
+            "w": "cœur",
+            "start": 2.57,
+            "end": 2.99,
+            "page": 1
+        },
+        {
+            "w": "d'un",
+            "start": 3.04,
+            "end": 3.46,
+            "page": 1
+        },
+        {
+            "w": "village",
+            "start": 3.51,
+            "end": 4.11,
+            "page": 1
+        },
+        {
+            "w": "akan,",
+            "start": 4.16,
+            "end": 4.64,
+            "page": 1
+        },
+        {
+            "w": "un",
+            "start": 4.69,
+            "end": 4.99,
+            "page": 1
+        },
+        {
+            "w": "baobab",
+            "start": 5.04,
+            "end": 5.58,
+            "page": 1
+        },
+        {
+            "w": "si",
+            "start": 5.63,
+            "end": 5.93,
+            "page": 1
+        },
+        {
+            "w": "vieux",
+            "start": 5.98,
+            "end": 6.46,
+            "page": 1
+        },
+        {
+            "w": "que",
+            "start": 6.51,
+            "end": 6.87,
+            "page": 1
+        },
+        {
+            "w": "nul",
+            "start": 6.92,
+            "end": 7.28,
+            "page": 1
+        },
+        {
+            "w": "ne",
+            "start": 7.33,
+            "end": 7.63,
+            "page": 1
+        },
+        {
+            "w": "connaissait",
+            "start": 7.68,
+            "end": 8.36,
+            "page": 1
+        },
+        {
+            "w": "son",
+            "start": 8.41,
+            "end": 8.77,
+            "page": 1
+        },
+        {
+            "w": "âge.",
+            "start": 8.82,
+            "end": 9.24,
+            "page": 1
+        },
+        {
+            "w": "Kacou",
+            "start": 9.89,
+            "end": 10.37,
+            "page": 2
+        },
+        {
+            "w": "Ananzè,",
+            "start": 10.42,
+            "end": 11.02,
+            "page": 2
+        },
+        {
+            "w": "l'araignée,",
+            "start": 11.07,
+            "end": 11.75,
+            "page": 2
+        },
+        {
+            "w": "était",
+            "start": 11.8,
+            "end": 12.28,
+            "page": 2
+        },
+        {
+            "w": "célèbre",
+            "start": 12.33,
+            "end": 12.93,
+            "page": 2
+        },
+        {
+            "w": "pour",
+            "start": 12.98,
+            "end": 13.4,
+            "page": 2
+        },
+        {
+            "w": "sa",
+            "start": 13.45,
+            "end": 13.75,
+            "page": 2
+        },
+        {
+            "w": "ruse,",
+            "start": 13.8,
+            "end": 14.28,
+            "page": 2
+        },
+        {
+            "w": "mais",
+            "start": 14.33,
+            "end": 14.75,
+            "page": 2
+        },
+        {
+            "w": "il",
+            "start": 14.8,
+            "end": 15.1,
+            "page": 2
+        },
+        {
+            "w": "détestait",
+            "start": 15.15,
+            "end": 15.83,
+            "page": 2
+        },
+        {
+            "w": "travailler.",
+            "start": 15.88,
+            "end": 16.56,
+            "page": 2
+        },
+        {
+            "w": "Un",
+            "start": 17.21,
+            "end": 17.51,
+            "page": 3
+        },
+        {
+            "w": "oiseau",
+            "start": 17.56,
+            "end": 18.1,
+            "page": 3
+        },
+        {
+            "w": "lui",
+            "start": 18.15,
+            "end": 18.51,
+            "page": 3
+        },
+        {
+            "w": "apprit",
+            "start": 18.56,
+            "end": 19.1,
+            "page": 3
+        },
+        {
+            "w": "que",
+            "start": 19.15,
+            "end": 19.51,
+            "page": 3
+        },
+        {
+            "w": "les",
+            "start": 19.56,
+            "end": 19.92,
+            "page": 3
+        },
+        {
+            "w": "récoltes",
+            "start": 19.97,
+            "end": 20.63,
+            "page": 3
+        },
+        {
+            "w": "appartiennent",
+            "start": 20.68,
+            "end": 21.36,
+            "page": 3
+        },
+        {
+            "w": "à",
+            "start": 21.41,
+            "end": 21.65,
+            "page": 3
+        },
+        {
+            "w": "ceux",
+            "start": 21.7,
+            "end": 22.12,
+            "page": 3
+        },
+        {
+            "w": "qui",
+            "start": 22.17,
+            "end": 22.53,
+            "page": 3
+        },
+        {
+            "w": "cultivent",
+            "start": 22.58,
+            "end": 23.26,
+            "page": 3
+        },
+        {
+            "w": "la",
+            "start": 23.31,
+            "end": 23.61,
+            "page": 3
+        },
+        {
+            "w": "terre.",
+            "start": 23.66,
+            "end": 24.2,
+            "page": 3
+        },
+        {
+            "w": "Alors",
+            "start": 24.85,
+            "end": 25.33,
+            "page": 4
+        },
+        {
+            "w": "Kacou",
+            "start": 25.38,
+            "end": 25.86,
+            "page": 4
+        },
+        {
+            "w": "comprit",
+            "start": 25.91,
+            "end": 26.51,
+            "page": 4
+        },
+        {
+            "w": ":",
+            "start": 26.56,
+            "end": 26.8,
+            "page": 4
+        },
+        {
+            "w": "sans",
+            "start": 26.85,
+            "end": 27.27,
+            "page": 4
+        },
+        {
+            "w": "le",
+            "start": 27.32,
+            "end": 27.62,
+            "page": 4
+        },
+        {
+            "w": "travail,",
+            "start": 27.67,
+            "end": 28.33,
+            "page": 4
+        },
+        {
+            "w": "la",
+            "start": 28.38,
+            "end": 28.68,
+            "page": 4
+        },
+        {
+            "w": "ruse",
+            "start": 28.73,
+            "end": 29.15,
+            "page": 4
+        },
+        {
+            "w": "ne",
+            "start": 29.2,
+            "end": 29.5,
+            "page": 4
+        },
+        {
+            "w": "remplit",
+            "start": 29.55,
+            "end": 30.15,
+            "page": 4
+        },
+        {
+            "w": "jamais",
+            "start": 30.2,
+            "end": 30.74,
+            "page": 4
+        },
+        {
+            "w": "le",
+            "start": 30.79,
+            "end": 31.09,
+            "page": 4
+        },
+        {
+            "w": "grenier.",
+            "start": 31.14,
+            "end": 31.8,
+            "page": 4
+        }
+    ]
+}

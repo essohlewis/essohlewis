@@ -1,0 +1,41 @@
+{
+  "tale_slug": "kacou-ananze-et-le-baobab",
+  "level": "N1",
+  "title": "Le baobab",
+  "origin": "Akan",
+  "moral": null,
+  "duration_sec": 150,
+  "pages": [
+    {
+      "index": 1,
+      "image": "/media/tales/kacou-baobab/n1/p01.svg",
+      "text": "L'arbre. Grand !",
+      "hotspots": [
+        { "id": "baobab", "shape": "circle", "cx": 0.5, "cy": 0.42, "r": 0.2,
+          "label": "arbre", "sound": "/media/sfx/wind_tree.opus",
+          "voice": { "fr": "/media/words/fr/baobab.opus" }, "animation": "shake" }
+      ]
+    },
+    {
+      "index": 2,
+      "image": "/media/tales/kacou-baobab/n1/p02.svg",
+      "text": "L'araignée. Bonjour !",
+      "hotspots": [
+        { "id": "araignee", "shape": "circle", "cx": 0.5, "cy": 0.42, "r": 0.2,
+          "label": "araignée", "sound": "/media/sfx/pop.opus",
+          "voice": { "fr": "/media/words/fr/araignee.opus" }, "animation": "bounce" }
+      ]
+    },
+    {
+      "index": 3,
+      "image": "/media/tales/kacou-baobab/n1/p03.svg",
+      "text": "L'oiseau. Cui-cui !",
+      "hotspots": [
+        { "id": "oiseau", "shape": "circle", "cx": 0.5, "cy": 0.4, "r": 0.2,
+          "label": "oiseau", "sound": "/media/sfx/bird.opus",
+          "voice": { "fr": "/media/words/fr/oiseau.opus" }, "animation": "fly" }
+      ]
+    }
+  ],
+  "games": []
+}

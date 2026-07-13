@@ -1,0 +1,96 @@
+{
+  "tale_slug": "kacou-ananze-et-le-baobab",
+  "level": "N2",
+  "title": "Kacou Ananzè et le baobab",
+  "origin": "Akan",
+  "moral": "La ruse ne remplace jamais le travail.",
+  "duration_sec": 380,
+  "pages": [
+    {
+      "index": 1,
+      "image": "/media/tales/kacou-baobab/n2/p01.svg",
+      "text": "Il était une fois, au cœur du village, un immense baobab.",
+      "hotspots": [
+        {
+          "id": "baobab",
+          "shape": "circle",
+          "cx": 0.5, "cy": 0.42, "r": 0.16,
+          "label": "le baobab",
+          "sound": "/media/sfx/wind_tree.opus",
+          "voice": { "fr": "/media/words/fr/baobab.opus", "bci": "/media/words/bci/baobab.opus" },
+          "animation": "shake"
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "image": "/media/tales/kacou-baobab/n2/p02.svg",
+      "text": "Kacou Ananzè, l'araignée rusée, vivait tout en haut de ses branches.",
+      "hotspots": [
+        {
+          "id": "araignee",
+          "shape": "circle",
+          "cx": 0.5, "cy": 0.42, "r": 0.15,
+          "label": "l'araignée",
+          "sound": "/media/sfx/pop.opus",
+          "voice": { "fr": "/media/words/fr/araignee.opus" },
+          "animation": "bounce"
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "image": "/media/tales/kacou-baobab/n2/p03.svg",
+      "text": "Un petit oiseau vint se poser et chanta une jolie chanson.",
+      "hotspots": [
+        {
+          "id": "oiseau",
+          "shape": "rect",
+          "x": 0.38, "y": 0.28, "w": 0.24, "h": 0.24,
+          "label": "l'oiseau",
+          "sound": "/media/sfx/bird.opus",
+          "voice": { "fr": "/media/words/fr/oiseau.opus" },
+          "animation": "fly"
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "image": "/media/tales/kacou-baobab/n2/p04.svg",
+      "text": "Mais pour manger, il faut travailler la terre, dit le vieux sage.",
+      "hotspots": [
+        {
+          "id": "champ",
+          "shape": "circle",
+          "cx": 0.5, "cy": 0.45, "r": 0.16,
+          "label": "le champ",
+          "sound": "/media/sfx/hoe.opus",
+          "voice": { "fr": "/media/words/fr/champ.opus" },
+          "animation": "shake"
+        }
+      ]
+    }
+  ],
+  "games": [
+    {
+      "type": "find_animal",
+      "question": "Quel animal chantait dans l'arbre ?",
+      "options": [
+        { "image": "/media/quiz/oiseau.svg", "correct": true },
+        { "image": "/media/quiz/lion.svg", "correct": false },
+        { "image": "/media/quiz/tortue.svg", "correct": false },
+        { "image": "/media/quiz/serpent.svg", "correct": false }
+      ]
+    },
+    {
+      "type": "order_images",
+      "images": [
+        "/media/quiz/kb-s1.svg",
+        "/media/quiz/kb-s2.svg",
+        "/media/quiz/kb-s3.svg",
+        "/media/quiz/kb-s4.svg"
+      ],
+      "correct_order": [0, 1, 2, 3]
+    }
+  ]
+}

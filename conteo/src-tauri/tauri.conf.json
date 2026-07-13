@@ -1,0 +1,32 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Conteo",
+  "version": "1.0.0",
+  "identifier": "ci.conteo.app",
+  "build": {
+    "frontendDist": "../public"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "CONTEO — Contes africains",
+        "width": 1024,
+        "height": 720,
+        "minWidth": 360,
+        "minHeight": 640,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data: https:; media-src 'self' https: blob:; connect-src 'self' https:; style-src 'self' 'unsafe-inline'; font-src 'self' https: data:"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["deb", "appimage", "msi", "dmg"],
+    "icon": [
+      "../public/assets/icons/icon-192.png",
+      "../public/assets/icons/icon-512.png"
+    ]
+  }
+}

@@ -1,0 +1,99 @@
+/* CONTEO — Interface parent (verrouillée, standards adultes) */
+
+.parent {
+  font-family: var(--font-parent);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.parent-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border-bottom: 1px solid rgba(0,0,0,.08);
+}
+.parent-header h1 { font-size: 22px; margin: 0; }
+.parent-tabs {
+  display: flex; gap: var(--sp-1);
+  padding: var(--sp-2) var(--sp-4);
+  overflow-x: auto;
+}
+.parent-tabs button {
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-md);
+  font-weight: 600; white-space: nowrap;
+  color: var(--c-muted);
+}
+.parent-tabs button.on { background: var(--c-sun); color: #fff; }
+
+.parent-body { padding: var(--sp-4); }
+
+/* Verrou arithmétique */
+.gate {
+  flex: 1; display: grid; place-items: center; text-align: center; padding: var(--sp-5);
+}
+.gate .q { font-size: 40px; font-weight: 800; margin: var(--sp-4) 0; color: var(--c-indigo); }
+.gate .keypad { display: grid; grid-template-columns: repeat(3, 72px); gap: var(--sp-3); justify-content: center; }
+.gate .key {
+  width: 72px; height: 72px; border-radius: var(--radius-md);
+  background: var(--surface); box-shadow: var(--shadow-1);
+  font-size: 26px; font-weight: 700;
+}
+.gate .answer { font-size: 34px; font-weight: 800; letter-spacing: 4px; min-height: 44px; }
+
+/* Cartes tableau de bord */
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-5); }
+.stat {
+  background: var(--surface); border-radius: var(--radius-md);
+  padding: var(--sp-4); box-shadow: var(--shadow-1);
+}
+.stat .num { font-size: 28px; font-weight: 800; color: var(--c-indigo); }
+.stat .lbl { font-size: 13px; color: var(--c-muted); }
+
+.chart-wrap { background: var(--surface); border-radius: var(--radius-md); padding: var(--sp-4); box-shadow: var(--shadow-1); margin-bottom: var(--sp-5); }
+canvas.chart { width: 100%; height: 180px; }
+
+/* Liste de profils */
+.profile-row {
+  display: flex; align-items: center; gap: var(--sp-3);
+  background: var(--surface); border-radius: var(--radius-md);
+  padding: var(--sp-3); margin-bottom: var(--sp-3); box-shadow: var(--shadow-1);
+}
+.profile-row .av { width: 52px; height: 52px; border-radius: 50%; background: var(--c-sun); display: grid; place-items: center; font-size: 24px; }
+.profile-row .meta { flex: 1; }
+.profile-row .meta b { display: block; }
+.pill { padding: 2px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; background: var(--c-bogolan); color: var(--c-earth); }
+
+/* Téléchargements */
+.pack-row {
+  background: var(--surface); border-radius: var(--radius-md);
+  padding: var(--sp-4); margin-bottom: var(--sp-3); box-shadow: var(--shadow-1);
+}
+.progress {
+  height: 10px; border-radius: 20px; background: rgba(0,0,0,.1); overflow: hidden; margin: var(--sp-2) 0;
+}
+.progress > i { display: block; height: 100%; background: var(--c-leaf); width: 0; transition: width .2s ease; }
+
+/* Facturation / plans */
+.plan-card {
+  background: var(--surface); border-radius: var(--radius-lg);
+  padding: var(--sp-5); margin-bottom: var(--sp-4); box-shadow: var(--shadow-1);
+  border: 2px solid transparent;
+}
+.plan-card.featured { border-color: var(--c-sun); }
+.plan-card .price { font-size: 30px; font-weight: 800; color: var(--c-earth); }
+.channels { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3); margin: var(--sp-4) 0; }
+.channel {
+  padding: var(--sp-3); border-radius: var(--radius-md);
+  background: var(--surface); box-shadow: var(--shadow-1);
+  display: flex; align-items: center; gap: var(--sp-2); font-weight: 700;
+  border: 2px solid transparent;
+}
+.channel.on { border-color: var(--c-leaf); }
+
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-3) 0; border-bottom: 1px solid rgba(0,0,0,.06); }

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#2B3A67">
+  <meta name="description" content="Contes africains illustrés et narrés pour les enfants de 2 à 7 ans.">
+  <title>CONTEO — Contes africains</title>
+
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/kid.css">
+  <link rel="stylesheet" href="/assets/css/parent.css">
+</head>
+<body>
+  <div id="offline-banner" class="offline-banner" hidden>Mode hors-ligne — vos contes téléchargés restent disponibles.</div>
+
+  <div id="app">
+    <div class="center-screen">
+      <div class="spinner" aria-label="Chargement"></div>
+    </div>
+  </div>
+
+  <!-- Point d'entrée : modules ES natifs, aucun framework -->
+  <script type="module" src="/assets/js/app.js"></script>
+  <noscript>Cette application nécessite JavaScript.</noscript>
+</body>
+</html>

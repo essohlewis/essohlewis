@@ -1,0 +1,81 @@
+{
+  "tale_slug": "kacou-ananze-et-le-baobab",
+  "level": "N3",
+  "title": "Kacou Ananzè et le baobab",
+  "origin": "Akan",
+  "moral": "La ruse ne remplace jamais le travail. Celui qui sème récolte.",
+  "duration_sec": 720,
+  "pages": [
+    {
+      "index": 1,
+      "image": "/media/tales/kacou-baobab/n3/p01.svg",
+      "text": "Il était une fois, au cœur d'un village akan, un baobab si vieux que nul ne connaissait son âge.",
+      "hotspots": [
+        { "id": "baobab", "shape": "circle", "cx": 0.5, "cy": 0.42, "r": 0.14,
+          "label": "le baobab", "sound": "/media/sfx/wind_tree.opus",
+          "voice": { "fr": "/media/words/fr/baobab.opus" }, "animation": "shake" }
+      ]
+    },
+    {
+      "index": 2,
+      "image": "/media/tales/kacou-baobab/n3/p02.svg",
+      "text": "Kacou Ananzè, l'araignée, était célèbre pour sa ruse, mais il détestait travailler.",
+      "hotspots": [
+        { "id": "araignee", "shape": "circle", "cx": 0.5, "cy": 0.42, "r": 0.14,
+          "label": "l'araignée", "sound": "/media/sfx/pop.opus",
+          "voice": { "fr": "/media/words/fr/araignee.opus" }, "animation": "bounce" }
+      ]
+    },
+    {
+      "index": 3,
+      "image": "/media/tales/kacou-baobab/n3/p03.svg",
+      "text": "Un oiseau lui apprit que les récoltes appartiennent à ceux qui cultivent la terre.",
+      "hotspots": [
+        { "id": "oiseau", "shape": "rect", "x": 0.38, "y": 0.28, "w": 0.24, "h": 0.24,
+          "label": "l'oiseau", "sound": "/media/sfx/bird.opus",
+          "voice": { "fr": "/media/words/fr/oiseau.opus" }, "animation": "fly" }
+      ]
+    },
+    {
+      "index": 4,
+      "image": "/media/tales/kacou-baobab/n3/p04.svg",
+      "text": "Alors Kacou comprit : sans le travail, la ruse ne remplit jamais le grenier.",
+      "hotspots": [
+        { "id": "champ", "shape": "circle", "cx": 0.5, "cy": 0.45, "r": 0.15,
+          "label": "le champ", "sound": "/media/sfx/hoe.opus",
+          "voice": { "fr": "/media/words/fr/champ.opus" }, "animation": "shake" }
+      ]
+    }
+  ],
+  "games": [
+    {
+      "type": "quiz",
+      "question": "Quelle est la morale du conte ?",
+      "options": [
+        { "image": "/media/quiz/kb-s4.svg", "correct": true },
+        { "image": "/media/quiz/serpent.svg", "correct": false },
+        { "image": "/media/quiz/lion.svg", "correct": false }
+      ]
+    },
+    {
+      "type": "find_animal",
+      "question": "Qui a appris la leçon à Kacou ?",
+      "options": [
+        { "image": "/media/quiz/oiseau.svg", "correct": true },
+        { "image": "/media/quiz/tortue.svg", "correct": false },
+        { "image": "/media/quiz/lion.svg", "correct": false },
+        { "image": "/media/quiz/serpent.svg", "correct": false }
+      ]
+    },
+    {
+      "type": "order_images",
+      "images": [
+        "/media/quiz/kb-s1.svg",
+        "/media/quiz/kb-s2.svg",
+        "/media/quiz/kb-s3.svg",
+        "/media/quiz/kb-s4.svg"
+      ],
+      "correct_order": [0, 1, 2, 3]
+    }
+  ]
+}

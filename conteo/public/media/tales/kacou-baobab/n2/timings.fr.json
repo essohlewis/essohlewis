@@ -1,0 +1,275 @@
+{
+    "lang": "fr",
+    "words": [
+        {
+            "w": "Il",
+            "start": 0.4,
+            "end": 0.7,
+            "page": 1
+        },
+        {
+            "w": "était",
+            "start": 0.75,
+            "end": 1.23,
+            "page": 1
+        },
+        {
+            "w": "une",
+            "start": 1.28,
+            "end": 1.64,
+            "page": 1
+        },
+        {
+            "w": "fois,",
+            "start": 1.69,
+            "end": 2.17,
+            "page": 1
+        },
+        {
+            "w": "au",
+            "start": 2.22,
+            "end": 2.52,
+            "page": 1
+        },
+        {
+            "w": "cœur",
+            "start": 2.57,
+            "end": 2.99,
+            "page": 1
+        },
+        {
+            "w": "du",
+            "start": 3.04,
+            "end": 3.34,
+            "page": 1
+        },
+        {
+            "w": "village,",
+            "start": 3.39,
+            "end": 4.05,
+            "page": 1
+        },
+        {
+            "w": "un",
+            "start": 4.1,
+            "end": 4.4,
+            "page": 1
+        },
+        {
+            "w": "immense",
+            "start": 4.45,
+            "end": 5.05,
+            "page": 1
+        },
+        {
+            "w": "baobab.",
+            "start": 5.1,
+            "end": 5.7,
+            "page": 1
+        },
+        {
+            "w": "Kacou",
+            "start": 6.35,
+            "end": 6.83,
+            "page": 2
+        },
+        {
+            "w": "Ananzè,",
+            "start": 6.88,
+            "end": 7.48,
+            "page": 2
+        },
+        {
+            "w": "l'araignée",
+            "start": 7.53,
+            "end": 8.21,
+            "page": 2
+        },
+        {
+            "w": "rusée,",
+            "start": 8.26,
+            "end": 8.8,
+            "page": 2
+        },
+        {
+            "w": "vivait",
+            "start": 8.85,
+            "end": 9.39,
+            "page": 2
+        },
+        {
+            "w": "tout",
+            "start": 9.44,
+            "end": 9.86,
+            "page": 2
+        },
+        {
+            "w": "en",
+            "start": 9.91,
+            "end": 10.21,
+            "page": 2
+        },
+        {
+            "w": "haut",
+            "start": 10.26,
+            "end": 10.68,
+            "page": 2
+        },
+        {
+            "w": "de",
+            "start": 10.73,
+            "end": 11.03,
+            "page": 2
+        },
+        {
+            "w": "ses",
+            "start": 11.08,
+            "end": 11.44,
+            "page": 2
+        },
+        {
+            "w": "branches.",
+            "start": 11.49,
+            "end": 12.17,
+            "page": 2
+        },
+        {
+            "w": "Un",
+            "start": 12.82,
+            "end": 13.12,
+            "page": 3
+        },
+        {
+            "w": "petit",
+            "start": 13.17,
+            "end": 13.65,
+            "page": 3
+        },
+        {
+            "w": "oiseau",
+            "start": 13.7,
+            "end": 14.24,
+            "page": 3
+        },
+        {
+            "w": "vint",
+            "start": 14.29,
+            "end": 14.71,
+            "page": 3
+        },
+        {
+            "w": "se",
+            "start": 14.76,
+            "end": 15.06,
+            "page": 3
+        },
+        {
+            "w": "poser",
+            "start": 15.11,
+            "end": 15.59,
+            "page": 3
+        },
+        {
+            "w": "et",
+            "start": 15.64,
+            "end": 15.94,
+            "page": 3
+        },
+        {
+            "w": "chanta",
+            "start": 15.99,
+            "end": 16.53,
+            "page": 3
+        },
+        {
+            "w": "une",
+            "start": 16.58,
+            "end": 16.94,
+            "page": 3
+        },
+        {
+            "w": "jolie",
+            "start": 16.99,
+            "end": 17.47,
+            "page": 3
+        },
+        {
+            "w": "chanson.",
+            "start": 17.52,
+            "end": 18.18,
+            "page": 3
+        },
+        {
+            "w": "Mais",
+            "start": 18.83,
+            "end": 19.25,
+            "page": 4
+        },
+        {
+            "w": "pour",
+            "start": 19.3,
+            "end": 19.72,
+            "page": 4
+        },
+        {
+            "w": "manger,",
+            "start": 19.77,
+            "end": 20.37,
+            "page": 4
+        },
+        {
+            "w": "il",
+            "start": 20.42,
+            "end": 20.72,
+            "page": 4
+        },
+        {
+            "w": "faut",
+            "start": 20.77,
+            "end": 21.19,
+            "page": 4
+        },
+        {
+            "w": "travailler",
+            "start": 21.24,
+            "end": 21.92,
+            "page": 4
+        },
+        {
+            "w": "la",
+            "start": 21.97,
+            "end": 22.27,
+            "page": 4
+        },
+        {
+            "w": "terre,",
+            "start": 22.32,
+            "end": 22.86,
+            "page": 4
+        },
+        {
+            "w": "dit",
+            "start": 22.91,
+            "end": 23.27,
+            "page": 4
+        },
+        {
+            "w": "le",
+            "start": 23.32,
+            "end": 23.62,
+            "page": 4
+        },
+        {
+            "w": "vieux",
+            "start": 23.67,
+            "end": 24.15,
+            "page": 4
+        },
+        {
+            "w": "sage.",
+            "start": 24.2,
+            "end": 24.68,
+            "page": 4
+        }
+    ]
+}

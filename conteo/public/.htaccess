@@ -1,0 +1,41 @@
+# CONTEO — Réécriture d'URL (Apache)
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Sert directement les fichiers et dossiers existants (assets, médias, PWA).
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Toute autre requête passe par le front controller.
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# Sécurité : en-têtes de base
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "DENY"
+    Header set Referrer-Policy "no-referrer"
+</IfModule>
+
+# Le Service Worker doit pouvoir contrôler toute la portée : pas de cache long.
+<Files "sw.js">
+    <IfModule mod_headers.c>
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+    </IfModule>
+</Files>
+
+# Types MIME pour les formats modernes
+<IfModule mod_mime.c>
+    AddType image/webp .webp
+    AddType image/avif .avif
+    AddType audio/ogg .opus
+    AddType audio/mp4 .m4a
+    AddType application/manifest+json .webmanifest
+</IfModule>
+
+# Empêche l'accès aux fichiers sensibles
+<FilesMatch "^\.env">
+    Require all denied
+</FilesMatch>

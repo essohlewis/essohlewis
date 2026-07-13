@@ -1,0 +1,127 @@
+/* CONTEO — Styles de base partagés */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-parent);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+  touch-action: manipulation; /* évite le double-tap zoom */
+}
+
+#app {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+img { max-width: 100%; display: block; }
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: 0;
+  background: none;
+  color: inherit;
+}
+
+/* Bouton primaire */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-5);
+  background: var(--c-sun);
+  color: #fff;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  min-height: 48px;
+  box-shadow: var(--shadow-1);
+  transition: transform .08s ease, background .15s ease;
+}
+.btn:active { transform: scale(.96); }
+.btn.secondary { background: var(--surface); color: var(--text); border: 2px solid var(--c-sun); }
+.btn.ghost { background: transparent; color: var(--c-earth); box-shadow: none; }
+.btn.block { width: 100%; }
+.btn:disabled { opacity: .5; pointer-events: none; }
+
+/* Champs de formulaire (espace parent) */
+.field { margin-bottom: var(--sp-4); }
+.field label { display: block; font-weight: 600; margin-bottom: var(--sp-1); font-size: 14px; }
+.input {
+  width: 100%;
+  padding: var(--sp-3);
+  border: 1px solid rgba(0,0,0,.15);
+  border-radius: var(--radius-md);
+  font-size: 16px; /* >=16px : évite le zoom auto iOS */
+  background: var(--surface);
+  color: var(--text);
+}
+.input:focus { outline: 2px solid var(--c-sun); }
+
+.error-text { color: var(--c-danger); font-size: 13px; margin-top: var(--sp-1); }
+.hint { color: var(--c-muted); font-size: 13px; }
+
+/* Chargement */
+.spinner {
+  width: 42px; height: 42px;
+  border: 4px solid rgba(0,0,0,.1);
+  border-top-color: var(--c-sun);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+  margin: var(--sp-6) auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.center-screen {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-5);
+  text-align: center;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  left: 50%; bottom: 24px;
+  transform: translateX(-50%);
+  background: var(--c-indigo);
+  color: #fff;
+  padding: var(--sp-3) var(--sp-5);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2);
+  z-index: 1000;
+  font-weight: 600;
+  max-width: 90vw;
+  animation: toast-in .25s ease;
+}
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 12px); } }
+
+/* Bannière hors-ligne */
+.offline-banner {
+  background: var(--c-earth);
+  color: #fff;
+  text-align: center;
+  padding: var(--sp-2);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px;
+  overflow: hidden; clip: rect(0 0 0 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

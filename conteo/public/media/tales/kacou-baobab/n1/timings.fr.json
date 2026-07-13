@@ -1,0 +1,59 @@
+{
+    "lang": "fr",
+    "words": [
+        {
+            "w": "L'arbre.",
+            "start": 0.4,
+            "end": 1.06,
+            "page": 1
+        },
+        {
+            "w": "Grand",
+            "start": 1.11,
+            "end": 1.59,
+            "page": 1
+        },
+        {
+            "w": "!",
+            "start": 1.64,
+            "end": 1.88,
+            "page": 1
+        },
+        {
+            "w": "L'araignée.",
+            "start": 2.53,
+            "end": 3.21,
+            "page": 2
+        },
+        {
+            "w": "Bonjour",
+            "start": 3.26,
+            "end": 3.86,
+            "page": 2
+        },
+        {
+            "w": "!",
+            "start": 3.91,
+            "end": 4.15,
+            "page": 2
+        },
+        {
+            "w": "L'oiseau.",
+            "start": 4.8,
+            "end": 5.48,
+            "page": 3
+        },
+        {
+            "w": "Cui-cui",
+            "start": 5.53,
+            "end": 6.13,
+            "page": 3
+        },
+        {
+            "w": "!",
+            "start": 6.18,
+            "end": 6.42,
+            "page": 3
+        }
+    ]
+}

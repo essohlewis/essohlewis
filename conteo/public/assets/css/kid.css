@@ -1,0 +1,195 @@
+/* CONTEO — Interface enfant (2–7 ans)
+   Boutons ≥ 72px, typographie ronde, très arrondis, retour visuel fort. */
+
+.kid {
+  font-family: var(--font-kid);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* En-tête enfant : avatar + accès parent */
+.kid-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-3) var(--sp-4);
+  gap: var(--sp-3);
+}
+.kid-avatar {
+  width: var(--touch-min); height: var(--touch-min);
+  border-radius: 50%;
+  background: var(--c-sun);
+  display: grid; place-items: center;
+  font-size: 34px;
+  box-shadow: var(--shadow-1);
+}
+.kid-title { font-size: var(--fs-kid-lg); font-weight: 800; color: var(--c-earth); }
+
+/* Bouton parent : discret, en haut à droite, cible >=72 */
+.parent-key {
+  width: var(--touch-min); height: var(--touch-min);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  display: grid; place-items: center;
+  font-size: 32px;
+  box-shadow: var(--shadow-1);
+}
+
+/* Bibliothèque : grille de vignettes */
+.library {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--sp-4);
+  padding: var(--sp-4);
+}
+.tale-card {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  aspect-ratio: 3 / 4;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  transition: transform .1s ease;
+}
+.tale-card:active { transform: scale(.95); }
+.tale-card img { flex: 1; width: 100%; object-fit: cover; background: #e8ddca; }
+.tale-card .cap {
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-kid-base);
+  font-weight: 700;
+  color: var(--c-ink);
+  background: var(--surface);
+}
+.tale-card .badge {
+  position: absolute; top: 8px; left: 8px;
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 13px; font-weight: 800; color: #fff;
+}
+.badge.new { background: var(--c-leaf); }
+.badge.read { background: var(--c-indigo); }
+.tale-card .lock {
+  position: absolute; top: 8px; right: 8px;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: rgba(0,0,0,.55); color: #fff;
+  display: grid; place-items: center; font-size: 20px;
+}
+
+/* ── Lecteur de conte ── */
+.reader {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  color: #fff;
+}
+.reader-stage {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+.reader-stage img.page-img {
+  width: 100%; height: 100%; object-fit: contain;
+}
+/* Zone de texte (masquée en N1) */
+.reader-text {
+  padding: var(--sp-4) var(--sp-5);
+  font-size: var(--fs-kid-lg);
+  font-weight: 700;
+  text-align: center;
+  background: rgba(0,0,0,.55);
+  line-height: 1.4;
+}
+.reader-text .w { transition: color .1s ease; }
+.reader-text .w.active { color: var(--c-sun); }  /* surlignage karaoké */
+
+/* Contrôles du lecteur : cibles >=72 */
+.reader-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: var(--sp-3);
+  gap: var(--sp-2);
+  background: var(--c-indigo);
+}
+.rc-btn {
+  width: var(--touch-min); height: var(--touch-min);
+  border-radius: var(--radius-lg);
+  background: rgba(255,255,255,.12);
+  display: grid; place-items: center;
+  font-size: 30px; color: #fff;
+}
+.rc-btn:active { background: rgba(255,255,255,.28); }
+.rc-btn.play { background: var(--c-sun); width: 88px; height: 88px; font-size: 38px; }
+
+/* Hotspots overlay */
+.hotspot {
+  position: absolute;
+  border-radius: 50%;
+  /* invisible mais tappable ; halo au tap via classe .pulse */
+}
+.hotspot.pulse {
+  animation: hs-pulse .6s ease;
+  background: radial-gradient(circle, rgba(242,167,59,.5), transparent 70%);
+}
+@keyframes hs-pulse { 0% { transform: scale(.7); opacity: .9; } 100% { transform: scale(1.3); opacity: 0; } }
+
+/* Animations d'objets */
+.anim-shake { animation: shake .5s ease; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+.anim-fly { animation: fly 1s ease; }
+@keyframes fly { to { transform: translate(30px,-40px); opacity:.4; } }
+.anim-bounce { animation: bounce .6s ease; }
+@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-20px)} }
+
+/* ── Mini-jeux ── */
+.game {
+  flex: 1; padding: var(--sp-5);
+  display: flex; flex-direction: column; gap: var(--sp-5);
+  text-align: center;
+}
+.game h2 { font-size: var(--fs-kid-lg); color: var(--c-earth); }
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--sp-4);
+}
+.game-option {
+  aspect-ratio: 1;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  min-height: var(--touch-min);
+}
+.game-option img { width: 100%; height: 100%; object-fit: cover; }
+.game-option.correct { outline: 6px solid var(--c-leaf); }
+.game-option.wrong { outline: 6px solid var(--c-danger); opacity: .6; }
+
+/* Drag & drop remise en ordre */
+.order-strip { display: flex; gap: var(--sp-3); flex-wrap: wrap; justify-content: center; }
+.order-item {
+  width: 120px; height: 120px; border-radius: var(--radius-md);
+  overflow: hidden; box-shadow: var(--shadow-1); background: var(--surface);
+  touch-action: none;
+}
+.order-item.dragging { opacity: .5; }
+
+/* ── Conte du soir ── */
+.bedtime {
+  flex: 1;
+  background: var(--c-indigo);
+  color: #fff;
+  transition: filter 2s linear;
+  display: flex; flex-direction: column;
+}
+.bedtime-timer-choice { display: flex; gap: var(--sp-4); justify-content: center; padding: var(--sp-6); }
+.moon-btn {
+  width: 96px; height: 96px; border-radius: 50%;
+  background: rgba(255,255,255,.14); font-size: 28px; font-weight: 800; color: #fff;
+}

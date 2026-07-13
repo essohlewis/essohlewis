@@ -1,0 +1,54 @@
+/* ═══════════════════════════════════════════════════════════
+   CONTEO — Design tokens
+   Couleurs inspirées des textiles ouest-africains (bogolan, kente).
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  /* Couleurs */
+  --c-sun:     #F2A73B;   /* Orange soleil — accent principal */
+  --c-sun-dk:  #D98E20;
+  --c-earth:   #A94E2A;   /* Terre cuite */
+  --c-leaf:    #2E7D5B;   /* Vert feuille */
+  --c-indigo:  #2B3A67;   /* Indigo — fond nuit / conte du soir */
+  --c-bogolan: #F5EDE0;   /* Écru bogolan — fond clair */
+  --c-ink:     #1C1B1A;   /* Texte */
+  --c-white:   #FFFFFF;
+  --c-muted:   #7A7268;
+  --c-danger:  #C0392B;
+  --c-ok:      #1C6B46;
+
+  /* Typographie */
+  --font-kid:    'Baloo 2', 'Nunito', system-ui, -apple-system, sans-serif;
+  --font-parent: 'Inter', system-ui, -apple-system, sans-serif;
+
+  --fs-kid-xl:   clamp(28px, 6vw, 44px);
+  --fs-kid-lg:   clamp(22px, 4.5vw, 32px);
+  --fs-kid-base: clamp(18px, 3.5vw, 24px);
+
+  /* Espacements */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px;
+  --sp-4: 16px; --sp-5: 24px; --sp-6: 32px; --sp-8: 48px;
+
+  /* Cibles tactiles enfant */
+  --touch-min: 72px;
+
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+
+  --shadow-1: 0 2px 8px rgba(0, 0, 0, .08);
+  --shadow-2: 0 8px 28px rgba(0, 0, 0, .18);
+
+  /* Fonds selon thème (surchargés en .theme-dark) */
+  --bg:       var(--c-bogolan);
+  --surface:  var(--c-white);
+  --text:     var(--c-ink);
+}
+
+/* Thème sombre (espace parent + préférence système) */
+.theme-dark {
+  --bg:      #17151A;
+  --surface: #242029;
+  --text:    #F3EFE9;
+  --c-muted: #A79E93;
+}

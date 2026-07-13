@@ -1,0 +1,25 @@
+# Environnement
+.env
+
+# Dépendances
+/node_modules/
+/vendor/
+
+# Build wrappers
+/android/
+/ios/
+/src-tauri/target/
+/src-tauri/gen/
+
+# Logs & cache serveur
+/storage/logs/*.log
+/storage/cache/*
+!/storage/logs/.gitkeep
+!/storage/cache/.gitkeep
+
+# OS / éditeurs
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
