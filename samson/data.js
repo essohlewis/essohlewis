@@ -536,8 +536,21 @@ const SAMSON_MODES = [
   { id: "survie",   label: "Survie",          icon: "♾️", desc: "Enchaîne sans fin, 3 vies, difficulté croissante.", color: "#ef4444" },
   { id: "chrono",   label: "Contre-la-montre", icon: "⏱️", desc: "90 secondes : trouve-en un maximum !", color: "#f59e0b" },
   { id: "duo",      label: "Duo",             icon: "👥", desc: "2 joueurs à tour de rôle, le meilleur gagne.", color: "#14b8a6" },
+  { id: "zen",      label: "Zen",             icon: "🧘", desc: "Entraîne-toi sans minuteur ni vies, à ton rythme.", color: "#10b981" },
   { id: "category", label: "Par thème",       icon: "🎯", desc: "Joue une seule catégorie : animaux, nature ou objets.", color: "#0ea5e9" },
   { id: "custom",   label: "Mes énigmes",     icon: "🎨", desc: "Crée et joue tes propres devinettes avec des emojis.", color: "#a855f7" }
+];
+
+/* Rangs du joueur (progression par points d'expérience) */
+const SAMSON_RANKS = [
+  { min: 0,     icon: "🥚", name: "Débutant" },
+  { min: 150,   icon: "🌱", name: "Apprenti" },
+  { min: 400,   icon: "🎯", name: "Amateur" },
+  { min: 900,   icon: "⭐", name: "Habitué" },
+  { min: 1800,  icon: "🔥", name: "Expert" },
+  { min: 3500,  icon: "💎", name: "Champion" },
+  { min: 6500,  icon: "👑", name: "Maître" },
+  { min: 12000, icon: "🏆", name: "Légende" }
 ];
 
 /* Succès / trophées débloquables */
@@ -555,7 +568,9 @@ const SAMSON_ACHIEVEMENTS = [
   { id: "survivor",    icon: "🛡️", name: "Survivant",         desc: "15 bonnes réponses en mode Survie." },
   { id: "played10",    icon: "🎮", name: "Joueur régulier",   desc: "Jouer 10 parties." },
   { id: "creator",     icon: "🎨", name: "Créateur",          desc: "Créer une énigme personnalisée." },
-  { id: "themed",      icon: "🧭", name: "Thématicien",       desc: "Terminer une partie « Par thème »." }
+  { id: "themed",      icon: "🧭", name: "Thématicien",       desc: "Terminer une partie « Par thème »." },
+  { id: "collector",   icon: "📚", name: "Collectionneur",    desc: "Avoir 5 énigmes personnalisées." },
+  { id: "rankExpert",  icon: "🎖️", name: "Vétéran",           desc: "Atteindre le rang Expert." }
 ];
 
 /* Catégories jouables (mode « Par thème ») */
@@ -566,5 +581,5 @@ const SAMSON_CATEGORIES = [
 ];
 
 if (typeof module !== "undefined") {
-  module.exports = { SAMSON_PUZZLES, SAMSON_TIERS, SAMSON_MODES, SAMSON_ACHIEVEMENTS, SAMSON_CATEGORIES };
+  module.exports = { SAMSON_PUZZLES, SAMSON_TIERS, SAMSON_MODES, SAMSON_ACHIEVEMENTS, SAMSON_CATEGORIES, SAMSON_RANKS };
 }

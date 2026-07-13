@@ -22,7 +22,7 @@
     totalCorrect: 0, totalAttempts: 0, totalScore: 0,
     tiers: {}, modeBest: {}, categories: {}, achievements: {},
     leaderboard: [], dailyStreak: 0, lastDailyDate: "", dailyDone: "",
-    survieBest: 0, chronoBest: 0, custom: [],
+    survieBest: 0, chronoBest: 0, custom: [], xp: 0,
     sound: true, theme: "light", kbd: "azerty", anim: true, name: "Joueur"
   };
   const store = {
@@ -83,6 +83,34 @@
     $("#home-best").textContent = store.data.best;
     $("#home-stars").textContent = store.data.totalStars;
     $("#home-daily").textContent = store.data.dailyStreak + "🔥";
+    renderRankBanner();
+  }
+  function currentRank(xp) {
+    let rank = SAMSON_RANKS[0], idx = 0;
+    SAMSON_RANKS.forEach((r, i) => { if (xp >= r.min) { rank = r; idx = i; } });
+    return { rank, idx, next: SAMSON_RANKS[idx + 1] || null };
+  }
+  function renderRankBanner() {
+    const xp = store.data.xp || 0; const { rank, next } = currentRank(xp);
+    const pct = next ? clamp((xp - rank.min) / (next.min - rank.min) * 100, 0, 100) : 100;
+    const info = next ? `${xp} / ${next.min} XP → ${next.icon} ${next.name}` : `Rang maximal · ${xp} XP`;
+    $("#rankBanner").innerHTML = `<span class="r-ico">${rank.icon}</span>
+      <span class="r-meta"><span class="r-name">Rang : ${rank.name}</span>
+      <span class="r-xp">${info}</span>
+      <span class="r-bar"><span class="r-fill" style="width:${pct}%"></span></span></span>`;
+  }
+  function levelUp(rank) {
+    const el = $("#achToast");
+    el.innerHTML = `<span class="at-ico">${rank.icon}</span><div><b>Niveau supérieur !</b><span>Nouveau rang : ${rank.name}</span></div>`;
+    el.classList.add("show"); audio.win(); popConfetti(60);
+    setTimeout(() => el.classList.remove("show"), 3200);
+  }
+  function gainXp(amount) {
+    const d = store.data; const oldIdx = currentRank(d.xp || 0).idx;
+    d.xp = (d.xp || 0) + Math.max(0, Math.round(amount));
+    const nr = currentRank(d.xp);
+    if (nr.idx >= 4) unlock("rankExpert");
+    if (nr.idx > oldIdx) setTimeout(() => levelUp(nr.rank), 400);
   }
   function buildModeGrid() {
     const grid = $("#modeGrid"); grid.innerHTML = "";
@@ -161,7 +189,7 @@
     opts = opts || {};
     game = { mode, tier: opts.tier || null, catFilter: opts.category || null };
     resetRunStats();
-    game.lives = 3; game.useLives = true; game.totalMode = false; game.ramp = false;
+    game.lives = 3; game.useLives = true; game.totalMode = false; game.ramp = false; game.noTimer = false;
     game.duo = null;
 
     if (mode === "parcours") {
@@ -179,6 +207,10 @@
       game.queue = shuffle(list.map(c => ({ id: c.id, name: c.name, hint: c.hint, category: c.category, emoji: c.emoji })));
       game.revealRatio = 0.35; game.timePerQ = 45;
       game.jk = { hint: 3, time: 1, fifty: 1 };
+    } else if (mode === "zen") {
+      game.queue = shuffle(SAMSON_PUZZLES);
+      game.revealRatio = 0.4; game.useLives = false; game.noTimer = true;
+      game.jk = { hint: 99, time: 0, fifty: 99 };
     } else if (mode === "daily") {
       game.queue = dailyQueue();
       game.revealRatio = 0.3; game.timePerQ = 45;
@@ -210,9 +242,11 @@
 
   function setupHud() {
     const m = game.mode;
-    const lbl = $("#hud-mode-lbl"), lvl = $("#hud-level"), livesWrap = $("#hud-lives-wrap"), duo = $("#duoBanner");
+    const lbl = $("#hud-mode-lbl"), livesWrap = $("#hud-lives-wrap"), duo = $("#duoBanner");
     livesWrap.style.display = game.useLives ? "" : "none";
-    if (m === "survie" || m === "chrono") { lbl.textContent = "Trouvés"; }
+    $(".timer-wrap").style.display = game.noTimer ? "none" : "";
+    $("#revealBtn").style.display = (m === "zen") ? "" : "none";
+    if (m === "survie" || m === "chrono" || m === "zen") { lbl.textContent = "Trouvés"; }
     else { lbl.textContent = "Niveau"; }
     if (game.duo) {
       duo.style.display = "block";
@@ -225,7 +259,7 @@
     $("#duoBanner").innerHTML = `👤 ${d.names[d.player - 1]} joue · ${d.names[0]}: ${d.scores[0]} — ${d.names[1]}: ${d.scores[1]}`;
   }
   function updateHud() {
-    if (game.mode === "survie" || game.mode === "chrono") $("#hud-level").textContent = game.correct;
+    if (game.mode === "survie" || game.mode === "chrono" || game.mode === "zen") $("#hud-level").textContent = game.correct;
     else $("#hud-level").textContent = `${game.index + 1}/${game.queue.length}`;
     $("#hud-score").textContent = game.score;
     if (game.useLives) $("#hud-lives").textContent = "❤️".repeat(Math.max(0, game.lives)) + "🖤".repeat(3 - Math.max(0, game.lives));
@@ -251,8 +285,8 @@
 
   /* ---------- Chargement d'une énigme ---------- */
   function loadPuzzle() {
-    // survie : rallonge la file si besoin
-    if (game.mode === "survie" && game.index >= game.queue.length - 1) game.queue = game.queue.concat(shuffle(SAMSON_PUZZLES));
+    // survie / zen : rallonge la file si besoin
+    if ((game.mode === "survie" || game.mode === "zen") && game.index >= game.queue.length - 1) game.queue = game.queue.concat(shuffle(SAMSON_PUZZLES));
     const p = game.queue[game.index];
     game.current = p; game.revealedThisPuzzle = 0;
     const params = puzzleParams();
@@ -266,7 +300,8 @@
     game.mask = buildMask(p.name, params.ratio);
     renderBoxes();
     renderJokers();
-    if (!game.totalMode) startQuestionTimer(params.time);
+    if (game.noTimer) { /* pas de minuteur en mode Zen */ }
+    else if (!game.totalMode) startQuestionTimer(params.time);
     else updateTimerBar();
     focusFirstEmpty();
   }
@@ -337,9 +372,10 @@
 
   /* ---------- Jokers ---------- */
   function renderJokers() {
-    $("#cntHint").textContent = game.jk.hint;
-    $("#cntTime").textContent = game.jk.time;
-    $("#cntFifty").textContent = game.jk.fifty;
+    const disp = n => n >= 99 ? "∞" : n;
+    $("#cntHint").textContent = disp(game.jk.hint);
+    $("#cntTime").textContent = disp(game.jk.time);
+    $("#cntFifty").textContent = disp(game.jk.fifty);
     $("#jkHint").disabled = game.jk.hint <= 0;
     $("#jkTime").disabled = game.jk.time <= 0;
     $("#jkFifty").disabled = game.jk.fifty <= 0 || editableBoxes().filter(b => !b.value).length <= 1;
@@ -347,7 +383,8 @@
   $("#jkHint").addEventListener("click", () => {
     if (game.jk.hint <= 0) return;
     const empty = editableBoxes().find(b => !b.value);
-    game.jk.hint--; game.hintsUsedGame++; game.revealedThisPuzzle++;
+    if (game.jk.hint < 99) game.jk.hint--;
+    game.hintsUsedGame++; game.revealedThisPuzzle++;
     if (empty) { empty.value = game.mask[+empty.dataset.i].char; empty.classList.add("filled"); toast("💡 Lettre révélée"); }
     else { $("#hintText").classList.add("show"); toast("💡 Indice affiché"); }
     audio.power(); renderJokers(); focusFirstEmpty();
@@ -363,13 +400,22 @@
     if (game.jk.fifty <= 0) return;
     const empties = editableBoxes().filter(b => !b.value);
     if (empties.length <= 1) return;
-    game.jk.fifty--;
+    if (game.jk.fifty < 99) game.jk.fifty--;
     const n = Math.ceil(empties.length / 2);
     shuffle(empties).slice(0, n).forEach(b => { b.value = game.mask[+b.dataset.i].char; b.classList.add("filled"); });
     game.revealedThisPuzzle += n;
     toast("🎯 Moitié révélée !"); audio.power(); renderJokers(); focusFirstEmpty();
   });
   $("#jkSkip").addEventListener("click", () => { game.combo = 0; hideCombo(); toast("Énigme passée"); nextPuzzle(); });
+
+  /* Bouton « Révéler la réponse » (mode Zen) */
+  $("#revealBtn").addEventListener("click", () => {
+    if (game.ended || !game.current) return;
+    stopTimer(); game.combo = 0; hideCombo();
+    game.mask.forEach((m, i) => { const b = game.boxes[i]; if (b) { b.value = m.char; b.classList.add("given"); } });
+    const fb = $("#feedback"); fb.textContent = `👁️ La réponse était « ${game.current.name} »`; fb.className = "feedback";
+    setTimeout(nextPuzzle, 1300);
+  });
 
   /* ---------- Clavier virtuel ---------- */
   function buildKeyboard() {
@@ -419,7 +465,7 @@
     if (!game.totalMode) stopTimer();
     game.correct++; game.combo++; game.maxCombo = Math.max(game.maxCombo, game.combo);
     const cat = game.current.category || "objet"; game.solvedCats[cat] = (game.solvedCats[cat] || 0) + 1;
-    const timeBonus = game.totalMode ? 40 : Math.round(game.timeLeft * 4);
+    const timeBonus = game.noTimer ? 20 : game.totalMode ? 40 : Math.round(game.timeLeft * 4);
     const comboMult = 1 + (game.combo - 1) * 0.25;
     const gained = Math.max(20, Math.round((100 + timeBonus) * comboMult) - game.revealedThisPuzzle * 25);
     game.score += gained;
@@ -463,7 +509,7 @@
     if (game.ended) return;
     game.index++;
     // Fin de la file
-    if (game.mode !== "survie" && game.index >= game.queue.length) {
+    if (game.mode !== "survie" && game.mode !== "zen" && game.index >= game.queue.length) {
       if (game.duo && game.duo.player === 1) { endDuoRun(); return; }
       endGame(true); return;
     }
@@ -554,6 +600,8 @@
       d.leaderboard.push({ name: d.name || "Joueur", score: game.score, mode: game.mode, date: todayStr() });
       d.leaderboard.sort((a, b) => b.score - a.score); d.leaderboard = d.leaderboard.slice(0, 10);
     }
+    // Points d'expérience
+    gainXp(game.score / 10 + game.correct * 3);
     store.save(); refreshHome();
 
     // --- Affichage ---
@@ -576,7 +624,9 @@
   }
 
   function showDuoResult() {
-    const d = game.duo; store.data.gamesPlayed++; store.save(); refreshHome();
+    const d = game.duo; store.data.gamesPlayed++;
+    gainXp(Math.max(d.scores[0], d.scores[1]) / 10);
+    store.save(); refreshHome();
     const [s1, s2] = d.scores; const win = s1 === s2 ? null : (s1 > s2 ? 0 : 1);
     $("#resultIcon").textContent = win === null ? "🤝" : "🏆";
     $("#resultTitle").textContent = win === null ? "Égalité !" : `${d.names[win]} gagne !`;
@@ -612,8 +662,10 @@
     const winRate = d.gamesPlayed ? Math.round(d.wins / d.gamesPlayed * 100) : 0;
     const acc = d.totalAttempts ? Math.round(d.totalCorrect / d.totalAttempts * 100) : 0;
     let favCat = "—", favN = 0; Object.entries(d.categories).forEach(([c, n]) => { if (n > favN) { favN = n; favCat = c; } });
+    const rk = currentRank(d.xp || 0);
     $("#statsHello").textContent = `Salut ${d.name || "Joueur"} ! Voici ton bilan.`;
     $("#statsGrid").innerHTML = [
+      ["Rang", `${rk.rank.icon} ${rk.rank.name}`], ["XP total", d.xp || 0],
       ["Parties", d.gamesPlayed], ["Meilleur score", d.best],
       ["Précision", acc + "%"], ["Combo record", "x" + d.bestCombo],
       ["Bonnes réponses", d.totalCorrect], ["Catégorie favorite", favCat]
@@ -690,11 +742,50 @@
     if (!/[a-zA-ZÀ-ÿ0-9]/.test(name)) { toast("Entre un mot valide 🙂"); $("#edName").focus(); return; }
     const puzzle = { id: "c" + Date.now(), name, hint: $("#edHint").value.trim(), category: editorCat(), emoji: ($("#edEmoji").value.trim() || "🖼️") };
     store.data.custom = store.data.custom || []; store.data.custom.push(puzzle); store.save();
-    unlock("creator"); audio.good();
+    unlock("creator"); checkCollector(); audio.good();
     $("#edName").value = ""; $("#edHint").value = ""; $("#edEmoji").value = "🖼️";
     renderCustomList(); toast("✅ Énigme ajoutée !");
   });
   $("#edPlay").addEventListener("click", () => { audio.ensure(); startMode("custom"); });
+  function checkCollector() { if ((store.data.custom || []).length >= 5) unlock("collector"); }
+
+  /* Import / Export des packs d'énigmes */
+  function copyText(text) {
+    if (navigator.clipboard) return navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+    return Promise.resolve(fallbackCopy(text));
+  }
+  function fallbackCopy(text) { try { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); return true; } catch (e) { return false; } }
+  $("#edExport").addEventListener("click", () => {
+    const list = store.data.custom || [];
+    if (!list.length) { toast("Aucune énigme à exporter"); return; }
+    const slim = list.map(c => ({ name: c.name, hint: c.hint, category: c.category, emoji: c.emoji }));
+    const code = "SAMSON1:" + btoa(unescape(encodeURIComponent(JSON.stringify(slim))));
+    copyText(code).then(() => toast("📤 Code copié dans le presse-papiers !"));
+    setTimeout(() => prompt("Ton code de partage (copie-le) :", code), 60);
+  });
+  $("#edImport").addEventListener("click", () => {
+    const code = prompt("Colle un code d'énigmes Samson :");
+    if (!code) return;
+    try {
+      const raw = code.trim().replace(/^SAMSON1:/, "");
+      const arr = JSON.parse(decodeURIComponent(escape(atob(raw))));
+      if (!Array.isArray(arr)) throw new Error("format");
+      let added = 0;
+      arr.forEach(p => {
+        if (p && p.name && /[a-zA-ZÀ-ÿ0-9]/.test(String(p.name))) {
+          store.data.custom.push({
+            id: "c" + Date.now() + Math.random().toString(36).slice(2, 6),
+            name: String(p.name).slice(0, 20), hint: String(p.hint || "").slice(0, 60),
+            category: ["objet", "animal", "nature"].includes(p.category) ? p.category : "objet",
+            emoji: String(p.emoji || "🖼️").slice(0, 4)
+          }); added++;
+        }
+      });
+      store.save(); renderCustomList(); checkCollector();
+      toast(added ? `📥 ${added} énigme(s) importée(s) !` : "Aucune énigme valide dans ce code");
+      if (added) audio.good();
+    } catch (e) { toast("Code invalide 😕"); }
+  });
 
   /* ---------- Confetti ---------- */
   const confetti = (() => {
@@ -738,7 +829,11 @@
     else startMode(game.mode);
   });
   $("#homeBtn").addEventListener("click", () => { refreshHome(); buildModeGrid(); screens.show("home"); });
-  $("#quitBtn").addEventListener("click", () => { if (confirm("Quitter la partie en cours ?")) { game.ended = true; stopTimer(); refreshHome(); buildModeGrid(); screens.show("home"); } });
+  $("#quitBtn").addEventListener("click", () => {
+    if (!confirm("Quitter la partie en cours ?")) return;
+    if (game.mode === "zen" && !game.ended && game.correct > 0) { endGame(true); return; }
+    game.ended = true; stopTimer(); refreshHome(); buildModeGrid(); screens.show("home");
+  });
 
   /* ---------- PWA (installation / hors-ligne) ---------- */
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.protocol === "http:")) {

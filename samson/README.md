@@ -24,7 +24,7 @@ samson/
 └── icon.svg      # icône de l'application
 ```
 
-## 🎮 7 modes de jeu
+## 🎮 8 modes de jeu
 
 | Mode | Description |
 |------|-------------|
@@ -33,8 +33,15 @@ samson/
 | ♾️ **Survie** | Enchaînement infini, 3 vies, difficulté et temps qui se durcissent. |
 | ⏱️ **Contre-la-montre** | 90 secondes chrono : marquer un maximum, chaque bonne réponse ajoute du temps. |
 | 👥 **Duo** | 2 joueurs à tour de rôle (avec écran de passation), le meilleur score gagne. |
+| 🧘 **Zen** | Entraînement sans minuteur ni vies, jokers illimités et bouton « Révéler ». |
 | 🎯 **Par thème** | Joue une seule catégorie : animaux, nature ou objets. |
-| 🎨 **Mes énigmes** | **Crée tes propres devinettes** (mot + emoji + indice) et joue-les ! |
+| 🎨 **Mes énigmes** | **Crée tes propres devinettes** (mot + emoji + indice), avec import/export de packs ! |
+
+## 🎖️ Progression du joueur
+
+Chaque partie rapporte de l'**XP** et fait grimper ton **rang** : 🥚 Débutant →
+🌱 Apprenti → 🎯 Amateur → ⭐ Habitué → 🔥 Expert → 💎 Champion → 👑 Maître → 🏆 Légende,
+avec une notification à chaque niveau supérieur.
 
 ## ✨ Fonctionnalités & innovations
 
@@ -42,9 +49,11 @@ samson/
 - **53 illustrations vectorielles SVG** dessinées à la main (aucune image externe).
 - **3 jokers** : 💡 révéler une lettre · ❄️ +10 secondes · 🎯 dévoiler la moitié du mot.
 - **Éditeur d'énigmes** : crée tes propres devinettes avec un emoji comme image, stockées localement.
+- **Import / export de packs** : partage tes énigmes personnalisées via un code.
+- **Système d'XP et de rangs** : progresse et débloque de nouveaux titres.
 - **Score dynamique** : bonus de temps + **multiplicateur de combo** − coût des jokers.
 - **Vies** ❤️, **minuteur** (par question ou global selon le mode) avec alerte.
-- **14 succès / trophées** débloquables avec notifications animées.
+- **16 succès / trophées** débloquables avec notifications animées.
 - **Statistiques** détaillées : parties, précision, combo record, catégorie favorite…
 - **Classement local** : les 10 meilleures parties tous modes confondus.
 - **Réglages** : nom du joueur, clavier **AZERTY/QWERTY**, sons, animations, réinitialisation.
