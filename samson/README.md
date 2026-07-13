@@ -19,7 +19,7 @@ samson/
 ├── style.css     # thème clair/sombre, animations, responsive
 ├── game.js       # logique complète (modes, jokers, succès, stats…)
 ├── data.js       # 53 énigmes (SVG + noms), modes, succès, rangs
-├── culture.js    # 81 questions de culture (9 matières, tous continents)
+├── culture.js    # 158 questions de culture (14 matières, tous continents)
 ├── manifest.json # métadonnées PWA
 ├── sw.js         # service worker (jeu hors-ligne)
 └── icon.svg      # icône de l'application
@@ -31,7 +31,7 @@ samson/
 |------|-------------|
 | 🗺️ **Parcours** | 4 paliers (Facile, Moyen, Difficile, Expert), étoiles à gagner. |
 | 📅 **Défi du jour** | 8 énigmes déterministes, identiques pour tous le même jour, avec **série quotidienne** 🔥. |
-| 🎓 **Culture & Matières** | **Quiz éducatif** : littérature, histoire, philosophie, informatique, économie, géographie, sciences, arts, section enfants — avec des figures de **tous les continents**. |
+| 🎓 **Culture & Matières** | **Quiz éducatif** : 14 matières (littérature, histoire, philosophie, informatique, économie, géographie, sciences, arts, maths, sport, religions, langues, civisme, enfants) — avec des figures de **tous les continents**. |
 | ♾️ **Survie** | Enchaînement infini, 3 vies, difficulté et temps qui se durcissent. |
 | ⏱️ **Contre-la-montre** | 90 secondes chrono : marquer un maximum, chaque bonne réponse ajoute du temps. |
 | 👥 **Duo** | 2 joueurs à tour de rôle (avec écran de passation), le meilleur score gagne. |
@@ -41,15 +41,18 @@ samson/
 
 ## 🎓 Mode « Culture & Matières »
 
-Un véritable quiz éducatif **pour tout âge**, avec **81 questions** réparties en **9 matières** :
-📖 Littérature · 🏛️ Histoire · 🧠 Philosophie · 💻 Informatique · 💰 Économie ·
-🌍 Géographie · 🔬 Sciences · 🎨 Arts & Musique · 🧒 Pour enfants.
+Un véritable quiz éducatif **pour tout âge**, avec **158 questions** réparties en **14 matières** :
+📖 Littérature · 🏛️ Histoire · 🧠 Philosophie · 💻 Informatique · 💰 Économie · 🌍 Géographie ·
+🔬 Sciences · 🎨 Arts & Musique · 🔢 Mathématiques · ⚽ Sport · 🕊️ Religions & cultures ·
+🗣️ Langues · ⚖️ Civisme · 🧒 Pour enfants.
 
 Le contenu met en avant la **diversité de tous les continents** (Afrique, Asie, Amérique,
 Europe, Océanie) : Chinua Achebe, Mariama Bâ, Soundiata Keïta, Mansa Moussa, Cheikh Anta
-Diop, Fela Kuti, Miriam Makeba, Tagore, García Márquez, Bolívar, Toussaint Louverture… aux
-côtés des grands repères européens. Chaque question affiche un énoncé, une icône, la matière
-et le **continent** concerné. Les questions sont facilement extensibles dans `culture.js`.
+Diop, Ubuntu, Fela Kuti, Miriam Makeba, Youssou N'Dour, Drogba, Kipchoge, Shaka Zulu,
+Senghor, Soyinka, le swahili, le wolof, le vaudou, l'Union africaine… aux côtés de Tagore,
+García Márquez, Bolívar, Toussaint Louverture, Frida Kahlo, Al-Khwârizmî, Confucius et des
+grands repères européens. Chaque question affiche un énoncé, une icône, la matière et le
+**continent** concerné. Les questions sont facilement extensibles dans `culture.js`.
 
 ## 🎖️ Progression du joueur
 
