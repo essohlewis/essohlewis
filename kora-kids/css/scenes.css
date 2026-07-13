@@ -50,6 +50,39 @@
   display: flex; align-items: center; gap: 12px; }
 .reward .earned svg { width: 1em; height: 1em; }
 .reward .actions { display: flex; gap: var(--sp-4); }
+.reward .dancer { background: none; border: none; }
+.unlock-banner {
+  background: var(--reward); color: var(--c-nuit); font-weight: 800;
+  font-size: clamp(15px, 2.4vw, 20px); padding: 12px 22px; border-radius: var(--radius-lg);
+  box-shadow: var(--shadow); max-width: 620px; text-align: center;
+  animation: pop 500ms var(--t-med);
+}
+
+/* ---------- Garde-robe (avatar) ---------- */
+.wardrobe .stage { justify-content: flex-start; gap: var(--sp-4); }
+.big-avatar { width: clamp(130px, 30vh, 220px); flex: 0 0 auto; }
+.big-avatar svg { width: 100%; }
+.acc-grid {
+  display: grid; gap: clamp(10px, 2vw, 20px);
+  grid-template-columns: repeat(3, 1fr); width: 100%; max-width: 620px;
+}
+@media (min-width: 720px) { .acc-grid { grid-template-columns: repeat(6, 1fr); } }
+.acc-card {
+  position: relative; background: var(--surface); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 8px; display: grid; gap: 4px; justify-items: center;
+  transition: transform var(--t-fast), box-shadow var(--t-med); min-height: var(--tap);
+}
+.acc-card:active { transform: scale(.94); }
+.acc-card .acc-av { width: clamp(56px, 12vw, 84px); }
+.acc-card .acc-av svg { width: 100%; }
+.acc-label { font-size: clamp(13px, 2vw, 16px); font-weight: 800; text-align: center; }
+.acc-card.worn { box-shadow: 0 0 0 4px var(--success), var(--shadow); }
+.acc-card.locked .acc-av { opacity: .4; filter: grayscale(.7); }
+.acc-check { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px;
+  border-radius: 50%; background: var(--success); color: #fff; display: none; place-items: center; }
+.acc-check svg { width: 16px; height: 16px; }
+.acc-card.worn .acc-check { display: grid; }
+.acc-lock { display: inline-flex; align-items: center; gap: 4px; font-weight: 900; color: var(--ink-soft); }
 
 /* ---------- Zone de glisser (drop) générique ---------- */
 .drop-zone {

@@ -1,7 +1,7 @@
 /* Service Worker — KORA KIDS
    Stratégie cache-first : après le premier chargement, aucune requête réseau. */
 
-const CACHE = "kora-kids-v2";
+const CACHE = "kora-kids-v3";
 
 /* Coquille + tous les modules et données à mettre en cache dès l'installation. */
 const SHELL = [
@@ -25,6 +25,7 @@ const SHELL = [
   "./js/scenes/map.js",
   "./js/scenes/parent.js",
   "./js/scenes/reward.js",
+  "./js/scenes/avatar.js",
   "./js/games/animaux.js",
   "./js/games/marche.js",
   "./js/games/alphabet.js",

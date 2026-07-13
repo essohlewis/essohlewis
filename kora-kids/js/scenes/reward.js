@@ -18,9 +18,14 @@ export default function reward(scene, params, { go }) {
   const stage = document.createElement("div"); stage.className = "stage";
   scene.appendChild(stage);
 
-  // Avatar qui danse.
-  const dancer = document.createElement("div"); dancer.className = "dancer bob";
-  dancer.appendChild(avatar(idx, profile ? accFromProfile(profile) : {}));
+  // Accessoires débloqués juste à l'instant (récupérés une seule fois).
+  const nouveaux = Store.takeJustUnlocked();
+
+  // Avatar qui danse — cliquable pour aller à la garde-robe.
+  const dancer = document.createElement("button"); dancer.className = "dancer bob";
+  dancer.setAttribute("aria-label", "Habiller mon avatar");
+  dancer.appendChild(avatar(idx, profile ? accFromProfile(profile) : []));
+  onTap(dancer, () => { Audio.play("tap"); go("avatar"); });
   stage.appendChild(dancer);
 
   // Compteur d'étoiles gagnées.
@@ -50,13 +55,23 @@ export default function reward(scene, params, { go }) {
   };
   setTimeout(rain, 400);
 
-  // Info déblocage d'accessoire.
-  const next = Store.nextUnlock(profile);
-  if (next) {
-    const hint = document.createElement("div");
-    hint.style.cssText = "font-size:18px;color:var(--ink-soft);font-weight:700";
-    hint.textContent = `Encore ${next.need - next.have} ⭐ pour un nouvel accessoire !`;
-    stage.appendChild(hint);
+  // Nouvel accessoire débloqué ? Célébration + accès direct à la garde-robe.
+  if (nouveaux.length) {
+    const noms = nouveaux.map(id => (Store.ACCESSOIRES.find(a => a.id === id) || {}).nom || id);
+    const banner = document.createElement("button");
+    banner.className = "unlock-banner";
+    banner.innerHTML = `🎁 Nouveau ! Tu as débloqué <b>${noms.join(", ")}</b> — touche pour l'essayer`;
+    onTap(banner, () => { Audio.play("tap"); go("avatar"); });
+    stage.appendChild(banner);
+    setTimeout(() => Audio.speak(`Bravo ! Tu as débloqué ${noms.join(" et ")} ! Touche ton avatar pour l'habiller.`), 1400);
+  } else {
+    const next = Store.nextUnlock(profile);
+    if (next) {
+      const hint = document.createElement("div");
+      hint.style.cssText = "font-size:18px;color:var(--ink-soft);font-weight:700";
+      hint.textContent = `Encore ${next.need - next.have} ⭐ pour un nouvel accessoire !`;
+      stage.appendChild(hint);
+    }
   }
 }
 

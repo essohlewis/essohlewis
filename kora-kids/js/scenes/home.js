@@ -71,7 +71,5 @@ function bigPlus() {
   return `<svg viewBox="0 0 100 100" style="width:60%"><path d="M50 24v52M24 50h52" stroke="currentColor" stroke-width="12" stroke-linecap="round"/></svg>`;
 }
 
-export function accFromProfile(p) {
-  const a = p.accessoires || [];
-  return { hat: a.includes("chapeau"), glasses: a.includes("lunettes"), scarf: a.includes("pagne") || a.includes("collier") };
-}
+/* Accessoires actuellement portés par l'enfant (garde-robe). */
+export function accFromProfile(p) { return (p && p.porte) || []; }

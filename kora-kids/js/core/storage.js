@@ -25,7 +25,13 @@ function load() {
 function migrate(data) {
   if (!data.version) data.version = 1;
   // Futures migrations : if (data.version < 2) { … data.version = 2; }
-  return { ...structuredClone(DEFAULT), ...data, settings: { ...DEFAULT.settings, ...(data.settings || {}) } };
+  const merged = { ...structuredClone(DEFAULT), ...data, settings: { ...DEFAULT.settings, ...(data.settings || {}) } };
+  // Compat : garde-robe. Les profils antérieurs portent d'emblée ce qu'ils ont débloqué.
+  (merged.profiles || []).forEach(p => {
+    if (!Array.isArray(p.accessoires)) p.accessoires = [];
+    if (!Array.isArray(p.porte)) p.porte = p.accessoires.slice();
+  });
+  return merged;
 }
 
 function persist() {
@@ -37,7 +43,7 @@ export function getProfiles() { return state.profiles; }
 
 export function addProfile({ nom, avatar, palier }) {
   const id = "p" + Date.now().toString(36);
-  const p = { id, nom, avatar, palier, etoiles: {}, accessoires: [], sessions: [] };
+  const p = { id, nom, avatar, palier, etoiles: {}, accessoires: [], porte: [], sessions: [] };
   state.profiles.push(p); persist(); return p;
 }
 export function updateProfile(id, patch) {
@@ -57,7 +63,8 @@ export function getActive() { return state.profiles.find(p => p.id === state.act
 export function addStars(gameId, n) {
   const p = getActive(); if (!p) return 0;
   p.etoiles[gameId] = (p.etoiles[gameId] || 0) + n;
-  checkUnlocks(p);
+  const nouveaux = checkUnlocks(p);
+  if (nouveaux.length) _justUnlocked = nouveaux;
   persist();
   return totalStars(p);
 }
@@ -69,19 +76,52 @@ export function starsFor(gameId, p = getActive()) {
   return (p && p.etoiles[gameId]) || 0;
 }
 
-const UNLOCK_TIERS = [20, 50, 100, 200, 350, 500];
-const ACCESSORIES = ["chapeau", "pagne", "sac", "lunettes", "ballon", "collier"];
+/* Accessoires d'avatar et leurs paliers de déblocage (en étoiles totales). */
+export const ACCESSOIRES = [
+  { id: "chapeau",  nom: "le chapeau",   tier: 20 },
+  { id: "pagne",    nom: "le pagne",     tier: 50 },
+  { id: "sac",      nom: "le sac",       tier: 100 },
+  { id: "lunettes", nom: "les lunettes", tier: 200 },
+  { id: "ballon",   nom: "le ballon",    tier: 350 },
+  { id: "collier",  nom: "le collier",   tier: 500 }
+];
+
+/* Débloque les accessoires atteints et les équipe automatiquement (effet « waouh »).
+   Renvoie la liste des accessoires nouvellement débloqués ce coup-ci. */
 function checkUnlocks(p) {
   const total = totalStars(p);
-  UNLOCK_TIERS.forEach((tier, i) => {
-    if (total >= tier && !p.accessoires.includes(ACCESSORIES[i])) p.accessoires.push(ACCESSORIES[i]);
+  const nouveaux = [];
+  ACCESSOIRES.forEach(({ id, tier }) => {
+    if (total >= tier && !p.accessoires.includes(id)) {
+      p.accessoires.push(id);
+      if (!p.porte) p.porte = [];
+      p.porte.push(id);                 // porté d'emblée
+      nouveaux.push(id);
+    }
   });
+  return nouveaux;
 }
 export function nextUnlock(p = getActive()) {
   const total = totalStars(p);
-  const tier = UNLOCK_TIERS.find(t => total < t);
-  return tier ? { need: tier, have: total } : null;
+  const acc = ACCESSOIRES.find(a => total < a.tier);
+  return acc ? { need: acc.tier, have: total, id: acc.id } : null;
 }
+
+/* ---------- Accessoires portés (garde-robe) ---------- */
+export function isUnlocked(id, p = getActive()) { return !!(p && p.accessoires.includes(id)); }
+export function getWorn(p = getActive()) { return (p && p.porte) || []; }
+export function isWorn(id, p = getActive()) { return getWorn(p).includes(id); }
+export function toggleWorn(id) {
+  const p = getActive(); if (!p || !p.accessoires.includes(id)) return getWorn(p);
+  if (!p.porte) p.porte = [];
+  const i = p.porte.indexOf(id);
+  if (i >= 0) p.porte.splice(i, 1); else p.porte.push(id);
+  persist();
+  return p.porte;
+}
+/* Accessoires nouvellement débloqués lors du dernier ajout d'étoiles. */
+let _justUnlocked = [];
+export function takeJustUnlocked() { const n = _justUnlocked; _justUnlocked = []; return n; }
 
 /* ---------- Sessions (temps de jeu / jour) ---------- */
 export function logSession(minutes) {
@@ -112,5 +152,6 @@ export function resetAll() { state = structuredClone(DEFAULT); persist(); }
 export default {
   getProfiles, addProfile, updateProfile, removeProfile, setActive, getActive,
   addStars, totalStars, starsFor, nextUnlock, logSession, todayMinutes,
-  getSettings, setSettings, resetProgress, resetAll
+  getSettings, setSettings, resetProgress, resetAll,
+  ACCESSOIRES, isUnlocked, getWorn, isWorn, toggleWorn, takeJustUnlocked
 };

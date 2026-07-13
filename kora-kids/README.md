@@ -41,7 +41,10 @@ fonctionne entièrement hors-ligne** et s'installe comme une application
   6. **Puzzle Progressif** — 4 / 9 / 16 pièces, image en filigrane.
 - **Espace parent verrouillé** : profils (CRUD), tableau de progression,
   réglages (volumes, mode soir, minuteur de session), réinitialisation.
-- **Récompenses** : étoiles + accessoires d'avatar débloqués par paliers.
+- **Récompenses** : étoiles + **garde-robe d'avatar** — l'enfant habille son
+  avatar (chapeau, pagne, sac, lunettes, ballon, collier) débloqués par paliers
+  (20 / 50 / 100 / 200 / 350 / 500 ⭐). Accessible depuis la carte et l'écran de
+  récompense (célébration au déblocage).
 - **Manifest + Service Worker** (cache-first) + icônes maskable.
 
 ---

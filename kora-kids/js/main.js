@@ -10,6 +10,7 @@ import home from "./scenes/home.js";
 import map from "./scenes/map.js";
 import parent from "./scenes/parent.js";
 import reward from "./scenes/reward.js";
+import avatarScene from "./scenes/avatar.js";
 
 // Modules de jeux (chargés statiquement — tout est en cache hors-ligne).
 import animaux from "./games/animaux.js";
@@ -26,6 +27,7 @@ Router.register("home", home);
 Router.register("map", map);
 Router.register("parent", parent);
 Router.register("reward", reward);
+Router.register("avatar", avatarScene);
 
 // Route générique "game" : dispatche vers le bon mini-jeu.
 Router.register("game", (scene, params, ctx) => {

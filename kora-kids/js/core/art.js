@@ -35,23 +35,38 @@ export function icon(name) { return svg(ICONS[name] || ICONS.star, { cls: "icon"
 /* ---------- Étoile de récompense (couleur or) ---------- */
 export function starSVG() { return svg(`<path d="M50 8l12 26 28 3-21 19 6 28-25-15-25 15 6-28L9 37l28-3z" fill="var(--reward)" stroke="#e0a800" stroke-width="2"/>`); }
 
-/* ---------- Avatars enfants (5 variantes colorées) ---------- */
+/* ---------- Avatars enfants (5 variantes colorées) ----------
+   `worn` : liste d'accessoires portés (chapeau, pagne, sac, lunettes, ballon,
+   collier). Rétro-compat : accepte aussi l'ancien objet {hat,glasses,scarf}. */
 const AV_SKIN = ["#7a4a2b", "#8d5a34", "#a06a3e"];
 const AV_HAIR = ["#1B2432", "#2b2018", "#3a2a1a"];
-export function avatar(seed = 0, { hat = false, glasses = false, scarf = false } = {}) {
+export function avatar(seed = 0, worn = []) {
+  if (worn && !Array.isArray(worn)) {         // compat ancien objet
+    const o = worn; worn = [];
+    if (o.hat) worn.push("chapeau"); if (o.glasses) worn.push("lunettes"); if (o.scarf) worn.push("pagne");
+  }
+  const has = (id) => worn.includes(id);
   const skin = AV_SKIN[seed % AV_SKIN.length];
   const hair = AV_HAIR[(seed + 1) % AV_HAIR.length];
   const shirt = ["#FF9F1C", "#2EC4B6", "#E71D36", "#FFD166", "#6A4C93"][seed % 5];
+
+  const sac = has("sac") ? `<path d="M42 62 26 86" stroke="#5a3a20" stroke-width="4" fill="none"/><rect x="14" y="80" width="22" height="18" rx="5" fill="#E71D36"/><rect x="20" y="80" width="10" height="6" rx="3" fill="#a81026"/>` : "";
+  const ballon = has("ballon") ? `<circle cx="84" cy="90" r="11" fill="#2EC4B6"/><path d="M73 90h22M84 79v22" stroke="#1B2432" stroke-width="2.5"/>` : "";
+  const pagne = has("pagne") ? `<path d="M30 64 66 90 60 99 24 73z" fill="#FF9F1C"/><path d="M33 68 63 90M28 74 58 96" stroke="#E71D36" stroke-width="3"/>` : "";
+  const collier = has("collier") ? `<g fill="#FFD166" stroke="#e0a800" stroke-width="1.5"><circle cx="38" cy="67" r="3.2"/><circle cx="44" cy="72" r="3.2"/><circle cx="50" cy="74" r="3.4"/><circle cx="56" cy="72" r="3.2"/><circle cx="62" cy="67" r="3.2"/></g>` : "";
+  const lunettes = has("lunettes") ? `<path d="M49 46h2" stroke="#1B2432" stroke-width="3"/><circle cx="41" cy="46" r="8" fill="rgba(255,255,255,.25)" stroke="#1B2432" stroke-width="3"/><circle cx="59" cy="46" r="8" fill="rgba(255,255,255,.25)" stroke="#1B2432" stroke-width="3"/><path d="M33 45h-6M67 45h6" stroke="#1B2432" stroke-width="3"/>` : "";
+  const chapeau = has("chapeau") ? `<path d="M24 30h52l-6-14H30z" fill="#2EC4B6"/><rect x="18" y="28" width="64" height="8" rx="4" fill="#1B2432"/>` : "";
+
   return svg(`
+    ${sac}${ballon}
     <circle cx="50" cy="86" r="34" fill="${shirt}"/>
-    ${scarf ? `<path d="M24 74q26 18 52 0v10q-26 16-52 0z" fill="#E71D36"/>` : ""}
+    ${pagne}${collier}
     <circle cx="50" cy="46" r="26" fill="${skin}"/>
     <path d="M24 44a26 26 0 0 1 52 0q-8-10-26-10T24 44z" fill="${hair}"/>
     <circle cx="41" cy="46" r="4" fill="#1B2432"/>
     <circle cx="59" cy="46" r="4" fill="#1B2432"/>
     <path d="M42 58q8 7 16 0" fill="none" stroke="#1B2432" stroke-width="3" stroke-linecap="round"/>
-    ${glasses ? `<path d="M33 46h10M57 46h10M43 46h14" fill="none" stroke="#1B2432" stroke-width="3"/><circle cx="41" cy="46" r="8" fill="none" stroke="#1B2432" stroke-width="3"/><circle cx="59" cy="46" r="8" fill="none" stroke="#1B2432" stroke-width="3"/>` : ""}
-    ${hat ? `<path d="M24 30h52l-6-14H30z" fill="#2EC4B6"/><rect x="20" y="28" width="60" height="8" rx="4" fill="#1B2432"/>` : ""}
+    ${lunettes}${chapeau}
   `);
 }
 
