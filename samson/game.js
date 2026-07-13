@@ -10,6 +10,7 @@
   const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
   const norm = (s) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
   const isLetter = (c) => /[a-zA-ZÀ-ÿ0-9]/.test(c);
+  const escapeHtml = (s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const todayStr = () => new Date().toISOString().slice(0, 10);
   const shuffle = (arr) => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   function mulberry32(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -22,7 +23,7 @@
     totalCorrect: 0, totalAttempts: 0, totalScore: 0,
     tiers: {}, modeBest: {}, categories: {}, achievements: {},
     leaderboard: [], dailyStreak: 0, lastDailyDate: "", dailyDone: "",
-    survieBest: 0, chronoBest: 0, custom: [], xp: 0, finishedDomains: [],
+    survieBest: 0, chronoBest: 0, custom: [], xp: 0, finishedDomains: [], examBest: {},
     sound: true, theme: "light", kbd: "azerty", anim: true, name: "Joueur", answerMode: "letters"
   };
   const store = {
@@ -160,6 +161,7 @@
   async function onModeClick(id) {
     if (id === "parcours") { buildTierGrid(); screens.show("levels"); return; }
     if (id === "culture") { buildDomainGrid(); screens.show("domains"); return; }
+    if (id === "examen") { buildExamGrid(); screens.show("exam"); return; }
     if (id === "category") { buildCatGrid(); screens.show("category"); return; }
     if (id === "custom") { showEditor(); return; }
     if (id === "daily" && store.data.dailyDone === todayStr()) {
@@ -217,6 +219,107 @@
       card.addEventListener("click", () => { audio.ensure(); startMode("culture", { domain: dom.id }); });
       grid.appendChild(card);
     });
+  }
+
+  /* ---------- Mode Examen (noté sur 20, bulletin + correction) ---------- */
+  function buildExamGrid() {
+    const grid = $("#examGrid"); grid.innerHTML = "";
+    const bests = store.data.examBest || {};
+    const addCard = (id, icon, color, label, desc) => {
+      const best = bests[id];
+      const card = document.createElement("button");
+      card.className = "tier-card"; card.type = "button";
+      card.innerHTML = `<span class="bar" style="background:${color}"></span>
+        <span class="tier-icon">${icon}</span>
+        <span class="tier-meta"><h3>${label}</h3><p>${desc}</p>
+        <span class="tier-stars">${best != null ? "Meilleure note : " + fmtNote(best) + "/20" : "Pas encore passé"}</span></span>`;
+      card.addEventListener("click", () => { audio.ensure(); startExam(id); });
+      grid.appendChild(card);
+    };
+    addCard("all", "🎓", "#0f766e", "Toutes les matières", "Examen général, questions variées");
+    SAMSON_DOMAINS.filter(d => SAMSON_QUIZ.filter(q => q.domain === d.id).length >= 4)
+      .forEach(d => addCard(d.id, d.icon, d.color, d.label, d.desc));
+  }
+
+  function startExam(domain) {
+    const pool = domain === "all" ? SAMSON_QUIZ : SAMSON_QUIZ.filter(q => q.domain === domain);
+    const n = Math.min(10, pool.length);
+    game = { mode: "examen", examDomain: domain };
+    resetRunStats();
+    game.useLives = false; game.totalMode = false; game.noTimer = false; game.ramp = false;
+    game.duo = null; game.examMode = true; game.examResults = [];
+    game.queue = shuffle(pool).slice(0, n);
+    game.revealRatio = 0.25; game.timePerQ = 40;
+    game.jk = { hint: 0, time: 0, fifty: 0 }; game.jkBase = { hint: 0, time: 0, fifty: 0 };
+    game.answerMode = store.data.answerMode || "letters";
+    game.optionPool = SAMSON_QUIZ;
+    screens.show("play");
+    setupHud();
+    loadPuzzle();
+  }
+
+  function examRecord(userAnswer) {
+    if (game.ended) return;
+    stopTimer();
+    const p = game.current;
+    const clean = (userAnswer == null) ? "" : String(userAnswer).replace(/\s+/g, " ").trim();
+    const ok = clean !== "" && isCorrect(clean);
+    if (ok) game.correct++;
+    game.attempts++;
+    game.examResults.push({ q: p.prompt || ("Image à identifier (" + (p.category || "objet") + ")"), correct: p.name, user: clean || "(sans réponse)", ok });
+    game.index++;
+    if (game.index >= game.queue.length) endExam(); else loadPuzzle();
+  }
+
+  const fmtNote = (n) => Number.isInteger(n) ? String(n) : n.toFixed(1);
+  function noteMention(n) {
+    if (n >= 18) return { label: "Félicitations du jury 🎉", appr: "Résultat exceptionnel, un sans-faute ou presque. Bravo !", cls: "good" };
+    if (n >= 16) return { label: "Mention Très bien", appr: "Excellent travail, tu maîtrises très bien le sujet.", cls: "good" };
+    if (n >= 14) return { label: "Mention Bien", appr: "Très bon résultat, continue sur cette lancée !", cls: "good" };
+    if (n >= 12) return { label: "Mention Assez bien", appr: "Bon travail ; quelques révisions et ce sera parfait.", cls: "mid" };
+    if (n >= 10) return { label: "Passable", appr: "La moyenne est atteinte, mais tu peux faire mieux !", cls: "mid" };
+    if (n >= 8) return { label: "Insuffisant", appr: "Tout près de la moyenne : révise les corrections et retente.", cls: "bad" };
+    return { label: "À revoir", appr: "Courage ! Relis attentivement la correction et recommence.", cls: "bad" };
+  }
+
+  function endExam() {
+    game.ended = true; stopTimer();
+    const total = game.queue.length || 1;
+    const note = Math.round((game.correct / total) * 20 * 2) / 2;
+    const M = noteMention(note);
+    const d = store.data;
+    d.gamesPlayed++;
+    d.examBest = d.examBest || {};
+    d.examBest[game.examDomain] = Math.max(d.examBest[game.examDomain] || 0, note);
+    if (note >= 10) unlock("diplome");
+    if (note >= 16) unlock("major");
+    gainXp(game.correct * 3 + note * 4);
+    store.save(); refreshHome();
+    renderBulletin(note, M, total);
+    (note >= 10 ? audio.win() : audio.lose());
+    if (note >= 14) popConfetti(130); else if (note >= 10) popConfetti(60);
+    screens.show("bulletin");
+  }
+
+  function examDomainLabel() {
+    if (game.examDomain === "all") return "Toutes les matières";
+    const d = SAMSON_DOMAINS.find(x => x.id === game.examDomain);
+    return d ? d.label : game.examDomain;
+  }
+
+  function renderBulletin(note, M, total) {
+    $("#gradeNote").textContent = fmtNote(note);
+    $("#gradeCircle").className = "grade-circle " + M.cls;
+    $("#bulletinTitle").textContent = M.label;
+    $("#bulletinSub").textContent = `${examDomainLabel()} · ${game.correct}/${total} bonnes réponses`;
+    $("#appreciation").textContent = "📝 Appréciation du professeur : " + M.appr;
+    $("#correctionList").innerHTML = game.examResults.map((r, i) =>
+      `<div class="correction-row ${r.ok ? "ok" : ""}"><span class="cr-mark">${r.ok ? "✅" : "❌"}</span>
+        <span class="cr-body"><div class="cr-q">${i + 1}. ${escapeHtml(r.q)}</div>
+        <div class="cr-a">${r.ok
+        ? `Réponse : <b>${escapeHtml(r.correct)}</b>`
+        : `Ta réponse : <span class="ko">${escapeHtml(r.user)}</span> &nbsp;·&nbsp; Correct : <b>${escapeHtml(r.correct)}</b>`}</div></span></div>`
+    ).join("");
   }
 
   /* ---------- Sélection des énigmes par mode ---------- */
@@ -297,11 +400,16 @@
   function setupHud() {
     const m = game.mode;
     const lbl = $("#hud-mode-lbl"), livesWrap = $("#hud-lives-wrap"), duo = $("#duoBanner");
+    const exam = game.examMode;
     livesWrap.style.display = game.useLives ? "" : "none";
     $(".timer-wrap").style.display = game.noTimer ? "none" : "";
     $("#revealBtn").style.display = (m === "zen") ? "" : "none";
-    if (m === "survie" || m === "chrono" || m === "zen") { lbl.textContent = "Trouvés"; }
-    else { lbl.textContent = "Niveau"; }
+    $("#jokers").style.display = exam ? "none" : "";
+    $(".answer-toggle").style.display = exam ? "none" : "";
+    $("#hud-score-wrap").style.display = exam ? "none" : "";
+    if (exam) lbl.textContent = "Question";
+    else if (m === "survie" || m === "chrono" || m === "zen") lbl.textContent = "Trouvés";
+    else lbl.textContent = "Niveau";
     if (game.duo) {
       duo.style.display = "block";
       updateDuoBanner();
@@ -461,8 +569,9 @@
     if (game.locked || game.ended) return;
     game.locked = true;
     if (!game.totalMode) stopTimer();
-    game.attempts++;
     game.choiceBtns.forEach(b => b.disabled = true);
+    if (game.examMode) { examRecord(name); return; }
+    game.attempts++;
     renderJokers();
     if (isCorrect(name)) { btn.classList.add("correct"); onCorrect(); }
     else {
@@ -612,7 +721,13 @@
   function currentGuess() { return game.mask.map((m, i) => { if (!m.isLetter) return m.char; const b = game.boxes[i]; return b ? (b.value || " ") : m.char; }).join(""); }
   function isCorrect(guess) { const ans = [game.current.name, ...(game.current.alias || [])].map(norm); return ans.includes(norm(guess)); }
   function submit() {
-    if (!game.current || game.ended || game.answerMode === "qcm") return;
+    if (!game.current || game.ended || game.answerMode === "qcm" || game.locked) return;
+    if (game.examMode) {
+      game.locked = true;
+      const typed = editableBoxes().some(b => b.value);
+      examRecord(typed ? currentGuess() : null);
+      return;
+    }
     const empty = editableBoxes().find(b => !b.value);
     if (empty) { toast("Complète toutes les cases !"); empty.focus(); shakeBoxes(); return; }
     game.attempts++;
@@ -658,6 +773,7 @@
 
   function timeOut() {
     if (game.totalMode) return;
+    if (game.examMode) { game.locked = true; audio.bad(); examRecord(null); return; }
     game.combo = 0; hideCombo(); game.attempts++; audio.bad(); game.locked = true;
     const fb = $("#feedback"); fb.textContent = `⏱ Temps écoulé ! C'était « ${game.current.name} »`; fb.className = "feedback bad";
     if (game.answerMode === "qcm") {
@@ -1003,6 +1119,15 @@
   $("#setBack").addEventListener("click", () => screens.show("home"));
   $("#catBack").addEventListener("click", () => screens.show("home"));
   $("#domainsBack").addEventListener("click", () => screens.show("home"));
+  $("#examSetupBack").addEventListener("click", () => screens.show("home"));
+  $("#examRetry").addEventListener("click", () => startExam(game.examDomain));
+  $("#examOther").addEventListener("click", () => { buildExamGrid(); screens.show("exam"); });
+  $("#examHome").addEventListener("click", () => { refreshHome(); buildModeGrid(); screens.show("home"); });
+  $("#examShare").addEventListener("click", async () => {
+    const text = `📝 Samson — Examen « ${examDomainLabel()} »\nMa note : ${$("#gradeNote").textContent}/20 — ${$("#bulletinTitle").textContent}\nÀ toi de faire mieux ! 🎓`;
+    try { if (navigator.share) await navigator.share({ title: "Samson", text }); else { await copyText(text); toast("📋 Note copiée !"); } }
+    catch (e) { try { await copyText(text); toast("📋 Note copiée !"); } catch (_) { toast("Partage indisponible"); } }
+  });
   $("#edBack").addEventListener("click", () => { refreshHome(); buildModeGrid(); screens.show("home"); });
   $("#replayBtn").addEventListener("click", () => {
     if (game.duo) startMode("duo");
@@ -1025,7 +1150,7 @@
   }
 
   /* ---------- Debug (tests automatisés) ---------- */
-  window.SAMSON_DEBUG = { answer: () => (game.current ? game.current.name : null), state: () => ({ score: game.score, index: game.index, lives: game.lives, correct: game.correct, mode: game.mode }), start: (m, o) => startMode(m, o) };
+  window.SAMSON_DEBUG = { answer: () => (game.current ? game.current.name : null), state: () => ({ score: game.score, index: game.index, lives: game.lives, correct: game.correct, mode: game.mode }), start: (m, o) => startMode(m, o), exam: (d) => startExam(d) };
 
   /* ---------- Init ---------- */
   buildKeyboard(); buildModeGrid(); refreshHome();

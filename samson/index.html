@@ -72,7 +72,7 @@
     <section class="screen" id="screen-play">
       <div class="hud">
         <div class="hud-item"><span class="lbl" id="hud-mode-lbl">Niveau</span><span id="hud-level">1/12</span></div>
-        <div class="hud-item"><span class="lbl">Score</span><span id="hud-score">0</span></div>
+        <div class="hud-item" id="hud-score-wrap"><span class="lbl">Score</span><span id="hud-score">0</span></div>
         <div class="hud-item" id="hud-lives-wrap"><span class="lbl">Vies</span><span class="hearts" id="hud-lives">❤️❤️❤️</span></div>
       </div>
       <div class="timer-wrap"><div class="timer-bar" id="timerBar"></div></div>
@@ -211,6 +211,32 @@
       </div>
       <button class="btn ghost danger" id="resetBtn" style="margin-top:16px">🗑️ Réinitialiser la progression</button>
       <button class="btn ghost" id="setBack" style="margin-top:10px">← Retour</button>
+    </section>
+
+    <!-- ============ EXAMEN : choix de la matière ============ -->
+    <section class="screen" id="screen-exam">
+      <h1 class="title">📝 Examen noté sur 20</h1>
+      <p class="subtitle">Choisis une matière. Une seule tentative par question, sans indice — comme en classe !</p>
+      <div class="tier-grid" id="examGrid"></div>
+      <button class="btn ghost" id="examSetupBack" style="margin-top:16px">← Retour</button>
+    </section>
+
+    <!-- ============ BULLETIN (résultat d'examen) ============ -->
+    <section class="screen" id="screen-bulletin">
+      <div class="bulletin-head">
+        <div class="grade-circle" id="gradeCircle"><b id="gradeNote">0</b><span>/20</span></div>
+        <div class="bulletin-meta">
+          <h1 class="title" id="bulletinTitle">Bulletin</h1>
+          <p class="subtitle" id="bulletinSub"></p>
+        </div>
+      </div>
+      <div class="appreciation" id="appreciation"></div>
+      <h3 class="section-h">📋 Correction</h3>
+      <div class="correction-list" id="correctionList"></div>
+      <button class="btn primary" id="examRetry" style="margin-top:16px">🔁 Refaire cet examen</button>
+      <button class="btn ghost" id="examShare">📤 Partager ma note</button>
+      <button class="btn ghost" id="examOther">📚 Autre matière</button>
+      <button class="btn ghost" id="examHome">🏠 Accueil</button>
     </section>
 
     <!-- ============ CULTURE & MATIÈRES ============ -->

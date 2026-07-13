@@ -25,13 +25,14 @@ samson/
 └── icon.svg      # icône de l'application
 ```
 
-## 🎮 9 modes de jeu
+## 🎮 10 modes de jeu
 
 | Mode | Description |
 |------|-------------|
 | 🗺️ **Parcours** | 4 paliers (Facile, Moyen, Difficile, Expert), étoiles à gagner. |
 | 📅 **Défi du jour** | 8 énigmes déterministes, identiques pour tous le même jour, avec **série quotidienne** 🔥. |
 | 🎓 **Culture & Matières** | **Quiz éducatif** : 14 matières (littérature, histoire, philosophie, informatique, économie, géographie, sciences, arts, maths, sport, religions, langues, civisme, enfants) — avec des figures de **tous les continents**. |
+| 📝 **Examen noté /20** | Évaluation scolaire par matière (une seule tentative, sans indice), puis un **bulletin** : note sur 20, mention, appréciation et **correction détaillée** de chaque question. |
 | ♾️ **Survie** | Enchaînement infini, 3 vies, difficulté et temps qui se durcissent. |
 | ⏱️ **Contre-la-montre** | 90 secondes chrono : marquer un maximum, chaque bonne réponse ajoute du temps. |
 | 👥 **Duo** | 2 joueurs à tour de rôle (avec écran de passation), le meilleur score gagne. |
@@ -75,7 +76,9 @@ avec une notification à chaque niveau supérieur.
 - **Système d'XP et de rangs** : progresse et débloque de nouveaux titres.
 - **Score dynamique** : bonus de temps + **multiplicateur de combo** − coût des jokers.
 - **Vies** ❤️, **minuteur** (par question ou global selon le mode) avec alerte.
-- **18 succès / trophées** débloquables avec notifications animées.
+- **Mode Examen** : note sur 20 au demi-point, mentions (Passable → Félicitations du jury),
+  appréciation, correction question par question, meilleures notes par matière et partage.
+- **20 succès / trophées** débloquables avec notifications animées.
 - **Statistiques** détaillées : parties, précision, combo record, catégorie favorite…
 - **Classement local** : les 10 meilleures parties tous modes confondus.
 - **Réglages** : mode de réponse (Lettres / QCM), nom du joueur, clavier **AZERTY/QWERTY**, sons, animations, réinitialisation.
