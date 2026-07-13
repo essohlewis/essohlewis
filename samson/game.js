@@ -61,6 +61,34 @@
   let toastT;
   function toast(msg) { const el = $("#toast"); el.textContent = msg; el.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("show"), 1900); }
 
+  /* ---------- Fenêtre modale (remplace confirm/prompt natifs) ---------- */
+  function modalAsk(opts) {
+    opts = opts || {};
+    return new Promise(resolve => {
+      const ov = $("#modalOverlay"), msg = $("#modalMsg"), inp = $("#modalInput"),
+        ok = $("#modalOk"), cancel = $("#modalCancel");
+      msg.textContent = opts.message || "";
+      const isInput = !!opts.input;
+      inp.style.display = isInput ? "" : "none";
+      if (isInput) { inp.value = opts.value || ""; inp.placeholder = opts.placeholder || ""; }
+      ok.textContent = opts.okText || "Confirmer";
+      cancel.textContent = opts.cancelText || "Annuler";
+      cancel.style.display = opts.hideCancel ? "none" : "";
+      ov.classList.add("show");
+      if (isInput) setTimeout(() => { inp.focus(); inp.select(); }, 60);
+      function done(res) {
+        ov.classList.remove("show");
+        ok.onclick = cancel.onclick = ov.onclick = inp.onkeydown = null;
+        resolve(res);
+      }
+      ok.onclick = () => done(isInput ? (inp.value || "") : true);
+      cancel.onclick = () => done(isInput ? null : false);
+      ov.onclick = e => { if (e.target === ov) done(isInput ? null : false); };
+      inp.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); ok.click(); } else if (e.key === "Escape") cancel.click(); };
+    });
+  }
+  const confirmAsk = (message, okText) => modalAsk({ message, okText: okText || "Confirmer" });
+
   /* ---------- Thème / son / animations ---------- */
   function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); $("#themeBtn").textContent = t === "dark" ? "☀️" : "🌙"; store.data.theme = t; store.save(); }
   function applySound() { audio.on = store.data.sound; $("#soundBtn").textContent = audio.on ? "🔊" : "🔇"; }
@@ -129,13 +157,14 @@
     });
   }
 
-  function onModeClick(id) {
+  async function onModeClick(id) {
     if (id === "parcours") { buildTierGrid(); screens.show("levels"); return; }
     if (id === "culture") { buildDomainGrid(); screens.show("domains"); return; }
     if (id === "category") { buildCatGrid(); screens.show("category"); return; }
     if (id === "custom") { showEditor(); return; }
     if (id === "daily" && store.data.dailyDone === todayStr()) {
-      if (!confirm("Tu as déjà fait le défi du jour. Rejouer pour t'entraîner (sans compter la série) ?")) return;
+      const ok = await confirmAsk("Tu as déjà fait le défi du jour. Rejouer pour t'entraîner (sans compter la série) ?", "Rejouer");
+      if (!ok) return;
     }
     startMode(id);
   }
@@ -749,7 +778,10 @@
   $("#segKbd").addEventListener("click", e => { if (e.target.dataset.v) { store.data.kbd = e.target.dataset.v; store.save(); setSeg("segKbd", e.target.dataset.v); buildKeyboard(); } });
   $("#segSound").addEventListener("click", e => { if (e.target.dataset.v) { store.data.sound = e.target.dataset.v === "on"; store.save(); applySound(); setSeg("segSound", e.target.dataset.v); } });
   $("#segAnim").addEventListener("click", e => { if (e.target.dataset.v) { store.data.anim = e.target.dataset.v === "on"; store.save(); applyAnim(); setSeg("segAnim", e.target.dataset.v); } });
-  $("#resetBtn").addEventListener("click", () => { if (confirm("Effacer toute ta progression (scores, succès, réglages) ?")) { store.reset(); location.reload(); } });
+  $("#resetBtn").addEventListener("click", async () => {
+    const ok = await confirmAsk("Effacer toute ta progression (scores, succès, réglages) ?", "Effacer");
+    if (ok) { store.reset(); location.reload(); }
+  });
 
   /* ---------- Éditeur d'énigmes personnalisées ---------- */
   const QUICK_EMOJIS = ["🐉", "🍕", "🚀", "🎸", "🦄", "🍎", "⚽", "🌵", "🐧", "🎈", "🚗", "🌈", "🐱", "🍔", "🎃", "⚡", "🐢", "🌻", "🎁", "🔑"];
@@ -795,10 +827,10 @@
     const slim = list.map(c => ({ name: c.name, hint: c.hint, category: c.category, emoji: c.emoji }));
     const code = "SAMSON1:" + btoa(unescape(encodeURIComponent(JSON.stringify(slim))));
     copyText(code).then(() => toast("📤 Code copié dans le presse-papiers !"));
-    setTimeout(() => prompt("Ton code de partage (copie-le) :", code), 60);
+    modalAsk({ message: "Ton code de partage (copie-le pour l'envoyer à un ami) :", input: true, value: code, okText: "Fermer", hideCancel: true });
   });
-  $("#edImport").addEventListener("click", () => {
-    const code = prompt("Colle un code d'énigmes Samson :");
+  $("#edImport").addEventListener("click", async () => {
+    const code = await modalAsk({ message: "Colle un code d'énigmes Samson :", input: true, placeholder: "SAMSON1:…", okText: "Importer" });
     if (!code) return;
     try {
       const raw = code.trim().replace(/^SAMSON1:/, "");
@@ -865,8 +897,9 @@
     else startMode(game.mode);
   });
   $("#homeBtn").addEventListener("click", () => { refreshHome(); buildModeGrid(); screens.show("home"); });
-  $("#quitBtn").addEventListener("click", () => {
-    if (!confirm("Quitter la partie en cours ?")) return;
+  $("#quitBtn").addEventListener("click", async () => {
+    const ok = await confirmAsk("Quitter la partie en cours ?", "Quitter");
+    if (!ok) return;
     if (game.mode === "zen" && !game.ended && game.correct > 0) { endGame(true); return; }
     game.ended = true; stopTimer(); refreshHome(); buildModeGrid(); screens.show("home");
   });

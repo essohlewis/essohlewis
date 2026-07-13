@@ -263,6 +263,18 @@
   <div class="toast" id="toast"></div>
   <div class="ach-toast" id="achToast"></div>
 
+  <!-- Fenêtre modale (confirmation / saisie) -->
+  <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <p class="modal-msg" id="modalMsg"></p>
+      <input class="text-input wide modal-input" id="modalInput" style="display:none" autocomplete="off">
+      <div class="modal-actions">
+        <button class="btn ghost" id="modalCancel" type="button">Annuler</button>
+        <button class="btn primary" id="modalOk" type="button">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
   <script src="data.js"></script>
   <script src="culture.js"></script>
   <script src="game.js"></script>
