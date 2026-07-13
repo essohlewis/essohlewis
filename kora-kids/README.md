@@ -68,9 +68,14 @@ tant qu'aucun vrai fichier n'est fourni. Dès qu'un `id` est listé, le fichier
 est préchargé et remplace automatiquement la synthèse. Aucun code de jeu à
 modifier.
 
-**Langues locales** : la voix est rangée par langue
-(`assets/audio/voix/fr/`, puis `…/dioula/`, `…/baoule/`). Réglez la langue via
-`settings.lang` et remplissez `manifest.json` — c'est tout.
+**Langues locales** (français, dioula, baoulé, bété) : un **sélecteur de langue
+de la voix** est disponible dans l'espace parent. Le français parle par
+synthèse ; les langues locales parlent via des **enregistrements** rangés par
+langue (`assets/audio/voix/dioula/`, `…/baoule/`, `…/bete/`). Une langue locale
+apparaît « 🔜 » (non sélectionnable) tant qu'aucun audio n'est déclaré, puis
+**s'active automatiquement** dès qu'un id est ajouté à `manifest.json`
+(`voix.<langue>`). Le changement de langue vide les voix en mémoire et les jeux
+rechargent la bonne langue. Aucun code à modifier.
 
 ---
 

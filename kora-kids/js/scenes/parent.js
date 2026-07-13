@@ -5,6 +5,7 @@
 import Store from "../core/storage.js";
 import Audio from "../core/audio.js";
 import { icon, avatar } from "../core/art.js";
+import { LANGUES, voixAvailability } from "../core/assets.js";
 import { onTap } from "../core/input.js";
 import Router from "../core/router.js";
 
@@ -222,6 +223,9 @@ function renderSettings(panel) {
   panel.appendChild(sliderRow("🔊 Voix", s.volumeVoix, v => { Store.setSettings({ volumeVoix: v }); Audio.setVolumes({ voix: v }); }));
   panel.appendChild(sliderRow("🎵 Effets", s.volumeSfx, v => { Store.setSettings({ volumeSfx: v }); Audio.setVolumes({ sfx: v }); Audio.play("tap"); }));
 
+  // Langue de la voix off (français + langues locales quand des voix existent).
+  renderLangue(panel);
+
   // Mode sombre.
   const darkRow = document.createElement("div"); darkRow.className = "parent-row";
   const dl = document.createElement("span"); dl.textContent = "🌙 Mode soir";
@@ -245,6 +249,44 @@ function renderSettings(panel) {
     seg.appendChild(b);
   });
   timerRow.append(tl, seg); panel.appendChild(timerRow);
+}
+
+/* Sélecteur de langue de la voix off. Français = TTS ; langues locales = via
+   fichiers enregistrés (activées automatiquement dès qu'un audio est déclaré). */
+async function renderLangue(panel) {
+  const row = document.createElement("div"); row.className = "parent-row"; row.style.flexWrap = "wrap";
+  const l = document.createElement("span"); l.textContent = "🌍 Langue de la voix";
+  const seg = document.createElement("div"); seg.className = "seg"; seg.style.flexWrap = "wrap";
+  row.append(l, seg); panel.appendChild(row);
+
+  const note = document.createElement("div");
+  note.style.cssText = "font-size:14px;color:var(--ink-soft);width:100%;margin:-4px 0 10px";
+  note.textContent = "Les langues locales parlent via des enregistrements (assets/audio/voix/<langue>/). « 🔜 » = voix à venir.";
+  panel.appendChild(note);
+
+  const avail = await voixAvailability();
+  const cur = Store.getSettings().lang || "fr";
+  LANGUES.forEach(lg => {
+    const ok = avail[lg.id];
+    const b = document.createElement("button");
+    b.innerHTML = `${lg.drapeau} ${lg.nom}` + (ok ? "" : ` <small style="opacity:.75">🔜</small>`);
+    if (lg.id === cur) b.classList.add("on");
+    if (!ok) b.classList.add("soon");
+    onTap(b, () => {
+      if (!ok) {
+        Audio.play("neutral");
+        Audio.speak(`La voix en ${lg.nom} arrive bientôt.`);
+        return;
+      }
+      Store.setSettings({ lang: lg.id });
+      Audio.clearVoix(); Audio.stopAll();
+      seg.querySelectorAll("button").forEach(x => x.classList.remove("on"));
+      b.classList.add("on");
+      Audio.play("tap");
+      if (lg.tts) Audio.speak("Voix en français.");
+    });
+    seg.appendChild(b);
+  });
 }
 
 function sliderRow(label, value, onChange) {

@@ -114,6 +114,12 @@ export function stopAll() {
   if ("speechSynthesis" in window) speechSynthesis.cancel();
 }
 
+/* Vide les voix en mémoire (au changement de langue) pour éviter des buffers
+   périmés d'une langue précédente ; les jeux rechargeront la bonne langue. */
+export function clearVoix() {
+  for (const key of [...buffers.keys()]) if (key.startsWith("voix-")) buffers.delete(key);
+}
+
 export function setMuted(b) {
   muted = !!b;
   if (muted) stopAll();
@@ -124,4 +130,4 @@ export function setVolumes({ voix, sfx }) {
 }
 export function isMuted() { return muted; }
 
-export default { load, play, speak, stopAll, setMuted, setVolumes, unlock, isMuted };
+export default { load, play, speak, stopAll, clearVoix, setMuted, setVolumes, unlock, isMuted };

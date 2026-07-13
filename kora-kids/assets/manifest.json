@@ -2,7 +2,10 @@
   "_note": "Déclarez ici les VRAIS médias disponibles pour qu'ils soient chargés et utilisés à la place de la synthèse/SVG. Tant qu'une liste est vide, KORA KIDS reste en mode génératif (voix SpeechSynthesis, cris Web Audio, illustrations SVG). Aucun fichier listé = aucune requête réseau.",
 
   "voix": {
-    "fr": []
+    "fr": [],
+    "dioula": [],
+    "baoule": [],
+    "bete": []
   },
   "_voix_exemple": { "fr": ["agouti", "lettre-A", "nombre-3", "forme-rond", "couleur-rouge", "mangue"], "dioula": ["agouti"] },
   "_voix_ids": "Conventions d'id de voix : <animal> (lion, agouti…) ; lettre-<L> (lettre-A…) ; nombre-<n> (nombre-0 à nombre-10) ; forme-<f> (forme-rond, forme-carre, forme-triangle, forme-etoile, forme-coeur, forme-croissant) ; couleur-<c> (couleur-rouge, couleur-vert, couleur-jaune, couleur-orange) ; <produit> (mangue, banane, attieke…). Un même id sert à tous les jeux qui l'emploient.",

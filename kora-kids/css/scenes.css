@@ -157,6 +157,7 @@
 .seg { display: inline-flex; gap: 6px; }
 .seg button { padding: 10px 16px; border-radius: 12px; background: var(--bg); font-weight: 800; box-shadow: var(--shadow); }
 .seg button.on { background: var(--primary); color: #fff; }
+.seg button.soon { opacity: .55; }
 .progress-bar-mini { height: 14px; border-radius: 7px; background: var(--bg); overflow: hidden; flex: 1; }
 .progress-bar-mini > i { display: block; height: 100%; background: var(--reward); }
 .lock-screen { display: grid; place-items: center; gap: var(--sp-4); text-align: center; }

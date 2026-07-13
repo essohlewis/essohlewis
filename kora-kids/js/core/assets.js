@@ -16,6 +16,25 @@ const IMG = "assets/img";
 
 export function lang() { return Store.getSettings().lang || "fr"; }
 
+/* Langues de la voix off. Le français dispose d'une synthèse (SpeechSynthesis) ;
+   les langues locales ne « parlent » que via des fichiers .mp3 enregistrés.
+   drapeau : emoji indicatif ; tts : synthèse vocale disponible sans fichiers. */
+export const LANGUES = [
+  { id: "fr",     nom: "Français", drapeau: "🇫🇷", tts: true },
+  { id: "dioula", nom: "Dioula",   drapeau: "🗣️", tts: false },
+  { id: "baoule", nom: "Baoulé",   drapeau: "🗣️", tts: false },
+  { id: "bete",   nom: "Bété",     drapeau: "🗣️", tts: false }
+];
+
+/* Renvoie { langId: disponible? } — disponible = TTS (fr) OU au moins un fichier
+   voix déclaré dans le manifeste pour cette langue. */
+export async function voixAvailability() {
+  const m = await manifest();
+  const out = {};
+  LANGUES.forEach(l => { out[l.id] = l.tts || ((m.voix[l.id] || []).length > 0); });
+  return out;
+}
+
 export const voixURL = (id) => `${AUDIO}/voix/${lang()}/${id}.mp3`;
 export const criURL  = (id) => `${AUDIO}/cris/${id}.mp3`;
 export const sfxURL  = (id) => `${AUDIO}/sfx/${id}.mp3`;
