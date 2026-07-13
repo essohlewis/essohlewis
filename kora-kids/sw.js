@@ -1,7 +1,7 @@
 /* Service Worker — KORA KIDS
    Stratégie cache-first : après le premier chargement, aucune requête réseau. */
 
-const CACHE = "kora-kids-v1";
+const CACHE = "kora-kids-v2";
 
 /* Coquille + tous les modules et données à mettre en cache dès l'installation. */
 const SHELL = [
@@ -20,6 +20,7 @@ const SHELL = [
   "./js/core/input.js",
   "./js/core/a11y.js",
   "./js/core/art.js",
+  "./js/core/assets.js",
   "./js/scenes/home.js",
   "./js/scenes/map.js",
   "./js/scenes/parent.js",
@@ -34,7 +35,10 @@ const SHELL = [
   "./js/data/alphabet.json",
   "./js/data/marche.json",
   "./js/data/config.json",
-  "./assets/img/ui/icon.svg"
+  "./assets/manifest.json",
+  "./assets/img/ui/icon.svg",
+  "./assets/fonts/fredoka-latin.woff2",
+  "./assets/fonts/fredoka-latin-ext.woff2"
 ];
 
 self.addEventListener("install", (e) => {

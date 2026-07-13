@@ -52,18 +52,22 @@ Le document de spécification prévoit des voix off enregistrées, des cris
 d'animaux et des illustrations riches. Pour rester **sans dépendance et jouable
 immédiatement hors-ligne**, cette version génère ces médias à la volée :
 
-| Média | Implémentation actuelle | Remplacement par de vrais fichiers |
+| Média | Repli actuel (sans fichier) | Brancher de vrais fichiers |
 |---|---|---|
-| **Voix off (français)** | `SpeechSynthesis` du navigateur (hors-ligne sur la plupart des appareils) | `Audio.speak(id)` lit automatiquement `assets/audio/voix/<id>.mp3` s'il est chargé |
-| **Cris d'animaux / SFX** | Synthèse Web Audio | déposez `assets/audio/cris/<id>.mp3` et déclarez-les dans `Audio.load()` |
-| **Illustrations** | SVG dessinés en code (`js/core/art.js`), colorables en CSS | remplacez les fabriques par `<img src>` vers vos SVG/WebP |
+| **Voix off** | `SpeechSynthesis` (hors-ligne sur la plupart des appareils) | déposez `assets/audio/voix/<langue>/<id>.mp3` et listez l'`id` dans `assets/manifest.json` (`voix.<langue>`) |
+| **Cris d'animaux** | Synthèse Web Audio | `assets/audio/cris/<id>.mp3` + `id` dans `manifest.json` (`cris`) |
+| **Effets (SFX)** | Synthèse Web Audio | `assets/audio/sfx/<id>.mp3` + `id` dans `manifest.json` (`sfx`) |
+| **Illustrations** | SVG dessinés en code (`js/core/art.js`) | ajoutez `"img": "lion.webp"` à l'entrée de donnée → `assets/img/<cat>/lion.webp` |
 
-La couche audio est **déjà séparée du code** (`js/core/audio.js`) : ajouter
-des voix baoulé/dioula = déposer des fichiers dans `assets/audio/voix/` et les
-précharger. Aucun code de jeu à modifier.
+**Système « les deux »** (`js/core/assets.js`) : les jeux ne chargent que les
+médias **déclarés dans `assets/manifest.json`** — donc **aucune requête 404**
+tant qu'aucun vrai fichier n'est fourni. Dès qu'un `id` est listé, le fichier
+est préchargé et remplace automatiquement la synthèse. Aucun code de jeu à
+modifier.
 
-`Audio.load([{ id, url }])` précharge les fichiers réels ; s'ils sont absents,
-le moteur bascule sur la synthèse — les deux mondes coexistent.
+**Langues locales** : la voix est rangée par langue
+(`assets/audio/voix/fr/`, puis `…/dioula/`, `…/baoule/`). Réglez la langue via
+`settings.lang` et remplissez `manifest.json` — c'est tout.
 
 ---
 
@@ -89,10 +93,12 @@ assets/  fonts/ · img/ui/ · audio/{voix,cris,sfx}/
 
 ### Police locale
 
-Déposez un fichier `assets/fonts/kora.woff2` (police ronde type *Baloo 2* /
-*Fredoka* / *Nunito*, **jamais via CDN**) et décommentez le `@font-face` en tête
-de `css/tokens.css`. Sans fichier, l'app utilise la police système ronde par
-défaut (`--font`).
+**Fredoka** (SIL Open Font License 1.1) est **embarquée localement** dans
+`assets/fonts/` (`fredoka-latin.woff2` + `fredoka-latin-ext.woff2`, ~34 Ko),
+déclarée en `@font-face` (famille `Kora`) dans `css/tokens.css` et mise en cache
+par le Service Worker. **Jamais chargée via un CDN au runtime.** Pour changer de
+police, remplacez les `.woff2` et ajustez les `@font-face`. Licence : voir
+`assets/fonts/OFL.txt`.
 
 ---
 

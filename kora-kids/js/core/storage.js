@@ -7,7 +7,7 @@ const VERSION = 1;
 const DEFAULT = {
   version: VERSION,
   profiles: [],
-  settings: { volumeVoix: 1, volumeSfx: 0.7, sombre: false, minuteur: 30 },
+  settings: { volumeVoix: 1, volumeSfx: 0.7, sombre: false, minuteur: 30, lang: "fr" },
   activeProfile: null
 };
 

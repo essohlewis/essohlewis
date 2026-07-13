@@ -54,11 +54,12 @@ export function prompt(container, text, { speak = true, icon: showSpeaker = true
   return bubble;
 }
 
-/* Retour standard : bonne réponse. */
-export function correct(el, name) {
+/* Retour standard : bonne réponse. `opts.id` permet de jouer un vrai fichier
+   voix "voix-<id>.mp3" (sinon la synthèse de `name` est utilisée). */
+export function correct(el, name, opts = {}) {
   el.classList.add("correct");
   Audio.play("success");
-  if (name) Audio.speak(name);
+  if (name) Audio.speak(name, opts);
   Store.getActive() && Audio.play("star");
 }
 

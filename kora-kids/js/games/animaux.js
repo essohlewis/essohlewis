@@ -4,6 +4,7 @@
 import Audio from "../core/audio.js";
 import Store from "../core/storage.js";
 import { animal } from "../core/art.js";
+import { criManifest, voixManifest, imageFor } from "../core/assets.js";
 import { onTap } from "../core/input.js";
 import { gameHead, prompt, correct, soft, finishRound, choiceCount, pick, rand, shuffle } from "./shell.js";
 
@@ -16,6 +17,10 @@ export default async function animaux(scene, _p, { go }) {
   const n = choiceCount(palier, 6);
   const pool = data.filter(a => a.palier.includes(palier));
   const bank = pool.length >= n ? pool : data;
+
+  // Précharge cris + voix DÉCLARÉS pour ce jeu. Absents → synthèse/TTS en repli.
+  const ids = bank.map(a => a.id);
+  Promise.all([criManifest(ids), voixManifest(ids)]).then(([c, v]) => Audio.load([...c, ...v]));
 
   const ui = gameHead(scene, "🐘 Les animaux", go);
   const stage = document.createElement("div"); stage.className = "stage";
@@ -50,7 +55,7 @@ export default async function animaux(scene, _p, { go }) {
     choices.forEach(a => {
       const card = document.createElement("button");
       card.className = "card"; card.setAttribute("aria-label", a.nom);
-      card.appendChild(animal(a.art));
+      card.appendChild(imageFor(a, "animaux") || animal(a.art));   // vrai fichier sinon SVG
       onTap(card, () => choose(a, card));
       grid.appendChild(card);
     });
@@ -60,7 +65,7 @@ export default async function animaux(scene, _p, { go }) {
     if (answered) return;
     if (a.id === target.id) {
       answered = true;
-      correct(card, a.nom);
+      correct(card, a.nom, { id: a.id });   // voix fichier "voix-<id>.mp3" sinon TTS du nom
       earned++; ui.addStar();
       grid.querySelectorAll(".card").forEach(c => { if (c !== card) c.classList.add("dim"); });
       q++;

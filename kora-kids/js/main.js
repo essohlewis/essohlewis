@@ -4,6 +4,7 @@ import Router from "./core/router.js";
 import Audio from "./core/audio.js";
 import Store from "./core/storage.js";
 import { applyTapSize } from "./core/a11y.js";
+import { sfxManifest, SFX } from "./core/assets.js";
 
 import home from "./scenes/home.js";
 import map from "./scenes/map.js";
@@ -45,7 +46,11 @@ function applySettings() {
 
 /* ---------- Débloque l'audio au premier tap (iOS/Android) ---------- */
 function armAudioUnlock() {
-  const unlock = () => { Audio.unlock(); window.removeEventListener("pointerdown", unlock); };
+  const unlock = () => {
+    Audio.unlock();
+    sfxManifest(SFX).then(m => Audio.load(m));   // vrais effets .mp3 si déclarés, sinon synthèse
+    window.removeEventListener("pointerdown", unlock);
+  };
   window.addEventListener("pointerdown", unlock, { once: false });
 }
 

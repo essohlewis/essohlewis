@@ -1,0 +1,20 @@
+{
+  "_note": "Déclarez ici les VRAIS médias disponibles pour qu'ils soient chargés et utilisés à la place de la synthèse/SVG. Tant qu'une liste est vide, KORA KIDS reste en mode génératif (voix SpeechSynthesis, cris Web Audio, illustrations SVG). Aucun fichier listé = aucune requête réseau.",
+
+  "voix": {
+    "fr": []
+  },
+  "_voix_exemple": { "fr": ["agouti", "lettre-A"], "dioula": ["agouti"] },
+  "_voix_chemin": "assets/audio/voix/<langue>/<id>.mp3  (ex. assets/audio/voix/fr/agouti.mp3, assets/audio/voix/fr/lettre-A.mp3)",
+
+  "cris": [],
+  "_cris_exemple": ["lion", "elephant"],
+  "_cris_chemin": "assets/audio/cris/<id>.mp3  (ex. assets/audio/cris/lion.mp3)",
+
+  "sfx": [],
+  "_sfx_exemple": ["success", "star", "tap", "neutral", "transition", "win"],
+  "_sfx_chemin": "assets/audio/sfx/<id>.mp3",
+
+  "img": {},
+  "_img_note": "Optionnel. Pour remplacer une illustration SVG, ajoutez un champ \"img\" à l'entrée de donnée concernée (js/data/*.json), ex. \"img\": \"lion.webp\" → assets/img/animaux/lion.webp."
+}

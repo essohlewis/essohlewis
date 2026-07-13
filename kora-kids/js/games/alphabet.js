@@ -4,6 +4,7 @@
 import Audio from "../core/audio.js";
 import Store from "../core/storage.js";
 import { resolveArt, icon } from "../core/art.js";
+import { voixManifest, imageFor } from "../core/assets.js";
 import { onTap } from "../core/input.js";
 import { gameHead, prompt, correct, soft, finishRound, shuffle, pick, rand, choiceCount } from "./shell.js";
 
@@ -13,6 +14,9 @@ export default async function alphabet(scene, _p, { go }) {
   const data = await fetch("js/data/alphabet.json").then(r => r.json());
   const profile = Store.getActive();
   const palier = (profile && profile.palier) || "moyen";
+
+  // Précharge la voix des lettres DÉCLARÉES (sinon TTS en repli).
+  voixManifest(data.map(e => "lettre-" + e.lettre)).then(m => Audio.load(m));
 
   const ui = gameHead(scene, "🔤 Alphabet Kora", go);
   const stage = document.createElement("div"); stage.className = "stage";
@@ -49,11 +53,11 @@ export default async function alphabet(scene, _p, { go }) {
       cell.textContent = entry.lettre; cell.setAttribute("aria-label", entry.lettre);
       onTap(cell, () => {
         Audio.play("tap");
-        // Son de la lettre puis mot.
-        Audio.speak(`${entry.son || entry.lettre}… comme ${entry.mot}`);
+        // Son de la lettre puis mot (fichier voix si présent, sinon TTS).
+        Audio.speak(`${entry.son || entry.lettre}… comme ${entry.mot}`, { id: "lettre-" + entry.lettre });
         reveal.innerHTML = "";
         const big = document.createElement("div"); big.className = "big-letter"; big.textContent = entry.lettre;
-        const art = resolveArt(entry.art);
+        const art = imageFor(entry, "alphabet") || resolveArt(entry.art);
         const word = document.createElement("div"); word.className = "word"; word.textContent = entry.mot;
         reveal.append(big, art, word);
         reveal.style.minHeight = "auto";
@@ -90,7 +94,7 @@ export default async function alphabet(scene, _p, { go }) {
         onTap(card, () => {
           if (answered) return;
           if (entry.lettre === target.lettre) {
-            answered = true; correct(card, `${target.lettre} comme ${target.mot}`);
+            answered = true; correct(card, `${target.lettre} comme ${target.mot}`, { id: "lettre-" + target.lettre });
             earned++; ui.addStar();
             grid.querySelectorAll(".card").forEach(c => { if (c !== card) c.classList.add("dim"); });
             q++;

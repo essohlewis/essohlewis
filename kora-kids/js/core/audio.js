@@ -92,13 +92,18 @@ export function play(id, { volume } = {}) {
   }
 }
 
-/* Consigne vocale. text = phrase à dire OU id d'un buffer voix chargé. */
-export function speak(text) {
+/* Consigne vocale. Coupe toujours la voix précédente.
+   - speak(text)            → prononce la phrase via SpeechSynthesis.
+   - speak(text, { id })    → si un vrai fichier voix "voix-<id>" est chargé,
+                              le joue ; sinon repli sur la synthèse de `text`.
+   - speak(id)              → rétro-compat : joue un buffer voix chargé sous cet id. */
+export function speak(text, { id } = {}) {
   if (muted) return;
-  // Si un fichier voix a été chargé sous cet id, on le joue.
-  if (buffers.has(text)) { play(text, { volume: volVoix / volSfx }); return; }
+  stopAll();
+  // Fichier voix réel prioritaire (via un id explicite ou un id direct).
+  const bufId = id != null ? "voix-" + id : text;
+  if (buffers.has(bufId)) { play(bufId, { volume: volSfx ? volVoix / volSfx : 1 }); return; }
   if (!("speechSynthesis" in window)) return;
-  speechSynthesis.cancel();               // coupe la voix précédente
   const u = new SpeechSynthesisUtterance(String(text));
   u.lang = "fr-FR"; u.rate = 0.92; u.pitch = 1.08; u.volume = volVoix;
   if (frVoice) u.voice = frVoice;
