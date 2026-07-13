@@ -62,8 +62,9 @@ avec une notification à chaque niveau supérieur.
 
 ## ✨ Fonctionnalités & innovations
 
-- **Deux modes de réponse au choix** (dans les réglages) : **Lettres** (compléter les cases)
-  ou **Choix multiples (QCM)** avec 4 propositions à sélectionner.
+- **Deux modes de réponse au choix** : **✍️ Remplir** (compléter les cases lettre par lettre)
+  ou **🔘 QCM** (4 propositions). Un sélecteur est disponible **directement pendant le jeu**
+  (bascule instantanée) et dans les réglages ; la préférence est mémorisée.
 - **Mécanique « écrire ou compléter »** : cases lettres pré-remplies selon le niveau.
 - **Affichage responsive** : la taille des cases s'adapte automatiquement à l'écran du
   téléphone (les mots longs restent lisibles, sans débordement).

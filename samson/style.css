@@ -193,6 +193,10 @@ h1.title { font-size: 26px; margin-bottom: 4px; }
 .letter-box.wrong { background: var(--danger); color: #fff; border-color: var(--danger); animation: shake .4s; }
 .sep { width: 12px; display: grid; place-items: center; color: var(--muted); font-weight: 800; align-self: center; }
 
+/* ---------------- Sélecteur du mode de réponse (en jeu) ---------------- */
+.answer-toggle { display: flex; justify-content: center; margin-bottom: 12px; }
+.answer-toggle .seg button { padding: 8px 16px; font-size: 13px; }
+
 /* ---------------- Choix multiples (QCM) ---------------- */
 .choices { display: grid; gap: 10px; margin-bottom: 8px; }
 .choice {

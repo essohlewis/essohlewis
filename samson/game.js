@@ -357,28 +357,41 @@
     const ht = $("#hintText"); ht.textContent = "💡 " + (p.hint || ""); ht.classList.remove("show");
     $("#feedback").textContent = ""; $("#feedback").className = "feedback";
 
+    renderAnswerArea();
+    if (game.noTimer) { /* pas de minuteur en mode Zen */ }
+    else if (!game.totalMode) startQuestionTimer(params.time);
+    else updateTimerBar();
+  }
+
+  /* ---------- Zone de réponse (Lettres ou QCM) ---------- */
+  function setPlayModeSeg() { $$("#segPlayMode button").forEach(b => b.classList.toggle("active", b.dataset.v === game.answerMode)); }
+  function renderAnswerArea() {
     game.locked = false;
+    $("#feedback").textContent = ""; $("#feedback").className = "feedback";
     const qcm = game.answerMode === "qcm";
+    setPlayModeSeg();
     $("#answerBoxes").style.display = qcm ? "none" : "";
     $("#answerChoices").style.display = qcm ? "" : "none";
     $("#submitBtn").style.display = qcm ? "none" : "";
     $(".kbd-toggle").style.display = qcm ? "none" : "";
-    if (qcm) { $("#keyboard").style.display = "none"; }
-
-    if (qcm) {
-      game.mask = []; game.boxes = [];
-      renderChoices();
-    } else {
-      game.mask = buildMask(p.name, params.ratio);
-      renderBoxes();
-      sizeBoxes();
+    if (qcm) $("#keyboard").style.display = "none";
+    if (qcm) { game.mask = []; game.boxes = []; renderChoices(); }
+    else {
+      game.mask = buildMask(game.current.name, puzzleParams().ratio);
+      renderBoxes(); sizeBoxes();
     }
     renderJokers();
-    if (game.noTimer) { /* pas de minuteur en mode Zen */ }
-    else if (!game.totalMode) startQuestionTimer(params.time);
-    else updateTimerBar();
     if (!qcm) focusFirstEmpty();
   }
+  $("#segPlayMode").addEventListener("click", e => {
+    const v = e.target.dataset.v;
+    if (!v || game.ended || game.locked || !game.current || v === game.answerMode) return;
+    game.answerMode = v;
+    store.data.answerMode = v; store.save();
+    setSeg("segAnswer", v);
+    renderAnswerArea();
+    audio.key();
+  });
 
   /* ---------- Cases lettres ---------- */
   function renderBoxes() {
