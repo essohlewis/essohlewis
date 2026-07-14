@@ -1,0 +1,77 @@
+/* Conteo — Design tokens (Custom Properties).
+   Palette inspirée des textiles ouest-africains. */
+:root {
+  /* Couleurs */
+  --c-sun:     #F2A73B;   /* Orange soleil — accent principal */
+  --c-earth:   #A94E2A;   /* Terre cuite */
+  --c-leaf:    #2E7D5B;   /* Vert feuille */
+  --c-indigo:  #2B3A67;   /* Indigo — mode conte du soir */
+  --c-bogolan: #F5EDE0;   /* Écru bogolan — fond clair */
+  --c-ink:     #1C1B1A;   /* Texte */
+
+  --c-sun-soft:   #FBE4BE;
+  --c-leaf-soft:  #CDE7DA;
+  --c-surface:    #FFFFFF;
+  --c-surface-2:  #FBF6EC;
+  --c-line:       #E6DCCB;
+  --c-muted:      #6E675E;
+  --c-danger:     #C0392B;
+  --c-ok:         #2E7D5B;
+
+  /* Typographie */
+  --font-kid:    'Baloo 2', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-parent: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --fs-kid-xl:   clamp(28px, 6vw, 44px);
+  --fs-kid-lg:   clamp(22px, 4.5vw, 32px);
+  --fs-kid-base: clamp(18px, 3.5vw, 24px);
+  --fs-base:     16px;
+  --fs-sm:       14px;
+
+  /* Espacements */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px;
+  --sp-4: 16px; --sp-5: 24px; --sp-6: 32px; --sp-8: 48px;
+
+  /* Cible tactile enfant — IMPÉRATIF */
+  --touch-min: 72px;
+
+  --radius:    12px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+
+  --shadow-1: 0 2px 8px rgba(28,27,26,.10);
+  --shadow-2: 0 8px 28px rgba(28,27,26,.18);
+
+  /* Karaoké */
+  --c-word-active: var(--c-sun);
+  --c-word-read:   #9A9691;
+
+  /* Fonds d'application */
+  --bg-app:      var(--c-bogolan);
+  --bg-panel:    var(--c-surface);
+  --text-app:    var(--c-ink);
+  --text-muted:  var(--c-muted);
+}
+
+/* Thème sombre (choisi dans les paramètres, appliqué via data-theme). */
+:root[data-theme="dark"] {
+  --bg-app:     #14161F;
+  --bg-panel:   #1E2230;
+  --c-surface:  #232838;
+  --c-surface-2:#1A1E2A;
+  --c-line:     #333A4D;
+  --text-app:   #F2EFEA;
+  --text-muted: #A7A197;
+  --c-bogolan:  #14161F;
+  --c-ink:      #F2EFEA;
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

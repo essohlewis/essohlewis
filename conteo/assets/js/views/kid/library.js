@@ -1,0 +1,80 @@
+/* Conteo — Bibliothèque enfant. Grille filtrée par le niveau du profil actif. */
+
+import { el, mount, toast } from '../../core/dom.js';
+import { navigate } from '../../core/router.js';
+import { store } from '../../core/store.js';
+import { loadCatalog, talesForLevel } from '../../content/catalog.js';
+import { isTaleUnlocked } from '../../billing/entitlements.js';
+import { getAllByIndex } from '../../core/db.js';
+import { packStatus } from '../../offline/downloader.js';
+import { uiTone } from '../../audio/sfx.js';
+import { avatarEmoji } from './pick-profile.js';
+import { kidNav } from './nav.js';
+import { levelLabel } from '../../content/level.js';
+import { t } from '../../core/i18n.js';
+
+export async function libraryView() {
+  const profile = store.activeProfile;
+  if (!profile) return navigate('/pick', { replace: true });
+
+  const catalog = await loadCatalog();
+  const level = profile.reading_level;
+  const tales = talesForLevel(catalog, level);
+
+  const progressRows = await getAllByIndex('progress', 'by_profile', profile.id);
+  const progressBySlug = Object.fromEntries(progressRows.map((r) => [r.tale_slug, r]));
+
+  const grid = el('div', { class: 'library-grid' });
+
+  for (const tale of tales) {
+    const unlocked = isTaleUnlocked(catalog, tale);
+    const prog = progressBySlug[tale.slug];
+    const dl = await packStatus(tale.pack_id);
+    const badges = [];
+    if (!prog) badges.push(el('span', { class: 'badge badge--new', text: t('new') }));
+    else if (prog.completed) badges.push(el('span', { class: 'badge badge--read', text: '✓ ' + t('already_read') }));
+    if (!unlocked) badges.push(el('span', { class: 'badge badge--lock', text: '🔒' }));
+    else if (dl !== 'complete') badges.push(el('span', { class: 'badge', text: '⬇' }));
+
+    const card = el('button', {
+      class: 'tale-card' + (unlocked ? '' : ' tale-card--locked'),
+      'aria-label': tale.title + (unlocked ? '' : ' (' + t('locked') + ')'),
+      onpointerup: () => {
+        uiTone('tap');
+        if (!unlocked) { toast('🔒 Demande à un parent', ''); return; }
+        navigate('/reader/' + tale.slug);
+      }
+    }, [
+      coverImg(tale.cover),
+      el('div', { class: 'tale-card__badges' }, badges),
+      el('div', { class: 'tale-card__title', text: tale.title }),
+      !unlocked && el('div', { class: 'tale-card__lock', 'aria-hidden': 'true', text: '🔒' })
+    ]);
+    grid.append(card);
+  }
+
+  if (!tales.length) {
+    grid.append(el('p', { class: 'text-muted', text: 'Aucun conte pour ce niveau pour le moment.' }));
+  }
+
+  const node = el('section', { class: 'kid view--full', style: { flex: '1', display: 'flex', flexDirection: 'column' } }, [
+    el('header', { class: 'library-head' }, [
+      el('div', { class: 'avatar', 'aria-hidden': 'true', text: avatarEmoji(profile.avatar_key) }),
+      el('div', {}, [
+        el('strong', { text: profile.first_name }),
+        el('div', { class: 'text-muted', style: { fontSize: '13px' }, text: 'Niveau ' + levelLabel(level) })
+      ])
+    ]),
+    el('div', { style: { flex: '1', overflowY: 'auto' } }, [grid]),
+    kidNav('library')
+  ]);
+
+  return mount(node);
+}
+
+/* Vignette avec repli dégradé si l'image manque (dev/offline). */
+export function coverImg(src, cls = 'tale-card__cover') {
+  const img = el('img', { class: cls, src, alt: '', loading: 'lazy', decoding: 'async' });
+  img.addEventListener('error', () => { img.removeAttribute('src'); img.style.opacity = '1'; });
+  return img;
+}

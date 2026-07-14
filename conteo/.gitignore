@@ -1,0 +1,18 @@
+# Dépendances (uniquement natif — pas de runtime web)
+node_modules/
+
+# Builds natifs générés
+android/
+ios/
+src-tauri/target/
+src-tauri/gen/
+
+# Codes d'activation générés (à ne JAMAIS committer)
+tools/*.csv
+codes-*.csv
+
+# Divers
+.DS_Store
+*.log
+.env
+.env.local

@@ -1,0 +1,26 @@
+{
+  "appId": "ci.conteo.app",
+  "appName": "Conteo",
+  "webDir": ".",
+  "bundledWebRuntime": false,
+  "backgroundColor": "#F5EDE0",
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 800,
+      "backgroundColor": "#F5EDE0",
+      "showSpinner": false
+    },
+    "CapacitorHttp": { "enabled": false }
+  },
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "https"
+  },
+  "ios": {
+    "backgroundColor": "#F5EDE0"
+  },
+  "android": {
+    "backgroundColor": "#F5EDE0",
+    "allowMixedContent": false
+  }
+}

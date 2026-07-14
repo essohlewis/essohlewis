@@ -1,0 +1,102 @@
+{
+  "slug": "kacou-baobab",
+  "level": "N3",
+  "title": "Kacou Ananzè et le baobab",
+  "origin": "Akan",
+  "moral": "La ruse ne remplace jamais le travail.",
+  "duration_sec": 720,
+
+  "audio": {
+    "fr":  { "src": "./media/tales/kacou-baobab/n3/fr.opus",  "fallback": "./media/tales/kacou-baobab/n3/fr.m4a",  "timings": "./data/tales/kacou-baobab/n3/fr.timings.json" },
+    "bci": { "src": "./media/tales/kacou-baobab/n3/bci.opus", "fallback": "./media/tales/kacou-baobab/n3/bci.m4a" }
+  },
+
+  "pages": [
+    {
+      "index": 1,
+      "image": "./media/tales/kacou-baobab/n3/p01.webp",
+      "text": "Au cœur du village akan se dressait un baobab si vieux que personne ne se souvenait de l'avoir vu petit. Ses branches portaient les fruits les plus sucrés de toute la région.",
+      "hotspots": [
+        { "id": "baobab", "shape": "circle", "cx": 0.5, "cy": 0.38, "r": 0.15, "label": "le baobab",
+          "sfx": "./media/sfx/wind_tree.opus", "voice": { "fr": "./media/words/fr/baobab.opus" }, "animation": "shake" }
+      ]
+    },
+    {
+      "index": 2,
+      "image": "./media/tales/kacou-baobab/n3/p02.webp",
+      "text": "Kacou Ananzè, l'araignée la plus rusée du pays, se disait : « Pourquoi grimper et me fatiguer, quand mon esprit malin peut tout obtenir sans effort ? »",
+      "hotspots": [
+        { "id": "kacou", "shape": "circle", "cx": 0.45, "cy": 0.5, "r": 0.14, "label": "Kacou",
+          "sfx": "./media/sfx/laugh.opus", "voice": { "fr": "./media/words/fr/kacou.opus" }, "animation": "shake" }
+      ]
+    },
+    {
+      "index": 3,
+      "image": "./media/tales/kacou-baobab/n3/p03.webp",
+      "text": "Il tendit des pièges, inventa des histoires et supplia les oiseaux de faire tomber les fruits. Mais les oiseaux préféraient les manger, et les pièges restaient vides.",
+      "hotspots": [
+        { "id": "oiseau", "shape": "rect", "x": 0.7, "y": 0.15, "w": 0.15, "h": 0.12, "label": "l'oiseau",
+          "sfx": "./media/sfx/bird.opus", "voice": { "fr": "./media/words/fr/oiseau.opus" }, "animation": "fly" }
+      ]
+    },
+    {
+      "index": 4,
+      "image": "./media/tales/kacou-baobab/n3/p04.webp",
+      "text": "La faim au ventre, Kacou finit par tisser une longue échelle de fils et grimpa, patte après patte, jusqu'aux plus hautes branches.",
+      "hotspots": []
+    },
+    {
+      "index": 5,
+      "image": "./media/tales/kacou-baobab/n3/p05.webp",
+      "text": "Épuisé mais heureux, il croqua enfin un fruit et comprit : le travail avait un goût bien plus doux que la paresse. La ruse ne remplace jamais le travail.",
+      "hotspots": [
+        { "id": "fruit", "shape": "circle", "cx": 0.6, "cy": 0.3, "r": 0.1, "label": "le fruit",
+          "sfx": "./media/sfx/pop.opus", "voice": { "fr": "./media/words/fr/fruit.opus" }, "animation": "pop" }
+      ]
+    }
+  ],
+
+  "games": [
+    {
+      "type": "quiz",
+      "question": "Pourquoi Kacou ne voulait-il pas grimper ?",
+      "options": [
+        { "image": "./media/quiz/kb/paresse.webp", "label": "Il se croyait trop malin", "correct": true },
+        { "image": "./media/quiz/kb/peur.webp",    "label": "Il avait peur du vide",   "correct": false },
+        { "image": "./media/quiz/kb/nuit.webp",    "label": "Il faisait nuit",         "correct": false }
+      ]
+    },
+    {
+      "type": "find_animal",
+      "question": "Qui mangeait les fruits à la place de Kacou ?",
+      "options": [
+        { "image": "./media/quiz/kb/oiseau.webp",  "label": "les oiseaux", "correct": true },
+        { "image": "./media/quiz/kb/lion.webp",    "label": "le lion",     "correct": false },
+        { "image": "./media/quiz/kb/tortue.webp",  "label": "la tortue",   "correct": false },
+        { "image": "./media/quiz/kb/serpent.webp", "label": "le serpent",  "correct": false }
+      ]
+    },
+    {
+      "type": "order_images",
+      "images": [
+        "./media/quiz/kb/s1.webp",
+        "./media/quiz/kb/s2.webp",
+        "./media/quiz/kb/s3.webp",
+        "./media/quiz/kb/s4.webp"
+      ],
+      "correct_order": [0, 1, 2, 3]
+    }
+  ],
+
+  "assets": [
+    "./media/tales/kacou-baobab/n3/p01.webp",
+    "./media/tales/kacou-baobab/n3/p02.webp",
+    "./media/tales/kacou-baobab/n3/p03.webp",
+    "./media/tales/kacou-baobab/n3/p04.webp",
+    "./media/tales/kacou-baobab/n3/p05.webp",
+    "./media/tales/kacou-baobab/n3/fr.opus",
+    "./media/sfx/wind_tree.opus",
+    "./media/sfx/bird.opus",
+    "./media/sfx/pop.opus"
+  ]
+}

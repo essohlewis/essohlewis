@@ -1,0 +1,48 @@
+{
+  "slug": "leuk-et-bouki",
+  "level": "N1",
+  "title": "Leuk et Bouki",
+  "origin": "Wolof",
+  "moral": "",
+  "duration_sec": 150,
+  "audio": {
+    "fr": { "src": "./media/tales/leuk-et-bouki/n1/fr.opus", "fallback": "./media/tales/leuk-et-bouki/n1/fr.m4a" }
+  },
+  "pages": [
+    {
+      "index": 1,
+      "image": "./media/tales/leuk-et-bouki/n1/p01.webp",
+      "text": "Leuk le lièvre. Saute saute !",
+      "hotspots": [
+        { "id": "lievre", "shape": "circle", "cx": 0.5, "cy": 0.5, "r": 0.22, "label": "le lièvre",
+          "sfx": "./media/sfx/pop.opus", "voice": { "fr": "./media/words/fr/lievre.opus" }, "animation": "pop" }
+      ]
+    },
+    {
+      "index": 2,
+      "image": "./media/tales/leuk-et-bouki/n1/p02.webp",
+      "text": "Bouki l'hyène. Grrr !",
+      "hotspots": [
+        { "id": "hyene", "shape": "circle", "cx": 0.5, "cy": 0.5, "r": 0.22, "label": "l'hyène",
+          "sfx": "./media/sfx/growl.opus", "voice": { "fr": "./media/words/fr/hyene.opus" }, "animation": "shake" }
+      ]
+    },
+    {
+      "index": 3,
+      "image": "./media/tales/leuk-et-bouki/n1/p03.webp",
+      "text": "Le grand arachide ! Miam.",
+      "hotspots": [
+        { "id": "arachide", "shape": "circle", "cx": 0.5, "cy": 0.45, "r": 0.2, "label": "l'arachide",
+          "sfx": "./media/sfx/pop.opus", "voice": { "fr": "./media/words/fr/arachide.opus" }, "animation": "pop" }
+      ]
+    }
+  ],
+  "games": [],
+  "assets": [
+    "./media/tales/leuk-et-bouki/n1/p01.webp",
+    "./media/tales/leuk-et-bouki/n1/p02.webp",
+    "./media/tales/leuk-et-bouki/n1/p03.webp",
+    "./media/sfx/pop.opus",
+    "./media/sfx/growl.opus"
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "slug": "leuk-et-bouki",
+  "level": "N2",
+  "title": "Leuk le lièvre et Bouki l'hyène",
+  "origin": "Wolof",
+  "moral": "Le partage vaut mieux que la gourmandise.",
+  "duration_sec": 360,
+  "audio": {
+    "fr": { "src": "./media/tales/leuk-et-bouki/n2/fr.opus", "fallback": "./media/tales/leuk-et-bouki/n2/fr.m4a" }
+  },
+  "pages": [
+    {
+      "index": 1,
+      "image": "./media/tales/leuk-et-bouki/n2/p01.webp",
+      "text": "Leuk le lièvre et Bouki l'hyène trouvèrent un champ d'arachides.",
+      "hotspots": [
+        { "id": "lievre", "shape": "circle", "cx": 0.35, "cy": 0.55, "r": 0.13, "label": "le lièvre",
+          "sfx": "./media/sfx/pop.opus", "voice": { "fr": "./media/words/fr/lievre.opus" }, "animation": "pop" },
+        { "id": "hyene", "shape": "circle", "cx": 0.65, "cy": 0.55, "r": 0.13, "label": "l'hyène",
+          "sfx": "./media/sfx/growl.opus", "voice": { "fr": "./media/words/fr/hyene.opus" }, "animation": "shake" }
+      ]
+    },
+    {
+      "index": 2,
+      "image": "./media/tales/leuk-et-bouki/n2/p02.webp",
+      "text": "Bouki, trop gourmande, voulut tout garder pour elle seule.",
+      "hotspots": []
+    },
+    {
+      "index": 3,
+      "image": "./media/tales/leuk-et-bouki/n2/p03.webp",
+      "text": "Leuk, malin, proposa un jeu pour partager équitablement les arachides.",
+      "hotspots": []
+    },
+    {
+      "index": 4,
+      "image": "./media/tales/leuk-et-bouki/n2/p04.webp",
+      "text": "À la fin, chacun eut sa part, et Bouki comprit sa leçon.",
+      "hotspots": []
+    }
+  ],
+  "games": [
+    {
+      "type": "find_animal",
+      "question": "Qui était trop gourmande ?",
+      "options": [
+        { "image": "./media/quiz/lb/hyene.webp",  "label": "l'hyène",  "correct": true },
+        { "image": "./media/quiz/lb/lievre.webp", "label": "le lièvre", "correct": false },
+        { "image": "./media/quiz/lb/singe.webp",  "label": "le singe",  "correct": false },
+        { "image": "./media/quiz/lb/oiseau.webp", "label": "l'oiseau",  "correct": false }
+      ]
+    }
+  ],
+  "assets": [
+    "./media/tales/leuk-et-bouki/n2/p01.webp",
+    "./media/tales/leuk-et-bouki/n2/p02.webp",
+    "./media/tales/leuk-et-bouki/n2/p03.webp",
+    "./media/tales/leuk-et-bouki/n2/p04.webp",
+    "./media/sfx/pop.opus",
+    "./media/sfx/growl.opus"
+  ]
+}

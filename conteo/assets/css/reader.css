@@ -1,0 +1,85 @@
+/* Conteo — Lecteur de conte + surlignage karaoké. */
+
+.reader {
+  flex: 1; display: flex; flex-direction: column;
+  background: #000; color: #fff; position: relative;
+  overflow: hidden;
+}
+
+.reader__stage {
+  position: relative; flex: 1; min-height: 0;
+  display: grid; place-items: center;
+  background: var(--c-indigo);
+}
+.reader__img {
+  width: 100%; height: 100%; object-fit: cover;
+  background: linear-gradient(135deg, var(--c-sun), var(--c-earth));
+}
+/* Overlay de hit-testing (canvas ou boutons) */
+.reader__overlay {
+  position: absolute; inset: 0; touch-action: manipulation;
+}
+.hotspot-btn {
+  position: absolute; border: 0; background: transparent; cursor: pointer;
+  border-radius: 50%;
+  min-width: var(--touch-min); min-height: var(--touch-min);
+}
+.hotspot-btn::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.0);
+  transition: box-shadow .2s ease;
+}
+.hotspot-btn:active::after { box-shadow: 0 0 0 4px rgba(255,255,255,.7); }
+
+/* Animations de hotspots */
+.anim-shake { animation: hs-shake .5s ease; }
+.anim-fly   { animation: hs-fly .8s ease; }
+.anim-pop   { animation: hs-pop .4s ease; }
+@keyframes hs-shake { 0%,100%{transform:rotate(0)} 25%{transform:rotate(-6deg)} 75%{transform:rotate(6deg)} }
+@keyframes hs-fly { to { transform: translate(30px,-40px); opacity:.2; } }
+@keyframes hs-pop { 50% { transform: scale(1.25); } }
+
+/* Bandeau texte + karaoké */
+.reader__caption {
+  padding: var(--sp-5) var(--sp-5) calc(var(--sp-4) + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, rgba(0,0,0,.82), rgba(0,0,0,.0));
+  font-family: var(--font-kid);
+  font-size: var(--fs-kid-lg);
+  line-height: 1.4;
+  text-align: center;
+}
+.reader--n1 .reader__caption { display: none; } /* N1 : pas de texte */
+
+.kw { transition: color .1s linear; }
+.kw--read   { color: var(--c-word-read); }
+.kw--active { color: var(--c-word-active); font-weight: 700; }
+
+/* Barre de contrôle */
+.reader__bar {
+  display: flex; align-items: center; justify-content: center; gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4) calc(var(--sp-3) + env(safe-area-inset-bottom));
+  background: var(--bg-panel);
+}
+.reader__bar .icon-btn { background: var(--c-surface-2); }
+.reader__bar .icon-btn--play {
+  width: 64px; height: 64px; font-size: 30px;
+  background: var(--c-sun); color: var(--c-ink);
+}
+.reader__topbar {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 5;
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: calc(var(--sp-2) + env(safe-area-inset-top)) var(--sp-3) var(--sp-2);
+  background: linear-gradient(to bottom, rgba(0,0,0,.5), transparent);
+}
+.reader__topbar .icon-btn { background: rgba(255,255,255,.18); color: #fff; }
+.reader__page-dots { display: flex; gap: 6px; }
+.reader__page-dots i {
+  width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.4);
+}
+.reader__page-dots i.on { background: #fff; }
+
+.speed-pill {
+  border: 0; border-radius: 999px; padding: 8px 14px;
+  background: var(--c-surface-2); color: var(--text-app); font-weight: 700;
+  cursor: pointer;
+}

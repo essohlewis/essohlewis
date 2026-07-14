@@ -1,0 +1,124 @@
+/* Conteo — Composants partagés : boutons, cartes, modales, toasts. */
+
+.btn {
+  --btn-bg: var(--c-sun);
+  --btn-fg: var(--c-ink);
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: var(--sp-2);
+  min-height: 48px; padding: 0 var(--sp-5);
+  border: 0; border-radius: 999px;
+  background: var(--btn-bg); color: var(--btn-fg);
+  font-weight: 700; font-size: var(--fs-base);
+  cursor: pointer; user-select: none;
+  transition: transform .12s ease, filter .12s ease;
+}
+.btn:active { transform: scale(.96); }
+.btn:hover { filter: brightness(1.03); }
+.btn--ghost { --btn-bg: transparent; --btn-fg: var(--text-app); border: 2px solid var(--c-line); }
+.btn--leaf  { --btn-bg: var(--c-leaf); --btn-fg: #fff; }
+.btn--indigo{ --btn-bg: var(--c-indigo); --btn-fg: #fff; }
+.btn--danger{ --btn-bg: var(--c-danger); --btn-fg: #fff; }
+.btn--block { width: 100%; }
+.btn[disabled] { opacity: .5; pointer-events: none; }
+
+/* Bouton enfant : grande cible tactile ronde */
+.btn-kid {
+  min-width: var(--touch-min); min-height: var(--touch-min);
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: var(--radius-xl);
+  background: var(--c-surface); color: var(--c-ink);
+  box-shadow: var(--shadow-1);
+  font-family: var(--font-kid); font-size: var(--fs-kid-lg); font-weight: 700;
+  cursor: pointer; transition: transform .12s ease;
+}
+.btn-kid:active { transform: scale(.93); }
+
+.card {
+  background: var(--bg-panel);
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-5);
+  box-shadow: var(--shadow-1);
+}
+
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 700; line-height: 1;
+  padding: 5px 10px; border-radius: 999px;
+  background: var(--c-sun-soft); color: var(--c-earth);
+}
+.badge--new  { background: var(--c-leaf-soft); color: var(--c-leaf); }
+.badge--read { background: #E7E2D8; color: var(--c-muted); }
+.badge--lock { background: #F1E0DC; color: var(--c-earth); }
+
+/* Modales */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(20,22,31,.55);
+  display: grid; place-items: center; padding: var(--sp-5);
+  animation: fade .18s ease;
+}
+.modal {
+  background: var(--bg-panel); border-radius: var(--radius-lg);
+  padding: var(--sp-6); max-width: 26rem; width: 100%;
+  box-shadow: var(--shadow-2);
+  animation: pop .2s ease;
+  max-height: calc(100dvh - 2 * var(--sp-5));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.modal h2 { font-family: var(--font-kid); margin-bottom: var(--sp-3); }
+
+@keyframes fade { from { opacity: 0; } }
+@keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+
+/* Toasts */
+#toast-root {
+  position: fixed; left: 0; right: 0; bottom: calc(var(--sp-5) + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; align-items: center; gap: var(--sp-2);
+  pointer-events: none; z-index: 60;
+}
+.toast {
+  background: var(--c-ink); color: #fff;
+  padding: var(--sp-3) var(--sp-5); border-radius: 999px;
+  box-shadow: var(--shadow-2); font-size: var(--fs-sm);
+  animation: toast-in .2s ease;
+  max-width: 90vw;
+}
+.toast--ok { background: var(--c-leaf); }
+.toast--err { background: var(--c-danger); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(12px); } }
+
+/* Champs de formulaire (espace parent uniquement) */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: var(--fs-sm); font-weight: 600; color: var(--text-muted); }
+.field input, .field select {
+  min-height: 44px; padding: 0 var(--sp-3);
+  border: 2px solid var(--c-line); border-radius: var(--radius);
+  background: var(--c-surface); color: var(--text-app); font-size: var(--fs-base);
+}
+.field input:focus, .field select:focus { border-color: var(--c-sun); outline: none; }
+
+/* Barre de progression */
+.progress {
+  height: 12px; border-radius: 999px; background: var(--c-line); overflow: hidden;
+}
+.progress > span {
+  display: block; height: 100%; width: 0; background: var(--c-leaf);
+  transition: width .3s ease;
+}
+
+/* En-tête de vue (espace parent + enfant) */
+.appbar {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  min-height: 60px;
+}
+.appbar h1 { font-family: var(--font-kid); font-size: var(--fs-kid-base); }
+.icon-btn {
+  width: 48px; height: 48px; border-radius: 50%;
+  border: 0; background: var(--c-surface); color: var(--text-app);
+  font-size: 22px; cursor: pointer; box-shadow: var(--shadow-1);
+  display: grid; place-items: center;
+}
+.icon-btn:active { transform: scale(.92); }

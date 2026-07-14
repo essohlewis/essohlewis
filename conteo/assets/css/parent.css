@@ -1,0 +1,85 @@
+/* Conteo — Espace parent : densité adulte normale. */
+
+.parent { font-family: var(--font-parent); }
+
+.parent-tabs {
+  display: flex; gap: var(--sp-2); overflow-x: auto;
+  padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--c-line);
+  -webkit-overflow-scrolling: touch;
+}
+.parent-tabs button {
+  flex: 0 0 auto; border: 0; background: transparent; cursor: pointer;
+  padding: 10px 16px; border-radius: 999px; font-weight: 600;
+  color: var(--text-muted); white-space: nowrap;
+}
+.parent-tabs button[aria-current="page"] {
+  background: var(--c-indigo); color: #fff;
+}
+
+.parent-body { padding: var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-5); max-width: 800px; width: 100%; margin: 0 auto; }
+
+/* Verrou arithmétique */
+.gate {
+  flex: 1; display: grid; place-items: center; padding: var(--sp-6);
+}
+.gate__card { max-width: 22rem; width: 100%; text-align: center; }
+.gate__q { font-size: 2rem; font-weight: 700; margin: var(--sp-4) 0; }
+.gate__pad {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3);
+  margin-top: var(--sp-4);
+}
+.gate__pad button {
+  min-height: 60px; border: 0; border-radius: var(--radius);
+  background: var(--c-surface-2); color: var(--text-app);
+  font-size: 1.4rem; font-weight: 700; cursor: pointer;
+}
+.gate__pad button:active { transform: scale(.95); }
+.gate__display {
+  min-height: 54px; border: 2px solid var(--c-line); border-radius: var(--radius);
+  display: grid; place-items: center; font-size: 1.6rem; font-weight: 700;
+}
+
+/* Dashboard */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--sp-4); }
+.stat {
+  background: var(--bg-panel); border: 1px solid var(--c-line);
+  border-radius: var(--radius-lg); padding: var(--sp-4);
+}
+.stat__value { font-size: 1.8rem; font-weight: 700; color: var(--c-earth); }
+.stat__label { font-size: var(--fs-sm); color: var(--text-muted); }
+
+.chart-card { }
+.chart-card canvas { width: 100%; height: auto; display: block; }
+
+/* Listes parent (profils, packs, téléchargements) */
+.plist { display: flex; flex-direction: column; gap: var(--sp-3); }
+.pitem {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-4); background: var(--bg-panel);
+  border: 1px solid var(--c-line); border-radius: var(--radius-lg);
+}
+.pitem .avatar { width: 48px; height: 48px; font-size: 26px; }
+.pitem .grow { flex: 1; min-width: 0; }
+.pitem .grow h3 { font-size: 1rem; }
+.pitem .grow p { font-size: var(--fs-sm); color: var(--text-muted); }
+
+.storage-bar { margin-top: var(--sp-2); }
+
+/* Boutique */
+.shop-item { }
+.shop-item .price { font-weight: 700; color: var(--c-earth); font-size: 1.1rem; }
+
+.seg {
+  display: inline-flex; border: 2px solid var(--c-line); border-radius: 999px; overflow: hidden;
+}
+.seg button {
+  border: 0; background: transparent; padding: 8px 16px; cursor: pointer;
+  font-weight: 600; color: var(--text-muted);
+}
+.seg button[aria-pressed="true"] { background: var(--c-sun); color: var(--c-ink); }
+
+.note {
+  font-size: var(--fs-sm); color: var(--text-muted);
+  background: var(--c-surface-2); border-left: 3px solid var(--c-sun);
+  padding: var(--sp-3); border-radius: var(--radius);
+}

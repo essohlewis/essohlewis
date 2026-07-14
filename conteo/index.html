@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <!-- Base fixe = dossier de index.html. Indispensable pour une SPA : sans elle,
+       après un pushState vers /reader/<slug>, les URL relatives (fetch, <img>)
+       se résoudraient contre /reader/ au lieu de la racine de l'app. -->
+  <base href="./">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#F2A73B">
+  <meta name="description" content="Conteo — Contes africains illustrés et narrés pour les 2 à 7 ans. 100% hors-ligne, sans publicité, sans traçage.">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' https://cdn.conteo.ci data: blob:;
+                 media-src 'self' https://cdn.conteo.ci blob:; script-src 'self';
+                 style-src 'self'; font-src 'self'; connect-src 'self' https://cdn.conteo.ci;
+                 frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none';">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./assets/icons/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./assets/icons/192.png">
+  <link rel="stylesheet" href="./assets/css/tokens.css">
+  <link rel="stylesheet" href="./assets/css/base.css">
+  <link rel="stylesheet" href="./assets/css/components.css">
+  <link rel="stylesheet" href="./assets/css/kid.css">
+  <link rel="stylesheet" href="./assets/css/reader.css">
+  <link rel="stylesheet" href="./assets/css/games.css">
+  <link rel="stylesheet" href="./assets/css/parent.css">
+  <title>Conteo — Contes africains</title>
+</head>
+<body>
+  <a class="skip-link" href="#app">Aller au contenu</a>
+  <div id="app" role="main" aria-live="polite"></div>
+  <div id="toast-root" aria-live="assertive"></div>
+  <noscript>
+    <p style="padding:2rem;font-family:sans-serif">Conteo a besoin de JavaScript pour fonctionner.</p>
+  </noscript>
+  <script type="module" src="./assets/js/main.js"></script>
+</body>
+</html>

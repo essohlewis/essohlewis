@@ -1,0 +1,118 @@
+{
+  "slug": "kacou-baobab",
+  "level": "N2",
+  "title": "Kacou Ananzè et le baobab",
+  "origin": "Akan",
+  "moral": "La ruse ne remplace jamais le travail.",
+  "duration_sec": 380,
+
+  "audio": {
+    "fr":  { "src": "./media/tales/kacou-baobab/n2/fr.opus",  "fallback": "./media/tales/kacou-baobab/n2/fr.m4a",  "timings": "./data/tales/kacou-baobab/n2/fr.timings.json" },
+    "bci": { "src": "./media/tales/kacou-baobab/n2/bci.opus", "fallback": "./media/tales/kacou-baobab/n2/bci.m4a", "timings": "./data/tales/kacou-baobab/n2/bci.timings.json" },
+    "dyu": { "src": "./media/tales/kacou-baobab/n2/dyu.opus", "fallback": "./media/tales/kacou-baobab/n2/dyu.m4a" }
+  },
+
+  "pages": [
+    {
+      "index": 1,
+      "image": "./media/tales/kacou-baobab/n2/p01.webp",
+      "image_avif": "./media/tales/kacou-baobab/n2/p01.avif",
+      "text": "Il était une fois, au cœur du village, un immense baobab.",
+      "hotspots": [
+        { "id": "baobab", "shape": "circle", "cx": 0.52, "cy": 0.42, "r": 0.16, "label": "le baobab",
+          "sfx": "./media/sfx/wind_tree.opus",
+          "voice": { "fr": "./media/words/fr/baobab.opus", "bci": "./media/words/bci/baobab.opus" },
+          "animation": "shake" },
+        { "id": "oiseau", "shape": "rect", "x": 0.72, "y": 0.12, "w": 0.14, "h": 0.12, "label": "l'oiseau",
+          "sfx": "./media/sfx/bird.opus",
+          "voice": { "fr": "./media/words/fr/oiseau.opus" },
+          "animation": "fly" },
+        { "id": "village", "shape": "rect", "x": 0.05, "y": 0.68, "w": 0.30, "h": 0.20, "label": "le village",
+          "sfx": "./media/sfx/village.opus",
+          "voice": { "fr": "./media/words/fr/village.opus" },
+          "animation": "pop" }
+      ]
+    },
+    {
+      "index": 2,
+      "image": "./media/tales/kacou-baobab/n2/p02.webp",
+      "text": "Kacou Ananzè l'araignée rêvait de manger tous ses fruits sucrés.",
+      "hotspots": [
+        { "id": "araignee", "shape": "circle", "cx": 0.40, "cy": 0.55, "r": 0.14, "label": "l'araignée",
+          "sfx": "./media/sfx/pop.opus",
+          "voice": { "fr": "./media/words/fr/araignee.opus" },
+          "animation": "pop" },
+        { "id": "fruit", "shape": "circle", "cx": 0.66, "cy": 0.30, "r": 0.10, "label": "le fruit",
+          "sfx": "./media/sfx/pop.opus",
+          "voice": { "fr": "./media/words/fr/fruit.opus" },
+          "animation": "pop" }
+      ]
+    },
+    {
+      "index": 3,
+      "image": "./media/tales/kacou-baobab/n2/p03.webp",
+      "text": "« Je suis trop malin pour travailler », dit Kacou en riant.",
+      "hotspots": [
+        { "id": "kacou", "shape": "circle", "cx": 0.5, "cy": 0.5, "r": 0.15, "label": "Kacou",
+          "sfx": "./media/sfx/laugh.opus",
+          "voice": { "fr": "./media/words/fr/kacou.opus" },
+          "animation": "shake" }
+      ]
+    },
+    {
+      "index": 4,
+      "image": "./media/tales/kacou-baobab/n2/p04.webp",
+      "text": "Mais les fruits étaient trop haut, et sa ruse ne suffisait pas.",
+      "hotspots": [
+        { "id": "fruit2", "shape": "circle", "cx": 0.6, "cy": 0.2, "r": 0.10, "label": "le fruit",
+          "sfx": "./media/sfx/pop.opus", "voice": { "fr": "./media/words/fr/fruit.opus" }, "animation": "pop" }
+      ]
+    },
+    {
+      "index": 5,
+      "image": "./media/tales/kacou-baobab/n2/p05.webp",
+      "text": "Alors Kacou grimpa, tomba, et comprit enfin la leçon.",
+      "hotspots": [
+        { "id": "kacou2", "shape": "circle", "cx": 0.45, "cy": 0.6, "r": 0.14, "label": "Kacou",
+          "sfx": "./media/sfx/pop.opus", "voice": { "fr": "./media/words/fr/kacou.opus" }, "animation": "pop" }
+      ]
+    }
+  ],
+
+  "games": [
+    {
+      "type": "find_animal",
+      "question": "Quel animal chantait dans l'arbre ?",
+      "question_audio": "./media/quiz/kb/q1.opus",
+      "options": [
+        { "image": "./media/quiz/kb/oiseau.webp",  "label": "l'oiseau",  "correct": true },
+        { "image": "./media/quiz/kb/lion.webp",    "label": "le lion",   "correct": false },
+        { "image": "./media/quiz/kb/tortue.webp",  "label": "la tortue", "correct": false },
+        { "image": "./media/quiz/kb/serpent.webp", "label": "le serpent","correct": false }
+      ]
+    },
+    {
+      "type": "order_images",
+      "images": [
+        "./media/quiz/kb/s1.webp",
+        "./media/quiz/kb/s2.webp",
+        "./media/quiz/kb/s3.webp",
+        "./media/quiz/kb/s4.webp"
+      ],
+      "correct_order": [0, 1, 2, 3]
+    }
+  ],
+
+  "assets": [
+    "./media/tales/kacou-baobab/n2/p01.webp",
+    "./media/tales/kacou-baobab/n2/p02.webp",
+    "./media/tales/kacou-baobab/n2/p03.webp",
+    "./media/tales/kacou-baobab/n2/p04.webp",
+    "./media/tales/kacou-baobab/n2/p05.webp",
+    "./media/tales/kacou-baobab/n2/fr.opus",
+    "./media/tales/kacou-baobab/n2/fr.m4a",
+    "./media/sfx/wind_tree.opus",
+    "./media/sfx/bird.opus",
+    "./media/sfx/pop.opus"
+  ]
+}

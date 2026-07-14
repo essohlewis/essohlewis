@@ -1,0 +1,65 @@
+{
+  "slug": "kacou-baobab",
+  "level": "N1",
+  "title": "Kacou et le baobab",
+  "origin": "Akan",
+  "moral": "",
+  "duration_sec": 160,
+
+  "audio": {
+    "fr":  { "src": "./media/tales/kacou-baobab/n1/fr.opus",  "fallback": "./media/tales/kacou-baobab/n1/fr.m4a" },
+    "bci": { "src": "./media/tales/kacou-baobab/n1/bci.opus", "fallback": "./media/tales/kacou-baobab/n1/bci.m4a" }
+  },
+
+  "pages": [
+    {
+      "index": 1,
+      "image": "./media/tales/kacou-baobab/n1/p01.webp",
+      "text": "Le grand baobab !",
+      "hotspots": [
+        { "id": "baobab", "shape": "circle", "cx": 0.5, "cy": 0.45, "r": 0.22, "label": "le baobab",
+          "sfx": "./media/sfx/wind_tree.opus", "voice": { "fr": "./media/words/fr/baobab.opus" }, "animation": "shake" }
+      ]
+    },
+    {
+      "index": 2,
+      "image": "./media/tales/kacou-baobab/n1/p02.webp",
+      "text": "L'oiseau chante. Cui cui !",
+      "hotspots": [
+        { "id": "oiseau", "shape": "circle", "cx": 0.5, "cy": 0.4, "r": 0.2, "label": "l'oiseau",
+          "sfx": "./media/sfx/bird.opus", "voice": { "fr": "./media/words/fr/oiseau.opus" }, "animation": "fly" }
+      ]
+    },
+    {
+      "index": 3,
+      "image": "./media/tales/kacou-baobab/n1/p03.webp",
+      "text": "Kacou l'araignée. Bonjour !",
+      "hotspots": [
+        { "id": "araignee", "shape": "circle", "cx": 0.5, "cy": 0.5, "r": 0.22, "label": "l'araignée",
+          "sfx": "./media/sfx/pop.opus", "voice": { "fr": "./media/words/fr/araignee.opus" }, "animation": "pop" }
+      ]
+    },
+    {
+      "index": 4,
+      "image": "./media/tales/kacou-baobab/n1/p04.webp",
+      "text": "Le fruit sucré. Miam !",
+      "hotspots": [
+        { "id": "fruit", "shape": "circle", "cx": 0.5, "cy": 0.45, "r": 0.2, "label": "le fruit",
+          "sfx": "./media/sfx/pop.opus", "voice": { "fr": "./media/words/fr/fruit.opus" }, "animation": "pop" }
+      ]
+    }
+  ],
+
+  "games": [],
+
+  "assets": [
+    "./media/tales/kacou-baobab/n1/p01.webp",
+    "./media/tales/kacou-baobab/n1/p02.webp",
+    "./media/tales/kacou-baobab/n1/p03.webp",
+    "./media/tales/kacou-baobab/n1/p04.webp",
+    "./media/tales/kacou-baobab/n1/fr.opus",
+    "./media/sfx/wind_tree.opus",
+    "./media/sfx/bird.opus",
+    "./media/sfx/pop.opus"
+  ]
+}

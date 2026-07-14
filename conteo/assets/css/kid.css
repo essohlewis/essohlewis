@@ -1,0 +1,110 @@
+/* Conteo — Interface enfant. Grandes cibles, formes rondes, fort contraste. */
+
+.kid { font-family: var(--font-kid); }
+
+/* Splash */
+.splash {
+  flex: 1; display: grid; place-items: center; text-align: center;
+  gap: var(--sp-5); padding: var(--sp-6);
+  background: radial-gradient(circle at 50% 30%, var(--c-sun-soft), var(--bg-app));
+}
+.splash__logo { font-size: clamp(64px, 22vw, 140px); line-height: 1; }
+.splash__title {
+  font-family: var(--font-kid); font-weight: 700;
+  font-size: var(--fs-kid-xl); color: var(--c-earth);
+}
+.splash__tap {
+  font-size: var(--fs-kid-base); color: var(--text-muted);
+  animation: bob 1.6s ease-in-out infinite;
+}
+@keyframes bob { 50% { transform: translateY(-8px); } }
+
+/* Sélection de profil */
+.profile-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--sp-5); width: 100%; max-width: 640px; margin: 0 auto;
+}
+.profile-card {
+  display: flex; flex-direction: column; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-4); border: 0; border-radius: var(--radius-xl);
+  background: var(--c-surface); box-shadow: var(--shadow-1); cursor: pointer;
+  min-height: var(--touch-min);
+}
+.profile-card:active { transform: scale(.95); }
+.avatar {
+  width: 92px; height: 92px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 52px;
+  background: var(--c-leaf-soft);
+}
+.profile-card__name { font-weight: 700; font-size: var(--fs-kid-base); }
+.profile-card--add .avatar { background: var(--c-sun-soft); }
+
+/* Bibliothèque */
+.library-head {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+}
+.library-head .avatar { width: 52px; height: 52px; font-size: 30px; }
+.library-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--sp-5); padding: var(--sp-4);
+}
+.tale-card {
+  position: relative; border: 0; padding: 0; cursor: pointer;
+  border-radius: var(--radius-lg); overflow: hidden;
+  background: var(--c-surface); box-shadow: var(--shadow-1);
+  display: flex; flex-direction: column;
+}
+.tale-card:active { transform: scale(.97); }
+.tale-card__cover {
+  aspect-ratio: 4 / 3; width: 100%; object-fit: cover;
+  background: linear-gradient(135deg, var(--c-sun-soft), var(--c-leaf-soft));
+}
+.tale-card__title {
+  padding: var(--sp-3); font-family: var(--font-kid); font-weight: 700;
+  font-size: var(--fs-kid-base); text-align: left;
+}
+.tale-card__badges {
+  position: absolute; top: var(--sp-2); left: var(--sp-2); right: var(--sp-2);
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.tale-card--locked { opacity: .85; }
+.tale-card__lock {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  background: rgba(28,27,26,.35); font-size: 44px; color: #fff;
+}
+
+/* Barre de navigation basse enfant */
+.kid-nav {
+  display: flex; justify-content: space-around; gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3) calc(var(--sp-2) + env(safe-area-inset-bottom));
+  background: var(--bg-panel); border-top: 1px solid var(--c-line);
+}
+.kid-nav button {
+  flex: 1; min-height: 64px; border: 0; background: transparent; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  font-family: var(--font-kid); font-size: 13px; color: var(--text-muted);
+  border-radius: var(--radius);
+}
+.kid-nav button[aria-current="page"] { color: var(--c-earth); background: var(--c-sun-soft); }
+.kid-nav .ico { font-size: 28px; }
+
+/* Mode conte du soir */
+.bedtime {
+  flex: 1; display: grid; place-items: center; text-align: center;
+  gap: var(--sp-6); padding: var(--sp-6);
+  background: var(--c-indigo); color: #EDE7FF;
+  transition: filter 2s linear;
+}
+.bedtime__moon { font-size: clamp(70px, 24vw, 160px); }
+.bedtime__timer { font-size: var(--fs-kid-xl); font-weight: 700; }
+.bedtime__opts { display: flex; gap: var(--sp-4); }
+
+/* Mes histoires */
+.recording-list { display: flex; flex-direction: column; gap: var(--sp-3); }
+.recording-item {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-4); background: var(--c-surface);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-1);
+}
+.recording-item .meta { flex: 1; }

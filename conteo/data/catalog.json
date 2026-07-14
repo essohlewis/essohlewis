@@ -1,0 +1,96 @@
+{
+  "version": "2026.07.1",
+  "updated_at": "2026-07-14T10:00:00Z",
+  "langs": [
+    { "code": "fr",  "label": "Français" },
+    { "code": "bci", "label": "Baoulé" },
+    { "code": "dyu", "label": "Dioula" },
+    { "code": "bet", "label": "Bété" }
+  ],
+  "packs": [
+    {
+      "id": "pack-free",
+      "title": "Découverte",
+      "cover": "./media/packs/free.webp",
+      "price_fcfa": 0,
+      "is_free": true,
+      "size_mb": 42,
+      "tales": ["kacou-baobab", "leuk-et-bouki"]
+    },
+    {
+      "id": "pack-sagesse",
+      "title": "Contes de la sagesse",
+      "cover": "./media/packs/sagesse.webp",
+      "price_fcfa": 2000,
+      "is_free": false,
+      "size_mb": 118,
+      "tales": ["le-lion-et-le-chasseur", "la-tortue-et-le-leopard", "le-tam-tam-magique"]
+    }
+  ],
+  "tales": [
+    {
+      "slug": "kacou-baobab",
+      "title": "Kacou Ananzè et le baobab",
+      "origin": "Akan",
+      "cover": "./media/tales/kacou-baobab/cover.webp",
+      "pack_id": "pack-free",
+      "levels": {
+        "N1": { "manifest": "./data/tales/kacou-baobab/n1.json", "duration_sec": 160 },
+        "N2": { "manifest": "./data/tales/kacou-baobab/n2.json", "duration_sec": 380 },
+        "N3": { "manifest": "./data/tales/kacou-baobab/n3.json", "duration_sec": 720 }
+      },
+      "audio_langs": ["fr", "bci", "dyu"]
+    },
+    {
+      "slug": "leuk-et-bouki",
+      "title": "Leuk le lièvre et Bouki l'hyène",
+      "origin": "Wolof",
+      "cover": "./media/tales/leuk-et-bouki/cover.webp",
+      "pack_id": "pack-free",
+      "levels": {
+        "N1": { "manifest": "./data/tales/leuk-et-bouki/n1.json", "duration_sec": 150 },
+        "N2": { "manifest": "./data/tales/leuk-et-bouki/n2.json", "duration_sec": 360 }
+      },
+      "audio_langs": ["fr", "dyu"]
+    },
+    {
+      "slug": "le-lion-et-le-chasseur",
+      "title": "Le lion et le chasseur",
+      "origin": "Mandingue",
+      "cover": "./media/tales/le-lion-et-le-chasseur/cover.webp",
+      "pack_id": "pack-sagesse",
+      "levels": {
+        "N1": { "manifest": "./data/tales/le-lion-et-le-chasseur/n1.json", "duration_sec": 170 },
+        "N2": { "manifest": "./data/tales/le-lion-et-le-chasseur/n2.json", "duration_sec": 400 },
+        "N3": { "manifest": "./data/tales/le-lion-et-le-chasseur/n3.json", "duration_sec": 700 }
+      },
+      "audio_langs": ["fr", "dyu"]
+    },
+    {
+      "slug": "la-tortue-et-le-leopard",
+      "title": "La tortue et le léopard",
+      "origin": "Baoulé",
+      "cover": "./media/tales/la-tortue-et-le-leopard/cover.webp",
+      "pack_id": "pack-sagesse",
+      "levels": {
+        "N1": { "manifest": "./data/tales/la-tortue-et-le-leopard/n1.json", "duration_sec": 165 },
+        "N2": { "manifest": "./data/tales/la-tortue-et-le-leopard/n2.json", "duration_sec": 390 },
+        "N3": { "manifest": "./data/tales/la-tortue-et-le-leopard/n3.json", "duration_sec": 690 }
+      },
+      "audio_langs": ["fr", "bci"]
+    },
+    {
+      "slug": "le-tam-tam-magique",
+      "title": "Le tam-tam magique",
+      "origin": "Sénoufo",
+      "cover": "./media/tales/le-tam-tam-magique/cover.webp",
+      "pack_id": "pack-sagesse",
+      "levels": {
+        "N1": { "manifest": "./data/tales/le-tam-tam-magique/n1.json", "duration_sec": 160 },
+        "N2": { "manifest": "./data/tales/le-tam-tam-magique/n2.json", "duration_sec": 370 },
+        "N3": { "manifest": "./data/tales/le-tam-tam-magique/n3.json", "duration_sec": 680 }
+      },
+      "audio_langs": ["fr", "bci"]
+    }
+  ]
+}
