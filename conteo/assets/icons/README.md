@@ -1,9 +1,8 @@
 # Icônes
 
-`favicon.svg` est fourni et sert d'icône principale (navigateurs modernes, onglet).
-
-Les icônes PNG matricielles requises par le manifest PWA et les stores doivent
-être **exportées depuis `favicon.svg`** (contenu binaire, non versionné ici) :
+`favicon.svg` est la source. Les icônes PNG (`192.png`, `512.png`,
+`512-mask.png`) en sont dérivées et **sont versionnées** (le manifest PWA et les
+stores exigent du PNG). Pour les régénérer après modification du SVG :
 
 | Fichier | Taille | Usage |
 |---|---|---|
@@ -11,12 +10,11 @@ Les icônes PNG matricielles requises par le manifest PWA et les stores doivent
 | `512.png` | 512×512 | PWA (splash Android) |
 | `512-mask.png` | 512×512 | PWA `purpose: maskable` (garder ~20% de marge de sécurité) |
 
-Export en une commande (nécessite un outil de rendu SVG, ex. `rsvg-convert` ou `sharp`) :
+Régénération (rasterisation via Chromium, aucune dépendance native) :
 
 ```bash
-for s in 192 512; do rsvg-convert -w $s -h $s favicon.svg -o ${s}.png; done
-rsvg-convert -w 512 -h 512 favicon.svg -o 512-mask.png
+npm run icons        # = node tools/generate-icons.mjs
 ```
 
-Tant que les PNG ne sont pas générés, l'application reste fonctionnelle :
-le Service Worker tolère leur absence et le `favicon.svg` s'affiche.
+Le Service Worker précache ces PNG ; il tolère leur absence en dev
+(`favicon.svg` sert alors de repli).

@@ -56,9 +56,38 @@ async function render(path) {
 
   store.route = { path: p, params: found.params, query: new URLSearchParams(query || '') };
   window.dispatchEvent(new CustomEvent('conteo:route', { detail: { path: p } }));
-  const result = await found.handler(found.params, store.route.query);
-  // Une vue peut renvoyer une fonction de nettoyage (arrêt d'audio, rAF, etc.)
-  if (typeof result === 'function') currentCleanup = result;
+  try {
+    const result = await found.handler(found.params, store.route.query);
+    // Une vue peut renvoyer une fonction de nettoyage (arrêt d'audio, rAF, etc.)
+    if (typeof result === 'function') currentCleanup = result;
+  } catch (err) {
+    // Barrière d'erreur : une vue qui échoue ne laisse jamais un écran blanc.
+    console.error('Erreur de vue :', err);
+    renderErrorScreen(p);
+  }
+}
+
+function renderErrorScreen(failedPath) {
+  const app = document.getElementById('app');
+  while (app.firstChild) app.removeChild(app.firstChild);
+  const wrap = document.createElement('section');
+  wrap.className = 'kid center';
+  wrap.style.cssText = 'flex:1;gap:16px;padding:32px';
+  const h = document.createElement('h1');
+  h.className = 'section-title'; h.textContent = 'Oups, petit souci';
+  const p = document.createElement('p');
+  p.className = 'text-muted'; p.style.maxWidth = '22rem';
+  p.textContent = 'Cette page n’a pas pu s’afficher. Réessaie, ou reviens à l’accueil.';
+  const retry = document.createElement('button');
+  retry.className = 'btn'; retry.textContent = '↻ Réessayer';
+  retry.addEventListener('pointerup', () => render(failedPath));
+  const home = document.createElement('button');
+  home.className = 'btn btn--ghost'; home.textContent = '🏠 Accueil';
+  home.addEventListener('pointerup', () => navigate('/'));
+  const row = document.createElement('div');
+  row.className = 'row'; row.append(retry, home);
+  wrap.append(document.createTextNode('😅'), h, p, row);
+  app.append(wrap);
 }
 
 export function start() {

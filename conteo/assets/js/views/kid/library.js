@@ -57,6 +57,11 @@ export async function libraryView() {
     grid.append(el('p', { class: 'text-muted', text: 'Aucun conte pour ce niveau pour le moment.' }));
   }
 
+  // « Reprendre la lecture » : conte le plus récent commencé mais non terminé.
+  const resumeCard = buildResumeCard(catalog, tales, progressRows);
+
+  const scroll = el('div', { style: { flex: '1', overflowY: 'auto' } }, [resumeCard, grid]);
+
   const node = el('section', { class: 'kid view--full', style: { flex: '1', display: 'flex', flexDirection: 'column' } }, [
     el('header', { class: 'library-head' }, [
       el('div', { class: 'avatar', 'aria-hidden': 'true', text: avatarEmoji(profile.avatar_key) }),
@@ -65,11 +70,34 @@ export async function libraryView() {
         el('div', { class: 'text-muted', style: { fontSize: '13px' }, text: 'Niveau ' + levelLabel(level) })
       ])
     ]),
-    el('div', { style: { flex: '1', overflowY: 'auto' } }, [grid]),
+    scroll,
     kidNav('library')
   ]);
 
   return mount(node);
+}
+
+/* Bandeau « Reprendre » pour le dernier conte commencé et non terminé. */
+function buildResumeCard(catalog, tales, progressRows) {
+  const bySlug = Object.fromEntries(tales.map((t) => [t.slug, t]));
+  const candidate = progressRows
+    .filter((p) => !p.completed && p.last_page > 1 && bySlug[p.tale_slug])
+    .filter((p) => isTaleUnlocked(catalog, bySlug[p.tale_slug]))
+    .sort((a, b) => (b.last_read_at || 0) - (a.last_read_at || 0))[0];
+  if (!candidate) return null;
+  const tale = bySlug[candidate.tale_slug];
+
+  return el('button', {
+    class: 'resume-card',
+    'aria-label': 'Reprendre : ' + tale.title,
+    onpointerup: () => { uiTone('tap'); navigate('/reader/' + tale.slug); }
+  }, [
+    el('span', { class: 'resume-card__ico', 'aria-hidden': 'true', text: '▶️' }),
+    el('div', { class: 'resume-card__body' }, [
+      el('span', { class: 'resume-card__kicker', text: 'Reprendre la lecture' }),
+      el('strong', { class: 'resume-card__title', text: tale.title })
+    ])
+  ]);
 }
 
 /* Vignette avec repli dégradé si l'image manque (dev/offline). */

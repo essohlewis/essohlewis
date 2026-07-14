@@ -45,6 +45,21 @@
   padding: var(--sp-3) var(--sp-4);
 }
 .library-head .avatar { width: 52px; height: 52px; font-size: 30px; }
+/* Bandeau « Reprendre la lecture » */
+.resume-card {
+  display: flex; align-items: center; gap: var(--sp-3);
+  width: calc(100% - 2 * var(--sp-4)); margin: var(--sp-2) var(--sp-4) 0;
+  border: 0; cursor: pointer; text-align: left;
+  padding: var(--sp-3) var(--sp-4); border-radius: var(--radius-lg);
+  background: linear-gradient(100deg, var(--c-sun), var(--c-earth)); color: #fff;
+  box-shadow: var(--shadow-1);
+}
+.resume-card:active { transform: scale(.98); }
+.resume-card__ico { font-size: 32px; }
+.resume-card__body { display: flex; flex-direction: column; min-width: 0; }
+.resume-card__kicker { font-size: 12px; font-weight: 700; opacity: .9; text-transform: uppercase; letter-spacing: .04em; }
+.resume-card__title { font-family: var(--font-kid); font-size: var(--fs-kid-base); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .library-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: var(--sp-5); padding: var(--sp-4);

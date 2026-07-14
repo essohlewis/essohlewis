@@ -254,6 +254,26 @@ npm run tauri        # frontendDist = "../" (le dossier statique)
 
 ## Tests
 
-Le code est validé par un test de fumée Playwright qui exerce le parcours
-complet (accueil → verrou parent → création de profil → bibliothèque → lecteur →
-karaoké → jeux). Aucune dépendance runtime n'est requise pour l'application.
+Deux niveaux, sans dépendance runtime pour l'application :
+
+```bash
+npm test         # tests unitaires (node:test) : niveau/âge, format FCFA,
+                 # recherche dichotomique du karaoké, vérification HMAC des codes
+npm run test:e2e # test de fumée navigateur (Playwright) : parcours complet
+                 # accueil → verrou parent → profil → bibliothèque → lecteur → karaoké
+```
+
+- `tests/unit.test.mjs` — 14 tests de fonctions pures (aucun navigateur).
+- `tests/smoke.mjs` — auto-suffisant : démarre son propre serveur statique puis
+  pilote Chromium. Nécessite `playwright` (devDependency) ; en CI, installer le
+  navigateur avec `npx playwright install chromium`.
+
+## PWA & installabilité
+
+- **Manifest** complet + icônes **192 / 512 / 512-maskable** (régénérables via
+  `npm run icons`).
+- **Invite d'installation** (« Installer ») captée depuis `beforeinstallprompt`
+  (Android/Chrome) ; sur iOS, le « Ajouter à l'écran d'accueil » de Safari reste natif.
+- **Bannière hors-ligne** automatique + reprise en ligne.
+- **Service Worker** : précache du shell, caches nommés par pack, offline intégral.
+- **Barrière d'erreur** : une vue qui échoue affiche un écran de reprise, jamais une page blanche.

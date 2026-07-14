@@ -10,6 +10,7 @@ import { installUnlockOnce } from './audio/unlock.js';
 import { installLifecycleHooks, onLimitReached, startScreenTimer, pauseScreenTimer } from './utils/screen-time.js';
 import { el, mount } from './core/dom.js';
 import { t } from './core/i18n.js';
+import { initPWA } from './utils/pwa.js';
 
 // Vues
 import { splashView } from './views/kid/splash.js';
@@ -69,6 +70,7 @@ async function boot() {
   installUnlockOnce();
   installLifecycleHooks();
   onLimitReached(showTimeUpLock);
+  initPWA();   // invite d'installation + bannière hors-ligne
 
   // Suivi du temps d'écran uniquement dans l'espace enfant.
   window.addEventListener('conteo:route', (e) => {
@@ -78,10 +80,6 @@ async function boot() {
     if (inKid && store.activeProfile) startScreenTimer();
     else pauseScreenTimer();
   });
-
-  // Réseau.
-  window.addEventListener('online', () => (store.online = true));
-  window.addEventListener('offline', () => (store.online = false));
 
   defineRoutes();
   router.start();

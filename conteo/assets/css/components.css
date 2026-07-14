@@ -108,6 +108,30 @@
   transition: width .3s ease;
 }
 
+/* Bannière PWA (offline / online) */
+.pwa-banner {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 55;
+  padding: calc(var(--sp-2) + env(safe-area-inset-top)) var(--sp-4) var(--sp-2);
+  text-align: center; font-size: var(--fs-sm); font-weight: 600; color: #fff;
+  transform: translateY(0); transition: transform .25s ease;
+}
+.pwa-banner.hidden { transform: translateY(-110%); }
+.pwa-banner--offline { background: var(--c-earth); }
+.pwa-banner--online { background: var(--c-leaf); }
+
+/* Puce d'installation PWA */
+.install-chip {
+  position: fixed; z-index: 56;
+  right: calc(var(--sp-4) + env(safe-area-inset-right));
+  bottom: calc(var(--sp-4) + env(safe-area-inset-bottom));
+  border: 0; border-radius: 999px; cursor: pointer;
+  padding: 12px 20px; font-weight: 700; font-size: var(--fs-sm);
+  background: var(--c-indigo); color: #fff; box-shadow: var(--shadow-2);
+  animation: chip-in .3s ease;
+}
+.install-chip:active { transform: scale(.95); }
+@keyframes chip-in { from { opacity: 0; transform: translateY(10px); } }
+
 /* En-tête de vue (espace parent + enfant) */
 .appbar {
   display: flex; align-items: center; gap: var(--sp-3);

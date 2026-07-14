@@ -47,8 +47,12 @@ const SHELL_ASSETS = [
   './assets/js/utils/format.js',
   './assets/js/utils/screen-time.js',
   './assets/js/utils/a11y.js',
+  './assets/js/utils/pwa.js',
   './data/catalog.json',
-  './assets/icons/favicon.svg'
+  './assets/icons/favicon.svg',
+  './assets/icons/192.png',
+  './assets/icons/512.png',
+  './assets/icons/512-mask.png'
 ];
 
 self.addEventListener('install', (event) => {
