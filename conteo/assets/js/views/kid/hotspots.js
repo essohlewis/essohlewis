@@ -5,6 +5,7 @@
 
 import { el } from '../../core/dom.js';
 import { play as playSfx } from '../../audio/sfx.js';
+import { speakOnce } from '../../audio/speech.js';
 import { store } from '../../core/store.js';
 
 export function buildHotspotOverlay(page, { lang, onDiscover } = {}) {
@@ -52,17 +53,22 @@ async function triggerHotspot(btn, hs, lang) {
   btn.classList.add(anim);
   btn.addEventListener('animationend', () => btn.classList.remove(anim), { once: true });
 
-  // Effet sonore (Web Audio) puis mot prononcé (audio court).
+  // Effet sonore (Web Audio) puis mot prononcé.
   if (hs.sfx) playSfx(hs.sfx);
   const voiceUrl = hs.voice?.[lang] || hs.voice?.fr;
-  if (voiceUrl) {
-    setTimeout(() => speakWord(voiceUrl), 220);   // léger décalage après le SFX
-  }
+  setTimeout(() => speakWord(voiceUrl, hs.label), 220);   // léger décalage après le SFX
 }
 
-/* Lecture d'un mot isolé (élément <audio> jetable). */
-function speakWord(url) {
-  const a = new Audio(url);
-  a.volume = store.volume ?? 0.8;
-  a.play().catch(() => {});
+/* Prononce le mot : audio enregistré si disponible, sinon synthèse vocale
+   du libellé (le libellé est en français, comme le texte des contes). */
+function speakWord(url, label) {
+  const vol = store.volume ?? 0.8;
+  if (url) {
+    const a = new Audio(url);
+    a.volume = vol;
+    a.play().catch(() => { if (label) speakOnce(label, { volume: vol }); });
+    a.addEventListener('error', () => { if (label) speakOnce(label, { volume: vol }); }, { once: true });
+  } else if (label) {
+    speakOnce(label, { volume: vol });
+  }
 }

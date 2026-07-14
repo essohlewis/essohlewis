@@ -110,6 +110,19 @@ async function main() {
     if (kw < 1) throw new Error('aucun mot karaoké rendu');
   });
 
+  await step('lecture : la narration démarre et surligne les mots', async () => {
+    // Sans fichier audio (servi par CDN), la narration bascule sur la synthèse
+    // vocale ; le surlignage karaoké doit progresser à l'appui sur « Écouter ».
+    await page.waitForTimeout(400);   // laisse l'audio 404 basculer en repli
+    await page.click('.reader__bar .icon-btn--play');
+    await page.waitForTimeout(900);
+    const lit = await page.$$eval('.reader__caption .kw--active, .reader__caption .kw--read', (els) => els.length);
+    const icon = await page.textContent('.reader__bar .icon-btn--play');
+    if (lit < 1) throw new Error('aucun mot surligné après lecture');
+    if (icon !== '⏸️') throw new Error('le bouton ne passe pas en pause');
+    await page.click('.reader__bar .icon-btn--play');   // pause pour la suite
+  });
+
   await step('navigation page suivante', async () => {
     await page.click('.reader__bar .icon-btn[aria-label="Suivant"]');
     await page.waitForTimeout(200);

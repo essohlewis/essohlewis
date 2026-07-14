@@ -7,6 +7,7 @@ import { store } from '../../core/store.js';
 import { loadCatalog, getTale } from '../../content/catalog.js';
 import { loadManifest, loadTimings, resolveAudio } from '../../content/manifest.js';
 import { Narrator } from '../../audio/narrator.js';
+import { SpeechNarrator, speechAvailable, tokenize } from '../../audio/speech.js';
 import { buildHotspotOverlay } from './hotspots.js';
 import { coverImg } from './library.js';
 import { preload as preloadSfx, uiTone } from '../../audio/sfx.js';
@@ -39,9 +40,15 @@ export async function readerView({ slug }) {
   const words = timings?.words || [];
   const discovered = new Set();
 
+  // Narration de repli (synthèse vocale) — le texte des contes est en français.
+  const speech = speechAvailable() ? new SpeechNarrator('fr-FR') : null;
+  // On bascule en synthèse vocale si l'audio enregistré est absent/illisible.
+  let useTTS = !audioSrc?.primary;
+
   let pageIndex = 0;
   let speedIdx = 1;
   let narrationOn = true;
+  let wantPlaying = false;   // intention utilisateur (lecture en cours souhaitée)
 
   // Précharge les SFX de la page courante.
   const preloadPageSfx = (p) => preloadSfx((p.hotspots || []).map((h) => h.sfx));
@@ -86,7 +93,7 @@ export async function readerView({ slug }) {
       }
     }));
     preloadPageSfx(page);
-    renderCaption(page, -1);
+    renderCaption(page);
     renderDots();
     prevBtn.disabled = pageIndex === 0;
   }
@@ -96,76 +103,147 @@ export async function readerView({ slug }) {
     pages.forEach((_, i) => dots.append(el('i', { class: i === pageIndex ? 'on' : '' })));
   }
 
-  // Découpe le texte en mots pour le karaoké (indices alignés sur les timings de la page).
-  function renderCaption(page, activeWordIdx) {
+  // Rend le texte de la page en mots karaoké.
+  // - Mode audio (timings présents) : indices alignés sur les timings.
+  // - Mode synthèse vocale : découpe par caractère (data-cs = index de début).
+  function renderCaption(page) {
     if (level === 'N1') { caption.textContent = ''; return; }
     clear(caption);
-    const pageWords = words.filter((w) => w.p === (page.index));
+    const pageWords = !useTTS ? words.filter((w) => w.p === page.index) : [];
     if (pageWords.length) {
-      // On mappe l'index global du mot actif vers l'index local de la page.
-      pageWords.forEach((w, i) => {
+      pageWords.forEach((w) => {
         const globalIdx = words.indexOf(w);
         const span = el('span', { class: 'kw', text: w.w + ' ' });
-        if (globalIdx < activeWordIdx) span.classList.add('kw--read');
-        if (globalIdx === activeWordIdx) span.classList.add('kw--active');
         span.dataset.gi = globalIdx;
         caption.append(span);
       });
-    } else {
-      caption.textContent = page.text || '';
+    } else if (page.text) {
+      // Découpe caractère par caractère pour la synthèse vocale (ou repli sans timings).
+      tokenize(page.text).forEach((tk) => {
+        const span = el('span', { class: 'kw', text: tk.word + ' ' });
+        span.dataset.cs = tk.start;
+        span.dataset.ce = tk.end;
+        caption.append(span);
+      });
     }
   }
 
-  // ---- Synchronisation karaoké ----
+  // ---- Synchronisation karaoké (mode audio, par index de mot) ----
   narrator.onWord = (i) => {
     if (level === 'N1') return;
-    const spans = caption.querySelectorAll('.kw');
-    spans.forEach((s) => {
+    caption.querySelectorAll('.kw').forEach((s) => {
       const gi = Number(s.dataset.gi);
       s.classList.toggle('kw--read', gi < i);
       s.classList.toggle('kw--active', gi === i);
     });
   };
+
+  // ---- Surlignage (mode synthèse vocale, par index de caractère) ----
+  function highlightByChar(charIndex) {
+    if (level === 'N1') return;
+    caption.querySelectorAll('.kw').forEach((s) => {
+      const cs = Number(s.dataset.cs), ce = Number(s.dataset.ce);
+      s.classList.toggle('kw--read', ce <= charIndex);
+      s.classList.toggle('kw--active', cs <= charIndex && charIndex < ce);
+    });
+  }
   narrator.onPage = (p) => {
     const idx = pages.findIndex((pg) => pg.index === p);
     if (idx >= 0 && idx !== pageIndex) { pageIndex = idx; renderPage(); }
   };
-  narrator.onEnd = () => {
+  narrator.onEnd = () => finishNarration();
+
+  // Détection : si l'audio enregistré échoue à charger (404, format), on bascule
+  // en synthèse vocale — automatiquement, y compris si la lecture est en cours.
+  if (audioSrc?.primary) {
+    narrator.load(audioSrc, timings);
+    narrator.audio.addEventListener('error', () => {
+      if (useTTS) return;
+      useTTS = true;
+      renderCaption(pages[pageIndex]);
+      if (wantPlaying && narrationOn) startTTS(pageIndex);   // reprise transparente
+    });
+  }
+  if (speech) { speech.setVolume(store.volume ?? 0.8); speech.onWord = highlightByChar; }
+
+  // ---- Moteur synthèse vocale ----
+  function startTTS(fromIndex) {
+    if (!speech) { toast('Narration vocale indisponible ici', ''); wantPlaying = false; playBtn.textContent = '▶️'; return; }
+    useTTS = true;
+    wantPlaying = true;
+    playBtn.textContent = '⏸️';
+    speakPage(fromIndex);
+  }
+  function speakPage(idx) {
+    if (idx >= pages.length) { finishNarration(); return; }
+    if (idx !== pageIndex) { pageIndex = idx; renderPage(); } else { renderCaption(pages[idx]); }
+    speech.setRate(SPEEDS[speedIdx]);
+    speech.onWord = highlightByChar;
+    speech.onEnd = () => { if (wantPlaying && !speech.paused) speakPage(pageIndex + 1); };
+    speech.speak(pages[idx].text || '');
+  }
+
+  function finishNarration() {
+    wantPlaying = false;
     playBtn.textContent = '▶️';
     saveProgress(true);
-    if ((manifest.games || []).length && level !== 'N1') {
-      setTimeout(() => showGames(), 600);
-    }
-  };
+    if ((manifest.games || []).length && level !== 'N1') setTimeout(() => showGames(), 600);
+  }
 
-  // ---- Contrôles ----
+  // ---- Contrôles unifiés (audio OU synthèse vocale) ----
   function togglePlay() {
     if (!narrationOn) { toast('Narration désactivée', ''); return; }
-    if (!audioSrc?.primary) { toast('Audio indisponible ici', ''); return; }
-    if (narrator.audio.readyState === 0 && !narrator.audio.src) {
-      narrator.load(audioSrc, timings);
+    const audioBroken = useTTS || narrator.audio.error || narrator.audio.networkState === 3;
+
+    if (audioBroken) {
+      if (wantPlaying) { wantPlaying = false; speech?.pause(); playBtn.textContent = '▶️'; }
+      else if (speech?.paused) { wantPlaying = true; speech.resume(); playBtn.textContent = '⏸️'; }
+      else startTTS(pageIndex);
+      return;
     }
+    // Mode audio enregistré.
+    wantPlaying = !narrator.paused ? false : true;
     const playing = narrator.toggle();
+    wantPlaying = playing;
     playBtn.textContent = playing ? '⏸️' : '▶️';
   }
 
   playBtn.addEventListener('pointerup', () => { uiTone('tap'); togglePlay(); });
-  prevBtn.addEventListener('pointerup', () => { if (pageIndex > 0) { pageIndex--; renderPage(); seekToPage(); } });
+  prevBtn.addEventListener('pointerup', () => { if (pageIndex > 0) goToPage(pageIndex - 1); });
   nextBtn.addEventListener('pointerup', () => {
-    if (pageIndex < pages.length - 1) { pageIndex++; renderPage(); seekToPage(); }
-    else { saveProgress(true); if ((manifest.games || []).length && level !== 'N1') showGames(); }
+    if (pageIndex < pages.length - 1) goToPage(pageIndex + 1);
+    else finishNarration();
   });
-  replayBtn.addEventListener('pointerup', () => { uiTone('tap'); narrator.replaySentence(); playBtn.textContent = '⏸️'; });
+  replayBtn.addEventListener('pointerup', () => {
+    uiTone('tap');
+    if (useTTS) startTTS(pageIndex);
+    else { narrator.replaySentence(); wantPlaying = true; playBtn.textContent = '⏸️'; }
+  });
   speedBtn.addEventListener('pointerup', () => {
     speedIdx = (speedIdx + 1) % SPEEDS.length;
     narrator.setRate(SPEEDS[speedIdx]);
+    speech?.setRate(SPEEDS[speedIdx]);
     speedBtn.textContent = SPEEDS[speedIdx] + '×';
+    if (useTTS && wantPlaying) startTTS(pageIndex);   // la vitesse s'applique au prochain énoncé
   });
   narrBtn.addEventListener('pointerup', () => {
     narrationOn = !narrationOn;
     narrBtn.textContent = narrationOn ? '🔊' : '🔇';
-    if (!narrationOn && !narrator.paused) { narrator.pause(); playBtn.textContent = '▶️'; }
+    if (!narrationOn) { stopNarration(); playBtn.textContent = '▶️'; }
   });
+
+  // Change de page en respectant le moteur courant.
+  function goToPage(idx) {
+    pageIndex = idx;
+    renderPage();
+    if (useTTS) { if (wantPlaying) startTTS(idx); }
+    else { seekToPage(); }
+  }
+  function stopNarration() {
+    wantPlaying = false;
+    if (!narrator.paused) narrator.pause();
+    speech?.cancel();
+  }
 
   function seekToPage() {
     const page = pages[pageIndex];
@@ -193,7 +271,7 @@ export async function readerView({ slug }) {
   }
 
   // ---- Cycle de vie ----
-  function cleanup() { narrator.destroy(); saveProgress(false); }
+  function cleanup() { speech?.cancel(); narrator.destroy(); saveProgress(false); }
 
   renderPage();
   // Reprise à la dernière page lue.

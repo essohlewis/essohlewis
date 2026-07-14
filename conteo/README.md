@@ -50,9 +50,12 @@ profil → lire un conte.
 
 > ⚠️ Les médias (images `.webp`/`.avif`, audio `.opus`/`.m4a`) ne sont **pas**
 > versionnés dans ce dépôt : ils sont servis par CDN en production. En
-> développement, l'app fonctionne sans eux (dégradés visuels, sons de repli
-> synthétiques) — le code, la navigation, le karaoké (via timings) et les jeux
-> sont pleinement testables.
+> développement, l'app reste **pleinement utilisable** sans eux :
+> - **narration de repli par synthèse vocale** (Web Speech API) quand l'audio
+>   enregistré est absent — le conte est réellement lu à voix haute, avec
+>   surlignage karaoké synchronisé ;
+> - **prononciation des hotspots** par synthèse vocale à défaut du mot enregistré ;
+> - **sons de repli synthétiques** (Web Audio) et **dégradés visuels** pour les images.
 
 ---
 
@@ -77,7 +80,7 @@ Tout est écrit **à la main**, sans framework :
 | Routage SPA | `core/router.js` — History API (~90 lignes) |
 | État global | `core/store.js` — Proxy réactif (~50 lignes) |
 | Persistance | `core/db.js` — wrapper IndexedDB promisifié |
-| Narration + karaoké | `audio/narrator.js` — `<audio>` + `requestAnimationFrame` + **recherche dichotomique** |
+| Narration + karaoké | `audio/narrator.js` — `<audio>` + `requestAnimationFrame` + **recherche dichotomique** ; repli **synthèse vocale** (`audio/speech.js`) si l'audio enregistré manque |
 | Effets sonores | `audio/sfx.js` — Web Audio API (buffers préchargés) |
 | Enregistrement voix | `audio/recorder.js` — MediaRecorder → IndexedDB (jamais transmis) |
 | Hotspots | `views/kid/hotspots.js` — overlay de `<button>` en % (coords normalisées) |

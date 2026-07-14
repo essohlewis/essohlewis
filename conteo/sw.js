@@ -38,6 +38,7 @@ const SHELL_ASSETS = [
   './assets/js/audio/sfx.js',
   './assets/js/audio/recorder.js',
   './assets/js/audio/unlock.js',
+  './assets/js/audio/speech.js',
   './assets/js/offline/downloader.js',
   './assets/js/offline/cache.js',
   './assets/js/offline/storage.js',
