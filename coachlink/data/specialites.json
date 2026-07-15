@@ -1,0 +1,16 @@
+[
+  { "id": "sport",        "nom": "Sport & Fitness",        "emoji": "🏋️", "categorie": "Sportif" },
+  { "id": "nutrition",    "nom": "Nutrition & Diététique", "emoji": "🥗", "categorie": "Bien-être" },
+  { "id": "yoga",         "nom": "Yoga & Relaxation",      "emoji": "🧘", "categorie": "Bien-être" },
+  { "id": "business",     "nom": "Business & Entrepreneuriat", "emoji": "💼", "categorie": "Professionnel" },
+  { "id": "carriere",     "nom": "Carrière & Emploi",      "emoji": "📈", "categorie": "Professionnel" },
+  { "id": "devperso",     "nom": "Développement personnel", "emoji": "🌱", "categorie": "Bien-être" },
+  { "id": "scolaire",     "nom": "Soutien scolaire",       "emoji": "📚", "categorie": "Scolaire" },
+  { "id": "langues",      "nom": "Langues",                "emoji": "🗣️", "categorie": "Scolaire" },
+  { "id": "musique",      "nom": "Musique",                "emoji": "🎵", "categorie": "Artistique" },
+  { "id": "danse",        "nom": "Danse",                  "emoji": "💃", "categorie": "Artistique" },
+  { "id": "finance",      "nom": "Finance personnelle",    "emoji": "💰", "categorie": "Professionnel" },
+  { "id": "prisedeparole","nom": "Prise de parole",        "emoji": "🎤", "categorie": "Professionnel" },
+  { "id": "parentalite",  "nom": "Parentalité",            "emoji": "👨‍👩‍👧", "categorie": "Bien-être" },
+  { "id": "mental",       "nom": "Coaching mental",        "emoji": "🧠", "categorie": "Bien-être" }
+]
