@@ -215,7 +215,7 @@
 /* ============================ MESSAGERIE ================================= */
 .messagerie {
   display: grid; grid-template-columns: 320px 1fr;
-  height: calc(100vh - var(--hauteur-entete) - var(--e-5) * 2);
+  height: calc(100dvh - var(--hauteur-entete) - var(--e-5) * 2);
   border: 1px solid var(--bordure); border-radius: var(--r-lg); overflow: hidden; background: var(--surface);
 }
 .conversations { border-right: 1px solid var(--bordure); overflow-y: auto; }
@@ -300,12 +300,66 @@ table.tableau { width: 100%; border-collapse: collapse; min-width: 640px; }
 @media (max-width: 900px) {
   .hero__grille { grid-template-columns: 1fr; }
   .hero__visuel { display: none; }
-  .auth-page { grid-template-columns: 1fr; }
+  .auth-page { grid-template-columns: 1fr; min-height: calc(100dvh - var(--hauteur-entete)); }
   .auth-visuel { display: none; }
   .recherche-layout { grid-template-columns: 1fr; }
   .filtres { position: static; }
-  .messagerie { grid-template-columns: 1fr; }
+
+  /* Messagerie plein écran sur mobile (bascule liste ⇄ conversation) */
+  .messagerie {
+    grid-template-columns: 1fr;
+    height: calc(100dvh - var(--hauteur-entete) - 120px);
+  }
   .messagerie.voir-chat .conversations { display: none; }
   .messagerie:not(.voir-chat) .chat { display: none; }
   .operateurs { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ------- Affinages mobile (téléphones) : lisibilité & pleine largeur ------- */
+@media (max-width: 640px) {
+  .hero { padding: var(--e-6) 0; }
+  .hero p.accroche { font-size: var(--fs-md); max-width: 100%; }
+  .hero__cta { flex-direction: column; }
+  .hero__cta .btn { width: 100%; }
+  .hero__preuves { gap: var(--e-4); justify-content: space-between; }
+  .section { padding: var(--e-6) 0; }
+  .section__titre p { font-size: var(--fs-md); }
+
+  /* En-tête de profil : empilé et centré pour tenir sur l'écran */
+  .profil-entete {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-top: -70px;
+    padding: 0 var(--e-3);
+  }
+  .profil-entete__info { padding-bottom: 0; }
+  .profil-entete__nom { justify-content: center; }
+  .profil-entete .rangee.rangee-wrap { justify-content: center; }
+  .profil-couverture { height: 150px; }
+  .profil-stats { gap: var(--e-4); justify-content: space-around; width: 100%; }
+
+  /* Les boutons d'action du profil passent en pleine largeur (faciles à toucher) */
+  .profil-actions .btn { flex: 1 1 140px; }
+
+  /* Tarifs et opérateurs : une colonne bien lisible */
+  .operateurs { grid-template-columns: repeat(2, 1fr); }
+  .cta-final { padding: var(--e-5); }
+
+  /* Bulles de chat un peu plus larges pour le confort de lecture */
+  .bulle { max-width: 85%; font-size: var(--fs-md); }
+  .chat__corps { padding: var(--e-3); }
+
+  /* En-tête de page : titres et actions empilés */
+  .page-entete { flex-direction: column; align-items: stretch; gap: var(--e-3); }
+  .page-entete .btn { width: 100%; }
+
+  /* Onglets défilables horizontalement sans casser la mise en page */
+  .onglets { margin-inline: calc(var(--gouttiere) * -1); padding-inline: var(--gouttiere); }
+}
+
+@media (max-width: 400px) {
+  .hero__preuve strong { font-size: var(--fs-xl); }
+  .profil-entete__avatar { width: 108px; height: 108px; }
+  .operateurs { grid-template-columns: 1fr; }
 }

@@ -56,7 +56,7 @@
     ]);
 
     /* --------------------------- Actions ---------------------------- */
-    const actions = el("div", { class: "rangee rangee-wrap gap-2 mt-4", style: "padding:0 var(--e-5)" }, [
+    const actions = el("div", { class: "rangee rangee-wrap gap-2 mt-4 profil-actions", style: "padding:0 var(--e-5)" }, [
       el("button", { class: "btn btn-cta btn-lg", html: CL.icon("calendrier", 18) + " Réserver une séance", onclick: () => ouvrirReservation(coach) }),
       el("button", { class: "btn btn-primaire", html: CL.icon("message", 18) + " Contacter", onclick: () => contacter(coach) }),
       btnFav,

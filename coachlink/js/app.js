@@ -119,6 +119,7 @@
   function rendre() {
     const { chemin, params } = analyser();
     CL.layout.fermerPanneaux && CL.layout.fermerPanneaux();
+    CL.layout.fermerMenuPublic && CL.layout.fermerMenuPublic();
 
     let trouve = null, args = params;
     for (const r of routes) {

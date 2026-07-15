@@ -246,6 +246,15 @@
   z-index: var(--z-toast);
   max-width: 360px;
 }
+/* Sur mobile : bandeau pleine largeur en haut, ne masque pas les titres. */
+@media (max-width: 560px) {
+  .toast-zone {
+    top: calc(var(--hauteur-entete) + 8px);
+    left: var(--gouttiere-safe-g); right: var(--gouttiere-safe-d);
+    max-width: none;
+  }
+  .toast { box-shadow: var(--ombre-lg); }
+}
 .toast {
   display: flex; align-items: flex-start; gap: var(--e-3);
   background: var(--surface);

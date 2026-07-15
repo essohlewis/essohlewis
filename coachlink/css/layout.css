@@ -14,7 +14,8 @@
 }
 .entete__inner {
   width: 100%; max-width: var(--largeur-max);
-  margin-inline: auto; padding-inline: var(--e-4);
+  margin-inline: auto;
+  padding-left: var(--gouttiere-safe-g); padding-right: var(--gouttiere-safe-d);
   display: flex; align-items: center; gap: var(--e-4);
 }
 .logo {
@@ -41,7 +42,7 @@
 .burger { display: none; }
 
 /* --- Structure application (sidebar + contenu) ---------------------------- */
-.app-shell { display: flex; min-height: calc(100vh - var(--hauteur-entete)); }
+.app-shell { display: flex; min-height: calc(100dvh - var(--hauteur-entete)); }
 
 .sidebar {
   width: var(--largeur-sidebar);
@@ -145,6 +146,45 @@
   background: var(--overlay); z-index: var(--z-sidebar);
 }
 
+/* --- Tiroir de navigation mobile (pages publiques) ------------------------ */
+.menu-mobile-overlay {
+  position: fixed; inset: 0;
+  background: var(--overlay);
+  z-index: calc(var(--z-entete) + 5);
+  opacity: 0; transition: opacity var(--t-normal);
+}
+.menu-mobile-overlay.ouvert { opacity: 1; }
+.menu-mobile {
+  position: fixed; top: 0; right: 0;
+  width: min(86vw, 340px);
+  height: 100dvh;
+  background: var(--surface);
+  z-index: calc(var(--z-entete) + 6);
+  box-shadow: var(--ombre-lg);
+  display: flex; flex-direction: column;
+  transform: translateX(100%);
+  transition: transform var(--t-normal);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.menu-mobile.ouvert { transform: translateX(0); }
+.menu-mobile__entete {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--e-4);
+  padding-top: max(var(--e-4), env(safe-area-inset-top));
+  border-bottom: 1px solid var(--bordure);
+}
+.menu-mobile__liens { flex: 1; overflow-y: auto; padding: var(--e-3); }
+.menu-mobile__lien {
+  display: flex; align-items: center; gap: var(--e-3);
+  padding: 14px 14px; border-radius: var(--r-md);
+  color: var(--texte); font-weight: 600;
+  min-height: 48px;
+}
+.menu-mobile__lien:hover, .menu-mobile__lien.actif {
+  background: var(--bleu-confiance-clair); color: var(--bleu-confiance);
+}
+.menu-mobile__pied { padding: var(--e-4); border-top: 1px solid var(--bordure); }
+
 /* ==========================================================================
    Responsive
    ========================================================================== */
@@ -159,23 +199,55 @@
   .entete__nav { display: none; }
   .burger { display: inline-flex; }
 
+  /* En-tête : gouttières sûres + espacement compact */
+  .entete__inner {
+    padding-left: var(--gouttiere-safe-g);
+    padding-right: var(--gouttiere-safe-d);
+    gap: var(--e-2);
+  }
+  .entete__actions { gap: 4px; }
+
+  /* Sidebar en tiroir plein écran (largeur confortable) */
   .sidebar {
     position: fixed; left: 0; top: var(--hauteur-entete);
+    width: min(84vw, 320px);
+    height: calc(100dvh - var(--hauteur-entete));
     transform: translateX(-100%);
     transition: transform var(--t-normal);
     z-index: calc(var(--z-sidebar) + 1);
     box-shadow: var(--ombre-lg);
+    padding-bottom: calc(var(--e-5) + env(safe-area-inset-bottom));
   }
   .sidebar.ouvert { transform: translateX(0); }
   .sidebar-overlay.ouvert { display: block; }
 
-  .contenu { padding: var(--e-4); }
-  .grille-2, .grille-3, .grille-4 { grid-template-columns: 1fr; }
-  .pied__grille { grid-template-columns: 1fr; }
-  h1 { font-size: var(--fs-2xl); }
+  /* Le contenu occupe TOUTE la largeur du téléphone (gouttières sûres) */
+  .contenu {
+    padding: var(--e-4) var(--gouttiere-safe-d) calc(var(--e-5) + env(safe-area-inset-bottom)) var(--gouttiere-safe-g);
+  }
+  .grille { gap: var(--e-4); }
+  /* Cartes statistiques : 2 par ligne (au lieu d'une colonne trop haute) */
+  .grille-4 { grid-template-columns: repeat(2, 1fr); }
+  .grille-2, .grille-3 { grid-template-columns: 1fr; }
+  .pied__grille { grid-template-columns: 1fr 1fr; }
+
+  /* Cibles tactiles confortables (min 44px) */
+  .sidebar__lien, .btn { min-height: 44px; }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 560px) {
   .grille-coachs { grid-template-columns: 1fr; }
+  .logo { font-size: var(--fs-md); }
+  .logo__pastille { width: 28px; height: 28px; }
+}
+
+@media (max-width: 400px) {
+  /* Très petits écrans : masquer le libellé du bouton S'inscrire */
   .entete__actions .btn span.label-btn { display: none; }
+  .pied__grille { grid-template-columns: 1fr; }
+  /* Les cartes statistiques/catégories restent en 2 colonnes (occupation
+     optimale de l'écran, pas de colonnes géantes qui gaspillent l'espace). */
+  .grille-4 { grid-template-columns: repeat(2, 1fr); gap: var(--e-3); }
+  .stat-carte, .categorie-carte { padding: var(--e-3); }
+  .stat-carte__valeur { font-size: var(--fs-2xl); }
 }

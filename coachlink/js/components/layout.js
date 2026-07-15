@@ -163,12 +163,75 @@
     return el("a", { href, class: actif ? "actif" : "", text: label });
   }
 
-  /* ------------------------- Sidebar tableau de bord ----------------- */
+  /* ------------------------- Menu mobile intelligent ----------------- */
+  // Sur les pages de tableau de bord : bascule la sidebar existante.
+  // Sur les pages publiques (pas de sidebar) : ouvre un tiroir de navigation.
   function basculerSidebarMobile() {
     const sb = document.querySelector(".sidebar");
-    const ov = document.querySelector(".sidebar-overlay");
-    if (sb) sb.classList.toggle("ouvert");
-    if (ov) ov.classList.toggle("ouvert");
+    if (sb) {
+      const ov = document.querySelector(".sidebar-overlay");
+      sb.classList.toggle("ouvert");
+      if (ov) ov.classList.toggle("ouvert");
+    } else {
+      basculerMenuPublic();
+    }
+  }
+
+  function basculerMenuPublic() {
+    const existant = document.getElementById("menu-mobile");
+    if (existant) { fermerMenuPublic(); return; }
+
+    const u = auth.courant();
+    const route = location.hash || "#/";
+    const lien = (href, label, icone) => {
+      const a = el("a", { class: "menu-mobile__lien" + (route === href || (href !== "#/" && route.startsWith(href)) ? " actif" : ""), href, html: CL.icon(icone, 20) + " " + esc(label) });
+      a.addEventListener("click", fermerMenuPublic);
+      return a;
+    };
+
+    const liens = [
+      lien("#/", "Accueil", "dashboard"),
+      lien("#/recherche", "Trouver un coach", "recherche"),
+      lien("#/comment-ca-marche", "Comment ça marche", "bouclier"),
+    ];
+    if (u) {
+      if (u.role === "client") liens.push(lien("#/client", "Mon espace", "utilisateur"));
+      if (u.role === "coach") liens.push(lien("#/espace-coach", "Espace coach", "diplome"));
+      if (u.role === "admin") liens.push(lien("#/admin", "Administration", "bouclier"));
+      liens.push(lien("#/messages", "Messagerie", "message"));
+    }
+
+    const actions = u
+      ? el("button", { class: "btn btn-fantome btn-bloc", style: "color:var(--rouge-alerte)", html: CL.icon("deconnexion", 18) + " Se déconnecter", onclick: () => { auth.deconnecter(); fermerMenuPublic(); CL.toast.info("À bientôt !", ""); location.hash = "#/"; rendreEntete(); } })
+      : el("div", { class: "pile-2" }, [
+          el("a", { class: "btn btn-fantome btn-bloc", href: "#/connexion", text: "Connexion", onclick: fermerMenuPublic }),
+          el("a", { class: "btn btn-cta btn-bloc", href: "#/inscription", text: "S'inscrire", onclick: fermerMenuPublic }),
+        ]);
+
+    const drawer = el("nav", { class: "menu-mobile", id: "menu-mobile" }, [
+      el("div", { class: "menu-mobile__entete" }, [
+        el("strong", { text: "Navigation" }),
+        el("button", { class: "btn-icone btn-fantome", "aria-label": "Fermer", html: CL.icon("fermer", 22), onclick: fermerMenuPublic }),
+      ]),
+      el("div", { class: "menu-mobile__liens" }, liens),
+      el("div", { class: "menu-mobile__pied" }, [actions]),
+    ]);
+    const overlay = el("div", { class: "menu-mobile-overlay", id: "menu-mobile-overlay" });
+    overlay.addEventListener("click", fermerMenuPublic);
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(drawer);
+    document.body.style.overflow = "hidden";
+    // Animation d'entrée.
+    requestAnimationFrame(() => { drawer.classList.add("ouvert"); overlay.classList.add("ouvert"); });
+  }
+
+  function fermerMenuPublic() {
+    const d = document.getElementById("menu-mobile");
+    const o = document.getElementById("menu-mobile-overlay");
+    if (d) { d.classList.remove("ouvert"); setTimeout(() => d.remove(), 260); }
+    if (o) { o.classList.remove("ouvert"); setTimeout(() => o.remove(), 260); }
+    document.body.style.overflow = "";
   }
 
   /**
@@ -235,6 +298,6 @@
 
   CL.layout = {
     rendreEntete, themeCourant, basculerTheme, sidebar, pied,
-    basculerSidebarMobile, fermerPanneaux,
+    basculerSidebarMobile, fermerPanneaux, fermerMenuPublic,
   };
 })();

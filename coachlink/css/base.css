@@ -22,16 +22,26 @@ body {
   color: var(--texte);
   background-color: var(--fond);
   min-height: 100vh;
+  min-height: 100dvh; /* hauteur dynamique : couvre tout l'écran mobile */
+  overflow-x: hidden; /* aucun débordement horizontal sur téléphone */
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   transition: background-color var(--t-normal), color var(--t-normal);
 }
 
 /* Titres */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--police-titre);
-  line-height: 1.25;
+  line-height: 1.2;
   color: var(--texte);
   font-weight: 700;
+  overflow-wrap: break-word; /* évite tout débordement des longs mots */
+  hyphens: auto;
+}
+
+/* Le texte long ne déborde jamais de son conteneur. */
+p, span, a, li, strong, label, div, button, td, th {
+  overflow-wrap: break-word;
 }
 h1 { font-size: var(--fs-3xl); }
 h2 { font-size: var(--fs-2xl); }
@@ -92,12 +102,13 @@ input, select, textarea {
   border: 0;
 }
 
-/* Conteneur centré */
+/* Conteneur centré (gouttières sûres pour les encoches mobiles) */
 .conteneur {
   width: 100%;
   max-width: var(--largeur-max);
   margin-inline: auto;
-  padding-inline: var(--e-4);
+  padding-left: var(--gouttiere-safe-g);
+  padding-right: var(--gouttiere-safe-d);
 }
 
 /* Sélection de texte */
