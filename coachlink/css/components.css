@@ -290,6 +290,11 @@
 }
 .onglet.actif { color: var(--bleu-confiance); border-bottom-color: var(--bleu-confiance); }
 .onglet:hover { color: var(--texte); }
+/* Onglets collants (profil) : restent visibles au défilement. */
+.onglets--sticky {
+  position: sticky; top: var(--hauteur-entete);
+  background: var(--fond); z-index: 5;
+}
 
 /* --- Avatar --------------------------------------------------------------- */
 .avatar {

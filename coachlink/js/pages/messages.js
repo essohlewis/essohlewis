@@ -9,6 +9,8 @@
   const { el, esc } = CL.dom;
   const { auth, messageService, ui, format } = CL;
 
+  let ecouteurMessage = null; // référence à l'écouteur cl:message courant
+
   CL.pages.messages = function (params) {
     const u = auth.courant();
     let convActiveId = params.conv || null;
@@ -101,9 +103,11 @@
       ]));
     }
 
-    // Écoute temps réel local.
-    const onMessage = () => { if (document.body.contains(conteneur)) { rafraichirListe(); } };
-    window.addEventListener("cl:message", onMessage);
+    // Écoute temps réel local. On retire l'écouteur précédent pour éviter
+    // l'accumulation à chaque visite de la page.
+    if (ecouteurMessage) window.removeEventListener("cl:message", ecouteurMessage);
+    ecouteurMessage = () => { if (document.body.contains(conteneur)) rafraichirListe(); };
+    window.addEventListener("cl:message", ecouteurMessage);
 
     rafraichirListe();
     if (convActiveId) { conteneur.classList.add("voir-chat"); ouvrirChat(); } else ouvrirChat();

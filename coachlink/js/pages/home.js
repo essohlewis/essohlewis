@@ -133,6 +133,9 @@
       ]),
     ]));
 
+    // Apparition progressive au défilement (sauf le hero, visible d'emblée).
+    CL.dom.qsa(".section", frag).forEach((s) => s.classList.add("reveal"));
+
     return frag;
   };
 

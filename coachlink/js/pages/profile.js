@@ -99,7 +99,7 @@
       ["avis", "Avis (" + (coach.avis || []).length + ")"],
       ["dispo", "Disponibilités"],
     ];
-    const barreOnglets = el("div", { class: "onglets" }, onglets.map(([cle, label], i) => {
+    const barreOnglets = el("div", { class: "onglets onglets--sticky" }, onglets.map(([cle, label], i) => {
       const o = el("button", { class: "onglet" + (i === 0 ? " actif" : ""), text: label, "data-onglet": cle });
       o.addEventListener("click", () => {
         barreOnglets.querySelectorAll(".onglet").forEach((x) => x.classList.remove("actif"));

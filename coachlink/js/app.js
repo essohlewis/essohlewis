@@ -157,6 +157,7 @@
     }
 
     CL.dom.vider(app);
+    contenu.classList.add("page-anim"); // transition douce à chaque page
 
     if (trouve.shell === "dash") {
       const role = trouve.role === "any" ? (CL.auth.courant() || {}).role : trouve.role;
@@ -177,6 +178,23 @@
 
     CL.layout.rendreEntete();
     window.scrollTo(0, 0);
+    observerReveal();
+  }
+
+  /* Apparition progressive des éléments .reveal au défilement. */
+  function observerReveal() {
+    const cibles = CL.dom.qsa(".reveal:not(.visible)", app);
+    if (!cibles.length) return;
+    if (!("IntersectionObserver" in window)) {
+      cibles.forEach((c) => c.classList.add("visible"));
+      return;
+    }
+    const obs = new IntersectionObserver((entrees) => {
+      entrees.forEach((e) => {
+        if (e.isIntersecting) { e.target.classList.add("visible"); obs.unobserve(e.target); }
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+    cibles.forEach((c) => obs.observe(c));
   }
 
   function rendre404() {
@@ -205,12 +223,34 @@
     window.addEventListener("cl:notif", () => CL.layout.rendreEntete());
     window.addEventListener("cl:favoris", () => {});
 
+    installerRetourHaut();
     rendre();
 
     // Enregistrement du service worker (PWA) — ignoré en file://.
     if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
       navigator.serviceWorker.register("service-worker.js").catch(() => {});
     }
+  }
+
+  /* Bouton flottant « retour en haut » (apparaît après défilement). */
+  function installerRetourHaut() {
+    const btn = CL.dom.el("button", {
+      class: "retour-haut", "aria-label": "Retour en haut",
+      html: CL.icon("fleche_gauche", 22),
+    });
+    // La flèche « gauche » pivotée de 90° pointe vers le haut.
+    btn.querySelector("svg").style.transform = "rotate(90deg)";
+    btn.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+    document.body.appendChild(btn);
+    let tick = false;
+    window.addEventListener("scroll", () => {
+      if (tick) return;
+      tick = true;
+      requestAnimationFrame(() => {
+        btn.classList.toggle("visible", window.scrollY > 500);
+        tick = false;
+      });
+    }, { passive: true });
   }
 
   CL.router = { rendre, aller: (h) => { location.hash = h; } };
