@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="MediaGrab — téléchargeur de médias 100 % côté client (front-only). Télécharge des URL directes, importe des fichiers locaux et convertit des images, sans backend." />
+  <meta name="color-scheme" content="dark light" />
+  <title>MediaGrab — Téléchargeur de médias front-only</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Favicon inline (data URI) pour rester 100 % hors ligne, aucune requête externe -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%AC%87%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+</head>
+<body>
+  <!-- =========================================================
+       EN-TÊTE
+       ========================================================= -->
+  <header class="app-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="#top" aria-label="MediaGrab, accueil">
+        <span class="brand-mark" aria-hidden="true">⬇</span>
+        <span class="brand-name">Media<span class="accent">Grab</span></span>
+      </a>
+
+      <button
+        id="theme-toggle"
+        class="theme-toggle"
+        type="button"
+        aria-pressed="false"
+        aria-label="Basculer entre le thème sombre et clair"
+      >
+        <span class="theme-icon theme-icon--dark" aria-hidden="true">🌙</span>
+        <span class="theme-icon theme-icon--light" aria-hidden="true">☀️</span>
+        <span class="theme-label">Thème</span>
+      </button>
+    </div>
+  </header>
+
+  <a id="top"></a>
+
+  <main class="wrap app-main">
+    <!-- =========================================================
+         HÉRO / INTRO
+         ========================================================= -->
+    <section class="hero" aria-labelledby="hero-title">
+      <h1 id="hero-title" class="hero-title">
+        Téléchargez des médias, <span class="accent">directement dans votre navigateur</span>.
+      </h1>
+      <p class="hero-sub">
+        100 % côté client. Aucune donnée envoyée à un serveur. Fonctionne hors ligne
+        pour vos fichiers locaux et pour toute URL directe autorisée par le serveur distant.
+      </p>
+    </section>
+
+    <!-- =========================================================
+         1. TÉLÉCHARGEMENT PAR URL DIRECTE
+         ========================================================= -->
+    <section class="card" aria-labelledby="url-title">
+      <div class="card-head">
+        <h2 id="url-title" class="card-title">🔗 Télécharger depuis une URL directe</h2>
+        <p class="card-desc">
+          Collez le lien direct d'un média (<code>.mp4</code>, <code>.webm</code>,
+          <code>.mp3</code>, <code>.jpg</code>, <code>.pdf</code>…). Le fichier doit être
+          servi en <strong>HTTPS</strong> et autoriser l'accès inter-origines (CORS).
+        </p>
+      </div>
+
+      <form id="url-form" class="url-form" novalidate>
+        <div class="field">
+          <label for="url-input" class="visually-hidden">URL du média à télécharger</label>
+          <input
+            id="url-input"
+            name="url"
+            type="url"
+            class="input"
+            placeholder="https://exemple.com/video.mp4"
+            autocomplete="off"
+            spellcheck="false"
+            inputmode="url"
+            aria-describedby="url-hint"
+          />
+          <button id="url-fetch-btn" type="submit" class="btn btn--primary">
+            <span class="btn-label">Récupérer</span>
+          </button>
+        </div>
+        <p id="url-hint" class="hint">Protocole <code>https://</code> requis.</p>
+      </form>
+
+      <!-- Encart d'avertissement plateformes non supportées -->
+      <div id="platform-warning" class="alert alert--warn" role="alert" hidden>
+        <span class="alert-icon" aria-hidden="true">⚠️</span>
+        <div class="alert-body">
+          <strong id="platform-warning-title">Plateforme non prise en charge</strong>
+          <p id="platform-warning-text"></p>
+        </div>
+      </div>
+
+      <!-- Zone d'erreur / info accessible -->
+      <div id="url-status" class="alert alert--info" role="status" aria-live="polite" hidden>
+        <span class="alert-icon" aria-hidden="true">ℹ️</span>
+        <div class="alert-body" id="url-status-body"></div>
+      </div>
+
+      <!-- Barre de progression du téléchargement en cours -->
+      <div id="url-progress-wrap" class="progress-wrap" hidden>
+        <div class="progress-meta">
+          <span id="url-progress-name" class="progress-name">Téléchargement…</span>
+          <span id="url-progress-pct" class="progress-pct" aria-hidden="true">0 %</span>
+        </div>
+        <div
+          class="progress"
+          role="progressbar"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="0"
+          aria-label="Progression du téléchargement"
+          id="url-progressbar"
+        >
+          <div id="url-progress-fill" class="progress-fill" style="width:0%"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         6. FILE D'ATTENTE (QUEUE) — plusieurs URL
+         ========================================================= -->
+    <section class="card" aria-labelledby="queue-title">
+      <div class="card-head">
+        <h2 id="queue-title" class="card-title">📋 File d'attente</h2>
+        <p class="card-desc">
+          Collez plusieurs URL (une par ligne). Elles seront traitées séquentiellement.
+        </p>
+      </div>
+
+      <div class="field field--column">
+        <label for="queue-input" class="label">URL à mettre en file (une par ligne)</label>
+        <textarea
+          id="queue-input"
+          class="input textarea"
+          rows="4"
+          placeholder="https://exemple.com/a.mp4&#10;https://exemple.com/b.mp3"
+          spellcheck="false"
+        ></textarea>
+      </div>
+      <div class="btn-row">
+        <button id="queue-start-btn" type="button" class="btn btn--primary">Lancer la file</button>
+        <button id="queue-clear-btn" type="button" class="btn btn--ghost">Vider la file</button>
+      </div>
+
+      <ul id="queue-list" class="queue-list" aria-live="polite" aria-label="Éléments de la file d'attente"></ul>
+    </section>
+
+    <!-- =========================================================
+         3. IMPORT DE FICHIERS LOCAUX + 4. APERÇU
+         ========================================================= -->
+    <section class="card" aria-labelledby="local-title">
+      <div class="card-head">
+        <h2 id="local-title" class="card-title">📂 Importer un fichier local</h2>
+        <p class="card-desc">
+          Glissez-déposez un média ou sélectionnez-le. Aperçu, métadonnées et conversion
+          d'image (PNG → JPG/WebP) restent entièrement sur votre appareil.
+        </p>
+      </div>
+
+      <div
+        id="dropzone"
+        class="dropzone"
+        tabindex="0"
+        role="button"
+        aria-label="Zone de dépôt de fichiers. Activez pour choisir un fichier."
+      >
+        <span class="dropzone-icon" aria-hidden="true">⬆️</span>
+        <p class="dropzone-text">
+          <strong>Glissez un fichier ici</strong> ou <span class="link-like">parcourez</span>
+        </p>
+        <p class="dropzone-hint">Vidéo, audio, image ou PDF</p>
+        <input
+          id="file-input"
+          type="file"
+          class="visually-hidden"
+          accept="video/*,audio/*,image/*,application/pdf"
+        />
+      </div>
+
+      <!-- Aperçu + métadonnées + conversion -->
+      <div id="preview-panel" class="preview-panel" hidden>
+        <div class="preview-media" id="preview-media"><!-- lecteur injecté ici --></div>
+
+        <div class="preview-info">
+          <h3 class="preview-title" id="preview-filename">—</h3>
+          <dl class="meta-grid" id="preview-meta"><!-- métadonnées injectées --></dl>
+
+          <div class="preview-actions">
+            <div class="field field--column">
+              <label class="label" for="rename-input">Renommer le fichier</label>
+              <input id="rename-input" type="text" class="input" placeholder="mon-fichier" />
+            </div>
+
+            <button id="download-local-btn" type="button" class="btn btn--primary">
+              Télécharger
+            </button>
+          </div>
+
+          <!-- Conversion d'image via canvas -->
+          <div id="convert-panel" class="convert-panel" hidden>
+            <h4 class="convert-title">Convertir l'image</h4>
+            <div class="field convert-row">
+              <label class="visually-hidden" for="convert-format">Format de sortie</label>
+              <select id="convert-format" class="input select">
+                <option value="image/jpeg">JPG</option>
+                <option value="image/webp">WebP</option>
+                <option value="image/png">PNG</option>
+              </select>
+              <label class="quality-label" for="convert-quality">
+                Qualité <span id="quality-value">0.92</span>
+              </label>
+              <input
+                id="convert-quality"
+                class="range"
+                type="range"
+                min="0.1" max="1" step="0.01" value="0.92"
+              />
+              <button id="convert-btn" type="button" class="btn btn--accent">Convertir & télécharger</button>
+            </div>
+            <p class="hint">La conversion s'effectue via <code>&lt;canvas&gt;</code>, localement.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         5. HISTORIQUE
+         ========================================================= -->
+    <section class="card" aria-labelledby="history-title">
+      <div class="card-head card-head--row">
+        <div>
+          <h2 id="history-title" class="card-title">🕘 Historique</h2>
+          <p class="card-desc">Stocké localement (<code>localStorage</code>). Rien n'est envoyé en ligne.</p>
+        </div>
+        <button id="history-clear-btn" type="button" class="btn btn--ghost btn--sm">Tout vider</button>
+      </div>
+
+      <ul id="history-list" class="history-list" aria-live="polite" aria-label="Historique des téléchargements"></ul>
+      <p id="history-empty" class="empty-state">Aucun téléchargement pour l'instant.</p>
+    </section>
+
+    <!-- =========================================================
+         README INTÉGRÉ
+         ========================================================= -->
+    <section class="card readme" aria-labelledby="readme-title">
+      <details>
+        <summary id="readme-title" class="card-title readme-summary">📖 À propos de MediaGrab (lisez-moi)</summary>
+        <div class="readme-body">
+          <h3>Ce que MediaGrab <span class="ok">peut</span> faire</h3>
+          <ul>
+            <li>Télécharger un <strong>lien direct</strong> vers un média (avec barre de progression réelle quand le serveur envoie <code>Content-Length</code>).</li>
+            <li>Importer des <strong>fichiers locaux</strong> (glisser-déposer ou sélecteur), les prévisualiser et lire leurs métadonnées.</li>
+            <li><strong>Convertir</strong> une image côté client via <code>&lt;canvas&gt;</code> (PNG ↔ JPG ↔ WebP).</li>
+            <li>Gérer une <strong>file d'attente</strong> de plusieurs URL, et un <strong>historique</strong> persistant.</li>
+            <li>Basculer entre thème <strong>sombre / clair</strong> (préférence mémorisée).</li>
+          </ul>
+
+          <h3>Ce que MediaGrab <span class="ko">ne peut pas</span> faire</h3>
+          <p>
+            Impossible de télécharger depuis <strong>YouTube, TikTok, Instagram, LinkedIn,
+            Facebook, X/Twitter</strong>. Ces plateformes servent leurs médias via des flux
+            protégés et bloquent l'accès inter-origines (<abbr title="Cross-Origin Resource Sharing">CORS</abbr>).
+            Un vrai <strong>serveur backend</strong> (type <code>yt-dlp</code>) est alors indispensable.
+            MediaGrab est volontairement <strong>honnête</strong> : il détecte ces liens et l'explique,
+            plutôt que de simuler un faux téléchargement.
+          </p>
+
+          <h3>Pourquoi certaines URL directes échouent-elles quand même ?</h3>
+          <p>
+            Même un lien <code>.mp4</code> valide peut être refusé si le serveur distant n'autorise
+            pas le CORS. Dans ce cas, MediaGrab vous propose une solution de repli : ouvrir le média
+            dans un nouvel onglet et faire <em>clic droit → Enregistrer sous</em>.
+          </p>
+          <p class="readme-tech">
+            <strong>Architecture :</strong> 3 fichiers — <code>index.html</code> (structure),
+            <code>style.css</code> (thème sombre/clair, responsive), <code>app.js</code> (logique).
+            Aucune dépendance, aucun CDN, aucun build. Ouvrez simplement <code>index.html</code>.
+          </p>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <div class="wrap">
+      <p>MediaGrab · Téléchargeur front-only · Vos fichiers ne quittent jamais votre navigateur.</p>
+    </div>
+  </footer>
+
+  <!-- Élément visuellement masqué pour annonces d'accessibilité globales -->
+  <div id="sr-announcer" class="visually-hidden" role="status" aria-live="assertive"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
