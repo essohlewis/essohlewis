@@ -1,0 +1,6 @@
+# Archives générées (livrables, non versionnés)
+coachlink.zip
+*.zip
+
+# Dépendances de test
+node_modules/
