@@ -104,6 +104,57 @@ Pour le développement avec rechargement automatique :
 npm run dev
 ```
 
+Au démarrage, le serveur affiche un **diagnostic** indiquant si `yt-dlp` et `ffmpeg`
+ont bien été détectés. Vérifiez ces lignes en cas de problème.
+
+---
+
+## 🛠️ Dépannage
+
+### « Oups, une erreur est survenue — Une erreur est survenue lors de l'analyse. »
+### ou « Le service d'extraction n'est pas disponible pour le moment. »
+
+**Cause la plus fréquente : le binaire `yt-dlp` n'est pas installé.** Le téléchargement
+automatique lors du `npm install` peut échouer (réseau, pare-feu, proxy, limite
+d'API GitHub). Le serveur cherche alors un `yt-dlp` **sur le PATH du système** ; s'il
+n'en trouve aucun, l'analyse échoue.
+
+**Solution (recommandée) — installer yt-dlp sur le système :**
+
+```bash
+# Linux / macOS (méthode fiable via pip)
+python3 -m pip install -U yt-dlp
+
+# Vérifiez que la commande répond :
+yt-dlp --version
+```
+
+Puis **relancez le serveur** (`npm start`). Le diagnostic doit afficher
+`✅ yt-dlp détecté : …`.
+
+Si `yt-dlp` est installé dans un emplacement non standard, indiquez son chemin dans
+`server/.env` :
+
+```bash
+YTDLP_PATH=/chemin/vers/yt-dlp
+```
+
+> Le serveur résout le binaire dans cet ordre : `YTDLP_PATH` → binaire embarqué par
+> `youtube-dl-exec` → `yt-dlp` du PATH → `youtube-dl` du PATH.
+
+### Le téléchargement en 1080p ou en MP3 échoue
+Ces opérations nécessitent **ffmpeg** (fusion des pistes vidéo/audio et conversion
+MP3). Installez-le : `sudo apt install ffmpeg` (Debian/Ubuntu) ou `brew install ffmpeg`
+(macOS). Le diagnostic de démarrage vous prévient s'il est absent.
+
+### Une vidéo précise ne fonctionne pas
+Elle est peut-être **privée, supprimée, géo-restreinte ou réservée aux abonnés** :
+ces contenus ne peuvent pas être récupérés. Essayez avec un lien public.
+
+### yt-dlp est à jour ?
+Les plateformes changent souvent : si l'extraction échoue soudainement, mettez
+yt-dlp à jour avec `python3 -m pip install -U yt-dlp` (ou `yt-dlp -U`).
+
 ---
 
 ## ⚙️ Variables d'environnement

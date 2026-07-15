@@ -15,12 +15,106 @@
  */
 
 const { create: createYoutubeDl } = require('youtube-dl-exec');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 
-// Permet de pointer vers un binaire yt-dlp personnalisé (utile en prod / Docker).
-// Par défaut, on laisse youtube-dl-exec utiliser le binaire fourni.
-const YTDLP_PATH = process.env.YTDLP_PATH || null;
+/**
+ * Résout le chemin d'un binaire yt-dlp utilisable, dans l'ordre suivant :
+ *   1. la variable d'environnement YTDLP_PATH (chemin explicite) ;
+ *   2. le binaire téléchargé par youtube-dl-exec (s'il a bien été installé) ;
+ *   3. un binaire `yt-dlp` présent dans le PATH du système ;
+ *   4. un binaire `youtube-dl` de repli dans le PATH.
+ *
+ * Renvoie le chemin trouvé, ou `null` si aucun binaire n'est disponible.
+ * @returns {string|null}
+ */
+function resolveYtdlpBinary() {
+  // 1. Chemin explicite fourni par l'utilisateur.
+  const explicit = process.env.YTDLP_PATH && process.env.YTDLP_PATH.trim();
+  if (explicit) {
+    if (fs.existsSync(explicit)) return explicit;
+    // eslint-disable-next-line no-console
+    console.warn(`[extractor] YTDLP_PATH="${explicit}" est introuvable, tentative de repli…`);
+  }
+
+  // 2. Binaire embarqué par youtube-dl-exec (nom variable selon l'OS).
+  try {
+    const bundledDir = path.join(require.resolve('youtube-dl-exec'), '..', '..', 'bin');
+    for (const name of ['yt-dlp', 'yt-dlp.exe', 'youtube-dl']) {
+      const p = path.join(bundledDir, name);
+      if (fs.existsSync(p)) return p;
+    }
+  } catch (_e) {
+    /* module introuvable : on continue */
+  }
+
+  // 3 & 4. Binaire présent dans le PATH.
+  for (const name of ['yt-dlp', 'youtube-dl']) {
+    try {
+      const which = spawnSync(process.platform === 'win32' ? 'where' : 'which', [name], {
+        encoding: 'utf8',
+      });
+      const found = (which.stdout || '').split(/\r?\n/).find(Boolean);
+      if (found && fs.existsSync(found.trim())) return found.trim();
+    } catch (_e) {
+      /* ignore */
+    }
+  }
+
+  return null;
+}
+
+// Chemin du binaire yt-dlp résolu au chargement du module.
+const YTDLP_PATH = resolveYtdlpBinary();
+
+// Instance youtube-dl-exec pointant sur le binaire résolu (ou l'instance par
+// défaut si rien n'a été trouvé — l'appel échouera alors proprement).
 const ytdlp = YTDLP_PATH ? createYoutubeDl(YTDLP_PATH) : require('youtube-dl-exec');
+
+/**
+ * Indique si un binaire yt-dlp utilisable a été trouvé.
+ * @returns {boolean}
+ */
+function isBinaryAvailable() {
+  return Boolean(YTDLP_PATH);
+}
+
+/**
+ * Retourne le chemin du binaire yt-dlp résolu (ou null).
+ * @returns {string|null}
+ */
+function getBinaryPath() {
+  return YTDLP_PATH;
+}
+
+/**
+ * Vérifie la présence de ffmpeg (nécessaire pour fusionner vidéo+audio et
+ * convertir en MP3). Renvoie true/false. Résultat mis en cache.
+ * @returns {boolean}
+ */
+let _ffmpegChecked = null;
+function isFfmpegAvailable() {
+  if (_ffmpegChecked !== null) return _ffmpegChecked;
+  try {
+    const r = spawnSync(process.platform === 'win32' ? 'where' : 'which', ['ffmpeg'], {
+      encoding: 'utf8',
+    });
+    _ffmpegChecked = Boolean((r.stdout || '').trim());
+  } catch (_e) {
+    _ffmpegChecked = false;
+  }
+  return _ffmpegChecked;
+}
+
+// Erreur dédiée : le binaire yt-dlp est absent.
+class BinaryMissingError extends Error {
+  constructor() {
+    super('yt-dlp introuvable sur le serveur.');
+    this.name = 'BinaryMissingError';
+    this.code = 'YTDLP_INTROUVABLE';
+  }
+}
 
 // Délai maximum autorisé pour une extraction de métadonnées (ms).
 const INFO_TIMEOUT = Number(process.env.EXTRACT_TIMEOUT || 25000);
@@ -170,6 +264,8 @@ function normalizeFormats(formats = []) {
  * @returns {Promise<object>}
  */
 async function getInfo(url) {
+  if (!isBinaryAvailable()) throw new BinaryMissingError();
+
   const raw = await ytdlp(url, {
     dumpSingleJson: true,
     noWarnings: true,
@@ -212,7 +308,9 @@ async function getInfo(url) {
  * @returns {import('child_process').ChildProcessWithoutNullStreams}
  */
 function streamDownload(url, opts) {
-  const bin = YTDLP_PATH || require('youtube-dl-exec').getBinaryPath?.() || 'yt-dlp';
+  if (!isBinaryAvailable()) throw new BinaryMissingError();
+
+  const bin = YTDLP_PATH;
   const args = [
     url,
     '--no-playlist',
@@ -248,4 +346,8 @@ module.exports = {
   humanFileSize,
   humanDuration,
   normalizeFormats,
+  isBinaryAvailable,
+  getBinaryPath,
+  isFfmpegAvailable,
+  BinaryMissingError,
 };

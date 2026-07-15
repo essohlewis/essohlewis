@@ -30,7 +30,31 @@ router.post('/', infoLimiter, validateUrl, async (req, res) => {
 
     return res.json({ success: true, data: info });
   } catch (err) {
+    // Cas particulier : le binaire yt-dlp n'est pas installé sur le serveur.
+    if (err && err.code === 'YTDLP_INTROUVABLE') {
+      // eslint-disable-next-line no-console
+      console.error(
+        '[info] yt-dlp est introuvable. Installez-le (voir README) ou renseignez YTDLP_PATH.'
+      );
+      return res.status(503).json({
+        error: 'YTDLP_INTROUVABLE',
+        message:
+          "Le service d'extraction n'est pas disponible pour le moment. (Administrateur : yt-dlp n'est pas installé sur le serveur — voir le README.)",
+      });
+    }
+
     const raw = (err && (err.stderr || err.message || '')).toString().toLowerCase();
+
+    // Détection d'un binaire manquant au niveau du process (ENOENT).
+    if (raw.includes('enoent') || raw.includes('command not found') || raw.includes('spawn')) {
+      // eslint-disable-next-line no-console
+      console.error('[info] Binaire yt-dlp introuvable (ENOENT). Voir le README.');
+      return res.status(503).json({
+        error: 'YTDLP_INTROUVABLE',
+        message:
+          "Le service d'extraction n'est pas disponible pour le moment. (Administrateur : yt-dlp n'est pas installé sur le serveur — voir le README.)",
+      });
+    }
 
     // On traduit les erreurs yt-dlp fréquentes en messages non techniques.
     if (raw.includes('private') || raw.includes('login') || raw.includes('sign in')) {

@@ -91,6 +91,13 @@ async function handleDownload(req, res) {
     // eslint-disable-next-line no-console
     console.error('[download] Impossible de lancer yt-dlp :', err.message);
     if (!res.headersSent) {
+      if (err && err.code === 'YTDLP_INTROUVABLE') {
+        return res.status(503).json({
+          error: 'YTDLP_INTROUVABLE',
+          message:
+            "Le service de téléchargement n'est pas disponible pour le moment. (Administrateur : yt-dlp n'est pas installé sur le serveur — voir le README.)",
+        });
+      }
       return res.status(500).json({
         error: 'ERREUR_TELECHARGEMENT',
         message: "Impossible de démarrer le téléchargement. Réessayez plus tard.",

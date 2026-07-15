@@ -19,6 +19,7 @@ const compression = require('compression');
 
 const infoRoute = require('./routes/info');
 const downloadRoute = require('./routes/download');
+const extractor = require('./services/extractor');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -92,11 +93,45 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: 'ERREUR_SERVEUR', message: 'Erreur interne du serveur.' });
 });
 
+/**
+ * Vérifie la présence des binaires requis et affiche un diagnostic clair.
+ * Le serveur démarre quand même, mais l'opérateur est prévenu.
+ */
+function checkDependencies() {
+  const ytdlp = extractor.getBinaryPath();
+  const ffmpeg = extractor.isFfmpegAvailable();
+
+  if (ytdlp) {
+    // eslint-disable-next-line no-console
+    console.log(`✅ yt-dlp détecté : ${ytdlp}`);
+  } else {
+    // eslint-disable-next-line no-console
+    console.error(
+      '\n⛔  yt-dlp est INTROUVABLE. L\'analyse et le téléchargement échoueront.\n' +
+        '    → Installez-le, puis relancez le serveur :\n' +
+        '        python3 -m pip install -U yt-dlp\n' +
+        '      ou renseignez YTDLP_PATH dans votre .env (voir README).\n'
+    );
+  }
+
+  if (!ffmpeg) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '⚠️  ffmpeg est introuvable : la fusion vidéo+audio (HD) et la conversion MP3\n' +
+        '    peuvent échouer. Installez-le (ex : sudo apt install ffmpeg).\n'
+    );
+  } else {
+    // eslint-disable-next-line no-console
+    console.log('✅ ffmpeg détecté.');
+  }
+}
+
 // On n'écoute pas si le module est importé (utile pour les tests).
 if (require.main === module) {
   app.listen(PORT, () => {
     // eslint-disable-next-line no-console
     console.log(`\n🎬  MediaGrab CI — serveur démarré sur http://localhost:${PORT}\n`);
+    checkDependencies();
   });
 }
 
