@@ -1,0 +1,96 @@
+/* =============================================================================
+   responsive.css — Adaptations mobile-first
+   Approche : le socle (main.css) est pensé desktop/large ; on adapte ici pour
+   les tablettes et surtout les smartphones (cible : Android 360px+).
+   ========================================================================== */
+
+/* --- Tablette --- */
+@media (max-width: 900px) {
+  .steps-grid {
+    grid-template-columns: 1fr;
+    max-width: 460px;
+    margin-inline: auto;
+  }
+  .footer-top {
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem 1.5rem;
+  }
+  .footer-brand { grid-column: 1 / -1; }
+}
+
+/* --- Menu mobile (hamburger) --- */
+@media (max-width: 780px) {
+  .hamburger { display: grid; }
+
+  .nav-links {
+    position: fixed;
+    inset: 68px 0 auto 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    background: var(--navbar-bg);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-bottom: 1px solid var(--surface-border);
+    padding: 0.5rem 1rem 1rem;
+    transform: translateY(-120%);
+    transition: transform var(--transition-slow);
+    box-shadow: var(--shadow-md);
+  }
+  .nav-links.open { transform: translateY(0); }
+  .nav-links a {
+    padding: 0.85rem 0.5rem;
+    border-bottom: 1px solid var(--surface-border);
+    font-size: 1rem;
+  }
+  .nav-links a:last-child { border-bottom: none; }
+
+  /* On masque le CTA texte de la navbar sur mobile (l'outil est dans le héro). */
+  .nav-actions .nav-cta { display: none; }
+}
+
+/* --- Smartphone --- */
+@media (max-width: 560px) {
+  .url-bar {
+    flex-direction: column;
+  }
+  .url-bar .btn-analyze {
+    width: 100%;
+  }
+
+  .result-media {
+    flex-direction: column;
+  }
+  .result-thumb {
+    width: 100%;
+  }
+
+  .format-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .skeleton-row { flex-direction: column; }
+  .sk-thumb { width: 100%; }
+
+  .about-stats { gap: 1.5rem; }
+  .about-stat strong { font-size: 1.6rem; }
+
+  .footer-top {
+    grid-template-columns: 1fr;
+    text-align: left;
+  }
+  .footer-bottom { justify-content: center; text-align: center; }
+}
+
+/* --- Très petits écrans --- */
+@media (max-width: 380px) {
+  .format-grid { grid-template-columns: 1fr; }
+  .platforms-grid { grid-template-columns: repeat(2, 1fr); }
+  .hero-badges { gap: 0.4rem; }
+  .hero-badge { font-size: 0.78rem; padding: 0.35rem 0.7rem; }
+}
+
+/* --- Écrans larges : on aère un peu plus --- */
+@media (min-width: 1400px) {
+  :root { --container: 1240px; }
+}
