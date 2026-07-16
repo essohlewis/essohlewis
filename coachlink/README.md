@@ -86,6 +86,11 @@ coachlink/
 
 ---
 
+### 📱 Expérience adaptative (app mobile / bureau)
+- Sur **téléphone**, l'interface adopte les codes d'une **application mobile native** : **barre de navigation inférieure** (tab bar) avec bouton central « Match » mis en avant (style FAB), badges de messages non lus, cibles tactiles confortables, pleine largeur et respect des encoches (safe-area).
+- Sur **ordinateur**, l'interface conserve une présentation **desktop** classique : barre de navigation supérieure et **sidebars** de tableaux de bord. La barre inférieure est masquée.
+- La bascule est purement CSS (points de rupture) : aucune duplication de code, un seul code source pour les deux plateformes.
+
 ## 🎨 Design
 
 Identité moderne et rassurante : **bleu confiance** + **vert validation** + accent **orange** (CTA), fond neutre. Coins arrondis, ombres douces, micro-interactions, mode sombre. Mobile-first (menu burger, sidebar desktop).

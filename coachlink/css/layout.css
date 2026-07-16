@@ -252,3 +252,64 @@
   .stat-carte, .categorie-carte { padding: var(--e-3); }
   .stat-carte__valeur { font-size: var(--fs-2xl); }
 }
+
+/* ==========================================================================
+   Barre de navigation inférieure — ressenti « application mobile »
+   (masquée sur ordinateur, affichée uniquement sur téléphone)
+   ========================================================================== */
+.bottom-nav { display: none; }
+
+@media (max-width: 768px) {
+  .bottom-nav {
+    display: flex;
+    position: fixed; left: 0; right: 0; bottom: 0;
+    height: calc(58px + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--surface);
+    border-top: 1px solid var(--bordure);
+    box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.08);
+    z-index: calc(var(--z-entete) + 1);
+    justify-content: space-around; align-items: stretch;
+  }
+  .bottom-nav__item {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; padding-top: 7px;
+    color: var(--texte-faible); font-weight: 600;
+    position: relative;
+    transition: color var(--t-rapide);
+  }
+  .bottom-nav__icone { display: inline-flex; }
+  .bottom-nav__label { font-size: 10px; letter-spacing: 0.01em; }
+  .bottom-nav__item.actif { color: var(--bleu-confiance); }
+  .bottom-nav__item:active { transform: scale(0.94); }
+
+  .bottom-nav__pastille {
+    position: absolute; top: 3px; left: 50%; margin-left: 6px;
+    min-width: 15px; height: 15px; padding: 0 4px;
+    background: var(--rouge-alerte); color: #fff; border-radius: var(--r-full);
+    font-size: 9px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Élément central mis en avant (bouton flottant type FAB) */
+  .bottom-nav__centre .bottom-nav__icone {
+    width: 48px; height: 48px; margin-top: -24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--orange-cta), var(--bleu-confiance));
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 16px rgba(27, 77, 204, 0.4);
+    border: 3px solid var(--surface);
+  }
+  .bottom-nav__centre .bottom-nav__label { margin-top: 2px; }
+  .bottom-nav__centre.actif { color: var(--orange-cta-fonce); }
+
+  /* Réserver l'espace de la barre en bas de page */
+  #app { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
+
+  /* Remonter les éléments flottants au-dessus de la barre */
+  .retour-haut { bottom: calc(72px + env(safe-area-inset-bottom)); }
+  .compare-bar { bottom: calc(58px + env(safe-area-inset-bottom)); }
+  body:has(.compare-bar.visible) .retour-haut { bottom: calc(150px + env(safe-area-inset-bottom)); }
+}

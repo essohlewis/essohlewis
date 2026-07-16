@@ -157,11 +157,57 @@
       nav,
       actions,
     ]));
+
+    // Synchronise la barre de navigation mobile (état actif, compteurs).
+    rendreBottomNav();
   }
 
   function lienNav(href, label, route) {
     const actif = route === href || (href !== "#/" && route.startsWith(href));
     return el("a", { href, class: actif ? "actif" : "", text: label });
+  }
+
+  /* ---------------- Barre de navigation mobile (tab bar app) --------- */
+  // Style « application native » : visible uniquement sur téléphone (CSS).
+  function rendreBottomNav() {
+    let nav = document.getElementById("bottom-nav");
+    if (!nav) {
+      nav = el("nav", { class: "bottom-nav", id: "bottom-nav", "aria-label": "Navigation principale" });
+      document.body.appendChild(nav);
+    }
+    CL.dom.vider(nav);
+
+    const u = auth.courant();
+    const route = location.hash || "#/";
+    const nbMsg = u ? CL.messageService.nbNonLus(u.id) : 0;
+
+    const items = [
+      { href: "#/", icone: "dashboard", label: "Accueil" },
+      { href: "#/recherche", icone: "recherche", label: "Coachs" },
+      { href: "#/coachmatch", icone: "eclair", label: "Match", centre: true },
+    ];
+    if (u) {
+      items.push({ href: "#/messages", icone: "message", label: "Messages", compteur: nbMsg });
+      const espace = u.role === "coach" ? "#/espace-coach" : u.role === "admin" ? "#/admin" : "#/client";
+      items.push({ href: espace, icone: "utilisateur", label: "Espace" });
+    } else {
+      items.push({ href: "#/comment-ca-marche", icone: "bouclier", label: "Aide" });
+      items.push({ href: "#/connexion", icone: "utilisateur", label: "Compte" });
+    }
+
+    items.forEach((it) => {
+      const base = it.href.split("?")[0];
+      const actif = route === it.href || route === base || (base !== "#/" && route.startsWith(base));
+      const item = el("a", {
+        href: it.href,
+        class: "bottom-nav__item" + (actif ? " actif" : "") + (it.centre ? " bottom-nav__centre" : ""),
+      }, [
+        el("span", { class: "bottom-nav__icone", html: CL.icon(it.icone, it.centre ? 24 : 22, { fill: it.centre && it.icone === "eclair" }) }),
+        el("span", { class: "bottom-nav__label", text: it.label }),
+        it.compteur ? el("span", { class: "bottom-nav__pastille", text: it.compteur > 9 ? "9+" : String(it.compteur) }) : null,
+      ]);
+      nav.appendChild(item);
+    });
   }
 
   /* ------------------------- Menu mobile intelligent ----------------- */
@@ -300,6 +346,6 @@
 
   CL.layout = {
     rendreEntete, themeCourant, basculerTheme, sidebar, pied,
-    basculerSidebarMobile, fermerPanneaux, fermerMenuPublic,
+    basculerSidebarMobile, fermerPanneaux, fermerMenuPublic, rendreBottomNav,
   };
 })();

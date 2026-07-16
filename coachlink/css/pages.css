@@ -361,6 +361,10 @@ table.tableau { width: 100%; border-collapse: collapse; min-width: 640px; }
     grid-template-columns: 1fr;
     height: calc(100dvh - var(--hauteur-entete) - 120px);
   }
+  /* Sur téléphone : laisser la place à la barre de navigation inférieure. */
+  @media (max-width: 768px) {
+    .messagerie { height: calc(100dvh - var(--hauteur-entete) - 185px); }
+  }
   .messagerie.voir-chat .conversations { display: none; }
   .messagerie:not(.voir-chat) .chat { display: none; }
   .operateurs { grid-template-columns: repeat(2, 1fr); }
