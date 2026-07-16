@@ -52,10 +52,40 @@ class ReservationController
             Response::erreur('Réservation introuvable.', 404);
         }
         $d = Request::corps();
-        if (!preg_match('/^\d{4}$/', (string) ($d['code'] ?? ''))) {
-            Response::erreur('Code de confirmation invalide (4 chiffres).', 422);
+
+        // Calcule le montant net (avec remise promo éventuelle) pour la passerelle.
+        $remise  = !empty($d['promoTaux']) ? (int) round(($resa['prix'] * $d['promoTaux']) / 100) : 0;
+        $montant = (int) $resa['prix'] - $remise;
+
+        // Initie le paiement via la passerelle de l'opérateur (simulateur par défaut).
+        $tx = PaiementService::pour($d['operateur'] ?? '')->initier([
+            'referenceInterne' => (int) $params['id'],
+            'montant'          => $montant,
+            'operateur'        => $d['operateur'] ?? '',
+            'numero'           => $d['numero'] ?? '',
+            'code'             => $d['code'] ?? null,
+            'description'      => 'CoachLink CI — ' . $resa['tarif_nom'],
+        ]);
+
+        if ($tx['statut'] === 'echoue') {
+            Response::erreur($tx['message'] ?? 'Paiement refusé.', 402);
         }
-        $resa = $model->payer((int) $params['id'], $d);
+
+        if ($tx['statut'] === 'en_attente') {
+            // Paiement réel initié : le client confirme sur son téléphone, la
+            // réservation sera marquée payée par le webhook (/paiements/callback).
+            // Clé dédiée « paiement_statut » (ne pas confondre avec le statut de
+            // la réservation).
+            Response::ok([
+                'paiement_statut' => 'en_attente',
+                'reference'       => $tx['reference'],
+                'lien'            => $tx['lien'] ?? null,
+                'message'         => $tx['message'] ?? 'Confirmez le paiement sur votre téléphone.',
+            ], 202);
+        }
+
+        // Succès immédiat (simulateur) : on enregistre le paiement.
+        $resa = $model->payer((int) $params['id'], array_merge($d, ['reference' => $tx['reference']]));
 
         $coach = (new Coach())->trouver($resa['coach_id']);
         if ($coach && $coach['proprietaire']) {

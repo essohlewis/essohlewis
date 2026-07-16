@@ -481,6 +481,13 @@
       const res = await bookingService.payer(resa.id, { operateur: op.nom, numero: numero.value.trim(), code: code.value.trim(), promo: promoActif });
       if (!res.ok) { e.currentTarget.disabled = false; return CL.toast.erreur("Paiement refusé", res.message); }
       CL.modal.fermer();
+      // Paiement réel asynchrone : en attente de confirmation sur le téléphone.
+      if (res.enAttente) {
+        if (res.lien) window.open(res.lien, "_blank", "noopener");
+        CL.toast.info("Paiement initié 📲", res.message);
+        location.hash = "#/client/reservations";
+        return;
+      }
       const eco = res.reservation.paiement.remise ? " (économie : " + format.fcfa(res.reservation.paiement.remise) + ")" : "";
       CL.toast.succes("Paiement réussi 🎉", "Réf : " + res.reservation.paiement.reference + eco);
       location.hash = "#/client/reservations";

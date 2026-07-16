@@ -122,6 +122,12 @@
             promoTaux: paiement.promo ? paiement.promo.taux : null,
             promoCode: paiement.promo ? paiement.promo.code : null,
           });
+          // Paiement réel asynchrone : l'opérateur confirmera via webhook.
+          // (« paiement_statut » distinct du statut de la réservation.)
+          if (brut && brut.paiement_statut === "en_attente") {
+            return { ok: true, enAttente: true, reference: brut.reference, lien: brut.lien || null,
+                     message: brut.message || "Confirmez le paiement sur votre téléphone." };
+          }
           const resa = CL.API.mapReservation(brut);
           const liste = toutes();
           const i = liste.findIndex((b) => String(b.id) === String(resaId));

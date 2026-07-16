@@ -58,7 +58,7 @@ class Reservation extends Model
             'paiement_montant' => $montant,
             'paiement_remise'  => $remise,
             'paiement_promo'   => $p['promoCode'] ?? null,
-            'paiement_ref'     => 'MM' . substr((string) (time() . random_int(10, 99)), -8),
+            'paiement_ref'     => $p['reference'] ?? ('MM' . substr((string) (time() . random_int(10, 99)), -8)),
             'paiement_date'    => date('c'),
         ]);
         return $this->trouver($id);

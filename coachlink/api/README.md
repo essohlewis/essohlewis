@@ -84,8 +84,9 @@ Les routes protégées attendent un en-tête `Authorization: Bearer <token>`.
 | POST | `/reservations` | client | Créer une réservation |
 | GET  | `/reservations/mes` | connecté | Mes réservations (client) |
 | GET  | `/reservations/coach` | coach | Demandes reçues |
-| POST | `/reservations/:id/payer` | client | Paiement Mobile Money (+ promo) |
+| POST | `/reservations/:id/payer` | client | Paiement Mobile Money (+ promo) — passerelle |
 | PATCH| `/reservations/:id/statut` | connecté | Changer le statut |
+| POST | `/paiements/callback` | – (webhook) | Confirmation asynchrone d'un opérateur |
 | GET  | `/notifications` | connecté | `{ items, nonLues }` |
 | PATCH| `/notifications/:id/lue` | connecté | Marquer lue |
 | POST | `/notifications/toutes-lues` | connecté | Tout marquer lu |
@@ -211,9 +212,26 @@ Tant que `cl_api_base` n'est pas défini, l'app fonctionne 100 % hors-ligne.
   démarré/arrêté avec la session, aucun effet hors-ligne. Intervalle réglable
   via `localStorage.cl_poll_ms` (8 s par défaut). Aucun changement backend requis.
 
+**Slice 7 — paiement Mobile Money (architecture passerelle)**
+- Abstraction `PaiementGateway` + fabrique `PaiementService` : sélectionne la
+  passerelle selon l'opérateur et la config. **Simulateur par défaut** (aucun
+  identifiant requis, code à 4 chiffres = succès), donc rien ne change en démo.
+- **Adaptateurs réels prêts** : `PaiementOrangeMoney` (OAuth + Web/Push Payment)
+  et `PaiementWave` (Checkout) — squelettes suivant les vraies API, activés en
+  renseignant les identifiants marchands dans `config.php → paiement`
+  (`mode: 'reel'`, `orange.actif`/`wave.actif`). `PaiementMtn`/`PaiementMoov`
+  suivent le même patron.
+- **Flux asynchrone réel** : `POST /reservations/:id/payer` renvoie **202**
+  `{ paiement_statut: 'en_attente', reference, lien }` ; l'opérateur confirme via
+  le webhook **`POST /paiements/callback`** (garde-fou par secret partagé
+  `X-Callback-Secret`) qui marque la réservation payée. Le front gère les deux
+  cas (succès immédiat / en attente).
+- `core/HttpClient.php` : petit client cURL (sans dépendance) pour les appels
+  opérateurs. **Aucun secret dans le dépôt** (tout est dans `config.php`).
+
 ### Reste (améliorations, non bloquantes)
-**Envoi d'email réel** (réinitialisation), Mobile Money réel, OAuth social,
-HTTPS/prod, notifications push (WebSocket/SSE pour remplacer le polling).
+**Envoi d'email réel** (réinitialisation), MTN/Moov (mêmes patrons), OAuth
+social, HTTPS/prod, notifications push (WebSocket/SSE pour remplacer le polling).
 
 ---
 
@@ -229,7 +247,8 @@ api/
 │   ├── config.example.php
 │   └── config.php        # (ignoré par git — secrets)
 ├── core/                 # App, Router, Request, Response, Database (PDO),
-│                         #   Jwt, Auth, Validator, RateLimiter, Pagination
+│                         #   Jwt, Auth, Validator, RateLimiter, Pagination,
+│                         #   HttpClient, PaiementGateway/Service/Simulateur/…
 ├── models/               # Model (CRUD PDO) + User, Coach, Reservation,
 │                         #   Review, Message, Notification
 ├── controllers/          # Auth, Coach, Reservation, Review, Notification,
@@ -286,5 +305,6 @@ sur tout le PHP, `composer install` + **PHPUnit** (PHP 8.2 et 8.4), et
 - ✅ Bascule complète du front sur l'API (service par service, cf. §4) — **fait**.
 - ✅ Tests automatisés (PHPUnit) + intégration continue — **fait**.
 - ✅ Messagerie temps réel (polling front) — **fait**.
+- ✅ Paiement Mobile Money (architecture passerelle + Orange/Wave + webhook) — **fait**.
 - Rafraîchissement de token / révocation ; journalisation structurée.
-- Envoi d'email réel (réinitialisation), Mobile Money réel, push WebSocket/SSE.
+- Envoi d'email réel (réinitialisation), MTN/Moov, OAuth, push WebSocket/SSE.

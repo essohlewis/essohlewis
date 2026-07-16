@@ -44,4 +44,31 @@ return [
 
     // Dossier de cache (compteurs de débit). Hors du dépôt par défaut.
     'cache_dir' => sys_get_temp_dir() . '/coachlink-cache',
+
+    // --- Paiement Mobile Money -------------------------------------------
+    // 'mode' : 'simulateur' (démo, aucun appel réseau, code à 4 chiffres) ou
+    // 'reel' (utilise les passerelles opérateurs pour lesquelles actif=true).
+    // Tant qu'un opérateur n'est pas 'actif' + configuré, on retombe sur le
+    // simulateur : l'application marche sans identifiant.
+    'paiement' => [
+        'mode'            => 'simulateur',
+        'callback_url'    => '', // URL publique HTTPS recevant les webhooks opérateurs
+        'callback_secret' => '', // secret partagé attendu dans l'en-tête X-Callback-Secret
+        'orange' => [
+            'actif'         => false,
+            'base_url'      => 'https://api.orange.com',
+            'client_id'     => '',
+            'client_secret' => '',
+            'x_auth_token'  => '',
+        ],
+        'wave' => [
+            'actif'       => false,
+            'base_url'    => 'https://api.wave.com',
+            'api_key'     => '',
+            'success_url' => '',
+            'error_url'   => '',
+        ],
+        'mtn'  => ['actif' => false],  // à implémenter (même patron)
+        'moov' => ['actif' => false],  // à implémenter (même patron)
+    ],
 ];
