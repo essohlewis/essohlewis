@@ -68,8 +68,21 @@ return [
             'success_url' => '',
             'error_url'   => '',
         ],
-        'mtn'  => ['actif' => false],  // à implémenter (même patron)
-        'moov' => ['actif' => false],  // à implémenter (même patron)
+        'mtn' => [
+            'actif'            => false,
+            'base_url'         => 'https://sandbox.momodeveloper.mtn.com', // prod : URL partenaire
+            'api_user'         => '',
+            'api_key'          => '',
+            'subscription_key' => '',
+            'environnement'    => 'sandbox', // 'sandbox' | 'production'
+            'devise'           => 'XOF',
+        ],
+        'moov' => [
+            'actif'         => false,
+            'base_url'      => '', // fournie par votre agrégateur Moov Africa
+            'client_id'     => '',
+            'client_secret' => '',
+        ],
     ],
 
     // --- Email ------------------------------------------------------------

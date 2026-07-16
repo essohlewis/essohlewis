@@ -24,8 +24,10 @@ class PaiementService
                     return new PaiementOrangeMoney($opCfg);
                 case 'wave':
                     return new PaiementWave($opCfg);
-                // 'mtn' et 'moov' suivent le même patron : ajoutez
-                // PaiementMtn / PaiementMoov puis un case ici.
+                case 'mtn':
+                    return new PaiementMtn($opCfg);
+                case 'moov':
+                    return new PaiementMoov($opCfg);
             }
         }
         return new PaiementSimulateur();

@@ -19,9 +19,33 @@ class PaiementTest extends ApiTestCase
     public function testServiceRetombeSurLeSimulateurSansConfig(): void
     {
         // La config de test ne définit pas 'paiement' → simulateur pour tout opérateur.
-        $this->assertInstanceOf(PaiementSimulateur::class, PaiementService::pour('orange'));
-        $this->assertInstanceOf(PaiementSimulateur::class, PaiementService::pour('wave'));
-        $this->assertFalse(PaiementService::estReel('orange'));
+        foreach (['orange', 'wave', 'mtn', 'moov'] as $op) {
+            $this->assertInstanceOf(PaiementSimulateur::class, PaiementService::pour($op));
+            $this->assertFalse(PaiementService::estReel($op));
+        }
+    }
+
+    public function testLesQuatreOperateursImplemententLeContrat(): void
+    {
+        $this->assertInstanceOf(PaiementGateway::class, new PaiementOrangeMoney(['base_url' => 'http://127.0.0.1:2']));
+        $this->assertInstanceOf(PaiementGateway::class, new PaiementWave(['base_url' => 'http://127.0.0.1:2']));
+        $this->assertInstanceOf(PaiementGateway::class, new PaiementMtn(['base_url' => 'http://127.0.0.1:2']));
+        $this->assertInstanceOf(PaiementGateway::class, new PaiementMoov(['base_url' => 'http://127.0.0.1:2']));
+    }
+
+    public function testMtnEchoueProprementSansServeur(): void
+    {
+        // Hôte injoignable → pas de jeton → échec propre (aucune exception).
+        $r = (new PaiementMtn(['base_url' => 'http://127.0.0.1:2', 'api_user' => 'x', 'api_key' => 'y', 'subscription_key' => 'z']))
+            ->initier(['referenceInterne' => 1, 'montant' => 1000, 'numero' => '0500000000']);
+        $this->assertSame('echoue', $r['statut']);
+    }
+
+    public function testMoovEchoueProprementSansServeur(): void
+    {
+        $r = (new PaiementMoov(['base_url' => 'http://127.0.0.1:2', 'client_id' => 'x', 'client_secret' => 'y']))
+            ->initier(['referenceInterne' => 1, 'montant' => 1000, 'numero' => '0100000000']);
+        $this->assertSame('echoue', $r['statut']);
     }
 
     public function testFluxPaiementViaPasserelleMarquePayee(): void

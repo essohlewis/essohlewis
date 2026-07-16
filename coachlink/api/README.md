@@ -216,11 +216,11 @@ Tant que `cl_api_base` n'est pas défini, l'app fonctionne 100 % hors-ligne.
 - Abstraction `PaiementGateway` + fabrique `PaiementService` : sélectionne la
   passerelle selon l'opérateur et la config. **Simulateur par défaut** (aucun
   identifiant requis, code à 4 chiffres = succès), donc rien ne change en démo.
-- **Adaptateurs réels prêts** : `PaiementOrangeMoney` (OAuth + Web/Push Payment)
-  et `PaiementWave` (Checkout) — squelettes suivant les vraies API, activés en
-  renseignant les identifiants marchands dans `config.php → paiement`
-  (`mode: 'reel'`, `orange.actif`/`wave.actif`). `PaiementMtn`/`PaiementMoov`
-  suivent le même patron.
+- **4 opérateurs prêts pour la production** : `PaiementOrangeMoney` (OAuth +
+  Web/Push Payment), `PaiementWave` (Checkout), `PaiementMtn` (MoMo Collections
+  RequestToPay) et `PaiementMoov` (OAuth + paiement) — squelettes suivant les
+  vraies API, activés en renseignant les identifiants marchands dans
+  `config.php → paiement` (`mode: 'reel'` + `<op>.actif`).
 - **Flux asynchrone réel** : `POST /reservations/:id/payer` renvoie **202**
   `{ paiement_statut: 'en_attente', reference, lien }` ; l'opérateur confirme via
   le webhook **`POST /paiements/callback`** (garde-fou par secret partagé
@@ -242,8 +242,8 @@ Tant que `cl_api_base` n'est pas défini, l'app fonctionne 100 % hors-ligne.
   mot de passe → `POST /auth/mot-de-passe/reset`.
 
 ### Reste (améliorations, non bloquantes)
-MTN/Moov (mêmes patrons de passerelle), OAuth social, HTTPS/prod, notifications
-push (WebSocket/SSE pour remplacer le polling).
+OAuth social, HTTPS/prod, notifications push (WebSocket/SSE pour remplacer le
+polling).
 
 ---
 
@@ -320,5 +320,6 @@ sur tout le PHP, `composer install` + **PHPUnit** (PHP 8.2 et 8.4), et
 - ✅ Messagerie temps réel (polling front) — **fait**.
 - ✅ Paiement Mobile Money (architecture passerelle + Orange/Wave + webhook) — **fait**.
 - ✅ Envoi d'email réel (transport SMTP + flux réinitialisation par lien) — **fait**.
+- ✅ 4 opérateurs Mobile Money (Orange, Wave, MTN, Moov) — **fait**.
 - Rafraîchissement de token / révocation ; journalisation structurée.
-- MTN/Moov, OAuth social, push WebSocket/SSE, HTTPS/prod.
+- OAuth social, push WebSocket/SSE, HTTPS/prod.
