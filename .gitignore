@@ -4,3 +4,9 @@ coachlink.zip
 
 # Dépendances de test
 node_modules/
+
+# Backend PHP — fichiers générés / secrets (non versionnés)
+coachlink/api/config/config.php
+coachlink/api/database/*.sqlite
+coachlink/api/uploads/*
+!coachlink/api/uploads/.gitkeep
