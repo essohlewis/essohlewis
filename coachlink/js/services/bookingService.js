@@ -128,6 +128,15 @@
         date: new Date().toISOString(),
       };
       sauver(liste);
+      // Notifie le coach du paiement reçu.
+      const coach = CL.coachService.obtenir(r.coachId);
+      if (coach && coach.proprietaire) {
+        CL.notifications.ajouter(coach.proprietaire, {
+          type: "paiement",
+          texte: `${r.clientNom} a payé « ${r.tarifNom} » (${(montantPaye).toLocaleString("fr-FR")} FCFA).`,
+          lien: "#/espace-coach/reservations",
+        });
+      }
       return { ok: true, reservation: r };
     },
 
@@ -153,6 +162,22 @@
           texte: `Votre demande « ${r.tarifNom} » a été refusée.`,
           lien: "#/client/reservations",
         });
+      } else if (statut === "terminee") {
+        CL.notifications.ajouter(r.clientId, {
+          type: "info",
+          texte: `Séance « ${r.tarifNom} » terminée. Laissez un avis à votre coach !`,
+          lien: "#/client/avis",
+        });
+      } else if (statut === "annulee") {
+        // Annulation par le client → prévient le coach.
+        const coach = CL.coachService.obtenir(r.coachId);
+        if (coach && coach.proprietaire) {
+          CL.notifications.ajouter(coach.proprietaire, {
+            type: "annulation",
+            texte: `${r.clientNom} a annulé sa réservation « ${r.tarifNom} ».`,
+            lien: "#/espace-coach/reservations",
+          });
+        }
       }
       return true;
     },

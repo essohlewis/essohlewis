@@ -43,6 +43,7 @@
     { motif: /^\/admin\/litiges$/, page: "adminLitiges", shell: "dash", role: "admin" },
 
     { motif: /^\/messages$/, page: "messages", shell: "dash", role: "any" },
+    { motif: /^\/notifications$/, page: "notifications", shell: "dash", role: "any" },
     { motif: /^\/parametres$/, page: "parametres", shell: "dash", role: "any" },
   ];
 
@@ -64,6 +65,7 @@
   function sidebarPour(role, routeActive) {
     const u = CL.auth.courant();
     const nbMsg = u ? CL.messageService.nbNonLus(u.id) : 0;
+    const nbNotif = u ? CL.notifications.nbNonLues(u.id) : 0;
     if (role === "client") {
       return CL.layout.sidebar("Espace client", [
         { href: "#/client", icone: "dashboard", label: "Tableau de bord" },
@@ -71,6 +73,7 @@
         { href: "#/client/favoris", icone: "coeur", label: "Mes favoris" },
         { href: "#/client/avis", icone: "etoile", label: "Mes avis" },
         { href: "#/messages", icone: "message", label: "Messagerie", compteur: nbMsg || null },
+        { href: "#/notifications", icone: "cloche", label: "Notifications", compteur: nbNotif || null },
         { href: "#/recherche", icone: "recherche", label: "Trouver un coach" },
         { href: "#/parametres", icone: "parametres", label: "Paramètres" },
       ], routeActive);
@@ -88,6 +91,7 @@
         { href: "#/espace-coach/diplomes", icone: "diplome", label: "Diplômes" },
         { href: "#/espace-coach/avis", icone: "etoile", label: "Avis reçus" },
         { href: "#/messages", icone: "message", label: "Messagerie", compteur: nbMsg || null },
+        { href: "#/notifications", icone: "cloche", label: "Notifications", compteur: nbNotif || null },
         { href: "#/parametres", icone: "parametres", label: "Paramètres" },
       ], routeActive);
     }
@@ -99,6 +103,7 @@
         { href: "#/admin/utilisateurs", icone: "utilisateurs", label: "Utilisateurs" },
         { href: "#/admin/litiges", icone: "bouclier", label: "Litiges" },
         { href: "#/messages", icone: "message", label: "Messagerie", compteur: nbMsg || null },
+        { href: "#/notifications", icone: "cloche", label: "Notifications", compteur: nbNotif || null },
       ], routeActive);
     }
     return null;
@@ -136,6 +141,22 @@
 
     // 404
     if (!trouve) { rendre404(); return; }
+
+    // Restriction du coach : espace dédié, sans accueil public, recherche,
+    // CoachMatch ni consultation d'autres coachs.
+    const uc = CL.auth.courant();
+    if (uc && uc.role === "coach") {
+      const pagesInterdites = ["home", "recherche", "coachmatch"];
+      if (pagesInterdites.includes(trouve.page)) { location.hash = "#/espace-coach"; return; }
+      if (trouve.page === "profilCoach") {
+        const monCoach = CL.coachCourant();
+        if (!monCoach || args.coachId !== monCoach.id) {
+          CL.toast.info("Espace coach", "Vous ne pouvez consulter que votre propre profil.");
+          location.hash = "#/espace-coach";
+          return;
+        }
+      }
+    }
 
     // Garde de rôle
     if (trouve.role) {

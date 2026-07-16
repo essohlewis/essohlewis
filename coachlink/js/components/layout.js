@@ -51,6 +51,7 @@
             return item;
           }))
         : ui.vide("cloche", "Aucune notification", null),
+      el("a", { class: "btn-lien texte-sm", href: "#/notifications", style: "display:block;text-align:center;padding:12px;border-top:1px solid var(--bordure)", text: "Voir toutes les notifications", onclick: fermerPanneaux }),
     ]);
     ancre.appendChild(panneau);
     setTimeout(() => document.addEventListener("click", fermeSurClicExterne), 0);
@@ -106,12 +107,34 @@
     const u = auth.courant();
     const route = location.hash || "#/";
 
-    const nav = el("nav", { class: "entete__nav" }, [
-      lienNav("#/", "Accueil", route),
-      lienNav("#/recherche", "Trouver un coach", route),
-      lienNav("#/coachmatch", "CoachMatch", route),
-      lienNav("#/comment-ca-marche", "Comment ça marche", route),
-    ]);
+    // Navigation adaptée au rôle : le coach ne voit ni l'accueil public,
+    // ni la recherche/CoachMatch (réservés aux clients), mais son espace.
+    let liensNav;
+    if (u && u.role === "coach") {
+      liensNav = [
+        lienNav("#/espace-coach", "Tableau de bord", route),
+        lienNav("#/espace-coach/reservations", "Mes demandes", route),
+        lienNav("#/espace-coach/profil", "Mon profil", route),
+        lienNav("#/messages", "Messagerie", route),
+      ];
+    } else if (u && u.role === "admin") {
+      liensNav = [
+        lienNav("#/admin", "Administration", route),
+        lienNav("#/admin/utilisateurs", "Utilisateurs", route),
+        lienNav("#/recherche", "Coachs", route),
+      ];
+    } else {
+      liensNav = [
+        lienNav("#/", "Accueil", route),
+        lienNav("#/recherche", "Trouver un coach", route),
+        lienNav("#/coachmatch", "CoachMatch", route),
+        lienNav("#/comment-ca-marche", "Comment ça marche", route),
+      ];
+    }
+    const nav = el("nav", { class: "entete__nav" }, liensNav);
+
+    // Destination du logo selon le rôle (le coach reste dans son espace).
+    const accueilRole = u ? (u.role === "coach" ? "#/espace-coach" : u.role === "admin" ? "#/admin" : "#/") : "#/";
 
     const actions = el("div", { class: "entete__actions" });
 
@@ -150,7 +173,7 @@
 
     hote.appendChild(el("div", { class: "entete__inner" }, [
       burger,
-      el("a", { class: "logo", href: "#/" }, [
+      el("a", { class: "logo", href: accueilRole }, [
         el("span", { class: "logo__pastille", text: "C" }),
         el("span", {}, [document.createTextNode("Coach"), el("span", { class: "logo__marque", text: "Link" }), document.createTextNode(" CI")]),
       ]),
@@ -181,18 +204,39 @@
     const route = location.hash || "#/";
     const nbMsg = u ? CL.messageService.nbNonLus(u.id) : 0;
 
-    const items = [
-      { href: "#/", icone: "dashboard", label: "Accueil" },
-      { href: "#/recherche", icone: "recherche", label: "Coachs" },
-      { href: "#/coachmatch", icone: "eclair", label: "Match", centre: true },
-    ];
-    if (u) {
-      items.push({ href: "#/messages", icone: "message", label: "Messages", compteur: nbMsg });
-      const espace = u.role === "coach" ? "#/espace-coach" : u.role === "admin" ? "#/admin" : "#/client";
-      items.push({ href: espace, icone: "utilisateur", label: "Espace" });
+    const nbNotif = u ? CL.notifications.nbNonLues(u.id) : 0;
+    let items;
+    if (u && u.role === "coach") {
+      // Barre dédiée coach : aucun accès à l'accueil, la recherche ou Match.
+      items = [
+        { href: "#/espace-coach", icone: "dashboard", label: "Bord" },
+        { href: "#/espace-coach/reservations", icone: "calendrier", label: "Demandes" },
+        { href: "#/espace-coach/profil", icone: "utilisateur", label: "Profil", centre: true },
+        { href: "#/messages", icone: "message", label: "Messages", compteur: nbMsg },
+        { href: "#/notifications", icone: "cloche", label: "Notifs", compteur: nbNotif },
+      ];
+    } else if (u && u.role === "admin") {
+      items = [
+        { href: "#/admin", icone: "dashboard", label: "Bord" },
+        { href: "#/admin/diplomes", icone: "diplome", label: "Diplômes" },
+        { href: "#/admin/utilisateurs", icone: "utilisateurs", label: "Comptes", centre: true },
+        { href: "#/admin/litiges", icone: "bouclier", label: "Litiges" },
+        { href: "#/messages", icone: "message", label: "Messages", compteur: nbMsg },
+      ];
     } else {
-      items.push({ href: "#/comment-ca-marche", icone: "bouclier", label: "Aide" });
-      items.push({ href: "#/connexion", icone: "utilisateur", label: "Compte" });
+      // Client / visiteur : parcours de découverte complet.
+      items = [
+        { href: "#/", icone: "dashboard", label: "Accueil" },
+        { href: "#/recherche", icone: "recherche", label: "Coachs" },
+        { href: "#/coachmatch", icone: "eclair", label: "Match", centre: true },
+      ];
+      if (u) {
+        items.push({ href: "#/messages", icone: "message", label: "Messages", compteur: nbMsg });
+        items.push({ href: "#/client", icone: "utilisateur", label: "Espace" });
+      } else {
+        items.push({ href: "#/comment-ca-marche", icone: "bouclier", label: "Aide" });
+        items.push({ href: "#/connexion", icone: "utilisateur", label: "Compte" });
+      }
     }
 
     items.forEach((it) => {
@@ -236,17 +280,43 @@
       return a;
     };
 
-    const liens = [
-      lien("#/", "Accueil", "dashboard"),
-      lien("#/recherche", "Trouver un coach", "recherche"),
-      lien("#/coachmatch", "CoachMatch", "eclair"),
-      lien("#/comment-ca-marche", "Comment ça marche", "bouclier"),
-    ];
-    if (u) {
-      if (u.role === "client") liens.push(lien("#/client", "Mon espace", "utilisateur"));
-      if (u.role === "coach") liens.push(lien("#/espace-coach", "Espace coach", "diplome"));
-      if (u.role === "admin") liens.push(lien("#/admin", "Administration", "bouclier"));
-      liens.push(lien("#/messages", "Messagerie", "message"));
+    let liens;
+    if (u && u.role === "coach") {
+      // Menu dédié coach — pas d'accueil public, recherche ni Match.
+      liens = [
+        lien("#/espace-coach", "Tableau de bord", "dashboard"),
+        lien("#/espace-coach/reservations", "Mes demandes", "calendrier"),
+        lien("#/espace-coach/profil", "Mon profil", "utilisateur"),
+        lien("#/espace-coach/mur", "Mon mur", "document"),
+        lien("#/espace-coach/galerie", "Ma galerie", "galerie"),
+        lien("#/espace-coach/disponibilites", "Disponibilités", "horloge"),
+        lien("#/espace-coach/diplomes", "Diplômes", "diplome"),
+        lien("#/espace-coach/avis", "Avis reçus", "etoile"),
+        lien("#/messages", "Messagerie", "message"),
+        lien("#/notifications", "Notifications", "cloche"),
+        lien("#/parametres", "Paramètres", "parametres"),
+      ];
+    } else if (u && u.role === "admin") {
+      liens = [
+        lien("#/admin", "Administration", "dashboard"),
+        lien("#/admin/diplomes", "Diplômes", "diplome"),
+        lien("#/admin/utilisateurs", "Utilisateurs", "utilisateurs"),
+        lien("#/admin/litiges", "Litiges", "bouclier"),
+        lien("#/messages", "Messagerie", "message"),
+        lien("#/notifications", "Notifications", "cloche"),
+      ];
+    } else {
+      liens = [
+        lien("#/", "Accueil", "dashboard"),
+        lien("#/recherche", "Trouver un coach", "recherche"),
+        lien("#/coachmatch", "CoachMatch", "eclair"),
+        lien("#/comment-ca-marche", "Comment ça marche", "bouclier"),
+      ];
+      if (u) {
+        liens.push(lien("#/client", "Mon espace", "utilisateur"));
+        liens.push(lien("#/messages", "Messagerie", "message"));
+        liens.push(lien("#/notifications", "Notifications", "cloche"));
+      }
     }
 
     const actions = u

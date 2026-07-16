@@ -367,6 +367,16 @@
 .notif-item.non-lu { background: var(--bleu-confiance-clair); }
 .notif-item__point { width: 8px; height: 8px; border-radius: 50%; background: var(--bleu-confiance); margin-top: 6px; flex-shrink: 0; }
 
+/* Cartes du centre de notifications */
+.notif-carte { transition: box-shadow var(--t-rapide), border-color var(--t-rapide); }
+.notif-carte:hover { box-shadow: var(--ombre-md); border-color: var(--bleu-confiance); }
+.notif-carte.non-lu { border-left: 4px solid var(--bleu-confiance); background: var(--bleu-confiance-clair); }
+.notif-carte__icone {
+  width: 42px; height: 42px; border-radius: var(--r-md); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.notif-point { width: 10px; height: 10px; border-radius: 50%; background: var(--bleu-confiance); flex-shrink: 0; }
+
 /* --- Divider / séparateur avec texte -------------------------------------- */
 .separateur-texte {
   display: flex; align-items: center; gap: var(--e-3);

@@ -86,6 +86,10 @@ coachlink/
 
 ---
 
+### 🔐 Expériences dédiées par rôle
+- **Coach** : espace entièrement dédié — **pas d'accueil public, pas de recherche d'autres coachs, pas de CoachMatch** (réservé aux clients). Le coach gère uniquement **ses informations** (profil, mur, galerie, disponibilités, diplômes) et **le suivi de ses clients** (demandes, messages, avis). Toute tentative d'accès à une page réservée aux clients (ou au profil d'un autre coach) le renvoie automatiquement à son tableau de bord. La navigation (haut, sidebar, barre mobile, menu) est intégralement adaptée.
+- **Centre de notifications** : nouvelle page `#/notifications` (tous rôles) avec filtres lu/non-lu et « tout marquer lu ». Le coach est notifié en temps réel des **nouvelles demandes, paiements, avis, annulations et messages** ; le client l'est des **confirmations, refus et fins de séance**. Pastilles de compteur dans la cloche, la sidebar et la barre mobile.
+
 ### 📱 Expérience adaptative (app mobile / bureau)
 - Sur **téléphone**, l'interface adopte les codes d'une **application mobile native** : **barre de navigation inférieure** (tab bar) avec bouton central « Match » mis en avant (style FAB), badges de messages non lus, cibles tactiles confortables, pleine largeur et respect des encoches (safe-area).
 - Sur **ordinateur**, l'interface conserve une présentation **desktop** classique : barre de navigation supérieure et **sidebars** de tableaux de bord. La barre inférieure est masquée.

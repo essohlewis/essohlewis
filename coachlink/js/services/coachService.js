@@ -133,6 +133,14 @@
       c.nbAvis = c.avis.length;
       c.note = Math.round((c.avis.reduce((s, a) => s + a.note, 0) / c.avis.length) * 10) / 10;
       sauver(liste);
+      // Notifie le coach du nouvel avis.
+      if (c.proprietaire && CL.notifications) {
+        CL.notifications.ajouter(c.proprietaire, {
+          type: "avis",
+          texte: `${avis.auteur} vous a laissé un avis (${avis.note}★).`,
+          lien: "#/espace-coach/avis",
+        });
+      }
       return true;
     },
 
