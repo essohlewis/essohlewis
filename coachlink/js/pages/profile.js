@@ -199,10 +199,13 @@
       p.video ? (CL.media.elementVideo(p.video) || null) : null,
       el("div", { class: "post__actions" }, [
         (function () {
-          const b = el("button", { html: CL.icon("pouce", 16) + " " + '<span>' + p.likes + "</span>" });
+          let aime = coachService.aPostAime(p.id);
+          const b = el("button", { class: aime ? "actif" : "", html: CL.icon("pouce", 16, { fill: aime }) + " " + '<span>' + p.likes + "</span>" });
           b.addEventListener("click", () => {
-            const n = coachService.aimerPost(coach.id, p.id);
-            b.querySelector("span").textContent = n;
+            const r = coachService.aimerPost(coach.id, p.id);
+            aime = r.aime;
+            b.className = aime ? "actif" : "";
+            b.innerHTML = CL.icon("pouce", 16, { fill: aime }) + " " + '<span>' + r.likes + "</span>";
           });
           return b;
         })(),

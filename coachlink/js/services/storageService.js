@@ -20,6 +20,8 @@
     conversations: "conversations",
     notifications: "notifications",
     favoris: "favoris",
+    likes: "likes",
+    litiges: "litiges",
     prefs: "prefs",
     seedFait: "seed_ok",
   };

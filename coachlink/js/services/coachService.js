@@ -263,14 +263,30 @@
       return true;
     },
 
+    /** True si l'utilisateur courant a aimé cette publication. */
+    aPostAime(postId) {
+      return storage.lire(storage.CLES.likes, []).map(String).includes(String(postId));
+    },
+
+    /**
+     * Bascule le « J'aime » de l'utilisateur sur une publication.
+     * @returns {{likes:number, aime:boolean}}
+     */
     aimerPost(coachId, postId) {
       const liste = tous();
       const c = liste.find((x) => x.id === coachId);
       const p = c && (c.posts || []).find((x) => x.id === postId);
-      if (!p) return 0;
-      p.likes = (p.likes || 0) + 1;
+      if (!p) return { likes: 0, aime: false };
+      const likes = storage.lire(storage.CLES.likes, []);
+      const idx = likes.findIndex((x) => String(x) === String(postId));
+      let aime;
+      if (idx >= 0) { likes.splice(idx, 1); p.likes = Math.max(0, (p.likes || 0) - 1); aime = false; }
+      else { likes.push(postId); p.likes = (p.likes || 0) + 1; aime = true; }
+      storage.ecrire(storage.CLES.likes, likes);
       sauver(liste);
-      return p.likes;
+      // API : le serveur fait foi (recompte) ; synchronisation en tâche de fond.
+      if (coachService._api()) CL.API.post("/posts/" + postId + "/like").catch(() => {});
+      return { likes: p.likes, aime };
     },
 
     /* --------------------------- Diplômes ----------------------------- */

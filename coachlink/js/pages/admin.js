@@ -117,17 +117,10 @@
 
   /* ---------------------------- Litiges --------------------------- */
   CL.pages.adminLitiges = function () {
-    // File de litiges simulée (démo). En production : issue d'un endpoint API.
-    const litiges = storage.lire("litiges", null) || [
-      { id: "l1", client: "Awa S.", coach: "Koffi Aka", motif: "Séance non honorée", statut: "ouvert", date: "2026-07-10" },
-      { id: "l2", client: "Marc B.", coach: "Ismaël Traoré", motif: "Remboursement demandé", statut: "en_cours", date: "2026-07-12" },
-    ];
-    storage.ecrire("litiges", litiges);
-
     const zone = el("div", { class: "pile-3" });
     function rendre() {
       CL.dom.vider(zone);
-      const liste = storage.lire("litiges", []);
+      const liste = CL.litiges.lister();
       if (!liste.length) { zone.appendChild(ui.vide("bouclier", "Aucun litige", "Tout roule ! Aucune réclamation en cours.")); return; }
       liste.forEach((l) => {
         const statutMap = { ouvert: ["st-attente", "Ouvert"], en_cours: ["st-confirme", "En cours"], resolu: ["st-termine", "Résolu"] };
@@ -136,14 +129,16 @@
           el("div", { class: "rangee entre rangee-wrap gap-3" }, [
             el("div", {}, [
               el("strong", { text: l.motif }),
-              el("div", { class: "texte-sm texte-doux", text: l.client + " ⇄ " + l.coach }),
+              el("div", { class: "texte-sm texte-doux", text: l.client + " ⇄ " + (l.coach || "—") }),
               el("div", { class: "texte-xs texte-faible", text: "Ouvert le " + format.date(l.date) }),
             ]),
             el("div", { class: "rangee gap-2" }, [
               el("span", { class: "pastille-statut " + cls, text: label }),
+              l.statut === "ouvert" ? el("button", { class: "btn btn-fantome btn-sm", text: "Prendre en charge", onclick: () => {
+                CL.litiges.changerStatut(l.id, "en_cours"); CL.toast.info("Litige en cours", ""); rendre();
+              } }) : null,
               l.statut !== "resolu" ? el("button", { class: "btn btn-succes btn-sm", text: "Marquer résolu", onclick: () => {
-                const liste2 = storage.lire("litiges", []); const item = liste2.find((y) => y.id === l.id); item.statut = "resolu"; storage.ecrire("litiges", liste2);
-                CL.toast.succes("Litige résolu", ""); rendre();
+                CL.litiges.changerStatut(l.id, "resolu"); CL.toast.succes("Litige résolu", ""); rendre();
               } }) : null,
             ]),
           ]),

@@ -128,8 +128,15 @@
       return { ok: true, user };
     },
 
-    /** Récupération de mot de passe (simulée). */
-    motDePasseOublie(email) {
+    /** Demande de réinitialisation (asynchrone). En mode API, renvoie aussi le
+     *  jeton de simulation (aucun email n'est réellement envoyé). */
+    async motDePasseOublie(email) {
+      if (auth._api()) {
+        try {
+          const d = await CL.API.post("/auth/mot-de-passe/oubli", { email });
+          return { ok: true, message: d.message, token: d.token || null };
+        } catch (e) { return { ok: false, message: e.message || "Demande impossible." }; }
+      }
       const existe = utilisateurs().some((u) => u.email.toLowerCase() === String(email).toLowerCase());
       return {
         ok: true,
@@ -137,6 +144,17 @@
           ? "Un lien de réinitialisation vous a été envoyé (simulé)."
           : "Si ce compte existe, un lien a été envoyé (simulé).",
       };
+    },
+
+    /** Réinitialise le mot de passe à partir d'un jeton (mode API). */
+    async reinitialiser(token, motDePasse) {
+      if (auth._api()) {
+        try {
+          const d = await CL.API.post("/auth/mot-de-passe/reset", { token, motDePasse });
+          return { ok: true, message: d.message };
+        } catch (e) { return { ok: false, message: e.message || "Réinitialisation impossible.", erreurs: e.erreurs || {} }; }
+      }
+      return { ok: false, message: "La réinitialisation nécessite le backend." };
     },
 
     deconnecter() {

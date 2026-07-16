@@ -178,6 +178,14 @@
       };
     },
 
+    mapLitige(l) {
+      return {
+        id: l.id, clientId: l.client_id ? Number(l.client_id) : null,
+        client: l.client_nom, coach: l.coach_nom, motif: l.motif,
+        statut: l.statut, date: l.date,
+      };
+    },
+
     mapMessage(m) {
       return { id: m.id, de: Number(m.de), texte: m.texte, pieces: [], date: m.date, lu: !!Number(m.lu) };
     },
@@ -223,16 +231,23 @@
       const u = CL.auth.courant();
       if (!u) return;
       try {
-        // Administrateur : comptes + toutes les réservations pour les tableaux de bord.
+        // « J'aime » de l'utilisateur (tous rôles) : liste d'identifiants de posts.
+        const likesP = API.get("/mes-likes").catch(() => []);
+
+        // Administrateur : comptes + réservations + litiges pour les tableaux de bord.
         if (u.role === "admin") {
-          const [users, resas, notifs] = await Promise.all([
+          const [users, resas, notifs, litiges, likes] = await Promise.all([
             API.get("/admin/utilisateurs").catch(() => []),
             API.get("/admin/reservations").catch(() => []),
             API.notifications().catch(() => ({ items: [] })),
+            API.get("/admin/litiges").catch(() => []),
+            likesP,
           ]);
           CL.storage.ecrire(CL.storage.CLES.users, (users || []).map(API.mapUser));
           CL.storage.ecrire(CL.storage.CLES.bookings, (resas || []).map(API.mapReservation));
           CL.storage.ecrire(CL.storage.CLES.notifications, ((notifs && notifs.items) || []).map(API.mapNotif));
+          CL.storage.ecrire(CL.storage.CLES.litiges, (litiges || []).map(API.mapLitige));
+          CL.storage.ecrire(CL.storage.CLES.likes, likes || []);
           return;
         }
 
@@ -240,14 +255,16 @@
         const resasP = u.role === "coach"
           ? API.get("/reservations/coach").catch(() => [])
           : API.mesResas().catch(() => []);
-        const [resas, notifs, convs] = await Promise.all([
+        const [resas, notifs, convs, likes] = await Promise.all([
           resasP,
           API.notifications().catch(() => ({ items: [] })),
           API.get("/conversations").catch(() => []),
+          likesP,
         ]);
         CL.storage.ecrire(CL.storage.CLES.bookings, (resas || []).map(API.mapReservation));
         CL.storage.ecrire(CL.storage.CLES.notifications, ((notifs && notifs.items) || []).map(API.mapNotif));
         CL.storage.ecrire(CL.storage.CLES.conversations, (convs || []).map(API.mapConversation));
+        CL.storage.ecrire(CL.storage.CLES.likes, likes || []);
 
         // Favoris (client) : on stocke la liste d'identifiants.
         if (u.role === "client") {

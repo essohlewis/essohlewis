@@ -229,20 +229,49 @@
 
   function motDePasseOublie() {
     const input = el("input", { class: "input", type: "email", placeholder: "vous@exemple.ci" });
+    const envoyer = el("button", { class: "btn btn-primaire", text: "Envoyer le lien" });
+    envoyer.addEventListener("click", async () => {
+      const email = input.value.trim();
+      if (!validation.email(email)) return CL.toast.erreur("Email invalide", "Vérifiez votre adresse.");
+      envoyer.disabled = true;
+      const res = await auth.motDePasseOublie(email);
+      envoyer.disabled = false;
+      if (!res.ok) return CL.toast.erreur("Échec", res.message);
+      if (res.token) { etapeReset(res.token); }          // mode API : lien validé automatiquement (simulation)
+      else { CL.modal.fermer(); CL.toast.succes("Envoyé", res.message); }
+    });
     CL.modal.ouvrir({
       titre: "Mot de passe oublié",
       contenu: el("div", {}, [
-        el("p", { class: "mb-4", text: "Saisissez votre email, nous vous enverrons un lien de réinitialisation (simulé)." }),
+        el("p", { class: "mb-4", text: "Saisissez votre email, nous vous enverrons un lien de réinitialisation." }),
         input,
       ]),
-      pied: [
-        el("button", { class: "btn btn-fantome", text: "Annuler", onclick: CL.modal.fermer }),
-        el("button", { class: "btn btn-primaire", text: "Envoyer le lien", onclick: () => {
-          const res = auth.motDePasseOublie(input.value.trim());
-          CL.modal.fermer();
-          CL.toast.succes("Envoyé", res.message);
-        } }),
-      ],
+      pied: [el("button", { class: "btn btn-fantome", text: "Annuler", onclick: CL.modal.fermer }), envoyer],
     });
+
+    function etapeReset(token) {
+      const npw = el("input", { class: "input", type: "password", placeholder: "Nouveau mot de passe (6 caractères min.)" });
+      const valider = el("button", { class: "btn btn-cta", text: "Réinitialiser" });
+      valider.addEventListener("click", async () => {
+        if ((npw.value || "").length < 6) return CL.toast.erreur("Trop court", "6 caractères minimum.");
+        valider.disabled = true;
+        const res = await auth.reinitialiser(token, npw.value);
+        valider.disabled = false;
+        if (!res.ok) return CL.toast.erreur("Échec", res.message);
+        CL.modal.fermer();
+        CL.toast.succes("Mot de passe modifié", res.message);
+      });
+      CL.modal.ouvrir({
+        titre: "Réinitialiser le mot de passe",
+        contenu: el("div", {}, [
+          el("div", { class: "carte mb-4", style: "padding:12px;background:var(--surface-2)" }, [
+            el("div", { class: "texte-xs texte-faible", html: "💡 <strong>Simulation</strong> : aucun email n'est réellement envoyé ; le lien a été validé automatiquement pour la démo." }),
+          ]),
+          el("p", { class: "mb-3", text: "Choisissez votre nouveau mot de passe." }),
+          npw,
+        ]),
+        pied: [el("button", { class: "btn btn-fantome", text: "Annuler", onclick: CL.modal.fermer }), valider],
+      });
+    }
   }
 })();

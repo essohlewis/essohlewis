@@ -60,4 +60,23 @@ class AdminController
         Auth::exigerRole('admin');
         Response::ok((new Reservation())->toutes());
     }
+
+    /** GET /admin/litiges — file des réclamations. */
+    public function litiges(array $params): void
+    {
+        Auth::exigerRole('admin');
+        Response::ok((new Litige())->toutes());
+    }
+
+    /** PATCH /admin/litiges/:id  { statut: ouvert|en_cours|resolu } */
+    public function statutLitige(array $params): void
+    {
+        Auth::exigerRole('admin');
+        $statut = Request::champ('statut');
+        if (!in_array($statut, ['ouvert', 'en_cours', 'resolu'], true)) {
+            Response::erreur('Statut invalide.', 422);
+        }
+        (new Litige())->changerStatut((int) $params['id'], $statut);
+        Response::ok(['id' => (int) $params['id'], 'statut' => $statut]);
+    }
 }

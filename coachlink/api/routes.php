@@ -10,6 +10,8 @@
 $router->post('/auth/register', [AuthController::class, 'register']);
 $router->post('/auth/login',    [AuthController::class, 'login']);
 $router->get('/auth/me',        [AuthController::class, 'me']);
+$router->post('/auth/mot-de-passe/oubli', [AuthController::class, 'motDePasseOubli']);
+$router->post('/auth/mot-de-passe/reset', [AuthController::class, 'reinitialiser']);
 
 // --- Coachs --------------------------------------------------------------
 $router->get('/coachs',          [CoachController::class, 'index']);
@@ -24,6 +26,8 @@ $router->post('/coachs/moi/galerie',          [CoachController::class, 'ajouterM
 $router->delete('/galerie/:id',               [CoachController::class, 'supprimerMedia']);
 $router->post('/coachs/moi/posts',            [CoachController::class, 'ajouterPost']);
 $router->delete('/posts/:id',                 [CoachController::class, 'supprimerPost']);
+$router->post('/posts/:id/like',              [CoachController::class, 'basculerLike']);
+$router->get('/mes-likes',                    [CoachController::class, 'mesLikes']);
 
 $router->get('/coachs/:id',      [CoachController::class, 'show']);
 $router->post('/coachs/:id/avis', [ReviewController::class, 'ajouter']);
@@ -32,6 +36,9 @@ $router->patch('/avis/:id/reponse', [ReviewController::class, 'repondre']);
 // Favoris (client)
 $router->get('/favoris',  [FavoriteController::class, 'index']);
 $router->post('/favoris', [FavoriteController::class, 'basculer']);
+
+// Litiges
+$router->post('/litiges', [LitigeController::class, 'ouvrir']);
 
 // Téléversement de fichiers
 $router->post('/uploads', [UploadController::class, 'televerser']);
@@ -58,6 +65,8 @@ $router->post('/conversations/:id/lu',          [MessageController::class, 'marq
 $router->get('/admin/stats',           [AdminController::class, 'stats']);
 $router->get('/admin/utilisateurs',    [AdminController::class, 'utilisateurs']);
 $router->get('/admin/reservations',    [AdminController::class, 'reservations']);
+$router->get('/admin/litiges',          [AdminController::class, 'litiges']);
+$router->patch('/admin/litiges/:id',    [AdminController::class, 'statutLitige']);
 $router->get('/admin/diplomes',        [AdminController::class, 'diplomesEnAttente']);
 $router->patch('/admin/diplomes/:id',  [AdminController::class, 'statutDiplome']);
 

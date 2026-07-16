@@ -22,9 +22,9 @@ $PK = $sqlite ? 'INTEGER PRIMARY KEY AUTOINCREMENT' : 'INT AUTO_INCREMENT PRIMAR
 $suffixe = $sqlite ? '' : ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4';
 
 $tables = [
-    'favoris', 'notifications', 'messages', 'conversations', 'reservations',
-    'posts', 'galerie', 'avis', 'disponibilites', 'diplomes', 'tarifs',
-    'coach_langues', 'coach_specialites', 'coachs', 'users',
+    'resets', 'litiges', 'post_likes', 'favoris', 'notifications', 'messages',
+    'conversations', 'reservations', 'posts', 'galerie', 'avis', 'disponibilites',
+    'diplomes', 'tarifs', 'coach_langues', 'coach_specialites', 'coachs', 'users',
 ];
 if ($fresh) {
     if (!$sqlite) $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
@@ -62,6 +62,9 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS conversations (id $PK, user_a INT, user_b
 $pdo->exec("CREATE TABLE IF NOT EXISTS messages (id $PK, conversation_id INT, de INT, texte TEXT, lu INT DEFAULT 0, date VARCHAR(40))$suffixe");
 $pdo->exec("CREATE TABLE IF NOT EXISTS notifications (id $PK, pour INT, type VARCHAR(30), texte TEXT, lien VARCHAR(120), lu INT DEFAULT 0, date VARCHAR(40))$suffixe");
 $pdo->exec("CREATE TABLE IF NOT EXISTS favoris (user_id INT, coach_id VARCHAR(40))$suffixe");
+$pdo->exec("CREATE TABLE IF NOT EXISTS post_likes (post_id INT, user_id INT, PRIMARY KEY (post_id, user_id))$suffixe");
+$pdo->exec("CREATE TABLE IF NOT EXISTS litiges (id $PK, client_id INT, client_nom VARCHAR(120), coach_nom VARCHAR(120), motif TEXT, statut VARCHAR(15) DEFAULT 'ouvert', date VARCHAR(40))$suffixe");
+$pdo->exec("CREATE TABLE IF NOT EXISTS resets (email VARCHAR(160), token VARCHAR(64), expire_le VARCHAR(40))$suffixe");
 
 echo "Schéma créé ($" . "pilote=" . Database::pilote() . ").\n";
 
@@ -113,5 +116,18 @@ if (is_file($jsonPath)) {
     } else {
         echo "Coachs déjà présents ($dejà) — import ignoré.\n";
     }
+}
+
+/* ------------------- Litiges de démonstration ---------------------------- */
+$nbLitiges = (int) $pdo->query("SELECT COUNT(*) n FROM litiges")->fetch()['n'];
+if ($nbLitiges === 0) {
+    $demo = [
+        [null, 'Awa S.', 'Koffi Aka', 'Séance non honorée', 'ouvert', '2026-07-10'],
+        [null, 'Marc B.', 'Ismaël Traoré', 'Remboursement demandé', 'en_cours', '2026-07-12'],
+    ];
+    foreach ($demo as $l) {
+        $pdo->prepare("INSERT INTO litiges (client_id, client_nom, coach_nom, motif, statut, date) VALUES (?,?,?,?,?,?)")->execute($l);
+    }
+    echo "Litiges de démonstration ajoutés.\n";
 }
 echo "Migration terminée ✔\n";

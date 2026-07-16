@@ -202,4 +202,35 @@ class Coach extends Model
     {
         $this->pdo()->prepare("DELETE FROM posts WHERE id = ? AND coach_id = ?")->execute([$postId, $coachId]);
     }
+
+    /**
+     * Bascule le « J'aime » d'un utilisateur sur une publication.
+     * @return array{likes:int, aime:bool} nouveau total + état pour cet utilisateur
+     */
+    public function basculerLike(int $postId, int $userId): array
+    {
+        $pdo = $this->pdo();
+        $existe = $pdo->prepare("SELECT 1 FROM post_likes WHERE post_id = ? AND user_id = ?");
+        $existe->execute([$postId, $userId]);
+        $aimeDeja = (bool) $existe->fetchColumn();
+
+        // Le compteur posts.likes garde la valeur de départ (démo) comme socle ;
+        // on l'ajuste de ±1 selon l'action de l'utilisateur.
+        if ($aimeDeja) {
+            $pdo->prepare("DELETE FROM post_likes WHERE post_id = ? AND user_id = ?")->execute([$postId, $userId]);
+            $pdo->prepare("UPDATE posts SET likes = CASE WHEN likes > 0 THEN likes - 1 ELSE 0 END WHERE id = ?")->execute([$postId]);
+        } else {
+            $pdo->prepare("INSERT INTO post_likes (post_id, user_id) VALUES (?, ?)")->execute([$postId, $userId]);
+            $pdo->prepare("UPDATE posts SET likes = likes + 1 WHERE id = ?")->execute([$postId]);
+        }
+        $likes = (int) $pdo->query("SELECT likes FROM posts WHERE id = " . (int) $postId)->fetchColumn();
+        return ['likes' => $likes, 'aime' => !$aimeDeja];
+    }
+
+    /** Identifiants des publications aimées par un utilisateur. */
+    public function likesDe(int $userId): array
+    {
+        $r = $this->requete("SELECT post_id FROM post_likes WHERE user_id = ?", [$userId]);
+        return array_map(fn($x) => (int) $x['post_id'], $r);
+    }
 }

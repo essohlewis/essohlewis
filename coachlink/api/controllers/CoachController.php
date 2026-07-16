@@ -147,4 +147,18 @@ class CoachController
         (new Coach())->supprimerPost($coach['id'], (int) $params['id']);
         Response::ok(true);
     }
+
+    /** POST /posts/:id/like — bascule le « J'aime » de l'utilisateur connecté. */
+    public function basculerLike(array $params): void
+    {
+        $user = Auth::exiger();
+        Response::ok((new Coach())->basculerLike((int) $params['id'], (int) $user['id']));
+    }
+
+    /** GET /mes-likes — identifiants des publications aimées par l'utilisateur. */
+    public function mesLikes(array $params): void
+    {
+        $user = Auth::exiger();
+        Response::ok((new Coach())->likesDe((int) $user['id']));
+    }
 }

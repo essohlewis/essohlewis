@@ -190,6 +190,34 @@ CREATE TABLE favoris (
   FOREIGN KEY (coach_id) REFERENCES coachs(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- --- « J'aime » sur les publications --------------------------------------
+CREATE TABLE post_likes (
+  post_id INT NOT NULL,
+  user_id INT NOT NULL,
+  PRIMARY KEY (post_id, user_id),
+  FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --- Litiges (modération admin) -------------------------------------------
+CREATE TABLE litiges (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  client_id  INT NULL,
+  client_nom VARCHAR(120),
+  coach_nom  VARCHAR(120),
+  motif      TEXT,
+  statut     ENUM('ouvert','en_cours','resolu') DEFAULT 'ouvert',
+  date       VARCHAR(40)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --- Jetons de réinitialisation de mot de passe ---------------------------
+CREATE TABLE resets (
+  email     VARCHAR(160) NOT NULL,
+  token     VARCHAR(64)  NOT NULL,
+  expire_le VARCHAR(40),
+  INDEX idx_token (token)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- Compte administrateur par défaut (mot de passe : admin123).

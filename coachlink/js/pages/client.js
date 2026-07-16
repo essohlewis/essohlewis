@@ -105,6 +105,28 @@
   };
 
   /* --------------------------- Composants ------------------------- */
+  /** Ouvre une réclamation (litige) sur une prestation. */
+  function signalerLitige(r, coach) {
+    const u = auth.courant();
+    const motif = el("textarea", { class: "textarea", rows: "3", placeholder: "Décrivez le problème rencontré (séance non honorée, remboursement…)." });
+    CL.modal.ouvrir({
+      titre: "Signaler un problème",
+      contenu: el("div", { class: "pile-3" }, [
+        el("p", { class: "texte-sm texte-doux", text: "Prestation « " + r.tarifNom + " » avec " + coachService.nomComplet(coach) + "." }),
+        motif,
+      ]),
+      pied: [
+        el("button", { class: "btn btn-fantome", text: "Annuler", onclick: CL.modal.fermer }),
+        el("button", { class: "btn btn-cta", text: "Envoyer la réclamation", onclick: () => {
+          if (!motif.value.trim()) return CL.toast.erreur("Motif requis", "Décrivez le problème.");
+          CL.litiges.ouvrir({ client: u.prenom + " " + u.nom, coach: coachService.nomComplet(coach), motif: motif.value.trim() });
+          CL.modal.fermer();
+          CL.toast.succes("Réclamation envoyée", "Notre équipe va l'examiner.");
+        } }),
+      ],
+    });
+  }
+
   function carteReservation(r, vue, onChange) {
     const coach = coachService.obtenir(r.coachId);
     const st = bookingService.STATUTS[r.statut];
@@ -119,6 +141,9 @@
       }
       if (r.statut === "terminee" && !r.avisLaisse && coach) {
         actions.appendChild(el("button", { class: "btn btn-cta btn-sm", text: "Laisser un avis", onclick: () => CL.ouvrirAvis(coach, r) }));
+      }
+      if ((r.statut === "confirmee" || r.statut === "terminee") && coach) {
+        actions.appendChild(el("button", { class: "btn btn-fantome btn-sm", html: CL.icon("bouclier", 14) + " Signaler", onclick: () => signalerLitige(r, coach) }));
       }
       if (coach) actions.appendChild(el("a", { class: "btn btn-primaire btn-sm", href: "#/coach/" + coach.id, text: "Voir le coach" }));
     }

@@ -60,6 +60,8 @@ Les routes protégées attendent un en-tête `Authorization: Bearer <token>`.
 | POST | `/auth/register` | – | Inscription (client/coach) → `{ user, token }` |
 | POST | `/auth/login` | – | Connexion → `{ user, token }` |
 | GET  | `/auth/me` | connecté | Profil courant |
+| POST | `/auth/mot-de-passe/oubli` | – | Demande de réinitialisation (jeton simulé) |
+| POST | `/auth/mot-de-passe/reset` | – | Réinitialise via `{ token, motDePasse }` |
 | GET  | `/coachs` | – | Liste + filtres `?texte=&specialite=&commune=&langue=&noteMin=&prixMax=&tri=` |
 | GET  | `/coachs/:id` | – | Profil coach complet (tarifs, avis, galerie, TrustScore…) |
 | GET  | `/coachs/moi` | coach | Ma fiche coach |
@@ -72,6 +74,8 @@ Les routes protégées attendent un en-tête `Authorization: Bearer <token>`.
 | DELETE | `/galerie/:id` | coach | Retirer une photo |
 | POST | `/coachs/moi/posts` | coach | Publier sur le mur (texte/image/vidéo) |
 | DELETE | `/posts/:id` | coach | Supprimer une publication |
+| POST | `/posts/:id/like` | connecté | Basculer le « J'aime » → `{ likes, aime }` |
+| GET  | `/mes-likes` | connecté | Publications aimées (liste d'IDs) |
 | POST | `/coachs/:id/avis` | client | Laisser un avis (recalcule la note) |
 | PATCH| `/avis/:id/reponse` | coach | Répondre à un avis |
 | GET  | `/favoris` | connecté | Mes coachs favoris |
@@ -93,6 +97,9 @@ Les routes protégées attendent un en-tête `Authorization: Bearer <token>`.
 | GET  | `/admin/reservations` | admin | Toutes les réservations |
 | GET  | `/admin/diplomes` | admin | Diplômes en attente |
 | PATCH| `/admin/diplomes/:id` | admin | Valider/refuser un diplôme |
+| POST | `/litiges` | connecté | Ouvrir une réclamation `{ coachNom, motif }` |
+| GET  | `/admin/litiges` | admin | File des réclamations |
+| PATCH| `/admin/litiges/:id` | admin | Changer le statut d'un litige |
 
 ### Exemple
 ```bash
@@ -172,11 +179,20 @@ Tant que `cl_api_base` n'est pas défini, l'app fonctionne 100 % hors-ligne.
 > réglez `'uploads_url' => '/uploads'` dans `config.php` (au lieu de
 > `/api/uploads`) pour que les fichiers soient servis correctement.
 
+**Slice 4 — finalisation fonctionnelle**
+- **« J'aime »** sur les publications : bascule par utilisateur
+  (`POST /posts/:id/like`, table `post_likes`), état hydraté via `GET /mes-likes`.
+- **Litiges** : le client ouvre une réclamation (`POST /litiges`), l'admin la
+  suit et la résout (`GET`/`PATCH /admin/litiges`) — persistés en base.
+- **Réinitialisation de mot de passe** : flux à jeton
+  (`/auth/mot-de-passe/oubli` → `/reset`), table `resets` avec expiration.
+  L'envoi d'email est **simulé** (le jeton est renvoyé pour la démo — à
+  remplacer par un vrai service d'email en production).
+
 ### Reste (améliorations, non bloquantes)
-« J'aime » sur les posts (pas d'endpoint), messagerie **temps réel**
-(WebSocket/polling au lieu du rafraîchissement à l'ouverture), litiges admin
-(actuellement locaux), Mobile Money réel, OAuth social, réinitialisation de
-mot de passe par email, pagination, rate limiting, HTTPS/prod, tests PHPUnit/CI.
+Messagerie **temps réel** (WebSocket/polling au lieu du rafraîchissement à
+l'ouverture), **envoi d'email réel** (réinitialisation), Mobile Money réel,
+OAuth social, pagination, rate limiting, HTTPS/prod, tests PHPUnit/CI.
 
 ---
 
