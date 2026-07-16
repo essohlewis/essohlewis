@@ -7,16 +7,26 @@ class App
 {
     private static array $config = [];
 
-    /** Charge la configuration (config.php ou, à défaut, config.example.php). */
-    public static function boot(): void
+    /**
+     * Amorçage. En temps normal, charge config.php (ou config.example.php).
+     * Les tests peuvent injecter une configuration ($override) et sauter
+     * l'envoi des en-têtes HTTP ($http = false).
+     */
+    public static function boot(?array $override = null, bool $http = true): void
     {
-        $dir = __DIR__ . '/../config/';
-        $fichier = is_file($dir . 'config.php') ? $dir . 'config.php' : $dir . 'config.example.php';
-        self::$config = require $fichier;
+        if ($override !== null) {
+            self::$config = $override;
+        } else {
+            $dir = __DIR__ . '/../config/';
+            $fichier = is_file($dir . 'config.php') ? $dir . 'config.php' : $dir . 'config.example.php';
+            self::$config = require $fichier;
+        }
 
         self::autoload();
-        self::securite();
-        self::cors();
+        if ($http) {
+            self::securite();
+            self::cors();
+        }
         self::gestionErreurs();
     }
 

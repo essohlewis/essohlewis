@@ -15,7 +15,7 @@ abstract class Model
     }
 
     /** Toutes les lignes (option : tri). */
-    public function tout(string $orderBy = null): array
+    public function tout(?string $orderBy = null): array
     {
         $sql = "SELECT * FROM {$this->table}";
         if ($orderBy) {
@@ -43,7 +43,7 @@ abstract class Model
     }
 
     /** Lignes filtrées par égalités (clé => valeur), avec tri optionnel. */
-    public function ou(array $conditions, string $orderBy = null): array
+    public function ou(array $conditions, ?string $orderBy = null): array
     {
         $clauses = [];
         $params  = [];

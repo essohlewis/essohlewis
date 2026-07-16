@@ -250,11 +250,32 @@ api/
 > les fichiers sont servis sur `/uploads/...` — réglez `uploads_url` en
 > conséquence dans `config.php` pour le développement.
 
-## 7. Prochaines étapes possibles
-- ✅ Upload réel de fichiers (photos, diplômes) via `multipart/form-data` — **fait**.
-- ✅ Limitation de débit (rate limiting) + en-têtes de sécurité — **fait**.
-- ✅ Pagination des listes (opt-in, `X-Total-Count`) — **fait**.
+## 7. Tests automatisés
+
+Le backend est couvert par une suite **PHPUnit** (SQLite en base temporaire,
+isolée). PHPUnit est la **seule** dépendance, et uniquement pour le développement
+(le code d'exécution reste sans dépendance).
+
+```bash
+cd coachlink/api
+composer install          # installe PHPUnit (dossier vendor/, ignoré par git)
+composer test             # ou : vendor/bin/phpunit
+```
+
+Couverture : JWT (aller-retour, signature altérée, expiration), Validator
+(email, téléphone CI, min, listes), modèle User (hachage/vérification),
+modèle Coach (recherche, remplacement de tarifs, « J'aime » par utilisateur),
+flux de réservation (création → statut → paiement avec remise), Pagination et
+RateLimiter. **20 tests / 59 assertions.**
+
+### Intégration continue
+`.github/workflows/ci.yml` exécute à chaque *push* / *pull request* : `php -l`
+sur tout le PHP, `composer install` + **PHPUnit** (PHP 8.2 et 8.4), et
+`node --check` sur tout le JavaScript du front.
+
+## 8. Prochaines étapes possibles
+- ✅ Upload réel de fichiers, rate limiting, en-têtes de sécurité, pagination — **fait**.
 - ✅ Bascule complète du front sur l'API (service par service, cf. §4) — **fait**.
+- ✅ Tests automatisés (PHPUnit) + intégration continue — **fait**.
 - Rafraîchissement de token / révocation ; journalisation structurée.
-- Tests automatisés (PHPUnit) et intégration continue.
 - Envoi d'email réel (réinitialisation), messagerie temps réel, Mobile Money réel.

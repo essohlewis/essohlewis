@@ -42,7 +42,7 @@ class Validator
         return $this;
     }
 
-    public function min(string $champ, int $longueur, string $message = null): self
+    public function min(string $champ, int $longueur, ?string $message = null): self
     {
         $v = (string) ($this->donnees[$champ] ?? '');
         if (mb_strlen($v) < $longueur) {

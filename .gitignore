@@ -10,3 +10,8 @@ coachlink/api/config/config.php
 coachlink/api/database/*.sqlite
 coachlink/api/uploads/*
 !coachlink/api/uploads/.gitkeep
+
+# Dépendances de dev (PHPUnit) & cache de tests
+coachlink/api/vendor/
+coachlink/api/.phpunit.cache/
+coachlink/api/.phpunit.result.cache
