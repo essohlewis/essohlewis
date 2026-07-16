@@ -15,6 +15,7 @@ class App
         self::$config = require $fichier;
 
         self::autoload();
+        self::securite();
         self::cors();
         self::gestionErreurs();
     }
@@ -52,11 +53,23 @@ class App
         }
         header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS');
         header('Access-Control-Allow-Headers: Content-Type, Authorization');
+        header('Access-Control-Expose-Headers: X-Total-Count, Retry-After');
 
         if (Request::methode() === 'OPTIONS') {
             http_response_code(204);
             exit;
         }
+    }
+
+    /** En-têtes de sécurité appliqués à toutes les réponses de l'API. */
+    private static function securite(): void
+    {
+        header('X-Content-Type-Options: nosniff');
+        header('X-Frame-Options: DENY');
+        header('Referrer-Policy: no-referrer');
+        // L'API ne renvoie que du JSON : on interdit tout chargement de ressource
+        // et toute inclusion dans une frame.
+        header("Content-Security-Policy: default-src 'none'; frame-ancestors 'none'");
     }
 
     /** Convertit les exceptions non gérées en réponses JSON 500. */

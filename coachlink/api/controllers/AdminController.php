@@ -51,14 +51,14 @@ class AdminController
     {
         Auth::exigerRole('admin');
         $users = (new User())->tout('cree_le DESC');
-        Response::ok(array_map([User::class, 'public'], $users));
+        Response::ok(Pagination::paginer(array_map([User::class, 'public'], $users)));
     }
 
     /** GET /admin/reservations — toutes les réservations de la plateforme. */
     public function reservations(array $params): void
     {
         Auth::exigerRole('admin');
-        Response::ok((new Reservation())->toutes());
+        Response::ok(Pagination::paginer((new Reservation())->toutes()));
     }
 
     /** GET /admin/litiges — file des réclamations. */

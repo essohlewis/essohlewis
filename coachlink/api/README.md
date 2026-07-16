@@ -189,10 +189,23 @@ Tant que `cl_api_base` n'est pas défini, l'app fonctionne 100 % hors-ligne.
   L'envoi d'email est **simulé** (le jeton est renvoyé pour la démo — à
   remplacer par un vrai service d'email en production).
 
+**Slice 5 — durcissement pour la production**
+- **Limitation de débit** (anti-abus / anti-brute-force) : `core/RateLimiter.php`,
+  fenêtre fixe par IP, stockage fichier avec verrou. Seau **global** (240/min
+  par défaut) appliqué à toutes les routes + seau **auth** (12/min) sur
+  `login`, `register` et les routes mot de passe. Au-delà → **429** +
+  `Retry-After`. Réglable dans `config.php` (`rate_limit`), désactivable (0).
+- **En-têtes de sécurité** sur toutes les réponses : `X-Content-Type-Options`,
+  `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Content-Security-Policy`.
+- **Pagination** optionnelle des listes (`core/Pagination.php`) : `?page=&parPage=`
+  sur `/coachs`, `/admin/utilisateurs`, `/admin/reservations`. **Non-intrusive**
+  (sans paramètre → liste complète, pour l'hydratation du front) ; total exposé
+  via l'en-tête `X-Total-Count`.
+
 ### Reste (améliorations, non bloquantes)
 Messagerie **temps réel** (WebSocket/polling au lieu du rafraîchissement à
 l'ouverture), **envoi d'email réel** (réinitialisation), Mobile Money réel,
-OAuth social, pagination, rate limiting, HTTPS/prod, tests PHPUnit/CI.
+OAuth social, HTTPS/prod, tests PHPUnit/CI.
 
 ---
 
@@ -208,7 +221,7 @@ api/
 │   ├── config.example.php
 │   └── config.php        # (ignoré par git — secrets)
 ├── core/                 # App, Router, Request, Response, Database (PDO),
-│                         #   Jwt, Auth, Validator
+│                         #   Jwt, Auth, Validator, RateLimiter, Pagination
 ├── models/               # Model (CRUD PDO) + User, Coach, Reservation,
 │                         #   Review, Message, Notification
 ├── controllers/          # Auth, Coach, Reservation, Review, Notification,
@@ -225,6 +238,10 @@ api/
 - Mots de passe **hachés** avec `password_hash` (bcrypt).
 - **JWT** signés HMAC-SHA256, vérifiés à chaque requête protégée (expiration).
 - Validation systématique des entrées (`core/Validator.php`).
+- **Limitation de débit** par IP (`core/RateLimiter.php`) : seau global + seau
+  auth renforcé (anti-brute-force). Réglable via `rate_limit` dans `config.php`.
+- **En-têtes de sécurité** sur chaque réponse (`nosniff`, `X-Frame-Options: DENY`,
+  `Referrer-Policy`, `Content-Security-Policy`).
 - CORS configurable ; en production, restreignez `cors_origins` à votre domaine.
 - Pensez à servir l'API en **HTTPS** et à changer `jwt_secret` + le mot de passe admin.
 
@@ -235,7 +252,9 @@ api/
 
 ## 7. Prochaines étapes possibles
 - ✅ Upload réel de fichiers (photos, diplômes) via `multipart/form-data` — **fait**.
-- Rafraîchissement de token / révocation ; limitation de débit (rate limiting).
-- Pagination des listes, cache, journalisation.
+- ✅ Limitation de débit (rate limiting) + en-têtes de sécurité — **fait**.
+- ✅ Pagination des listes (opt-in, `X-Total-Count`) — **fait**.
+- ✅ Bascule complète du front sur l'API (service par service, cf. §4) — **fait**.
+- Rafraîchissement de token / révocation ; journalisation structurée.
 - Tests automatisés (PHPUnit) et intégration continue.
-- Bascule complète du front sur l'API (service par service, cf. §4).
+- Envoi d'email réel (réinitialisation), messagerie temps réel, Mobile Money réel.

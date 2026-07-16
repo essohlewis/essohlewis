@@ -33,4 +33,15 @@ return [
     'uploads_dir'  => __DIR__ . '/../uploads',
     'uploads_url'  => '/api/uploads', // URL publique de base des fichiers
     'max_upload'   => 8 * 1024 * 1024, // 8 Mo
+
+    // --- Limitation de débit (anti-abus / anti-brute-force) ---------------
+    // Nombre maximal de requêtes par IP et par fenêtre de 60 s.
+    // Mettez 0 pour désactiver un seau.
+    'rate_limit' => [
+        'global' => 240, // toutes routes confondues
+        'auth'   => 12,  // routes sensibles (login, register, mot de passe)
+    ],
+
+    // Dossier de cache (compteurs de débit). Hors du dépôt par défaut.
+    'cache_dir' => sys_get_temp_dir() . '/coachlink-cache',
 ];

@@ -10,6 +10,10 @@ require __DIR__ . '/core/App.php';
 
 App::boot();
 
+// Limitation de débit globale (toutes routes) par IP.
+$limites = App::config('rate_limit', []);
+RateLimiter::verifier('global', (int) ($limites['global'] ?? 240), 60);
+
 $router = new Router();
 require __DIR__ . '/routes.php';
 

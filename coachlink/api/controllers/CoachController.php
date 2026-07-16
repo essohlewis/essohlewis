@@ -17,7 +17,7 @@ class CoachController
             'prixMax'    => Request::query('prixMax'),
             'tri'        => Request::query('tri', 'trust'),
         ];
-        Response::ok((new Coach())->rechercher($filtres));
+        Response::ok(Pagination::paginer((new Coach())->rechercher($filtres)));
     }
 
     /** GET /coachs/:id */

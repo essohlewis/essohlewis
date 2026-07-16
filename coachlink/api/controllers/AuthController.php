@@ -5,9 +5,17 @@
 
 class AuthController
 {
+    /** Limite anti-brute-force appliquée aux routes d'authentification. */
+    private function limiterAuth(): void
+    {
+        $limites = App::config('rate_limit', []);
+        RateLimiter::verifier('auth', (int) ($limites['auth'] ?? 12), 60);
+    }
+
     /** POST /auth/register */
     public function register(array $params): void
     {
+        $this->limiterAuth();
         $d = Request::corps();
         (new Validator($d))
             ->requis('prenom')->requis('nom')
@@ -41,6 +49,7 @@ class AuthController
     /** POST /auth/login */
     public function login(array $params): void
     {
+        $this->limiterAuth();
         $d = Request::corps();
         $userModel = new User();
         $user = $userModel->parEmail($d['email'] ?? '');
@@ -60,6 +69,7 @@ class AuthController
     /** POST /auth/mot-de-passe/oubli  { email } — génère un jeton de réinitialisation. */
     public function motDePasseOubli(array $params): void
     {
+        $this->limiterAuth();
         $email = strtolower(trim((string) Request::champ('email')));
         // Réponse volontairement générique (ne révèle pas si le compte existe).
         $reponse = ['message' => "Si un compte existe pour cet email, un lien de réinitialisation vient d'être envoyé."];
@@ -82,6 +92,7 @@ class AuthController
     /** POST /auth/mot-de-passe/reset  { token, motDePasse } */
     public function reinitialiser(array $params): void
     {
+        $this->limiterAuth();
         $d = Request::corps();
         (new Validator($d))
             ->requis('token')
