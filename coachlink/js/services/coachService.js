@@ -112,6 +112,8 @@
       if (f.includes(id)) f = f.filter((x) => x !== id);
       else f.push(id);
       storage.ecrire(storage.CLES.favoris, f);
+      // API : synchronisation en tâche de fond (le serveur bascule le favori).
+      if (CL.API && CL.API.actif) CL.API.post("/favoris", { coachId: id }).catch(() => {});
       return f.includes(id);
     },
 

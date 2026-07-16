@@ -88,6 +88,8 @@ class ReservationController
             $notif->ajouter((int) $resa['client_id'], 'confirmation', 'Votre séance « ' . $resa['tarif_nom'] . ' » est confirmée !', '#/client/reservations');
         } elseif ($statut === 'refusee') {
             $notif->ajouter((int) $resa['client_id'], 'refus', 'Votre demande « ' . $resa['tarif_nom'] . ' » a été refusée.', '#/client/reservations');
+        } elseif ($statut === 'terminee') {
+            $notif->ajouter((int) $resa['client_id'], 'info', 'Séance « ' . $resa['tarif_nom'] . ' » terminée. Laissez un avis à votre coach !', '#/client/avis');
         } elseif ($statut === 'annulee' && $coach && $coach['proprietaire']) {
             $notif->ajouter((int) $coach['proprietaire'], 'annulation', $resa['client_nom'] . ' a annulé « ' . $resa['tarif_nom'] . ' ».', '#/espace-coach/reservations');
         }

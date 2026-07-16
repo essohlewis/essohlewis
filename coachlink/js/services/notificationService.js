@@ -40,13 +40,19 @@
       const liste = toutes();
       liste.forEach((n) => { if (n.pour === userId) n.lu = true; });
       sauver(liste);
+      // API : synchronisation en tâche de fond.
+      if (CL.API && CL.API.actif) CL.API.post("/notifications/toutes-lues").catch(() => {});
       window.dispatchEvent(new CustomEvent("cl:notif"));
     },
 
     marquerLue(id) {
       const liste = toutes();
       const n = liste.find((x) => x.id === id);
-      if (n) { n.lu = true; sauver(liste); window.dispatchEvent(new CustomEvent("cl:notif")); }
+      if (n) {
+        n.lu = true; sauver(liste);
+        if (CL.API && CL.API.actif) CL.API.patch("/notifications/" + id + "/lue").catch(() => {});
+        window.dispatchEvent(new CustomEvent("cl:notif"));
+      }
     },
   };
 

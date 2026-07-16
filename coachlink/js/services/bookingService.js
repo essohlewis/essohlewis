@@ -173,6 +173,12 @@
       r.statut = statut;
       sauver(liste);
 
+      // En mode API, le serveur gère la transition (notifications, créneau).
+      if (bookingService._api()) {
+        CL.API.patch("/reservations/" + resaId + "/statut", { statut }).catch(() => {});
+        return true;
+      }
+
       // Effets de bord : notifications + occupation créneau.
       if (statut === "confirmee") {
         CL.coachService.reserverCreneau(r.coachId, r.jour, r.heure);

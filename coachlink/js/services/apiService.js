@@ -151,14 +151,22 @@
       const u = CL.auth.courant();
       if (!u) return;
       try {
+        // Réservations selon le rôle : client → les siennes, coach → reçues.
+        const resasP = u.role === "coach"
+          ? API.get("/reservations/coach").catch(() => [])
+          : API.mesResas().catch(() => []);
         const [resas, notifs] = await Promise.all([
-          API.mesResas().catch(() => []),
+          resasP,
           API.notifications().catch(() => ({ items: [] })),
         ]);
-        // Réservations du client dans le store global (clé bookings).
         CL.storage.ecrire(CL.storage.CLES.bookings, (resas || []).map(API.mapReservation));
-        // Notifications.
         CL.storage.ecrire(CL.storage.CLES.notifications, ((notifs && notifs.items) || []).map(API.mapNotif));
+
+        // Favoris (client) : on stocke la liste d'identifiants.
+        if (u.role === "client") {
+          const favs = await API.get("/favoris").catch(() => []);
+          CL.storage.ecrire(CL.storage.CLES.favoris, (favs || []).map((c) => c.id));
+        }
       } catch (e) { console.warn("Hydratation utilisateur partielle", e); }
     },
 

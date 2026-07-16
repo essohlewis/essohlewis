@@ -120,7 +120,8 @@ location.reload();
 L'app bascule alors sur le backend. Pour revenir hors-ligne :
 `delete localStorage.cl_api_base; location.reload();`.
 
-### Ce qui est déjà branché (slice 1 — testé)
+### Ce qui est déjà branché (slices 1 & 2 — testés)
+**Slice 1**
 - **Authentification** : inscription / connexion / déconnexion via l'API,
   **JWT** stocké et envoyé automatiquement, `courant()` reste synchrone.
 - **Catalogue coachs** : au démarrage, le catalogue est **hydraté** depuis
@@ -130,16 +131,28 @@ L'app bascule alors sur le backend. Pour revenir hors-ligne :
   l'API ; la liste des réservations client reflète le serveur.
 - **Avis** : publication via l'API (note recalculée côté serveur).
 
+**Slice 2 — boucle transactionnelle client ↔ coach**
+- **Hydratation adaptée au rôle** : le client charge ses réservations
+  (`GET /reservations/mes`) + favoris (`GET /favoris`), le coach charge les
+  demandes reçues (`GET /reservations/coach`) ; les deux chargent leurs
+  notifications (`GET /notifications`).
+- **Gestion des demandes par le coach** : accepter / refuser / terminer →
+  `PATCH /reservations/:id/statut` (le serveur notifie le client).
+- **Favoris** : `POST /favoris` (bascule) synchronisé en tâche de fond.
+- **Notifications** : marquer une (`PATCH /notifications/:id/lue`) ou toutes
+  (`POST /notifications/toutes-lues`) comme lues, synchronisé en tâche de fond.
+
 Le mécanisme : **hydratation** (l'API remplit le store local au démarrage /
-à la connexion) pour les lectures synchrones, et **appels API asynchrones**
-dans les gestionnaires d'événements pour les écritures. Tant que
-`cl_api_base` n'est pas défini, l'app fonctionne 100 % hors-ligne.
+à la connexion) pour les lectures synchrones, et **appels API** dans les
+gestionnaires d'événements pour les écritures — soit `await` (création,
+paiement, avis), soit « écriture locale immédiate + appel en tâche de fond »
+(favoris, statut, notifications lues) pour garder les signatures synchrones.
+Tant que `cl_api_base` n'est pas défini, l'app fonctionne 100 % hors-ligne.
 
 ### Slices suivantes (à brancher de la même façon)
 Espace coach (gestion fiche/tarifs/dispo/galerie/posts via les endpoints
-`/coachs/moi/*`), messagerie (`/conversations`), notifications
-(`/notifications`), favoris (`/favoris`), admin (`/admin/*`), uploads
-(`/uploads`) — tous les endpoints existent déjà.
+`/coachs/moi/*`), messagerie (`/conversations`), admin (`/admin/*`),
+uploads (`/uploads`) — tous les endpoints existent déjà.
 
 ---
 
