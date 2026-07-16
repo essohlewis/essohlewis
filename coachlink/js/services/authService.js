@@ -160,6 +160,7 @@
     deconnecter() {
       storage.supprimer(storage.CLES.session);
       if (CL.API) CL.API.definirToken(null);
+      if (CL.realtime) CL.realtime.arreter();
     },
 
     /** Coach lié à l'utilisateur courant (id de fiche coach), si connu. */
@@ -174,6 +175,8 @@
       const token = extra.token || ("tok_" + btoa(userId + ":" + Date.now()).replace(/=/g, ""));
       storage.ecrire(storage.CLES.session, Object.assign({ userId, token, depuis: Date.now() }, extra, { token }));
       if (CL.API && extra.token) CL.API.definirToken(extra.token);
+      // Démarre le « temps réel » (polling) en mode API.
+      if (CL.realtime) CL.realtime.demarrer();
     },
 
     /** Met à jour le profil de l'utilisateur courant. */

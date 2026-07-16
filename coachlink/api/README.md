@@ -202,10 +202,18 @@ Tant que `cl_api_base` n'est pas défini, l'app fonctionne 100 % hors-ligne.
   (sans paramètre → liste complète, pour l'hydratation du front) ; total exposé
   via l'en-tête `X-Total-Count`.
 
+**Slice 6 — messagerie temps réel (front)**
+- `js/services/realtimeService.js` : interrogation périodique (polling) de
+  `GET /notifications` en mode API. Nouvelle notification → mise à jour de la
+  cloche (`cl:notif`) ; nouveau message → rechargement des conversations +
+  `cl:message` (le fil ouvert se met à jour en direct, sans recharger).
+- Économe : en pause quand l'onglet est masqué, une seule requête en vol,
+  démarré/arrêté avec la session, aucun effet hors-ligne. Intervalle réglable
+  via `localStorage.cl_poll_ms` (8 s par défaut). Aucun changement backend requis.
+
 ### Reste (améliorations, non bloquantes)
-Messagerie **temps réel** (WebSocket/polling au lieu du rafraîchissement à
-l'ouverture), **envoi d'email réel** (réinitialisation), Mobile Money réel,
-OAuth social, HTTPS/prod, tests PHPUnit/CI.
+**Envoi d'email réel** (réinitialisation), Mobile Money réel, OAuth social,
+HTTPS/prod, notifications push (WebSocket/SSE pour remplacer le polling).
 
 ---
 
@@ -277,5 +285,6 @@ sur tout le PHP, `composer install` + **PHPUnit** (PHP 8.2 et 8.4), et
 - ✅ Upload réel de fichiers, rate limiting, en-têtes de sécurité, pagination — **fait**.
 - ✅ Bascule complète du front sur l'API (service par service, cf. §4) — **fait**.
 - ✅ Tests automatisés (PHPUnit) + intégration continue — **fait**.
+- ✅ Messagerie temps réel (polling front) — **fait**.
 - Rafraîchissement de token / révocation ; journalisation structurée.
-- Envoi d'email réel (réinitialisation), messagerie temps réel, Mobile Money réel.
+- Envoi d'email réel (réinitialisation), Mobile Money réel, push WebSocket/SSE.

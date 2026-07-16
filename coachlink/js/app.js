@@ -268,7 +268,10 @@
   async function demarrerAvecApi() {
     try {
       await CL.hydrate.catalogue();
-      if (CL.auth.estConnecte()) await CL.hydrate.donneesUtilisateur();
+      if (CL.auth.estConnecte()) {
+        await CL.hydrate.donneesUtilisateur();
+        CL.realtime && CL.realtime.demarrer(); // « temps réel » (polling)
+      }
     } catch (e) {
       console.warn("API injoignable — bascule hors-ligne.", e);
       CL.toast && CL.toast.erreur("Backend injoignable", "Affichage des données de démonstration.");

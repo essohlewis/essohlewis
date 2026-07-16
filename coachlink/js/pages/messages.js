@@ -14,6 +14,7 @@
   CL.pages.messages = function (params) {
     const u = auth.courant();
     let convActiveId = params.conv || null;
+    let rafraichirChatCourant = null; // rafraîchit le fil ouvert (temps réel)
 
     const listeConv = el("div", { class: "conversations" });
     const zoneChat = el("div", { class: "chat" });
@@ -77,6 +78,8 @@
         const frais = messageService.obtenir(conv.id);
         if (frais) conv.messages = frais.messages;
       }
+      // Exposé au niveau page pour le rafraîchissement « temps réel ».
+      rafraichirChatCourant = () => { messageService.marquerLu(conv.id, u.id); rafraichirConv(); rendreMessages(); };
 
       async function envoyer() {
         const txt = saisie.value.trim();
@@ -116,7 +119,11 @@
     // Écoute temps réel local. On retire l'écouteur précédent pour éviter
     // l'accumulation à chaque visite de la page.
     if (ecouteurMessage) window.removeEventListener("cl:message", ecouteurMessage);
-    ecouteurMessage = () => { if (document.body.contains(conteneur)) rafraichirListe(); };
+    ecouteurMessage = () => {
+      if (!document.body.contains(conteneur)) return;
+      rafraichirListe();
+      if (rafraichirChatCourant) rafraichirChatCourant(); // met à jour le fil ouvert
+    };
     window.addEventListener("cl:message", ecouteurMessage);
 
     rafraichirListe();
