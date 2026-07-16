@@ -73,7 +73,10 @@
 }
 
 .contenu { flex: 1; min-width: 0; padding: var(--e-5); }
-.contenu--large { max-width: var(--largeur-max); margin-inline: auto; width: 100%; }
+.contenu--large {
+  max-width: var(--largeur-max); margin-inline: auto; width: 100%;
+  padding-left: var(--gouttiere-safe-g); padding-right: var(--gouttiere-safe-d);
+}
 
 /* --- Grilles -------------------------------------------------------------- */
 .grille { display: grid; gap: var(--e-5); }

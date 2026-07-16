@@ -44,8 +44,9 @@
   --fs-4xl: clamp(2rem, 1.4rem + 3.2vw, 3rem);
   --lh: 1.6;
 
-  /* Padding horizontal sûr : respecte les encoches (safe-area) des mobiles. */
-  --gouttiere: 16px;
+  /* Gouttières horizontales fluides : petites sur mobile, plus larges sur
+     grand écran. Intègrent les encoches (safe-area) des mobiles. */
+  --gouttiere: clamp(16px, 3vw, 80px);
   --gouttiere-safe-g: max(var(--gouttiere), env(safe-area-inset-left));
   --gouttiere-safe-d: max(var(--gouttiere), env(safe-area-inset-right));
 
@@ -78,7 +79,10 @@
   --t-lente: 0.4s ease;
 
   /* --- Divers ------------------------------------------------------------ */
-  --largeur-max: 1200px;
+  /* Largeur maxi très grande : le contenu remplit tout l'écran de bureau
+     (marges seulement au-delà d'écrans géants). Les gouttières grandissent
+     avec la largeur pour un rendu aéré sans bande vide. */
+  --largeur-max: 2600px;
   --hauteur-entete: 64px;
   --largeur-sidebar: 248px;
   --z-entete: 100;
@@ -135,7 +139,6 @@
 /* Grand écran de bureau (~1600px+, 27") */
 @media (min-width: 1600px) {
   :root {
-    --largeur-max: 1440px;
     --largeur-sidebar: 268px;
   }
 }
@@ -143,7 +146,6 @@
 /* Très grand écran (~1920px+, 27-32" Full HD/QHD) */
 @media (min-width: 1920px) {
   :root {
-    --largeur-max: 1680px;
     --largeur-sidebar: 288px;
     --hauteur-entete: 72px;
     --fs-md: 1.06rem; --fs-lg: 1.2rem; --fs-xl: 1.5rem;
@@ -155,7 +157,6 @@
 /* Écran QHD/4K large (~2560px+, 32") */
 @media (min-width: 2560px) {
   :root {
-    --largeur-max: 2160px;
     --largeur-sidebar: 340px;
     --hauteur-entete: 84px;
     --fs-sm: 0.95rem; --fs-md: 1.18rem; --fs-lg: 1.38rem; --fs-xl: 1.75rem;
@@ -165,12 +166,13 @@
   }
 }
 
-/* Écran géant 4K/45" (~3840px+) */
+/* Écran géant 4K/45" (~3840px+) : gouttières plus généreuses, cap large */
 @media (min-width: 3840px) {
   :root {
-    --largeur-max: 3200px;
+    --largeur-max: 3400px;
     --largeur-sidebar: 420px;
     --hauteur-entete: 100px;
+    --gouttiere: clamp(80px, 4vw, 160px);
     --fs-sm: 1.1rem; --fs-md: 1.4rem; --fs-lg: 1.65rem; --fs-xl: 2.1rem;
     --fs-2xl: 2.7rem; --fs-3xl: 3.6rem; --fs-4xl: 5.2rem;
     --e-3: 20px; --e-4: 26px; --e-5: 40px; --e-6: 60px; --e-7: 92px; --e-8: 130px;
