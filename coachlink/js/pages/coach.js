@@ -115,10 +115,12 @@
     ]);
   }
 
-  function contacterClient(r) {
+  async function contacterClient(r) {
     const u = auth.courant();
-    const conv = CL.messageService.ouvrir({ userId: u.id, userNom: u.prenom + " " + u.nom, autreId: r.clientId, autreNom: r.clientNom });
-    location.hash = "#/messages?conv=" + conv.id;
+    try {
+      const conv = await CL.messageService.ouvrir({ userId: u.id, userNom: u.prenom + " " + u.nom, autreId: r.clientId, autreNom: r.clientNom });
+      location.hash = "#/messages?conv=" + conv.id;
+    } catch (e) { CL.toast.erreur("Messagerie", (e && e.message) || "Impossible d'ouvrir la conversation."); }
   }
 
   /* ----------------------------- Profil --------------------------- */

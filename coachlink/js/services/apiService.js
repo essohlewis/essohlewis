@@ -64,8 +64,55 @@
 
     get(chemin) { return API.appel("GET", chemin); },
     post(chemin, corps) { return API.appel("POST", chemin, corps); },
+    put(chemin, corps) { return API.appel("PUT", chemin, corps); },
     patch(chemin, corps) { return API.appel("PATCH", chemin, corps); },
     supprimer(chemin) { return API.appel("DELETE", chemin); },
+
+    /* --------------------------- Téléversement ------------------------ */
+    /**
+     * Envoie un fichier (multipart) vers /uploads. Retourne l'URL absolue.
+     * @param {Blob|File} blob
+     * @param {string} nom  nom de fichier suggéré
+     */
+    async televerser(blob, nom) {
+      const form = new FormData();
+      form.append("fichier", blob, nom || "fichier");
+      const entetes = {};
+      const token = API.token();
+      if (token) entetes["Authorization"] = "Bearer " + token;
+      let reponse;
+      try {
+        reponse = await fetch(API.base + "/uploads", { method: "POST", headers: entetes, body: form });
+      } catch (e) { throw { message: "Serveur injoignable (upload)." }; }
+      let json = {};
+      try { json = await reponse.json(); } catch (_) {}
+      if (!reponse.ok || json.ok === false) throw { message: (json && json.message) || "Téléversement refusé." };
+      // On stocke le chemin renvoyé par le serveur tel quel (relatif) ; l'affichage
+      // le préfixe via urlMedia() au moment du mappage (mapCoach).
+      return (json.data && json.data.url) || null;
+    },
+
+    /** Convertit une data-URL en Blob puis la téléverse. Retourne l'URL serveur. */
+    async televerserImage(dataUrl) {
+      if (!dataUrl || !/^data:/.test(dataUrl)) return dataUrl; // déjà une URL
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const ext = (blob.type.split("/")[1] || "jpg").replace("jpeg", "jpg");
+      return API.televerser(blob, "image." + ext);
+    },
+
+    /**
+     * Normalise une URL de média : les data-URL et URLs absolues passent
+     * telles quelles ; un chemin relatif renvoyé par l'API (/uploads/…) est
+     * préfixé par l'origine de l'API (utile quand le front et l'API diffèrent).
+     */
+    urlMedia(u) {
+      if (!u || /^(https?:|data:|blob:)/i.test(u)) return u || null;
+      try {
+        const origine = new URL(API.base, location.href).origin;
+        return origine + (u.charAt(0) === "/" ? u : "/" + u);
+      } catch (_) { return u; }
+    },
 
     /* --------- Exemples de raccourcis (mappage endpoints) -------------- */
     // Auth
@@ -94,13 +141,13 @@
         nbSeances: Number(c.nb_seances) || 0, ancienneteMois: Number(c.anciennete_mois) || 0,
         tauxReponse: Number(c.taux_reponse) || 0, couleur: c.couleur || "#1b4dcc",
         email: c.email, telephone: c.telephone,
-        photo: c.photo || null, couverture: c.couverture || null,
+        photo: API.urlMedia(c.photo), couverture: API.urlMedia(c.couverture),
         specialites: c.specialites || [], langues: c.langues || [],
         tarifs: (c.tarifs || []).map((t) => ({ id: t.id, nom: t.nom, type: t.type, prix: Number(t.prix), duree: Number(t.duree), description: t.description })),
         diplomes: (c.diplomes || []).map((d) => ({ id: d.id, titre: d.titre, ecole: d.ecole, annee: d.annee, statut: d.statut })),
         avis: (c.avis || []).map((a) => ({ id: a.id, auteur: a.auteur, note: Number(a.note), texte: a.texte, reponse: a.reponse, date: a.date })),
-        galerie: (c.galerie || []).map((g) => ({ id: g.id, image: g.image, legende: g.legende, date: g.date })),
-        posts: (c.posts || []).map((p) => ({ id: p.id, texte: p.texte, image: p.image, video: p.video, likes: Number(p.likes) || 0, date: p.date })),
+        galerie: (c.galerie || []).map((g) => ({ id: g.id, image: API.urlMedia(g.image), legende: g.legende, date: g.date })),
+        posts: (c.posts || []).map((p) => ({ id: p.id, texte: p.texte, image: API.urlMedia(p.image), video: p.video, likes: Number(p.likes) || 0, date: p.date })),
         disponibilites: c.disponibilites || { Lun: [], Mar: [], Mer: [], Jeu: [], Ven: [], Sam: [], Dim: [] },
       };
     },
@@ -121,6 +168,31 @@
 
     mapNotif(n) {
       return { id: n.id, pour: Number(n.pour), type: n.type, texte: n.texte, lien: n.lien, lu: !!Number(n.lu), date: n.date };
+    },
+
+    mapUser(u) {
+      return {
+        id: Number(u.id), role: u.role, prenom: u.prenom, nom: u.nom,
+        email: u.email, telephone: u.telephone, source: u.source || "email",
+        creeLe: u.cree_le || u.creeLe, coachId: u.coachId || null,
+      };
+    },
+
+    mapMessage(m) {
+      return { id: m.id, de: Number(m.de), texte: m.texte, pieces: [], date: m.date, lu: !!Number(m.lu) };
+    },
+
+    /** Conversation serveur (user_a/user_b) → format du front (participants/noms). */
+    mapConversation(c) {
+      const a = Number(c.user_a), b = Number(c.user_b);
+      return {
+        id: c.id,
+        cle: [a, b].sort((x, y) => x - y).join("__"),
+        participants: [a, b],
+        noms: { [a]: c.nom_a, [b]: c.nom_b },
+        messages: (c.messages || []).map(API.mapMessage),
+        majLe: c.maj_le || c.majLe,
+      };
     },
   };
 
@@ -146,21 +218,36 @@
       CL.storage.ecrire(CL.storage.CLES.coachs, liste.map(API.mapCoach));
     },
 
-    /** Charge les données de l'utilisateur connecté (réservations, notifs, favoris). */
+    /** Charge les données de l'utilisateur connecté (réservations, notifs, favoris…). */
     async donneesUtilisateur() {
       const u = CL.auth.courant();
       if (!u) return;
       try {
+        // Administrateur : comptes + toutes les réservations pour les tableaux de bord.
+        if (u.role === "admin") {
+          const [users, resas, notifs] = await Promise.all([
+            API.get("/admin/utilisateurs").catch(() => []),
+            API.get("/admin/reservations").catch(() => []),
+            API.notifications().catch(() => ({ items: [] })),
+          ]);
+          CL.storage.ecrire(CL.storage.CLES.users, (users || []).map(API.mapUser));
+          CL.storage.ecrire(CL.storage.CLES.bookings, (resas || []).map(API.mapReservation));
+          CL.storage.ecrire(CL.storage.CLES.notifications, ((notifs && notifs.items) || []).map(API.mapNotif));
+          return;
+        }
+
         // Réservations selon le rôle : client → les siennes, coach → reçues.
         const resasP = u.role === "coach"
           ? API.get("/reservations/coach").catch(() => [])
           : API.mesResas().catch(() => []);
-        const [resas, notifs] = await Promise.all([
+        const [resas, notifs, convs] = await Promise.all([
           resasP,
           API.notifications().catch(() => ({ items: [] })),
+          API.get("/conversations").catch(() => []),
         ]);
         CL.storage.ecrire(CL.storage.CLES.bookings, (resas || []).map(API.mapReservation));
         CL.storage.ecrire(CL.storage.CLES.notifications, ((notifs && notifs.items) || []).map(API.mapNotif));
+        CL.storage.ecrire(CL.storage.CLES.conversations, (convs || []).map(API.mapConversation));
 
         // Favoris (client) : on stocke la liste d'identifiants.
         if (u.role === "client") {
@@ -168,6 +255,29 @@
           CL.storage.ecrire(CL.storage.CLES.favoris, (favs || []).map((c) => c.id));
         }
       } catch (e) { console.warn("Hydratation utilisateur partielle", e); }
+    },
+
+    /** Recharge la fiche du coach connecté (après édition) dans le catalogue local. */
+    async maFiche() {
+      const u = CL.auth.courant();
+      if (!u || u.role !== "coach") return null;
+      try {
+        const c = API.mapCoach(await API.maFicheCoach());
+        const liste = CL.storage.lire(CL.storage.CLES.coachs, []);
+        const i = liste.findIndex((x) => x.id === c.id || String(x.proprietaire) === String(u.id));
+        if (i >= 0) liste[i] = c; else liste.push(c);
+        CL.storage.ecrire(CL.storage.CLES.coachs, liste);
+        return c;
+      } catch (e) { console.warn("Hydratation fiche coach", e); return null; }
+    },
+
+    /** Recharge les conversations de l'utilisateur connecté. */
+    async conversations() {
+      if (!CL.auth.estConnecte()) return;
+      try {
+        const convs = await API.get("/conversations");
+        CL.storage.ecrire(CL.storage.CLES.conversations, (convs || []).map(API.mapConversation));
+      } catch (e) { console.warn("Hydratation conversations", e); }
     },
 
     /** Recharge le profil complet d'un coach depuis l'API. */

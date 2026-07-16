@@ -135,6 +135,21 @@ class Coach extends Model
         $this->pdo()->prepare("DELETE FROM tarifs WHERE id = ? AND coach_id = ?")->execute([$tarifId, $coachId]);
     }
 
+    /** Remplace l'ensemble des tarifs (le front édite et enregistre toute la liste). */
+    public function remplacerTarifs(string $coachId, array $tarifs): void
+    {
+        $pdo = $this->pdo();
+        $pdo->prepare("DELETE FROM tarifs WHERE coach_id = ?")->execute([$coachId]);
+        $ins = $pdo->prepare("INSERT INTO tarifs (id, coach_id, nom, type, prix, duree, description) VALUES (?,?,?,?,?,?,?)");
+        foreach ($tarifs as $t) {
+            $ins->execute([
+                $coachId . '_' . uniqid('', true), $coachId,
+                $t['nom'] ?? 'Prestation', $t['type'] ?? 'seance',
+                (int) ($t['prix'] ?? 0), (int) ($t['duree'] ?? 60), $t['description'] ?? '',
+            ]);
+        }
+    }
+
     /** Remplace toutes les disponibilités par la grille fournie {Lun:[h], …}. */
     public function majDisponibilites(string $coachId, array $dispo): void
     {

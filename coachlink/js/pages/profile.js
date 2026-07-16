@@ -522,14 +522,16 @@
   CL.ouvrirAvis = ouvrirAvis; // réutilisé par l'espace client
 
   /* ========================== CONTACT ============================= */
-  function contacter(coach) {
+  async function contacter(coach) {
     if (!auth.estConnecte()) { CL.toast.info("Connexion requise", ""); location.hash = "#/connexion"; return; }
     const u = auth.courant();
     const cible = coach.proprietaire || ("coach:" + coach.id); // id destinataire (démo)
-    const conv = CL.messageService.ouvrir({ userId: u.id, userNom: u.prenom + " " + u.nom, autreId: cible, autreNom: nomCoach(coach) });
-    CL.messageService.envoyer(conv.id, u.id, "Bonjour " + coach.prenom + ", je suis intéressé(e) par votre accompagnement.");
-    CL.toast.succes("Message envoyé", "Poursuivez la conversation dans la messagerie.");
-    location.hash = "#/messages";
+    try {
+      const conv = await CL.messageService.ouvrir({ userId: u.id, userNom: u.prenom + " " + u.nom, autreId: cible, autreNom: nomCoach(coach) });
+      await CL.messageService.envoyer(conv.id, u.id, "Bonjour " + coach.prenom + ", je suis intéressé(e) par votre accompagnement.");
+      CL.toast.succes("Message envoyé", "Poursuivez la conversation dans la messagerie.");
+      location.hash = "#/messages?conv=" + conv.id;
+    } catch (e) { CL.toast.erreur("Messagerie", (e && e.message) || "Envoi impossible."); }
   }
 
   /* ========================== PARTAGE ============================= */

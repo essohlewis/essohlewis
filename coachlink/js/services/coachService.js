@@ -12,6 +12,24 @@
   function sauver(liste) { storage.ecrire(storage.CLES.coachs, liste); }
 
   const coachService = {
+    /* ----------------------- Pont API (backend) ----------------------- */
+    _api() { return CL.API && CL.API.actif; },
+
+    /**
+     * Après une écriture serveur : recharge la fiche du coach connecté puis
+     * rafraîchit l'affichage (les identifiants locaux optimistes sont
+     * remplacés par ceux du serveur).
+     */
+    async _apresEcriture(promesse) {
+      try {
+        await promesse;
+        if (CL.hydrate && CL.hydrate.maFiche) await CL.hydrate.maFiche();
+        if (CL.router && CL.router.rendre) CL.router.rendre();
+      } catch (e) {
+        CL.toast && CL.toast.erreur("Synchronisation", (e && e.message) || "Échec côté serveur.");
+      }
+    },
+
     /* -------------------------- Lecture ------------------------------- */
     lister() { return tous(); },
     specialites() { return storage.lire("specialites", CL.SEED ? CL.SEED.specialites : []); },
@@ -156,6 +174,7 @@
       if (!a) return false;
       a.reponse = reponse;
       sauver(liste);
+      if (coachService._api()) coachService._apresEcriture(CL.API.patch("/avis/" + avisId + "/reponse", { reponse }));
       return true;
     },
 
@@ -174,7 +193,17 @@
         likes: 0,
       });
       sauver(liste);
+      if (coachService._api()) coachService._pousserPost(post);
       return true;
+    },
+
+    /** Téléverse l'image éventuelle puis publie le post côté serveur. */
+    async _pousserPost(post) {
+      let image = post.image || null;
+      if (image && /^data:/.test(image)) image = await CL.API.televerserImage(image).catch(() => null);
+      await coachService._apresEcriture(
+        CL.API.post("/coachs/moi/posts", { texte: post.texte || "", image: image, video: post.video || null })
+      );
     },
 
     supprimerPost(coachId, postId) {
@@ -183,6 +212,7 @@
       if (!c) return false;
       c.posts = (c.posts || []).filter((p) => p.id !== postId);
       sauver(liste);
+      if (coachService._api()) coachService._apresEcriture(CL.API.supprimer("/posts/" + postId));
       return true;
     },
 
@@ -209,14 +239,27 @@
         date: new Date().toISOString(),
       });
       sauver(liste);
+      if (coachService._api()) coachService._pousserMedia(media);
       return true;
     },
+
+    /** Téléverse l'image puis l'ajoute à la galerie côté serveur. */
+    async _pousserMedia(media) {
+      let image = media.image;
+      if (image && /^data:/.test(image)) image = await CL.API.televerserImage(image).catch(() => null);
+      if (!image) return;
+      await coachService._apresEcriture(
+        CL.API.post("/coachs/moi/galerie", { image: image, legende: media.legende || "" })
+      );
+    },
+
     supprimerMedia(coachId, mediaId) {
       const liste = tous();
       const c = liste.find((x) => x.id === coachId);
       if (!c) return false;
       c.galerie = (c.galerie || []).filter((m) => m.id !== mediaId);
       sauver(liste);
+      if (coachService._api()) coachService._apresEcriture(CL.API.supprimer("/galerie/" + mediaId));
       return true;
     },
 
@@ -245,6 +288,11 @@
         fichierId: diplome.fichierId || null,
       });
       sauver(liste);
+      if (coachService._api()) {
+        coachService._apresEcriture(CL.API.post("/coachs/moi/diplomes", {
+          titre: diplome.titre, ecole: diplome.ecole, annee: diplome.annee,
+        }));
+      }
       return true;
     },
 
@@ -256,6 +304,10 @@
       if (!d) return false;
       d.statut = statut; // "verifie" | "refuse"
       sauver(liste);
+      // Modération : PATCH /admin/diplomes/:id (le re-render suffit, pas de maFiche admin).
+      if (coachService._api()) CL.API.patch("/admin/diplomes/" + diplomeId, { statut }).catch((e) => {
+        CL.toast && CL.toast.erreur("Modération", (e && e.message) || "Échec côté serveur.");
+      });
       return true;
     },
 
@@ -287,6 +339,7 @@
       if (!c) return false;
       c.disponibilites = dispo;
       sauver(liste);
+      if (coachService._api()) coachService._apresEcriture(CL.API.put("/coachs/moi/disponibilites", { dispo }));
       return true;
     },
 
@@ -297,7 +350,28 @@
       if (idx === -1) return false;
       liste[idx] = Object.assign({}, liste[idx], patch);
       sauver(liste);
+      if (coachService._api()) coachService._pousserFiche(patch);
       return liste[idx];
+    },
+
+    /** Envoie la mise à jour de fiche (PATCH /coachs/moi) en téléversant les images. */
+    async _pousserFiche(patch) {
+      try {
+        const corps = {};
+        ["titre", "bio", "commune", "specialites", "tarifs", "categorie"].forEach((k) => {
+          if (patch[k] !== undefined) corps[k] = patch[k];
+        });
+        for (const champ of ["photo", "couverture"]) {
+          if (patch[champ] !== undefined) {
+            corps[champ] = patch[champ] ? await CL.API.televerserImage(patch[champ]) : null;
+          }
+        }
+        await CL.API.patch("/coachs/moi", corps);
+        if (CL.hydrate) await CL.hydrate.maFiche();
+        if (CL.router) CL.router.rendre();
+      } catch (e) {
+        CL.toast && CL.toast.erreur("Enregistrement", (e && e.message) || "Échec côté serveur.");
+      }
     },
 
     /** Crée une fiche coach à l'inscription (données minimales). */

@@ -53,4 +53,11 @@ class AdminController
         $users = (new User())->tout('cree_le DESC');
         Response::ok(array_map([User::class, 'public'], $users));
     }
+
+    /** GET /admin/reservations — toutes les réservations de la plateforme. */
+    public function reservations(array $params): void
+    {
+        Auth::exigerRole('admin');
+        Response::ok((new Reservation())->toutes());
+    }
 }

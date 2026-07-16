@@ -12,6 +12,12 @@ class Reservation extends Model
         return $this->ou(['client_id' => $clientId], 'cree_le DESC');
     }
 
+    /** Toutes les réservations (administration). */
+    public function toutes(): array
+    {
+        return $this->tout('cree_le DESC');
+    }
+
     public function parCoach(string $coachId): array
     {
         return $this->ou(['coach_id' => $coachId], 'cree_le DESC');

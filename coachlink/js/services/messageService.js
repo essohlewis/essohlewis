@@ -14,7 +14,16 @@
 
   function cleConv(a, b) { return [a, b].sort().join("__"); }
 
+  function upsert(conv) {
+    const liste = toutes();
+    const i = liste.findIndex((c) => c.id === conv.id);
+    if (i >= 0) liste[i] = conv; else liste.push(conv);
+    sauver(liste);
+  }
+
   const messageService = {
+    _api() { return CL.API && CL.API.actif; },
+
     /** Conversations impliquant l'utilisateur. */
     parUtilisateur(userId) {
       return toutes()
@@ -27,8 +36,16 @@
     /**
      * Récupère (ou crée) une conversation entre deux utilisateurs.
      * meta = { userId, userNom, autreId, autreNom }
+     * Asynchrone : renvoie une Promise<conversation> (API ou local).
      */
-    ouvrir(meta) {
+    async ouvrir(meta) {
+      if (messageService._api()) {
+        const conv = CL.API.mapConversation(
+          await CL.API.post("/conversations", { autreId: meta.autreId, autreNom: meta.autreNom })
+        );
+        upsert(conv);
+        return conv;
+      }
       const liste = toutes();
       const cle = cleConv(meta.userId, meta.autreId);
       let conv = liste.find((c) => c.cle === cle);
@@ -52,8 +69,18 @@
       return conv;
     },
 
-    /** Envoie un message dans une conversation. */
-    envoyer(convId, expediteurId, texte, piecesJointes) {
+    /** Envoie un message dans une conversation (asynchrone). */
+    async envoyer(convId, expediteurId, texte, piecesJointes) {
+      if (messageService._api()) {
+        const msg = CL.API.mapMessage(
+          await CL.API.post("/conversations/" + convId + "/messages", { texte })
+        );
+        const l = toutes();
+        const c = l.find((x) => x.id === convId);
+        if (c) { c.messages.push(msg); c.majLe = msg.date; sauver(l); }
+        window.dispatchEvent(new CustomEvent("cl:message", { detail: { convId, msg } }));
+        return msg;
+      }
       const liste = toutes();
       const conv = liste.find((c) => c.id === convId);
       if (!conv) return null;
@@ -88,6 +115,7 @@
       let change = false;
       conv.messages.forEach((m) => { if (m.de !== userId && !m.lu) { m.lu = true; change = true; } });
       if (change) sauver(liste);
+      if (messageService._api()) CL.API.post("/conversations/" + convId + "/lu").catch(() => {});
     },
 
     nbNonLus(userId) {

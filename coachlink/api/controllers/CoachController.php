@@ -58,6 +58,9 @@ class CoachController
         if (isset($d['specialites']) && is_array($d['specialites'])) {
             $model->majSpecialites($coach['id'], $d['specialites']);
         }
+        if (isset($d['tarifs']) && is_array($d['tarifs'])) {
+            $model->remplacerTarifs($coach['id'], $d['tarifs']);
+        }
         Response::ok($model->complet($coach['id']));
     }
 

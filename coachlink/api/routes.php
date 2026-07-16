@@ -57,6 +57,7 @@ $router->post('/conversations/:id/lu',          [MessageController::class, 'marq
 // --- Administration ------------------------------------------------------
 $router->get('/admin/stats',           [AdminController::class, 'stats']);
 $router->get('/admin/utilisateurs',    [AdminController::class, 'utilisateurs']);
+$router->get('/admin/reservations',    [AdminController::class, 'reservations']);
 $router->get('/admin/diplomes',        [AdminController::class, 'diplomesEnAttente']);
 $router->patch('/admin/diplomes/:id',  [AdminController::class, 'statutDiplome']);
 

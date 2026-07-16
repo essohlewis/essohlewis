@@ -63,7 +63,7 @@ Les routes protégées attendent un en-tête `Authorization: Bearer <token>`.
 | GET  | `/coachs` | – | Liste + filtres `?texte=&specialite=&commune=&langue=&noteMin=&prixMax=&tri=` |
 | GET  | `/coachs/:id` | – | Profil coach complet (tarifs, avis, galerie, TrustScore…) |
 | GET  | `/coachs/moi` | coach | Ma fiche coach |
-| PATCH| `/coachs/moi` | coach | Modifier ma fiche (titre, bio, commune, spécialités, photo, couverture) |
+| PATCH| `/coachs/moi` | coach | Modifier ma fiche (titre, bio, commune, spécialités, tarifs, photo, couverture) |
 | POST | `/coachs/moi/tarifs` | coach | Ajouter un tarif |
 | DELETE | `/tarifs/:id` | coach | Supprimer un tarif |
 | PUT  | `/coachs/moi/disponibilites` | coach | Remplacer la grille de disponibilités |
@@ -90,6 +90,7 @@ Les routes protégées attendent un en-tête `Authorization: Bearer <token>`.
 | POST | `/conversations/:id/messages` | connecté | Envoyer un message |
 | GET  | `/admin/stats` | admin | Statistiques plateforme |
 | GET  | `/admin/utilisateurs` | admin | Liste des comptes |
+| GET  | `/admin/reservations` | admin | Toutes les réservations |
 | GET  | `/admin/diplomes` | admin | Diplômes en attente |
 | PATCH| `/admin/diplomes/:id` | admin | Valider/refuser un diplôme |
 
@@ -142,17 +143,40 @@ L'app bascule alors sur le backend. Pour revenir hors-ligne :
 - **Notifications** : marquer une (`PATCH /notifications/:id/lue`) ou toutes
   (`POST /notifications/toutes-lues`) comme lues, synchronisé en tâche de fond.
 
+**Slice 3 — espace coach, uploads, messagerie, admin**
+- **Espace coach** : édition de la fiche (titre, bio, commune, spécialités,
+  **tarifs** remplacés en bloc) via `PATCH /coachs/moi` ; **disponibilités**
+  (`PUT /coachs/moi/disponibilites`) ; **diplômes** (`POST /coachs/moi/diplomes`) ;
+  **galerie** (`POST`/`DELETE`) ; **mur/posts** (`POST`/`DELETE`) ;
+  **réponses aux avis** (`PATCH /avis/:id/reponse`).
+- **Téléversements** : les images (photo, couverture, galerie, posts) sont
+  **téléversées** (`POST /uploads`, multipart) au lieu d'être stockées en
+  data-URL ; le serveur renvoie un chemin, préfixé à l'affichage (`urlMedia`).
+- **Messagerie** : conversations hydratées (`GET /conversations`), ouverture
+  (`POST /conversations`), envoi (`POST /conversations/:id/messages`), accusé
+  de lecture (`POST /conversations/:id/lu`) — la réponse automatique de démo
+  est désactivée en mode API (le vrai interlocuteur répond).
+- **Admin** : hydratation des comptes (`GET /admin/utilisateurs`) et de toutes
+  les réservations (`GET /admin/reservations`, ajouté) ; **modération des
+  diplômes** (`PATCH /admin/diplomes/:id`).
+
 Le mécanisme : **hydratation** (l'API remplit le store local au démarrage /
 à la connexion) pour les lectures synchrones, et **appels API** dans les
 gestionnaires d'événements pour les écritures — soit `await` (création,
-paiement, avis), soit « écriture locale immédiate + appel en tâche de fond »
-(favoris, statut, notifications lues) pour garder les signatures synchrones.
+paiement, avis, messagerie), soit « écriture locale optimiste + appel en
+tâche de fond puis re-synchronisation de la fiche » (favoris, statut,
+notifications lues, espace coach) pour garder les signatures synchrones.
 Tant que `cl_api_base` n'est pas défini, l'app fonctionne 100 % hors-ligne.
 
-### Slices suivantes (à brancher de la même façon)
-Espace coach (gestion fiche/tarifs/dispo/galerie/posts via les endpoints
-`/coachs/moi/*`), messagerie (`/conversations`), admin (`/admin/*`),
-uploads (`/uploads`) — tous les endpoints existent déjà.
+> **Uploads en développement** : avec le serveur PHP intégré (racine = `api/`),
+> réglez `'uploads_url' => '/uploads'` dans `config.php` (au lieu de
+> `/api/uploads`) pour que les fichiers soient servis correctement.
+
+### Reste (améliorations, non bloquantes)
+« J'aime » sur les posts (pas d'endpoint), messagerie **temps réel**
+(WebSocket/polling au lieu du rafraîchissement à l'ouverture), litiges admin
+(actuellement locaux), Mobile Money réel, OAuth social, réinitialisation de
+mot de passe par email, pagination, rate limiting, HTTPS/prod, tests PHPUnit/CI.
 
 ---
 

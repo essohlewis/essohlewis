@@ -73,19 +73,29 @@
       }
       rendreMessages();
 
-      function envoyer() {
+      function rafraichirConv() {
+        const frais = messageService.obtenir(conv.id);
+        if (frais) conv.messages = frais.messages;
+      }
+
+      async function envoyer() {
         const txt = saisie.value.trim();
         if (!txt) return;
-        messageService.envoyer(conv.id, u.id, txt);
         saisie.value = "";
+        try {
+          await messageService.envoyer(conv.id, u.id, txt);
+        } catch (e) { CL.toast.erreur("Message", (e && e.message) || "Envoi impossible."); return; }
+        rafraichirConv();
         rendreMessages();
         rafraichirListe();
-        // Réponse simulée si l'interlocuteur est un coach (démo).
-        if (String(autre).startsWith("coach:") || u.role === "client") {
+        // Réponse simulée (démo hors-ligne uniquement ; en mode API, le vrai
+        // interlocuteur répond via le serveur).
+        if (!(CL.API && CL.API.actif) && (String(autre).startsWith("coach:") || u.role === "client")) {
           setTimeout(() => {
             const conv2 = messageService.obtenir(conv.id);
             if (conv2) {
               messageService.envoyer(conv.id, autre, reponseAuto(txt));
+              rafraichirConv();
               if (convActiveId === conv.id) { rendreMessages(); }
               rafraichirListe();
             }
@@ -111,6 +121,13 @@
 
     rafraichirListe();
     if (convActiveId) { conteneur.classList.add("voir-chat"); ouvrirChat(); } else ouvrirChat();
+
+    // Mode API : rafraîchit les conversations depuis le serveur en arrière-plan.
+    if (CL.API && CL.API.actif && CL.hydrate) {
+      CL.hydrate.conversations().then(() => {
+        if (document.body.contains(conteneur)) { rafraichirListe(); if (convActiveId) ouvrirChat(); }
+      });
+    }
 
     return el("div", {}, [
       el("div", { class: "page-entete" }, [el("div", {}, [el("h1", { text: "Messagerie" }), el("p", { text: "Échangez avec vos coachs et clients." })])]),
