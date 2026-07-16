@@ -1,9 +1,10 @@
 /* ==========================================================================
    service-worker.js — Cache applicatif pour un fonctionnement hors-ligne (PWA).
-   Stratégie : "cache d'abord" pour les ressources statiques de l'app.
+   Stratégie : "réseau d'abord" (network-first) → l'app affiche TOUJOURS la
+   dernière version en ligne, et bascule sur le cache uniquement hors-ligne.
    NB : ignoré lorsque l'app est ouverte via file:// (nécessite http/https).
    ========================================================================== */
-const CACHE = "coachlink-v1";
+const CACHE = "coachlink-v3";
 
 const RESSOURCES = [
   "./",
@@ -57,12 +58,18 @@ self.addEventListener("activate", (e) => {
   );
 });
 
-// Requêtes : cache d'abord, repli réseau.
+// Requêtes : RÉSEAU D'ABORD (met à jour le cache), repli cache si hors-ligne.
+// Garantit que toute modification (CSS/JS) est affichée immédiatement.
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   e.respondWith(
-    caches.match(e.request).then((rep) => rep || fetch(e.request).then((reseau) => {
-      return caches.open(CACHE).then((c) => { try { c.put(e.request, reseau.clone()); } catch (_) {} return reseau; });
-    }).catch(() => caches.match("./index.html")))
+    fetch(e.request)
+      .then((reseau) => {
+        // Copie la réponse fraîche dans le cache pour l'usage hors-ligne.
+        const copie = reseau.clone();
+        caches.open(CACHE).then((c) => { try { c.put(e.request, copie); } catch (_) {} });
+        return reseau;
+      })
+      .catch(() => caches.match(e.request).then((rep) => rep || caches.match("./index.html")))
   );
 });
