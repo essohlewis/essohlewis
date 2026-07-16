@@ -17,6 +17,7 @@
   const routes = [
     { motif: /^\/?$/, page: "home", shell: "public" },
     { motif: /^\/recherche$/, page: "recherche", shell: "public" },
+    { motif: /^\/coachmatch$/, page: "coachmatch", shell: "public" },
     { motif: /^\/comment-ca-marche$/, page: "commentCaMarche", shell: "public" },
     { motif: /^\/coach\/([\w-]+)$/, page: "profilCoach", shell: "public", param: "coachId" },
     { motif: /^\/connexion$/, page: "connexion", shell: "nu" },
@@ -224,6 +225,7 @@
     window.addEventListener("cl:favoris", () => {});
 
     installerRetourHaut();
+    CL.compareBar && CL.compareBar.installer();
     rendre();
 
     // Enregistrement du service worker (PWA) — ignoré en file://.

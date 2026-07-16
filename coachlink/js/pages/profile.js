@@ -355,6 +355,7 @@
   /* ========================== PAIEMENT ============================= */
   function ouvrirPaiement(coach, resa) {
     let operateur = "orange";
+    let promoActif = null; // { code, taux, libelle }
     const numero = el("input", { class: "input", type: "tel", placeholder: "Numéro Mobile Money (ex: 07 01 02 03 04)" });
     const code = el("input", { class: "input", type: "text", inputmode: "numeric", maxlength: "4", placeholder: "Code de confirmation (4 chiffres)" });
 
@@ -371,31 +372,77 @@
       return carte;
     }));
 
+    // --- Récapitulatif dynamique (avec remise éventuelle) ---
+    const recap = el("div", { class: "carte carte-corps", style: "background:var(--bleu-confiance-clair)" });
+    function montantFinal() { return promoActif ? resa.prix - Math.round((resa.prix * promoActif.taux) / 100) : resa.prix; }
+    function majRecapPaiement() {
+      CL.dom.vider(recap);
+      recap.appendChild(el("div", { class: "recap-ligne" }, [el("span", { text: resa.tarifNom }), el("span", { text: format.fcfa(resa.prix) })]));
+      if (promoActif) {
+        const remise = Math.round((resa.prix * promoActif.taux) / 100);
+        recap.appendChild(el("div", { class: "recap-ligne", style: "color:var(--vert-validation)" }, [
+          el("span", { text: "Remise " + promoActif.libelle + " (-" + promoActif.taux + "%)" }),
+          el("strong", { text: "-" + format.fcfa(remise) }),
+        ]));
+      }
+      recap.appendChild(el("div", { class: "recap-total mt-2" }, [el("span", { text: "À payer" }), el("strong", { text: format.fcfa(montantFinal()) })]));
+      recap.appendChild(el("div", { class: "texte-sm texte-doux mt-2", text: nomCoach(coach) + " · " + resa.jour + " à " + resa.heure }));
+      btnPayer.innerHTML = CL.icon("check", 18) + " Payer " + format.fcfa(montantFinal());
+    }
+
+    // --- Champ code promo ---
+    const promoInput = el("input", { class: "input", placeholder: "Code promo ou parrainage", style: "text-transform:uppercase" });
+    const promoMsg = el("div", { class: "aide" });
+    const btnPromo = el("button", { class: "btn btn-doux", text: "Appliquer" });
+    btnPromo.addEventListener("click", () => {
+      const res = bookingService.validerPromo(promoInput.value, CL.auth.courant().id);
+      if (!res.ok) {
+        promoActif = null;
+        promoMsg.textContent = res.message;
+        promoMsg.style.color = "var(--rouge-alerte)";
+      } else {
+        promoActif = { code: promoInput.value.trim().toUpperCase(), taux: res.taux, libelle: res.libelle };
+        promoMsg.textContent = "✓ " + res.libelle + " : -" + res.taux + "% appliqué !";
+        promoMsg.style.color = "var(--vert-validation)";
+        CL.toast.succes("Code appliqué 🎁", res.libelle + " -" + res.taux + "%");
+      }
+      majRecapPaiement();
+    });
+
+    const btnPayer = el("button", { class: "btn btn-succes" });
+
     const contenu = el("div", { class: "pile-4" }, [
-      el("div", { class: "carte carte-corps", style: "background:var(--bleu-confiance-clair)" }, [
-        el("div", { class: "recap-ligne" }, [el("span", { text: resa.tarifNom }), el("strong", { text: format.fcfa(resa.prix) })]),
-        el("div", { class: "texte-sm texte-doux mt-2", text: nomCoach(coach) + " · " + resa.jour + " à " + resa.heure }),
-      ]),
+      recap,
       el("div", {}, [el("label", { class: "champ", style: "display:block;font-weight:600;margin-bottom:8px", text: "Choisissez votre opérateur" }), grilleOp]),
       el("div", { class: "champ" }, [el("label", { text: "Numéro Mobile Money" }), numero]),
       el("div", { class: "champ" }, [el("label", { text: "Code de confirmation" }), code, el("div", { class: "aide", text: "Simulation : saisissez n'importe quel code à 4 chiffres (ex: 1234)." })]),
+      el("div", { class: "champ" }, [
+        el("label", { html: CL.icon("eclair", 15) + " Code promo / parrainage" }),
+        el("div", { class: "rangee gap-2" }, [promoInput, btnPromo]),
+        promoMsg,
+        el("div", { class: "aide", text: "Essayez : BIENVENUE10, COACHLINK15 ou SPORT2026." }),
+      ]),
       el("div", { class: "rangee gap-2 texte-xs texte-faible", html: CL.icon("bouclier", 16) + " Paiement simulé & sécurisé. Aucune transaction réelle." }),
     ]);
+    majRecapPaiement();
+
+    btnPayer.addEventListener("click", () => {
+      const op = bookingService.OPERATEURS.find((o) => o.id === operateur);
+      if (op.prefixe && !CL.validation.telephoneCI(numero.value)) return CL.toast.erreur("Numéro invalide", "Format CI attendu (07/05/01).");
+      const res = bookingService.payer(resa.id, { operateur: op.nom, numero: numero.value.trim(), code: code.value.trim(), promo: promoActif });
+      if (!res.ok) return CL.toast.erreur("Paiement refusé", res.message);
+      CL.modal.fermer();
+      const eco = res.reservation.paiement.remise ? " (économie : " + format.fcfa(res.reservation.paiement.remise) + ")" : "";
+      CL.toast.succes("Paiement réussi 🎉", "Réf : " + res.reservation.paiement.reference + eco);
+      location.hash = "#/client/reservations";
+    });
 
     CL.modal.ouvrir({
       titre: "Paiement Mobile Money",
       contenu,
       pied: [
         el("button", { class: "btn btn-fantome", text: "Plus tard", onclick: () => { CL.modal.fermer(); CL.toast.info("Réservation en attente", "Vous pourrez payer depuis vos réservations."); location.hash = "#/client/reservations"; } }),
-        el("button", { class: "btn btn-succes", html: CL.icon("check", 18) + " Payer " + format.fcfa(resa.prix), onclick: () => {
-          const op = bookingService.OPERATEURS.find((o) => o.id === operateur);
-          if (op.prefixe && !CL.validation.telephoneCI(numero.value)) return CL.toast.erreur("Numéro invalide", "Format CI attendu (07/05/01).");
-          const res = bookingService.payer(resa.id, { operateur: op.nom, numero: numero.value.trim(), code: code.value.trim() });
-          if (!res.ok) return CL.toast.erreur("Paiement refusé", res.message);
-          CL.modal.fermer();
-          CL.toast.succes("Paiement réussi 🎉", "Réf : " + res.reservation.paiement.reference);
-          location.hash = "#/client/reservations";
-        } }),
+        btnPayer,
       ],
     });
   }

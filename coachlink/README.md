@@ -41,6 +41,11 @@ Vous pouvez aussi créer librement des comptes **client** ou **coach** depuis la
 - **Tableaux de bord** : client, coach (stats + graphiques CSS), admin (modération diplômes, utilisateurs, litiges).
 - **Plus** : mode clair/sombre persistant, structure i18n (FR par défaut), **PWA-ready** (manifest + service worker), squelettes de chargement, animations, accessibilité (ARIA, focus).
 
+### 🚀 Fonctionnalités innovantes
+- **CoachMatch** 🎯 — assistant de recommandation intelligent : un mini-questionnaire en 5 étapes, puis un **score de compatibilité (0-100)** par coach calculé sur des critères pondérés (spécialité, budget, localisation, langue, disponibilité, TrustScore), avec des **raisons explicites** (« Pourquoi ce coach ? »). Route `#/coachmatch`.
+- **Comparateur de coachs** ⚖️ — ajoutez jusqu'à 3 coachs (bouton sur chaque carte), une **barre flottante** apparaît, puis un **tableau comparatif** côte à côte (TrustScore, note, prix, communes, langues, badges…).
+- **Codes promo & parrainage** 🎁 — chaque utilisateur dispose d'un **code de parrainage personnel** partageable ; les codes promo (`BIENVENUE10`, `COACHLINK15`, `SPORT2026`) et de parrainage appliquent une **remise en temps réel** lors du paiement Mobile Money.
+
 ---
 
 ## 🏗️ Architecture

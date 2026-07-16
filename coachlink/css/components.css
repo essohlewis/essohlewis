@@ -399,3 +399,41 @@
   background: var(--surface);
 }
 .partage-boutons .btn-icone:hover { background: var(--surface-2); }
+
+/* --- Barre flottante du comparateur --------------------------------------- */
+.compare-bar {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--bordure);
+  box-shadow: 0 -6px 24px rgba(15, 23, 42, 0.12);
+  z-index: calc(var(--z-entete) + 2);
+  transform: translateY(110%);
+  transition: transform var(--t-normal);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.compare-bar.visible { transform: translateY(0); }
+.compare-bar__inner {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--e-4);
+  padding-block: var(--e-3); flex-wrap: wrap;
+}
+.compare-bar__vignettes { display: flex; gap: var(--e-2); }
+.compare-bar__vignette { position: relative; }
+.compare-bar__retirer {
+  position: absolute; top: -6px; right: -6px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--rouge-alerte); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+}
+.compare-bar__vide {
+  width: 40px; height: 40px; border-radius: var(--r-full);
+  border: 2px dashed var(--bordure-forte); color: var(--texte-faible);
+  display: flex; align-items: center; justify-content: center; font-weight: 700;
+}
+/* Le tableau de comparaison ne « survole » pas les cellules d'en-tête. */
+.compare-table th { background: var(--surface); position: static; }
+.compare-table td, .compare-table th { min-width: 150px; vertical-align: middle; }
+.compare-table tr:hover td { background: transparent; }
+
+@media (max-width: 560px) {
+  .compare-bar__inner { justify-content: center; }
+}

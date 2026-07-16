@@ -135,6 +135,7 @@
 .texte-doux { color: var(--texte-doux); }
 .texte-faible { color: var(--texte-faible); }
 .texte-sm { font-size: var(--fs-sm); }
+.texte-lg { font-size: var(--fs-lg); }
 .texte-xs { font-size: var(--fs-xs); }
 .texte-centre { text-align: center; }
 .gras { font-weight: 700; }

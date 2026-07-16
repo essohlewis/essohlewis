@@ -19,8 +19,35 @@
     { id: "wave", nom: "Wave", prefixe: "", classe: "op-wave", label: "Wave" },
   ];
 
+  // Codes promotionnels de la plateforme (taux de réduction en %).
+  const PROMOS = {
+    BIENVENUE10: { taux: 10, libelle: "Offre de bienvenue" },
+    COACHLINK15: { taux: 15, libelle: "Promo CoachLink" },
+    SPORT2026: { taux: 20, libelle: "Spécial rentrée sportive" },
+  };
+
   const bookingService = {
     OPERATEURS,
+    PROMOS,
+
+    /**
+     * Valide un code promo ou un code de parrainage.
+     * Les codes de parrainage ont le format PARRAIN-XXXX (10 % de remise) et
+     * ne peuvent pas être son propre code.
+     * @returns {{ok:boolean, taux?:number, libelle?:string, message?:string}}
+     */
+    validerPromo(code, userId) {
+      const c = String(code || "").trim().toUpperCase();
+      if (!c) return { ok: false, message: "Saisissez un code." };
+      if (PROMOS[c]) return { ok: true, taux: PROMOS[c].taux, libelle: PROMOS[c].libelle };
+      if (/^PARRAIN-[A-Z0-9]{4,}$/.test(c)) {
+        if (userId && CL.auth.codeParrainage && c === CL.auth.codeParrainage(CL.auth.courant())) {
+          return { ok: false, message: "Vous ne pouvez pas utiliser votre propre code de parrainage." };
+        }
+        return { ok: true, taux: 10, libelle: "Parrainage" };
+      }
+      return { ok: false, message: "Code invalide ou expiré." };
+    },
 
     STATUTS: {
       en_attente: { label: "En attente", classe: "st-attente" },
@@ -83,10 +110,20 @@
       if (!/^\d{4}$/.test(String(paiement.code || ""))) {
         return { ok: false, message: "Code de confirmation invalide (4 chiffres attendus)." };
       }
+      // Application éventuelle d'un code promo / parrainage.
+      let remise = 0, promo = null;
+      if (paiement.promo && paiement.promo.taux) {
+        remise = Math.round((r.prix * paiement.promo.taux) / 100);
+        promo = { code: paiement.promo.code, taux: paiement.promo.taux, libelle: paiement.promo.libelle };
+      }
+      const montantPaye = r.prix - remise;
       r.paiement = {
         operateur: paiement.operateur,
         numero: paiement.numero,
-        montant: r.prix,
+        montant: montantPaye,
+        prixInitial: r.prix,
+        remise,
+        promo,
         reference: "MM" + Date.now().toString().slice(-8),
         date: new Date().toISOString(),
       };

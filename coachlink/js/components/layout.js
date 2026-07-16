@@ -109,6 +109,7 @@
     const nav = el("nav", { class: "entete__nav" }, [
       lienNav("#/", "Accueil", route),
       lienNav("#/recherche", "Trouver un coach", route),
+      lienNav("#/coachmatch", "CoachMatch", route),
       lienNav("#/comment-ca-marche", "Comment ça marche", route),
     ]);
 
@@ -192,6 +193,7 @@
     const liens = [
       lien("#/", "Accueil", "dashboard"),
       lien("#/recherche", "Trouver un coach", "recherche"),
+      lien("#/coachmatch", "CoachMatch", "eclair"),
       lien("#/comment-ca-marche", "Comment ça marche", "bouclier"),
     ];
     if (u) {

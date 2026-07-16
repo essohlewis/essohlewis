@@ -145,6 +145,8 @@ input, select, textarea {
 }
 .retour-haut.visible { opacity: 1; visibility: visible; transform: translateY(0); }
 .retour-haut:hover { background: var(--bleu-confiance-fonce); }
+/* Remonte le bouton quand la barre du comparateur est affichée. */
+body:has(.compare-bar.visible) .retour-haut { bottom: calc(92px + env(safe-area-inset-bottom)); }
 
 /* Accessibilité : respect de la préférence « animations réduites ». */
 @media (prefers-reduced-motion: reduce) {

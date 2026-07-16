@@ -30,6 +30,22 @@
       window.dispatchEvent(new CustomEvent("cl:favoris"));
     });
 
+    // Bouton « comparer »
+    const enCompare = CL.compareService && CL.compareService.contient(coach.id);
+    const btnCompare = el("button", {
+      class: "btn-icone", "aria-label": "Ajouter au comparateur", title: "Comparer",
+      style: "background:var(--surface);border:1px solid var(--bordure)",
+      html: CL.icon("graphique", 18),
+    });
+    btnCompare.style.color = enCompare ? "var(--bleu-confiance)" : "var(--texte-doux)";
+    btnCompare.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const r = CL.compareService.basculer(coach.id);
+      if (r.plein) { CL.toast.info("Comparateur plein", "3 coachs maximum. Retirez-en un d'abord."); return; }
+      btnCompare.style.color = r.actif ? "var(--bleu-confiance)" : "var(--texte-doux)";
+      CL.toast.succes(r.actif ? "Ajouté au comparateur" : "Retiré du comparateur", nom);
+    });
+
     const c = el("article", { class: "carte carte-interactive coach-carte", tabindex: "0", role: "link", "aria-label": "Voir le profil de " + nom }, [
       el("div", { class: "coach-carte__banniere", style: `background:linear-gradient(120deg, ${coach.couleur}, #3b6fe6)` }, [
         ui.avatarCoach(coach, "coach-carte__avatar"),
@@ -45,7 +61,7 @@
             ]),
             el("div", { class: "coach-carte__specialite", text: coach.titre }),
           ]),
-          btnFav,
+          el("div", { class: "rangee gap-2", style: "flex-shrink:0" }, [btnCompare, btnFav]),
         ]),
         el("div", { class: "coach-carte__meta" }, [
           el("span", { class: "rangee gap-2" }, [ui.etoiles(coach.note), el("span", { class: "note-valeur", text: format.note(coach.note) }), el("span", { class: "texte-faible texte-xs", text: `(${coach.nbAvis})` })]),

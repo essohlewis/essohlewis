@@ -65,11 +65,25 @@
       el("button", { class: "btn btn-fantome", html: CL.icon("deconnexion", 18) + " Se déconnecter", onclick: () => { auth.deconnecter(); CL.toast.info("Déconnecté", ""); location.hash = "#/"; CL.layout.rendreEntete(); } }),
     ]);
 
+    /* --------------------- Parrainage ---------------------------- */
+    const code = auth.codeParrainage(u);
+    const carteParrainage = el("div", { class: "carte carte-corps pile-3", style: "border:1px solid var(--bleu-confiance);background:var(--bleu-confiance-clair)" }, [
+      el("h3", { html: CL.icon("eclair", 18, { fill: true }) + " Parrainez & faites des économies" }),
+      el("p", { class: "texte-sm", text: "Partagez votre code : vos filleuls bénéficient de -10 % sur leur première séance." }),
+      el("div", { class: "rangee gap-2" }, [
+        el("input", { class: "input gras", value: code, readonly: "readonly", style: "text-align:center;letter-spacing:1px" }),
+        el("button", { class: "btn btn-primaire", html: CL.icon("partager", 16) + " Copier", onclick: async () => {
+          (await CL.socialService.copier(code)) ? CL.toast.succes("Code copié", "Partagez-le à vos proches !") : CL.toast.erreur("Échec", "");
+        } }),
+      ]),
+      el("div", {}, [CL.ui.boutonsPartage(location.origin + location.pathname + "#/inscription", "Rejoins-moi sur CoachLink CI avec mon code " + code + " et profite de -10 % !")]),
+    ]);
+
     return el("div", {}, [
       el("div", { class: "page-entete" }, [el("div", {}, [el("h1", { text: "Paramètres" }), el("p", { text: "Gérez votre compte et vos préférences." })])]),
       el("div", { class: "deux-colonnes--inverse" }, [
         el("div", { class: "pile-4" }, [cartePref, carteDanger]),
-        el("div", { class: "pile-4" }, [carteProfil]),
+        el("div", { class: "pile-4" }, [carteProfil, carteParrainage]),
       ]),
     ]);
   };

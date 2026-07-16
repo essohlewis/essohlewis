@@ -22,6 +22,13 @@
     /** Hash non cryptographique exposé (utilisé pour amorcer les comptes démo). */
     hacher: pseudoHash,
 
+    /** Code de parrainage personnel d'un utilisateur (stable, partageable). */
+    codeParrainage(user) {
+      if (!user) return null;
+      const suffixe = String(user.id).replace(/[^a-z0-9]/gi, "").slice(-4).toUpperCase().padStart(4, "X");
+      return "PARRAIN-" + suffixe;
+    },
+
     /** Utilisateur connecté (ou null) */
     courant() {
       const session = storage.lire(storage.CLES.session);
