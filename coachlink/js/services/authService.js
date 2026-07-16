@@ -107,6 +107,20 @@
       return { ok: true, user };
     },
 
+    /** Connexion à partir d'un JWT déjà obtenu (retour OAuth). Mode API. */
+    async connecterAvecToken(token) {
+      if (!auth._api()) return { ok: false, message: "Disponible uniquement avec le backend." };
+      try {
+        CL.API.definirToken(token);
+        const user = await CL.API.moi(); // GET /auth/me
+        auth._ouvrirSession(user.id, { token, user, coachId: user.coachId || null });
+        return { ok: true, user };
+      } catch (e) {
+        CL.API.definirToken(null);
+        return { ok: false, message: (e && e.message) || "Jeton invalide ou expiré." };
+      }
+    },
+
     /** Connexion sociale simulée (Facebook / LinkedIn), hors-ligne uniquement. */
     async connexionSociale(reseau) {
       if (auth._api()) {

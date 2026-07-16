@@ -103,4 +103,16 @@ return [
             'password'    => '',
         ],
     ],
+
+    // --- Connexion sociale (OAuth) ---------------------------------------
+    // Laissez 'actif' à false pour conserver la simulation hors-ligne côté front.
+    // redirect_base : URL publique de l'API (le callback y est ajouté et doit
+    //   être déclaré dans l'app du fournisseur).
+    // front_url : URL du front vers laquelle revenir après authentification.
+    'oauth' => [
+        'redirect_base' => '', // ex : https://api.coachlink.ci
+        'front_url'     => '', // ex : https://coachlink.ci
+        'facebook' => ['actif' => false, 'client_id' => '', 'client_secret' => ''],
+        'linkedin' => ['actif' => false, 'client_id' => '', 'client_secret' => ''],
+    ],
 ];

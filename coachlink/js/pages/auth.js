@@ -16,7 +16,27 @@
   }
 
   /* ============================ CONNEXION ========================== */
-  CL.pages.connexion = function () {
+  CL.pages.connexion = function (params) {
+    params = params || {};
+
+    // Retour d'une connexion sociale (OAuth) : jeton dans l'URL.
+    if (params.oauth) {
+      (async () => {
+        const res = await auth.connecterAvecToken(params.oauth);
+        if (!res.ok) return CL.toast.erreur("Connexion sociale échouée", res.message);
+        if (CL.hydrate && CL.API && CL.API.actif) await CL.hydrate.donneesUtilisateur();
+        CL.realtime && CL.realtime.demarrer();
+        CL.toast.succes("Connecté", "Bienvenue " + res.user.prenom + " !");
+        redirigerSelonRole(res.user);
+      })();
+      return el("div", { class: "auth-page" }, [el("div", { style: "margin:auto;padding:60px;text-align:center" }, [
+        el("div", { class: "spinner", style: "margin:0 auto 16px" }), el("p", { text: "Connexion en cours…" }),
+      ])]);
+    }
+    if (params.oauth_erreur) {
+      setTimeout(() => CL.toast.erreur("Connexion sociale échouée", "Réessayez ou utilisez votre email."), 100);
+    }
+
     if (auth.estConnecte()) { redirigerSelonRole(auth.courant()); return el("div"); }
 
     const form = el("div", { class: "auth-carte" }, [
@@ -253,6 +273,16 @@
   }
 
   async function connSociale(reseau) {
+    // Mode API : si le réseau est configuré, on redirige vers le fournisseur OAuth.
+    if (CL.API && CL.API.actif) {
+      try {
+        const d = await CL.API.get("/auth/oauth/" + reseau);
+        if (d && d.url) { location.href = d.url; return; }
+      } catch (e) {
+        return CL.toast.info("Bientôt disponible", "La connexion " + reseau + " n'est pas encore configurée côté serveur.");
+      }
+    }
+    // Hors-ligne : simulation.
     const res = await auth.connexionSociale(reseau);
     if (!res.ok) return CL.toast.info("Indisponible", res.message);
     CL.toast.succes("Connexion " + reseau, "Bienvenue " + res.user.prenom + " !");

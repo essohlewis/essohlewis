@@ -127,6 +127,63 @@ class AuthController
         Response::ok(['message' => 'Mot de passe réinitialisé. Vous pouvez vous connecter.']);
     }
 
+    /** GET /auth/oauth/:provider — renvoie l'URL d'autorisation du réseau. */
+    public function oauthUrl(array $params): void
+    {
+        $reseau   = strtolower($params['provider'] ?? '');
+        $provider = OAuthService::pour($reseau);
+        if (!$provider) {
+            Response::erreur('Connexion sociale non configurée pour ce réseau.', 400);
+        }
+        // « state » signé (JWT) = protection CSRF, sans stockage serveur.
+        $state = Jwt::encoder(['oauth' => $reseau, 'nonce' => bin2hex(random_bytes(8))]);
+        $url   = $provider->urlAutorisation($state, OAuthService::redirectUri($reseau));
+        Response::ok(['url' => $url]);
+    }
+
+    /** GET /auth/oauth/:provider/callback — échange le code, connecte, redirige. */
+    public function oauthCallback(array $params): void
+    {
+        $reseau   = strtolower($params['provider'] ?? '');
+        $provider = OAuthService::pour($reseau);
+        $code     = (string) Request::query('code');
+        $state    = (string) Request::query('state');
+        $front    = OAuthService::frontUrl();
+
+        $redirige = function (string $suffixe) use ($front): void {
+            header('Location: ' . $front . '/index.html' . $suffixe);
+            exit;
+        };
+
+        if (!$provider || $code === '' || !Jwt::decoder($state)) {
+            $redirige('#/connexion?oauth_erreur=1');
+        }
+
+        $profil = $provider->profil($code, OAuthService::redirectUri($reseau));
+        if (!$profil || empty($profil['email'])) {
+            $redirige('#/connexion?oauth_erreur=1');
+        }
+
+        // Trouver ou créer le compte (rôle client par défaut).
+        $userModel = new User();
+        $user = $userModel->parEmail($profil['email']);
+        if (!$user) {
+            $id = $userModel->creer([
+                'role'      => 'client',
+                'prenom'    => $profil['prenom'] ?: 'Utilisateur',
+                'nom'       => $profil['nom'] ?: ucfirst($reseau),
+                'email'     => $profil['email'],
+                'telephone' => '',
+                'motDePasse'=> bin2hex(random_bytes(16)), // aléatoire : le compte se connecte via le réseau
+                'source'    => $reseau,
+            ]);
+            $user = $userModel->trouver($id);
+        }
+
+        $token = Jwt::encoder(['sub' => (int) $user['id'], 'role' => $user['role']]);
+        $redirige('#/connexion?oauth=' . urlencode($token));
+    }
+
     /* ------------------------------------------------------------------ */
     private function avecToken(array $user): array
     {

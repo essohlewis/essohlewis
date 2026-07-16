@@ -60,8 +60,10 @@ Les routes protégées attendent un en-tête `Authorization: Bearer <token>`.
 | POST | `/auth/register` | – | Inscription (client/coach) → `{ user, token }` |
 | POST | `/auth/login` | – | Connexion → `{ user, token }` |
 | GET  | `/auth/me` | connecté | Profil courant |
-| POST | `/auth/mot-de-passe/oubli` | – | Demande de réinitialisation (jeton simulé) |
+| POST | `/auth/mot-de-passe/oubli` | – | Demande de réinitialisation (email) |
 | POST | `/auth/mot-de-passe/reset` | – | Réinitialise via `{ token, motDePasse }` |
+| GET  | `/auth/oauth/:provider` | – | URL d'autorisation (facebook/linkedin) |
+| GET  | `/auth/oauth/:provider/callback` | – | Retour OAuth → redirige le front avec le JWT |
 | GET  | `/coachs` | – | Liste + filtres `?texte=&specialite=&commune=&langue=&noteMin=&prixMax=&tri=` |
 | GET  | `/coachs/:id` | – | Profil coach complet (tarifs, avis, galerie, TrustScore…) |
 | GET  | `/coachs/moi` | coach | Ma fiche coach |
@@ -241,9 +243,21 @@ Tant que `cl_api_base` n'est pas défini, l'app fonctionne 100 % hors-ligne.
 - Front : page **`#/reinitialiser`** (ouverte depuis le lien email) → nouveau
   mot de passe → `POST /auth/mot-de-passe/reset`.
 
+**Slice 9 — connexion sociale (OAuth Facebook / LinkedIn)**
+- Abstraction `OAuthProvider` + `OAuthService` (même patron adaptateur).
+  `OAuthFacebook` (Graph API) et `OAuthLinkedIn` (OpenID Connect) — squelettes
+  réels, activés via `config.php → oauth` (`<reseau>.actif` + `client_id`/
+  `client_secret` + `redirect_base`/`front_url`).
+- Flux : `GET /auth/oauth/:provider` renvoie l'URL d'autorisation (state signé
+  JWT = anti-CSRF) → l'utilisateur autorise → `GET /auth/oauth/:provider/callback`
+  échange le code, crée/retrouve le compte, émet un JWT et **redirige le front**
+  (`#/connexion?oauth=<jwt>`). Front : `auth.connecterAvecToken` connecte
+  l'utilisateur. **Repli** : si un réseau n'est pas configuré, le front bascule
+  sur la simulation (hors-ligne) ou informe l'utilisateur.
+
 ### Reste (améliorations, non bloquantes)
-OAuth social, HTTPS/prod, notifications push (WebSocket/SSE pour remplacer le
-polling).
+HTTPS/prod, notifications push (WebSocket/SSE pour remplacer le polling),
+rafraîchissement/révocation de token, journalisation structurée.
 
 ---
 
@@ -261,7 +275,8 @@ api/
 ├── core/                 # App, Router, Request, Response, Database (PDO),
 │                         #   Jwt, Auth, Validator, RateLimiter, Pagination,
 │                         #   HttpClient, PaiementGateway/Service/Simulateur/…,
-│                         #   MailTransport/Service/Log/Smtp
+│                         #   MailTransport/Service/Log/Smtp,
+│                         #   OAuthProvider/Service/Facebook/LinkedIn
 ├── models/               # Model (CRUD PDO) + User, Coach, Reservation,
 │                         #   Review, Message, Notification
 ├── controllers/          # Auth, Coach, Reservation, Review, Notification,
@@ -321,5 +336,6 @@ sur tout le PHP, `composer install` + **PHPUnit** (PHP 8.2 et 8.4), et
 - ✅ Paiement Mobile Money (architecture passerelle + Orange/Wave + webhook) — **fait**.
 - ✅ Envoi d'email réel (transport SMTP + flux réinitialisation par lien) — **fait**.
 - ✅ 4 opérateurs Mobile Money (Orange, Wave, MTN, Moov) — **fait**.
+- ✅ Connexion sociale OAuth (Facebook, LinkedIn) — **fait**.
 - Rafraîchissement de token / révocation ; journalisation structurée.
-- OAuth social, push WebSocket/SSE, HTTPS/prod.
+- Push WebSocket/SSE, HTTPS/prod.

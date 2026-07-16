@@ -12,6 +12,8 @@ $router->post('/auth/login',    [AuthController::class, 'login']);
 $router->get('/auth/me',        [AuthController::class, 'me']);
 $router->post('/auth/mot-de-passe/oubli', [AuthController::class, 'motDePasseOubli']);
 $router->post('/auth/mot-de-passe/reset', [AuthController::class, 'reinitialiser']);
+$router->get('/auth/oauth/:provider/callback', [AuthController::class, 'oauthCallback']);
+$router->get('/auth/oauth/:provider', [AuthController::class, 'oauthUrl']);
 
 // --- Coachs --------------------------------------------------------------
 $router->get('/coachs',          [CoachController::class, 'index']);
