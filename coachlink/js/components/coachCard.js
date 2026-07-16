@@ -50,8 +50,11 @@
       CL.toast.succes(r.actif ? "Ajouté au comparateur" : "Retiré du comparateur", nom);
     });
 
+    const fondBanniere = coach.couverture
+      ? `background:linear-gradient(120deg, rgba(0,0,0,.15), rgba(0,0,0,.15)), url('${coach.couverture}') center/cover`
+      : `background:linear-gradient(120deg, ${coach.couleur}, #3b6fe6)`;
     const c = el("article", { class: "carte carte-interactive coach-carte", tabindex: "0", role: "link", "aria-label": "Voir le profil de " + nom }, [
-      el("div", { class: "coach-carte__banniere", style: `background:linear-gradient(120deg, ${coach.couleur}, #3b6fe6)` }, [
+      el("div", { class: "coach-carte__banniere", style: fondBanniere }, [
         ui.avatarCoach(coach, "coach-carte__avatar"),
       ]),
       el("div", { class: "coach-carte__corps" }, [

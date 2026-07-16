@@ -37,7 +37,9 @@
     });
 
     const entete = el("div", {}, [
-      el("div", { class: "profil-couverture", style: `background:linear-gradient(120deg, ${coach.couleur}, #3b6fe6, var(--orange-cta))` }),
+      el("div", { class: "profil-couverture", style: coach.couverture
+        ? `background:url('${coach.couverture}') center/cover`
+        : `background:linear-gradient(120deg, ${coach.couleur}, #3b6fe6, var(--orange-cta))` }),
       el("div", { class: "profil-entete" }, [
         ui.avatarCoach(coach, "profil-entete__avatar"),
         el("div", { class: "profil-entete__info" }, [
@@ -94,6 +96,7 @@
     const contenuOnglet = el("div", { class: "mt-4" });
     const onglets = [
       ["apropos", "À propos"],
+      ["galerie", "Galerie (" + (coach.galerie || []).length + ")"],
       ["tarifs", "Tarifs"],
       ["mur", "Mur (" + (coach.posts || []).length + ")"],
       ["avis", "Avis (" + (coach.avis || []).length + ")"],
@@ -112,6 +115,7 @@
     function rendreOnglet(cle) {
       CL.dom.vider(contenuOnglet);
       if (cle === "apropos") contenuOnglet.appendChild(ongletApropos(coach));
+      else if (cle === "galerie") contenuOnglet.appendChild(ongletGalerie(coach));
       else if (cle === "tarifs") contenuOnglet.appendChild(ongletTarifs(coach));
       else if (cle === "mur") contenuOnglet.appendChild(ongletMur(coach));
       else if (cle === "avis") contenuOnglet.appendChild(ongletAvis(coach));
@@ -186,8 +190,13 @@
         ui.avatarCoach(coach, "avatar-sm"),
         el("div", {}, [el("strong", { text: nomCoach(coach) }), el("div", { class: "texte-xs texte-faible", text: format.tempsRelatif(p.date) })]),
       ]),
-      el("p", { style: "color:var(--texte)", text: p.texte }),
-      p.image ? el("div", { class: "post__media" }, [el("img", { src: p.image, alt: "Publication" })]) : null,
+      p.texte ? el("p", { style: "color:var(--texte)", text: p.texte }) : null,
+      p.image ? (function () {
+        const media = el("div", { class: "post__media", style: "cursor:zoom-in" }, [el("img", { src: p.image, alt: "Publication" })]);
+        media.addEventListener("click", () => ouvrirLightbox(p.image));
+        return media;
+      })() : null,
+      p.video ? (CL.media.elementVideo(p.video) || null) : null,
       el("div", { class: "post__actions" }, [
         (function () {
           const b = el("button", { html: CL.icon("pouce", 16) + " " + '<span>' + p.likes + "</span>" });
@@ -203,6 +212,36 @@
     ]);
     return carte;
   }
+
+  /* ============================ GALERIE =========================== */
+  function ongletGalerie(coach) {
+    const medias = coach.galerie || [];
+    if (!medias.length) return ui.vide("galerie", "Galerie vide", nomCoach(coach) + " n'a pas encore ajouté de photos.");
+    return el("div", { class: "galerie-grille" }, medias.map((m) => {
+      const vignette = el("figure", { class: "galerie-item" }, [
+        el("img", { src: m.image, alt: m.legende || "Photo", loading: "lazy" }),
+        m.legende ? el("figcaption", { text: m.legende }) : null,
+      ]);
+      vignette.addEventListener("click", () => ouvrirLightbox(m.image, m.legende));
+      return vignette;
+    }));
+  }
+
+  /* Visionneuse plein écran (lightbox) */
+  function ouvrirLightbox(src, legende) {
+    const box = el("div", { class: "lightbox" }, [
+      el("button", { class: "lightbox__fermer btn-icone", "aria-label": "Fermer", html: CL.icon("fermer", 26) }),
+      el("img", { src, alt: legende || "Image" }),
+      legende ? el("div", { class: "lightbox__legende", text: legende }) : null,
+    ]);
+    const fermer = () => { box.remove(); document.body.style.overflow = ""; document.removeEventListener("keydown", onEsc); };
+    const onEsc = (e) => { if (e.key === "Escape") fermer(); };
+    box.addEventListener("click", (e) => { if (e.target === box || e.target.closest(".lightbox__fermer")) fermer(); });
+    document.addEventListener("keydown", onEsc);
+    document.body.appendChild(box);
+    document.body.style.overflow = "hidden";
+  }
+  CL.ouvrirLightbox = ouvrirLightbox;
 
   function ongletAvis(coach) {
     const avis = coach.avis || [];

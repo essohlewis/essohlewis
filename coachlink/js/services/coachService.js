@@ -156,10 +156,54 @@
       c.posts.unshift({
         id: CL.dom.uid("p"),
         texte: post.texte,
-        image: post.image || null,
+        image: post.image || null,   // data-URL (image téléversée)
+        video: post.video || null,   // lien vidéo (YouTube/Vimeo/direct)
         date: new Date().toISOString(),
         likes: 0,
       });
+      sauver(liste);
+      return true;
+    },
+
+    supprimerPost(coachId, postId) {
+      const liste = tous();
+      const c = liste.find((x) => x.id === coachId);
+      if (!c) return false;
+      c.posts = (c.posts || []).filter((p) => p.id !== postId);
+      sauver(liste);
+      return true;
+    },
+
+    /* -------------------------- Médias / photos ----------------------- */
+    /** Définit la photo de profil (data-URL) ou la retire (null). */
+    majPhoto(coachId, dataUrl) { return coachService.majProfil(coachId, { photo: dataUrl }); },
+    /** Définit la photo de couverture (data-URL) ou la retire (null). */
+    majCouverture(coachId, dataUrl) { return coachService.majProfil(coachId, { couverture: dataUrl }); },
+
+    /* ------------------------------ Galerie --------------------------- */
+    galerie(coachId) {
+      const c = coachService.obtenir(coachId);
+      return (c && c.galerie) || [];
+    },
+    ajouterMedia(coachId, media) {
+      const liste = tous();
+      const c = liste.find((x) => x.id === coachId);
+      if (!c) return false;
+      c.galerie = c.galerie || [];
+      c.galerie.unshift({
+        id: CL.dom.uid("m"),
+        image: media.image,          // data-URL
+        legende: media.legende || "",
+        date: new Date().toISOString(),
+      });
+      sauver(liste);
+      return true;
+    },
+    supprimerMedia(coachId, mediaId) {
+      const liste = tous();
+      const c = liste.find((x) => x.id === coachId);
+      if (!c) return false;
+      c.galerie = (c.galerie || []).filter((m) => m.id !== mediaId);
       sauver(liste);
       return true;
     },

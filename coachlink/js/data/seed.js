@@ -295,11 +295,46 @@
     ]
   };
 
-  // Attache avis et posts aux coachs.
+  // Génère une « photo » de démonstration (SVG en data-URL, sans fichier externe).
+  function photoDemo(titre, c1, c2) {
+    // NB : on utilise des guillemets DOUBLES dans le SVG ; encodeURIComponent
+    // les encode (%22), évitant tout guillemet brut qui casserait un url('…') CSS.
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800">' +
+      '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+      '<stop offset="0" stop-color="' + c1 + '"/><stop offset="1" stop-color="' + c2 + '"/></linearGradient></defs>' +
+      '<rect width="800" height="800" fill="url(#g)"/>' +
+      '<circle cx="650" cy="150" r="90" fill="rgba(255,255,255,0.15)"/>' +
+      '<circle cx="150" cy="650" r="140" fill="rgba(255,255,255,0.10)"/>' +
+      '<text x="50%" y="52%" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="54" font-weight="700" fill="#ffffff">' + titre + '</text></svg>';
+    return "data:image/svg+xml," + encodeURIComponent(svg);
+  }
+
+  // Attache avis, posts et médias de démonstration aux coachs.
   coachs.forEach((c) => {
     c.avis = avisSeed[c.id] || [];
     c.posts = postsSeed[c.id] || [];
+    c.photo = c.photo || null;          // photo de profil (data-URL)
+    c.couverture = c.couverture || null; // photo de couverture (data-URL)
+    c.galerie = c.galerie || [];         // galerie de photos
   });
+
+  // Démo médias pour Koffi Aka (coach sportif) : couverture, galerie, post image + vidéo.
+  const koffi = coachs.find((c) => c.id === "c1");
+  if (koffi) {
+    koffi.couverture = photoDemo("", "#1b4dcc", "#ff7a1a");
+    koffi.galerie = [
+      { id: "m1", image: photoDemo("Séance collective", "#1b4dcc", "#12a150"), legende: "Séance collective à la Riviera", date: "2026-06-01" },
+      { id: "m2", image: photoDemo("Préparation physique", "#123a9e", "#3b6fe6"), legende: "Préparation physique en salle", date: "2026-06-12" },
+      { id: "m3", image: photoDemo("Course matinale", "#ff7a1a", "#e5650a"), legende: "Course matinale au Parc", date: "2026-06-20" },
+      { id: "m4", image: photoDemo("Étirements", "#12a150", "#1b4dcc"), legende: "Étirements & récupération", date: "2026-07-02" }
+    ];
+    koffi.posts = [
+      { id: "p1", texte: "Séance de groupe ce matin à la Riviera 🏃‍♂️ Bravo à tous pour l'énergie !", image: photoDemo("Team Koffi 💪", "#1b4dcc", "#12a150"), video: null, date: "2026-07-10", likes: 24 },
+      { id: "p2", texte: "Ma routine d'échauffement en vidéo 👇 À reproduire avant chaque séance !", image: null, video: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", date: "2026-07-08", likes: 37 },
+      { id: "p3", texte: "Rappel : l'hydratation est la clé de la performance. Buvez avant d'avoir soif 💧", image: null, video: null, date: "2026-07-05", likes: 15 }
+    ];
+  }
 
   CL.SEED = {
     coachs,

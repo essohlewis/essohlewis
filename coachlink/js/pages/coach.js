@@ -162,10 +162,7 @@
 
     const page = el("div", {}, [
       el("div", { class: "page-entete" }, [el("div", {}, [el("h1", { text: "Mon profil coach" }), el("p", { text: "Ces informations sont visibles publiquement." })]), el("a", { class: "btn btn-fantome", href: "#/coach/" + c.id, html: CL.icon("oeil", 18) + " Voir mon profil public" })]),
-      el("div", { class: "carte carte-corps rangee gap-4 mb-4" }, [
-        ui.avatarCoach(c, "avatar-lg"),
-        el("div", {}, [el("strong", { style: "font-size:var(--fs-lg)", text: coachService.nomComplet(c) }), el("p", { class: "texte-sm texte-doux", text: "Photo générée automatiquement (upload simulé)." }), el("button", { class: "btn btn-fantome btn-sm mt-2", html: CL.icon("crayon", 14) + " Changer la photo", onclick: () => CL.toast.info("Simulation", "L'upload de photo sera géré par l'API.") })]),
-      ]),
+      blocPhotos(c),
       el("div", { class: "carte carte-corps pile-4 mb-4" }, [
         champ("Titre / accroche", titre),
         champ("Biographie", bio),
@@ -200,25 +197,71 @@
     const zone = el("div", { class: "pile-4" });
     const texte = el("textarea", { class: "textarea", placeholder: "Partagez une réussite, une astuce, une annonce…", rows: "3" });
 
+    // État du média attaché à la publication en cours.
+    let imageJointe = null; // data-URL
+    let videoLien = "";
+    const apercu = el("div", { class: "mt-3" });
+    const champVideo = el("div", { class: "champ mt-3", style: "display:none" }, []);
+    const inputVideo = el("input", { class: "input", placeholder: "Lien YouTube, Vimeo ou vidéo (https://…)" });
+    champVideo.appendChild(el("label", { class: "texte-sm gras mb-2", text: "Lien de la vidéo" }));
+    champVideo.appendChild(inputVideo);
+
+    function rafraichirApercu() {
+      CL.dom.vider(apercu);
+      if (imageJointe) {
+        apercu.appendChild(el("div", { class: "post__media", style: "position:relative" }, [
+          el("img", { src: imageJointe, alt: "Aperçu" }),
+          el("button", { class: "btn-icone", style: "position:absolute;top:8px;right:8px;background:var(--rouge-alerte);color:#fff", "aria-label": "Retirer l'image", html: CL.icon("poubelle", 16), onclick: () => { imageJointe = null; rafraichirApercu(); } }),
+        ]));
+      }
+    }
+
+    async function choisirImage() {
+      try {
+        const dataUrl = await CL.media.choisirImage(1000, 0.72);
+        if (dataUrl) { imageJointe = dataUrl; videoLien = ""; inputVideo.value = ""; champVideo.style.display = "none"; rafraichirApercu(); }
+      } catch (e) { CL.toast.erreur("Image", e.message); }
+    }
+
     function rendreMur() {
       CL.dom.vider(zone);
       const posts = coachService.obtenir(c.id).posts || [];
       if (!posts.length) { zone.appendChild(ui.vide("document", "Aucune publication", "Publiez votre premier post pour animer votre mur.")); return; }
-      posts.forEach((p) => zone.appendChild(el("div", {}, [CL.profilComposants.cartePost(c, p)])));
+      posts.forEach((p) => {
+        const carte = CL.profilComposants.cartePost(c, p);
+        // Bouton de suppression réservé au propriétaire.
+        carte.querySelector(".post__entete").appendChild(
+          el("button", { class: "btn-icone btn-fantome pousse-droite", "aria-label": "Supprimer", title: "Supprimer", html: CL.icon("poubelle", 16), onclick: () => { coachService.supprimerPost(c.id, p.id); CL.toast.info("Publication supprimée", ""); rendreMur(); } })
+        );
+        zone.appendChild(el("div", {}, [carte]));
+      });
     }
     rendreMur();
 
+    function publier() {
+      const t = texte.value.trim();
+      videoLien = inputVideo.value.trim();
+      if (!t && !imageJointe && !videoLien) return CL.toast.erreur("Vide", "Ajoutez du texte, une image ou une vidéo.");
+      if (videoLien && !CL.media.parseVideo(videoLien)) return CL.toast.erreur("Lien invalide", "Vérifiez le lien de la vidéo.");
+      coachService.ajouterPost(c.id, { texte: t, image: imageJointe, video: videoLien || null });
+      texte.value = ""; imageJointe = null; videoLien = ""; inputVideo.value = ""; champVideo.style.display = "none";
+      rafraichirApercu();
+      CL.toast.succes("Publié 🎉", "Votre publication est en ligne.");
+      rendreMur();
+    }
+
     return el("div", {}, [
-      el("div", { class: "page-entete" }, [el("div", {}, [el("h1", { text: "Mon mur" }), el("p", { text: "Publiez pour engager votre communauté." })])]),
+      el("div", { class: "page-entete" }, [el("div", {}, [el("h1", { text: "Mon mur" }), el("p", { text: "Publiez du texte, des photos et des vidéos pour engager votre communauté." })])]),
       el("div", { class: "carte carte-corps mb-4" }, [
         el("div", { class: "rangee gap-3", style: "align-items:flex-start" }, [ui.avatarCoach(c, "avatar-sm"), el("div", { style: "flex:1" }, [texte])]),
-        el("div", { class: "rangee entre mt-3" }, [
-          el("span", { class: "texte-xs texte-faible", html: CL.icon("trombone", 14) + " Photo/vidéo (lien) — bientôt via l'API" }),
-          el("button", { class: "btn btn-cta", html: CL.icon("envoyer", 16) + " Publier", onclick: () => {
-            if (!texte.value.trim()) return CL.toast.erreur("Vide", "Écrivez quelque chose.");
-            coachService.ajouterPost(c.id, { texte: texte.value.trim() });
-            texte.value = ""; CL.toast.succes("Publié", ""); rendreMur();
-          } }),
+        apercu,
+        champVideo,
+        el("div", { class: "rangee entre mt-3 rangee-wrap gap-2" }, [
+          el("div", { class: "rangee gap-2" }, [
+            el("button", { class: "btn btn-fantome btn-sm", html: CL.icon("image", 16) + " Photo", onclick: choisirImage }),
+            el("button", { class: "btn btn-fantome btn-sm", html: CL.icon("video", 16) + " Vidéo", onclick: () => { champVideo.style.display = champVideo.style.display === "none" ? "block" : "none"; if (champVideo.style.display === "block") inputVideo.focus(); } }),
+          ]),
+          el("button", { class: "btn btn-cta", html: CL.icon("envoyer", 16) + " Publier", onclick: publier }),
         ]),
       ]),
       zone,
@@ -332,7 +375,105 @@
     return el("div", {}, [el("div", { class: "page-entete" }, [el("div", {}, [el("h1", { text: "Avis reçus" }), el("p", { text: "Répondez pour montrer votre professionnalisme." })])]), zone]);
   };
 
+  /* ------------------------------ Galerie ------------------------- */
+  CL.pages.coachGalerie = function () {
+    const err = garde(); if (err) return err;
+    const c = moncoach();
+    const grille = el("div", { class: "galerie-grille" });
+
+    function rendreGalerie() {
+      CL.dom.vider(grille);
+      const medias = coachService.galerie(c.id);
+      if (!medias.length) { grille.appendChild(ui.vide("galerie", "Galerie vide", "Ajoutez vos plus belles photos de séances, résultats, événements…")); return; }
+      medias.forEach((m) => {
+        grille.appendChild(el("figure", { class: "galerie-item galerie-item--gerable" }, [
+          el("img", { src: m.image, alt: m.legende || "Photo", loading: "lazy", onclick: () => CL.ouvrirLightbox(m.image, m.legende) }),
+          m.legende ? el("figcaption", { text: m.legende }) : null,
+          el("button", { class: "galerie-item__suppr btn-icone", "aria-label": "Supprimer", title: "Supprimer", html: CL.icon("poubelle", 16), onclick: () => { coachService.supprimerMedia(c.id, m.id); CL.toast.info("Photo supprimée", ""); rendreGalerie(); } }),
+        ]));
+      });
+    }
+    rendreGalerie();
+
+    async function ajouter() {
+      try {
+        const dataUrl = await CL.media.choisirImage(1200, 0.72);
+        if (!dataUrl) return;
+        const legende = el("input", { class: "input", placeholder: "Légende (facultatif)", maxlength: "80" });
+        CL.modal.ouvrir({
+          titre: "Ajouter à la galerie",
+          contenu: el("div", { class: "pile-3" }, [
+            el("div", { class: "post__media" }, [el("img", { src: dataUrl, alt: "Aperçu" })]),
+            champ("Légende", legende),
+          ]),
+          pied: [
+            el("button", { class: "btn btn-fantome", text: "Annuler", onclick: CL.modal.fermer }),
+            el("button", { class: "btn btn-cta", text: "Ajouter à ma galerie", onclick: () => {
+              coachService.ajouterMedia(c.id, { image: dataUrl, legende: legende.value.trim() });
+              CL.modal.fermer(); CL.toast.succes("Photo ajoutée 📸", "Elle est visible sur votre profil public."); rendreGalerie();
+            } }),
+          ],
+        });
+      } catch (e) { CL.toast.erreur("Image", e.message); }
+    }
+
+    return el("div", {}, [
+      el("div", { class: "page-entete" }, [
+        el("div", {}, [el("h1", { text: "Ma galerie" }), el("p", { text: "Vos photos apparaissent sur votre profil public et rassurent les clients." })]),
+        el("button", { class: "btn btn-cta", html: CL.icon("upload", 18) + " Ajouter une photo", onclick: ajouter }),
+      ]),
+      grille,
+    ]);
+  };
+
   /* --------------------------- Composants ------------------------- */
+  /** Carte d'édition des photos de profil et de couverture. */
+  function blocPhotos(c) {
+    const carte = el("div", { class: "carte carte-corps mb-4" });
+    function rendre() {
+      const coach = coachService.obtenir(c.id);
+      CL.dom.vider(carte);
+      const couverture = el("div", { class: "profil-couverture", style: (coach.couverture
+        ? `background:url('${coach.couverture}') center/cover`
+        : `background:linear-gradient(120deg, ${coach.couleur}, #3b6fe6, var(--orange-cta))`) + ";height:150px;border-radius:var(--r-md)" });
+
+      const boutonsCouv = el("div", { class: "rangee gap-2", style: "position:absolute;top:12px;right:12px" }, [
+        el("button", { class: "btn btn-sm", style: "background:rgba(0,0,0,.55);color:#fff", html: CL.icon("appareil", 15) + " Couverture", onclick: () => changer("couverture", 1200, 0.72) }),
+        coach.couverture ? el("button", { class: "btn-icone", style: "background:rgba(0,0,0,.55);color:#fff", "aria-label": "Retirer la couverture", html: CL.icon("poubelle", 15), onclick: () => { coachService.majCouverture(c.id, null); CL.toast.info("Couverture retirée", ""); rendre(); } }) : null,
+      ]);
+
+      const avatar = ui.avatarCoach(coach, "avatar-lg");
+      avatar.style.border = "4px solid var(--surface)";
+      avatar.style.marginTop = "-56px";
+
+      carte.appendChild(el("div", { style: "position:relative" }, [couverture, boutonsCouv]));
+      carte.appendChild(el("div", { class: "rangee gap-4 rangee-wrap", style: "padding:0 4px" }, [
+        el("div", { style: "position:relative" }, [avatar]),
+        el("div", { style: "flex:1;min-width:200px" }, [
+          el("strong", { style: "font-size:var(--fs-lg)", text: coachService.nomComplet(coach) }),
+          el("p", { class: "texte-sm texte-doux", text: "Photo de profil et couverture visibles publiquement. JPG/PNG, redimensionnés automatiquement." }),
+          el("div", { class: "rangee gap-2 mt-2 rangee-wrap" }, [
+            el("button", { class: "btn btn-fantome btn-sm", html: CL.icon("appareil", 15) + " Changer la photo", onclick: () => changer("photo", 400, 0.82) }),
+            coach.photo ? el("button", { class: "btn btn-fantome btn-sm", html: CL.icon("poubelle", 15) + " Retirer la photo", onclick: () => { coachService.majPhoto(c.id, null); CL.toast.info("Photo retirée", ""); rendre(); CL.layout.rendreEntete(); } }) : null,
+          ]),
+        ]),
+      ]));
+    }
+    async function changer(champCible, maxDim, q) {
+      try {
+        const dataUrl = await CL.media.choisirImage(maxDim, q);
+        if (!dataUrl) return;
+        if (champCible === "photo") coachService.majPhoto(c.id, dataUrl);
+        else coachService.majCouverture(c.id, dataUrl);
+        CL.toast.succes("Image mise à jour 📸", "");
+        rendre();
+        CL.layout.rendreEntete();
+      } catch (e) { CL.toast.erreur("Image", e.message); }
+    }
+    rendre();
+    return carte;
+  }
+
   function graphiqueBarres() {
     const donnees = [8, 12, 10, 16, 14, 20];
     const mois = ["Fév", "Mar", "Avr", "Mai", "Jun", "Jui"];

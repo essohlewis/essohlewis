@@ -45,6 +45,7 @@ Vous pouvez aussi créer librement des comptes **client** ou **coach** depuis la
 - **CoachMatch** 🎯 — assistant de recommandation intelligent : un mini-questionnaire en 5 étapes, puis un **score de compatibilité (0-100)** par coach calculé sur des critères pondérés (spécialité, budget, localisation, langue, disponibilité, TrustScore), avec des **raisons explicites** (« Pourquoi ce coach ? »). Route `#/coachmatch`.
 - **Comparateur de coachs** ⚖️ — ajoutez jusqu'à 3 coachs (bouton sur chaque carte), une **barre flottante** apparaît, puis un **tableau comparatif** côte à côte (TrustScore, note, prix, communes, langues, badges…).
 - **Codes promo & parrainage** 🎁 — chaque utilisateur dispose d'un **code de parrainage personnel** partageable ; les codes promo (`BIENVENUE10`, `COACHLINK15`, `SPORT2026`) et de parrainage appliquent une **remise en temps réel** lors du paiement Mobile Money.
+- **Médias du coach** 📸 — le coach peut téléverser une **photo de profil** et une **photo de couverture**, gérer une **galerie de photos**, et publier sur son **mur** des posts avec **image (upload)** ou **vidéo (lien YouTube/Vimeo/direct)**. Les images sont redimensionnées côté client (canvas) et une **visionneuse plein écran (lightbox)** permet de les agrandir. Aucun fichier externe : tout fonctionne hors-ligne.
 
 ---
 

@@ -28,11 +28,11 @@
       return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
     },
 
-    /** Élément <img> avatar pour un coach. */
+    /** Élément <img> avatar pour un coach (photo réelle si disponible). */
     avatarCoach(coach, classe) {
       return el("img", {
         class: "avatar " + (classe || "avatar-md"),
-        src: ui.avatarURI(CL.coachService.nomComplet(coach), coach.couleur),
+        src: coach.photo || ui.avatarURI(CL.coachService.nomComplet(coach), coach.couleur),
         alt: "Photo de " + CL.coachService.nomComplet(coach),
         loading: "lazy",
       });
