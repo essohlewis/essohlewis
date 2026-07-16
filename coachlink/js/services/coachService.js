@@ -116,24 +116,26 @@
     },
 
     /* ----------------------------- Avis ------------------------------- */
-    ajouterAvis(coachId, avis) {
+    async ajouterAvis(coachId, avis) {
+      if (CL.API && CL.API.actif) {
+        try {
+          await CL.API.post("/coachs/" + coachId + "/avis", { note: avis.note, texte: avis.texte });
+          // Recharge le coach à jour (note recalculée côté serveur).
+          if (CL.hydrate) await CL.hydrate.coach(coachId);
+          return true;
+        } catch (e) { CL.toast && CL.toast.erreur("Avis refusé", e.message); return false; }
+      }
       const liste = tous();
       const c = liste.find((x) => x.id === coachId);
       if (!c) return false;
       c.avis = c.avis || [];
       c.avis.unshift({
-        id: CL.dom.uid("a"),
-        auteur: avis.auteur,
-        note: avis.note,
-        texte: avis.texte,
-        date: new Date().toISOString(),
-        reponse: null,
+        id: CL.dom.uid("a"), auteur: avis.auteur, note: avis.note, texte: avis.texte,
+        date: new Date().toISOString(), reponse: null,
       });
-      // Recalcule la note moyenne et le nombre d'avis.
       c.nbAvis = c.avis.length;
       c.note = Math.round((c.avis.reduce((s, a) => s + a.note, 0) / c.avis.length) * 10) / 10;
       sauver(liste);
-      // Notifie le coach du nouvel avis.
       if (c.proprietaire && CL.notifications) {
         CL.notifications.ajouter(c.proprietaire, {
           type: "avis",

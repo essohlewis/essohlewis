@@ -73,23 +73,31 @@
 
     obtenir(id) { return toutes().find((b) => b.id === id) || null; },
 
+    _api() { return CL.API && CL.API.actif; },
+
     /**
-     * Crée une demande de prestation (statut en_attente).
+     * Crée une demande de prestation (statut en_attente). Asynchrone.
      * donnees = { coachId, clientId, clientNom, tarifId, tarifNom, prix,
-     *             jour, heure, message }
+     *             duree, jour, heure, message }
      */
-    creer(donnees) {
+    async creer(donnees) {
+      if (bookingService._api()) {
+        const brut = await CL.API.reserver({
+          coachId: donnees.coachId, tarifId: donnees.tarifId, tarifNom: donnees.tarifNom,
+          prix: donnees.prix, duree: donnees.duree, jour: donnees.jour, heure: donnees.heure,
+          message: donnees.message || "",
+        });
+        const resa = CL.API.mapReservation(brut);
+        const liste = toutes(); liste.unshift(resa); sauver(liste); // reflète localement (le serveur notifie le coach)
+        return resa;
+      }
       const liste = toutes();
       const resa = Object.assign({
-        id: CL.dom.uid("resa"),
-        statut: "en_attente",
-        paiement: null,
+        id: CL.dom.uid("resa"), statut: "en_attente", paiement: null,
         creeLe: new Date().toISOString(),
       }, donnees);
       liste.push(resa);
       sauver(liste);
-
-      // Notifie le coach.
       const coach = CL.coachService.obtenir(donnees.coachId);
       if (coach && coach.proprietaire) {
         CL.notifications.ajouter(coach.proprietaire, {
@@ -101,15 +109,32 @@
       return resa;
     },
 
-    /** Enregistre le paiement Mobile Money simulé. */
-    payer(resaId, paiement) {
-      const liste = toutes();
-      const r = liste.find((b) => b.id === resaId);
-      if (!r) return { ok: false, message: "Réservation introuvable." };
-      // Simulation : le code de confirmation doit faire 4 chiffres.
+    /** Enregistre le paiement Mobile Money (asynchrone). */
+    async payer(resaId, paiement) {
+      // Validation commune du code de confirmation.
       if (!/^\d{4}$/.test(String(paiement.code || ""))) {
         return { ok: false, message: "Code de confirmation invalide (4 chiffres attendus)." };
       }
+      if (bookingService._api()) {
+        try {
+          const brut = await CL.API.payer(resaId, {
+            operateur: paiement.operateur, numero: paiement.numero, code: paiement.code,
+            promoTaux: paiement.promo ? paiement.promo.taux : null,
+            promoCode: paiement.promo ? paiement.promo.code : null,
+          });
+          const resa = CL.API.mapReservation(brut);
+          const liste = toutes();
+          const i = liste.findIndex((b) => String(b.id) === String(resaId));
+          if (i >= 0) liste[i] = resa; else liste.unshift(resa);
+          sauver(liste);
+          return { ok: true, reservation: resa };
+        } catch (e) {
+          return { ok: false, message: e.message || "Paiement refusé." };
+        }
+      }
+      const liste = toutes();
+      const r = liste.find((b) => b.id === resaId);
+      if (!r) return { ok: false, message: "Réservation introuvable." };
       // Application éventuelle d'un code promo / parrainage.
       let remise = 0, promo = null;
       if (paiement.promo && paiement.promo.taux) {

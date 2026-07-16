@@ -109,26 +109,37 @@ curl "http://127.0.0.1:8000/coachs?specialite=sport&tri=note"
 ## 4. Brancher le front-end sur l'API
 
 Le front a été conçu pour ça : toute la donnée passe par la couche
-`js/services/`. Un client prêt à l'emploi est fourni : **`js/services/apiService.js`**.
+`js/services/`. Le pont **`js/services/apiService.js`** est déjà inclus.
 
-Étapes :
-1. Incluez `apiService.js` dans `index.html` (avant les pages).
-2. Dans `apiService.js`, réglez `CL.API.base` (URL de l'API) et `CL.API.actif = true`.
-3. Dans chaque service front, remplacez les accès `localStorage` par des appels
-   `CL.API.*`. Le format des objets renvoyés est identique → **les pages ne
-   changent pas**. Exemple pour l'authentification :
-
+### Activation (une ligne, sans modifier le code)
+Ouvrez la console du navigateur sur l'app et faites :
 ```js
-// authService.connecter() — version API
-async connecter(email, motDePasse) {
-  const res = await CL.API.connecter({ email, motDePasse });
-  CL.API.definirToken(res.token);   // stocke le JWT
-  return { ok: true, user: res.user };
-}
+localStorage.cl_api_base = "http://127.0.0.1:8000"; // URL de votre API
+location.reload();
 ```
+L'app bascule alors sur le backend. Pour revenir hors-ligne :
+`delete localStorage.cl_api_base; location.reload();`.
 
-Tant que `CL.API.actif` reste `false`, l'application continue de fonctionner
-100 % hors-ligne (localStorage) — la bascule se fait service par service.
+### Ce qui est déjà branché (slice 1 — testé)
+- **Authentification** : inscription / connexion / déconnexion via l'API,
+  **JWT** stocké et envoyé automatiquement, `courant()` reste synchrone.
+- **Catalogue coachs** : au démarrage, le catalogue est **hydraté** depuis
+  `GET /coachs` dans le store local → home, recherche et profils affichent
+  les données réelles **sans réécriture des pages**.
+- **Réservations** : création + **paiement Mobile Money** (avec promo) via
+  l'API ; la liste des réservations client reflète le serveur.
+- **Avis** : publication via l'API (note recalculée côté serveur).
+
+Le mécanisme : **hydratation** (l'API remplit le store local au démarrage /
+à la connexion) pour les lectures synchrones, et **appels API asynchrones**
+dans les gestionnaires d'événements pour les écritures. Tant que
+`cl_api_base` n'est pas défini, l'app fonctionne 100 % hors-ligne.
+
+### Slices suivantes (à brancher de la même façon)
+Espace coach (gestion fiche/tarifs/dispo/galerie/posts via les endpoints
+`/coachs/moi/*`), messagerie (`/conversations`), notifications
+(`/notifications`), favoris (`/favoris`), admin (`/admin/*`), uploads
+(`/uploads`) — tous les endpoints existent déjà.
 
 ---
 

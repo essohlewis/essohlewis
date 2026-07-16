@@ -118,8 +118,9 @@
   function coachDeLutilisateur() {
     const u = CL.auth.courant();
     if (!u) return null;
-    if (u.coachId) return CL.coachService.obtenir(u.coachId);
-    return CL.coachService.lister().find((c) => c.proprietaire === u.id) || null;
+    const cid = u.coachId || (CL.auth.coachIdCourant && CL.auth.coachIdCourant());
+    if (cid) return CL.coachService.obtenir(cid);
+    return CL.coachService.lister().find((c) => String(c.proprietaire) === String(u.id)) || null;
   }
   CL.coachCourant = coachDeLutilisateur;
 
@@ -249,12 +250,30 @@
 
     installerRetourHaut();
     CL.compareBar && CL.compareBar.installer();
-    rendre();
+
+    // Mode API : on hydrate le store local depuis le backend avant le 1er rendu.
+    if (CL.API && CL.API.actif) {
+      demarrerAvecApi();
+    } else {
+      rendre();
+    }
 
     // Enregistrement du service worker (PWA) — ignoré en file://.
     if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
       navigator.serviceWorker.register("service-worker.js").catch(() => {});
     }
+  }
+
+  /** Amorçage en mode backend : charge le catalogue (+ données utilisateur). */
+  async function demarrerAvecApi() {
+    try {
+      await CL.hydrate.catalogue();
+      if (CL.auth.estConnecte()) await CL.hydrate.donneesUtilisateur();
+    } catch (e) {
+      console.warn("API injoignable — bascule hors-ligne.", e);
+      CL.toast && CL.toast.erreur("Backend injoignable", "Affichage des données de démonstration.");
+    }
+    rendre();
   }
 
   /* Bouton flottant « retour en haut » (apparaît après défilement). */

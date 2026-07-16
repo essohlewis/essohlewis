@@ -37,13 +37,14 @@
       ]),
     ]);
 
-    function soumettre() {
+    async function soumettre() {
       const email = form.querySelector('[name="email"]').value.trim();
       const mdp = form.querySelector('[name="motDePasse"]').value;
       if (!validation.email(email)) return CL.toast.erreur("Email invalide", "Vérifiez votre adresse.");
       if (!mdp) return CL.toast.erreur("Champ requis", "Saisissez votre mot de passe.");
-      const res = auth.connecter(email, mdp);
+      const res = await auth.connecter(email, mdp);
       if (!res.ok) return CL.toast.erreur("Échec", res.message);
+      if (CL.hydrate && CL.API && CL.API.actif) await CL.hydrate.donneesUtilisateur();
       CL.toast.succes("Connecté", "Bienvenue " + res.user.prenom + " !");
       redirigerSelonRole(res.user);
     }
@@ -145,7 +146,7 @@
       CL.toast.succes("Profil importé", "Vérifiez et complétez vos informations.");
     }
 
-    function soumettre() {
+    async function soumettre() {
       const val = (n) => { const e = zone.querySelector(`[name="${n}"]`); return e ? e.value.trim() : ""; };
       const donnees = {
         role: etat.role,
@@ -172,8 +173,9 @@
         donnees.bio = etat.donnees.bio || "";
         donnees.langues = etat.donnees.langues || ["Français"];
       }
-      const res = auth.inscrire(donnees);
+      const res = await auth.inscrire(donnees);
       if (!res.ok) return CL.toast.erreur("Échec", res.message);
+      if (CL.hydrate && CL.API && CL.API.actif) await CL.hydrate.donneesUtilisateur();
       CL.toast.succes("Compte créé 🎉", "Bienvenue sur CoachLink CI !");
       redirigerSelonRole(res.user);
     }
@@ -218,8 +220,9 @@
     return el("div", { class: "grille grille-2" }, [fb, li]);
   }
 
-  function connSociale(reseau) {
-    const res = auth.connexionSociale(reseau);
+  async function connSociale(reseau) {
+    const res = await auth.connexionSociale(reseau);
+    if (!res.ok) return CL.toast.info("Indisponible", res.message);
     CL.toast.succes("Connexion " + reseau, "Bienvenue " + res.user.prenom + " !");
     redirigerSelonRole(res.user);
   }

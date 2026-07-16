@@ -376,16 +376,22 @@
       contenu,
       pied: [
         el("button", { class: "btn btn-fantome", text: "Annuler", onclick: CL.modal.fermer }),
-        el("button", { class: "btn btn-cta", html: CL.icon("portefeuille", 18) + " Continuer vers le paiement", onclick: () => {
+        el("button", { class: "btn btn-cta", html: CL.icon("portefeuille", 18) + " Continuer vers le paiement", onclick: async (e) => {
           if (!choix.jour || !choix.heure) return CL.toast.erreur("Créneau manquant", "Choisissez un créneau libre.");
           const t = tarif();
-          const resa = bookingService.creer({
-            coachId: coach.id, clientId: u.id, clientNom: u.prenom + " " + u.nom,
-            tarifId: t.id, tarifNom: t.nom, prix: t.prix, duree: t.duree,
-            jour: choix.jour, heure: choix.heure, message: message.value.trim(),
-          });
-          CL.modal.fermer();
-          ouvrirPaiement(coach, resa);
+          const btn = e.currentTarget; btn.disabled = true;
+          try {
+            const resa = await bookingService.creer({
+              coachId: coach.id, clientId: u.id, clientNom: u.prenom + " " + u.nom,
+              tarifId: t.id, tarifNom: t.nom, prix: t.prix, duree: t.duree,
+              jour: choix.jour, heure: choix.heure, message: message.value.trim(),
+            });
+            CL.modal.fermer();
+            ouvrirPaiement(coach, resa);
+          } catch (err) {
+            btn.disabled = false;
+            CL.toast.erreur("Erreur", err.message || "Réservation impossible.");
+          }
         } }),
       ],
     });
@@ -465,11 +471,12 @@
     ]);
     majRecapPaiement();
 
-    btnPayer.addEventListener("click", () => {
+    btnPayer.addEventListener("click", async (e) => {
       const op = bookingService.OPERATEURS.find((o) => o.id === operateur);
       if (op.prefixe && !CL.validation.telephoneCI(numero.value)) return CL.toast.erreur("Numéro invalide", "Format CI attendu (07/05/01).");
-      const res = bookingService.payer(resa.id, { operateur: op.nom, numero: numero.value.trim(), code: code.value.trim(), promo: promoActif });
-      if (!res.ok) return CL.toast.erreur("Paiement refusé", res.message);
+      e.currentTarget.disabled = true;
+      const res = await bookingService.payer(resa.id, { operateur: op.nom, numero: numero.value.trim(), code: code.value.trim(), promo: promoActif });
+      if (!res.ok) { e.currentTarget.disabled = false; return CL.toast.erreur("Paiement refusé", res.message); }
       CL.modal.fermer();
       const eco = res.reservation.paiement.remise ? " (économie : " + format.fcfa(res.reservation.paiement.remise) + ")" : "";
       CL.toast.succes("Paiement réussi 🎉", "Réf : " + res.reservation.paiement.reference + eco);
@@ -498,10 +505,12 @@
       ]),
       pied: [
         el("button", { class: "btn btn-fantome", text: "Annuler", onclick: CL.modal.fermer }),
-        el("button", { class: "btn btn-cta", text: "Publier l'avis", onclick: () => {
+        el("button", { class: "btn btn-cta", text: "Publier l'avis", onclick: async (e) => {
           if (!texte.value.trim()) return CL.toast.erreur("Commentaire requis", "Écrivez quelques mots.");
           const u = auth.courant();
-          coachService.ajouterAvis(coach.id, { auteur: u.prenom + " " + u.nom, note: saisie.valeur(), texte: texte.value.trim() });
+          e.currentTarget.disabled = true;
+          const ok = await coachService.ajouterAvis(coach.id, { auteur: u.prenom + " " + u.nom, note: saisie.valeur(), texte: texte.value.trim() });
+          if (!ok) { e.currentTarget.disabled = false; return; }
           if (resa) bookingService.marquerAvisLaisse(resa.id);
           CL.modal.fermer();
           CL.toast.succes("Merci !", "Votre avis a été publié.");

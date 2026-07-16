@@ -29,52 +29,75 @@
       return "PARRAIN-" + suffixe;
     },
 
-    /** Utilisateur connecté (ou null) */
+    /** Utilisateur connecté (ou null). Toujours synchrone. */
     courant() {
       const session = storage.lire(storage.CLES.session);
       if (!session || !session.userId) return null;
+      if (session.user) return session.user; // mode API : utilisateur persisté dans la session
       return utilisateurs().find((u) => u.id === session.userId) || null;
     },
 
     estConnecte() { return !!auth.courant(); },
     estRole(role) { const u = auth.courant(); return u && u.role === role; },
 
+    /** True si le backend API est activé. */
+    _api() { return CL.API && CL.API.actif; },
+
     /**
-     * Inscription. donnees = { role, prenom, nom, email, telephone, motDePasse, ... }
-     * Si role === "coach", crée aussi une fiche coach liée.
+     * Inscription (asynchrone). donnees = { role, prenom, nom, email, telephone,
+     * motDePasse, titre, specialites, commune, categorie }.
+     * Renvoie une Promise<{ ok, user, message?, erreurs? }>.
      */
-    inscrire(donnees) {
+    async inscrire(donnees) {
+      if (auth._api()) {
+        try {
+          const res = await CL.API.inscrire({
+            role: donnees.role || "client",
+            prenom: donnees.prenom, nom: donnees.nom, email: donnees.email,
+            telephone: donnees.telephone || "", motDePasse: donnees.motDePasse,
+            titre: donnees.titre, commune: donnees.commune, categorie: donnees.categorie,
+            specialite: (donnees.specialites || [])[0] || null,
+          });
+          auth._ouvrirSession(res.user.id, { token: res.token, user: res.user, coachId: res.user.coachId || null });
+          return { ok: true, user: res.user };
+        } catch (e) {
+          return { ok: false, message: e.message || "Inscription impossible.", erreurs: e.erreurs || {} };
+        }
+      }
+      // --- Mode hors-ligne (localStorage) ---
       const liste = utilisateurs();
       if (liste.some((u) => u.email.toLowerCase() === donnees.email.toLowerCase())) {
         return { ok: false, message: "Un compte existe déjà avec cet email." };
       }
       const id = CL.dom.uid("u");
       const user = {
-        id,
-        role: donnees.role || "client",
-        prenom: donnees.prenom,
-        nom: donnees.nom,
-        email: donnees.email,
-        telephone: donnees.telephone || "",
-        motDePasse: pseudoHash(donnees.motDePasse || ""),
-        source: donnees.source || "email",
+        id, role: donnees.role || "client", prenom: donnees.prenom, nom: donnees.nom,
+        email: donnees.email, telephone: donnees.telephone || "",
+        motDePasse: pseudoHash(donnees.motDePasse || ""), source: donnees.source || "email",
         creeLe: new Date().toISOString(),
       };
       liste.push(user);
       sauverUtilisateurs(liste);
-
-      // Création d'une fiche coach minimale si rôle coach.
       if (user.role === "coach" && CL.coachService) {
         user.coachId = CL.coachService.creerDepuisInscription(user, donnees);
         sauverUtilisateurs(utilisateurs().map((u) => (u.id === id ? user : u)));
       }
-
       auth._ouvrirSession(id);
       return { ok: true, user };
     },
 
-    /** Connexion par email + mot de passe. */
-    connecter(email, motDePasse) {
+    /** Connexion (asynchrone). Renvoie Promise<{ ok, user, message? }>. */
+    async connecter(email, motDePasse) {
+      if (auth._api()) {
+        try {
+          const res = await CL.API.connecter({ email, motDePasse });
+          auth._ouvrirSession(res.user.id, { token: res.token, user: res.user, coachId: res.user.coachId || null });
+          return { ok: true, user: res.user };
+        } catch (e) {
+          return { ok: false, message: e.message || "Connexion impossible." };
+        }
+      }
+      // --- Mode hors-ligne ---
       const user = utilisateurs().find((u) => u.email.toLowerCase() === String(email).toLowerCase());
       if (!user) return { ok: false, message: "Aucun compte trouvé avec cet email." };
       if (user.motDePasse !== pseudoHash(motDePasse)) {
@@ -84,18 +107,19 @@
       return { ok: true, user };
     },
 
-    /** Connexion sociale simulée (Facebook / LinkedIn). */
-    connexionSociale(reseau) {
+    /** Connexion sociale simulée (Facebook / LinkedIn), hors-ligne uniquement. */
+    async connexionSociale(reseau) {
+      if (auth._api()) {
+        return { ok: false, message: "Connexion sociale bientôt disponible côté serveur." };
+      }
       const email = `demo.${reseau}@coachlink.ci`;
       let user = utilisateurs().find((u) => u.email === email);
       if (!user) {
-        const res = auth.inscrire({
+        const res = await auth.inscrire({
           role: "client",
           prenom: reseau === "linkedin" ? "Profil" : "Ami",
           nom: reseau === "linkedin" ? "LinkedIn" : "Facebook",
-          email,
-          motDePasse: "social-" + reseau,
-          source: reseau,
+          email, motDePasse: "social-" + reseau, source: reseau,
         });
         user = res.user;
       } else {
@@ -115,16 +139,33 @@
       };
     },
 
-    deconnecter() { storage.supprimer(storage.CLES.session); },
+    deconnecter() {
+      storage.supprimer(storage.CLES.session);
+      if (CL.API) CL.API.definirToken(null);
+    },
 
-    _ouvrirSession(userId) {
-      // Token simulé — remplacé par un JWT renvoyé par l'API plus tard.
-      const token = "tok_" + btoa(userId + ":" + Date.now()).replace(/=/g, "");
-      storage.ecrire(storage.CLES.session, { userId, token, depuis: Date.now() });
+    /** Coach lié à l'utilisateur courant (id de fiche coach), si connu. */
+    coachIdCourant() {
+      const session = storage.lire(storage.CLES.session);
+      return (session && session.coachId) || null;
+    },
+
+    _ouvrirSession(userId, extra) {
+      extra = extra || {};
+      // JWT réel (mode API) ou token simulé (hors-ligne).
+      const token = extra.token || ("tok_" + btoa(userId + ":" + Date.now()).replace(/=/g, ""));
+      storage.ecrire(storage.CLES.session, Object.assign({ userId, token, depuis: Date.now() }, extra, { token }));
+      if (CL.API && extra.token) CL.API.definirToken(extra.token);
     },
 
     /** Met à jour le profil de l'utilisateur courant. */
     majUtilisateur(patch) {
+      const session = storage.lire(storage.CLES.session);
+      if (session && session.user) {
+        session.user = Object.assign({}, session.user, patch);
+        storage.ecrire(storage.CLES.session, session);
+        return session.user;
+      }
       const u = auth.courant();
       if (!u) return null;
       const liste = utilisateurs().map((x) => (x.id === u.id ? Object.assign({}, x, patch) : x));
