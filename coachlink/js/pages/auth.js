@@ -184,6 +184,38 @@
     return pageAuth("Commencez votre aventure dès aujourd'hui", ["Inscription gratuite en 2 minutes", "Pour les clients comme les coachs", "Vos données restent privées", "Support en français, tarifs en FCFA"], zone);
   };
 
+  /* ===================== RÉINITIALISATION (lien email) ============== */
+  CL.pages.reinitialiser = function (params) {
+    const token = (params && params.token) || "";
+    const npw = champInput("motDePasse", "password", "Nouveau mot de passe (6 caractères min.)", "cadenas");
+    const confirmer = champInput("motDePasse2", "password", "Confirmez le mot de passe", "cadenas");
+
+    const form = el("div", { class: "auth-carte" }, [
+      el("h2", { class: "mb-2", text: "Nouveau mot de passe 🔒" }),
+      el("p", { class: "mb-5", text: token ? "Choisissez un nouveau mot de passe pour votre compte." : "Lien invalide : aucun jeton fourni." }),
+    ]);
+    if (token) {
+      form.appendChild(champ("Nouveau mot de passe", npw));
+      form.appendChild(champ("Confirmation", confirmer));
+      const btn = el("button", { class: "btn btn-primaire btn-bloc btn-lg mt-2", text: "Réinitialiser mon mot de passe" });
+      btn.addEventListener("click", async () => {
+        const p1 = form.querySelector('[name="motDePasse"]').value;
+        const p2 = form.querySelector('[name="motDePasse2"]').value;
+        if (p1.length < 6) return CL.toast.erreur("Trop court", "6 caractères minimum.");
+        if (p1 !== p2) return CL.toast.erreur("Non concordant", "Les deux mots de passe diffèrent.");
+        btn.disabled = true;
+        const res = await auth.reinitialiser(token, p1);
+        btn.disabled = false;
+        if (!res.ok) return CL.toast.erreur("Échec", res.message);
+        CL.toast.succes("Mot de passe modifié 🎉", "Connectez-vous avec votre nouveau mot de passe.");
+        location.hash = "#/connexion";
+      });
+      form.appendChild(btn);
+    }
+    form.appendChild(el("p", { class: "texte-centre mt-5 texte-sm" }, [el("a", { href: "#/connexion", class: "gras", text: "Retour à la connexion" })]));
+    return pageAuth("Réinitialisez votre accès en toute sécurité", ["Lien valable 1 heure", "Chiffrement des mots de passe", "Votre compte reste protégé"], form);
+  };
+
   /* ---------------------------- Helpers UI -------------------------- */
   function pageAuth(titre, points, formulaire) {
     return el("div", { class: "auth-page" }, [

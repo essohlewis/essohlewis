@@ -22,6 +22,7 @@
     { motif: /^\/coach\/([\w-]+)$/, page: "profilCoach", shell: "public", param: "coachId" },
     { motif: /^\/connexion$/, page: "connexion", shell: "nu" },
     { motif: /^\/inscription$/, page: "inscription", shell: "nu" },
+    { motif: /^\/reinitialiser$/, page: "reinitialiser", shell: "nu" },
 
     { motif: /^\/client$/, page: "clientAccueil", shell: "dash", role: "client" },
     { motif: /^\/client\/reservations$/, page: "clientReservations", shell: "dash", role: "client" },

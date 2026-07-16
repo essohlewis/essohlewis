@@ -74,17 +74,32 @@ class AuthController
         // Réponse volontairement générique (ne révèle pas si le compte existe).
         $reponse = ['message' => "Si un compte existe pour cet email, un lien de réinitialisation vient d'être envoyé."];
 
-        if ($email && (new User())->parEmail($email)) {
+        $user = $email ? (new User())->parEmail($email) : null;
+        if ($user) {
             $token = bin2hex(random_bytes(24));
             $pdo = Database::connexion();
             $pdo->prepare("DELETE FROM resets WHERE email = ?")->execute([$email]);
             $pdo->prepare("INSERT INTO resets (email, token, expire_le) VALUES (?, ?, ?)")
                 ->execute([$email, $token, date('c', time() + 3600)]);
-            // DÉMO : aucun service d'email n'est branché. On renvoie le jeton pour
-            // permettre le test. EN PRODUCTION : envoyez-le par email et ne le
-            // renvoyez PAS dans la réponse.
-            $reponse['token'] = $token;
-            $reponse['simulation'] = true;
+
+            // Envoi de l'email de réinitialisation (mode 'log' en démo, SMTP réel
+            // en production — voir config mail).
+            $lien  = MailService::lienFront('#/reinitialiser?token=' . $token);
+            $corps = '<p>Bonjour ' . htmlspecialchars($user['prenom']) . ',</p>'
+                . '<p>Vous avez demandé la réinitialisation de votre mot de passe. Ce lien est valable 1 heure :</p>'
+                . '<p><a href="' . htmlspecialchars($lien) . '" style="display:inline-block;background:#f97316;color:#fff;'
+                . 'padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold">Réinitialiser mon mot de passe</a></p>'
+                . '<p style="color:#64748b;font-size:13px;word-break:break-all">Ou copiez ce lien : ' . htmlspecialchars($lien) . '</p>';
+            MailService::envoyer($email, 'Réinitialisation de votre mot de passe',
+                MailService::gabarit('Réinitialisation du mot de passe', $corps));
+
+            // DÉMO (mode 'log', pas de SMTP) : on renvoie le jeton pour permettre
+            // le test sans boîte mail. EN PRODUCTION (SMTP) : le jeton n'est PAS
+            // renvoyé — l'utilisateur suit le lien reçu par email.
+            if (!MailService::estReel()) {
+                $reponse['token'] = $token;
+                $reponse['simulation'] = true;
+            }
         }
         Response::ok($reponse);
     }

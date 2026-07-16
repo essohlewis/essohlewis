@@ -229,9 +229,21 @@ Tant que `cl_api_base` n'est pas défini, l'app fonctionne 100 % hors-ligne.
 - `core/HttpClient.php` : petit client cURL (sans dépendance) pour les appels
   opérateurs. **Aucun secret dans le dépôt** (tout est dans `config.php`).
 
+**Slice 8 — envoi d'email réel (réinitialisation de mot de passe)**
+- Abstraction `MailTransport` + `MailService` (même patron que le paiement).
+  **`MailLog` par défaut** : aucun email n'est envoyé, ils sont écrits dans
+  `cache_dir/mails/*.eml` (démo/test). **`MailSmtp`** : client SMTP réel en
+  **sockets bruts** (STARTTLS/SSL + AUTH LOGIN), compatible Gmail / SendGrid /
+  Mailgun / OVH… Activez avec `mail.mode = 'smtp'` + identifiants dans `config.php`.
+- `POST /auth/mot-de-passe/oubli` **envoie l'email** de réinitialisation
+  (lien `#/reinitialiser?token=…`, valable 1 h). En mode démo (log) le jeton est
+  aussi renvoyé pour tester sans boîte mail ; en mode SMTP il ne l'est pas.
+- Front : page **`#/reinitialiser`** (ouverte depuis le lien email) → nouveau
+  mot de passe → `POST /auth/mot-de-passe/reset`.
+
 ### Reste (améliorations, non bloquantes)
-**Envoi d'email réel** (réinitialisation), MTN/Moov (mêmes patrons), OAuth
-social, HTTPS/prod, notifications push (WebSocket/SSE pour remplacer le polling).
+MTN/Moov (mêmes patrons de passerelle), OAuth social, HTTPS/prod, notifications
+push (WebSocket/SSE pour remplacer le polling).
 
 ---
 
@@ -248,7 +260,8 @@ api/
 │   └── config.php        # (ignoré par git — secrets)
 ├── core/                 # App, Router, Request, Response, Database (PDO),
 │                         #   Jwt, Auth, Validator, RateLimiter, Pagination,
-│                         #   HttpClient, PaiementGateway/Service/Simulateur/…
+│                         #   HttpClient, PaiementGateway/Service/Simulateur/…,
+│                         #   MailTransport/Service/Log/Smtp
 ├── models/               # Model (CRUD PDO) + User, Coach, Reservation,
 │                         #   Review, Message, Notification
 ├── controllers/          # Auth, Coach, Reservation, Review, Notification,
@@ -306,5 +319,6 @@ sur tout le PHP, `composer install` + **PHPUnit** (PHP 8.2 et 8.4), et
 - ✅ Tests automatisés (PHPUnit) + intégration continue — **fait**.
 - ✅ Messagerie temps réel (polling front) — **fait**.
 - ✅ Paiement Mobile Money (architecture passerelle + Orange/Wave + webhook) — **fait**.
+- ✅ Envoi d'email réel (transport SMTP + flux réinitialisation par lien) — **fait**.
 - Rafraîchissement de token / révocation ; journalisation structurée.
-- Envoi d'email réel (réinitialisation), MTN/Moov, OAuth, push WebSocket/SSE.
+- MTN/Moov, OAuth social, push WebSocket/SSE, HTTPS/prod.

@@ -71,4 +71,23 @@ return [
         'mtn'  => ['actif' => false],  // à implémenter (même patron)
         'moov' => ['actif' => false],  // à implémenter (même patron)
     ],
+
+    // --- Email ------------------------------------------------------------
+    // 'mode' : 'log' (démo — les emails sont écrits dans cache_dir/mails, rien
+    // n'est envoyé) ou 'smtp' (envoi réel via le serveur configuré ci-dessous).
+    'mail' => [
+        'mode'     => 'log',
+        'from'     => 'no-reply@coachlink.ci',
+        'from_nom' => 'CoachLink CI',
+        // URL publique du front, pour construire les liens des emails
+        // (ex : 'https://coachlink.ci'). Laissez vide en développement.
+        'app_url'  => '',
+        'smtp' => [
+            'host'        => '',      // ex : smtp.gmail.com, smtp.sendgrid.net…
+            'port'        => 587,
+            'chiffrement' => 'tls',   // 'tls' | 'ssl' | ''
+            'user'        => '',
+            'password'    => '',
+        ],
+    ],
 ];
