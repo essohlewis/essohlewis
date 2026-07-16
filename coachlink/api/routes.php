@@ -15,9 +15,26 @@ $router->get('/auth/me',        [AuthController::class, 'me']);
 $router->get('/coachs',          [CoachController::class, 'index']);
 $router->get('/coachs/moi',      [CoachController::class, 'moi']);
 $router->patch('/coachs/moi',    [CoachController::class, 'majMoi']);
+// Gestion par le coach connecté (avant /coachs/:id pour éviter les collisions).
+$router->post('/coachs/moi/tarifs',           [CoachController::class, 'ajouterTarif']);
+$router->delete('/tarifs/:id',                [CoachController::class, 'supprimerTarif']);
+$router->put('/coachs/moi/disponibilites',    [CoachController::class, 'majDisponibilites']);
+$router->post('/coachs/moi/diplomes',         [CoachController::class, 'ajouterDiplome']);
+$router->post('/coachs/moi/galerie',          [CoachController::class, 'ajouterMedia']);
+$router->delete('/galerie/:id',               [CoachController::class, 'supprimerMedia']);
+$router->post('/coachs/moi/posts',            [CoachController::class, 'ajouterPost']);
+$router->delete('/posts/:id',                 [CoachController::class, 'supprimerPost']);
+
 $router->get('/coachs/:id',      [CoachController::class, 'show']);
 $router->post('/coachs/:id/avis', [ReviewController::class, 'ajouter']);
 $router->patch('/avis/:id/reponse', [ReviewController::class, 'repondre']);
+
+// Favoris (client)
+$router->get('/favoris',  [FavoriteController::class, 'index']);
+$router->post('/favoris', [FavoriteController::class, 'basculer']);
+
+// Téléversement de fichiers
+$router->post('/uploads', [UploadController::class, 'televerser']);
 
 // --- Réservations --------------------------------------------------------
 $router->post('/reservations',            [ReservationController::class, 'creer']);

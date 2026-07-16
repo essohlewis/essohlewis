@@ -63,9 +63,20 @@ Les routes protégées attendent un en-tête `Authorization: Bearer <token>`.
 | GET  | `/coachs` | – | Liste + filtres `?texte=&specialite=&commune=&langue=&noteMin=&prixMax=&tri=` |
 | GET  | `/coachs/:id` | – | Profil coach complet (tarifs, avis, galerie, TrustScore…) |
 | GET  | `/coachs/moi` | coach | Ma fiche coach |
-| PATCH| `/coachs/moi` | coach | Modifier ma fiche (titre, bio, commune, photo, couverture) |
+| PATCH| `/coachs/moi` | coach | Modifier ma fiche (titre, bio, commune, spécialités, photo, couverture) |
+| POST | `/coachs/moi/tarifs` | coach | Ajouter un tarif |
+| DELETE | `/tarifs/:id` | coach | Supprimer un tarif |
+| PUT  | `/coachs/moi/disponibilites` | coach | Remplacer la grille de disponibilités |
+| POST | `/coachs/moi/diplomes` | coach | Soumettre un diplôme (→ en_attente) |
+| POST | `/coachs/moi/galerie` | coach | Ajouter une photo à la galerie |
+| DELETE | `/galerie/:id` | coach | Retirer une photo |
+| POST | `/coachs/moi/posts` | coach | Publier sur le mur (texte/image/vidéo) |
+| DELETE | `/posts/:id` | coach | Supprimer une publication |
 | POST | `/coachs/:id/avis` | client | Laisser un avis (recalcule la note) |
 | PATCH| `/avis/:id/reponse` | coach | Répondre à un avis |
+| GET  | `/favoris` | connecté | Mes coachs favoris |
+| POST | `/favoris` | connecté | Basculer un favori `{ coachId }` |
+| POST | `/uploads` | connecté | Téléverser un fichier (multipart, champ `fichier`) → `{ url }` |
 | POST | `/reservations` | client | Créer une réservation |
 | GET  | `/reservations/mes` | connecté | Mes réservations (client) |
 | GET  | `/reservations/coach` | coach | Demandes reçues |
@@ -153,8 +164,14 @@ api/
 - CORS configurable ; en production, restreignez `cors_origins` à votre domaine.
 - Pensez à servir l'API en **HTTPS** et à changer `jwt_secret` + le mot de passe admin.
 
+> **Note uploads (dev vs prod)** : `uploads_url` vaut `/api/uploads` (Apache,
+> racine web au-dessus de `api/`). Avec le serveur PHP intégré (racine = `api/`),
+> les fichiers sont servis sur `/uploads/...` — réglez `uploads_url` en
+> conséquence dans `config.php` pour le développement.
+
 ## 7. Prochaines étapes possibles
-- Upload réel de fichiers (photos, diplômes) via `multipart/form-data`.
-- Rafraîchissement de token / révocation.
+- ✅ Upload réel de fichiers (photos, diplômes) via `multipart/form-data` — **fait**.
+- Rafraîchissement de token / révocation ; limitation de débit (rate limiting).
 - Pagination des listes, cache, journalisation.
 - Tests automatisés (PHPUnit) et intégration continue.
+- Bascule complète du front sur l'API (service par service, cf. §4).

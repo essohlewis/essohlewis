@@ -55,6 +55,93 @@ class CoachController
         if ($champs) {
             $model->maj($coach['id'], $champs);
         }
+        if (isset($d['specialites']) && is_array($d['specialites'])) {
+            $model->majSpecialites($coach['id'], $d['specialites']);
+        }
         Response::ok($model->complet($coach['id']));
+    }
+
+    /* ---------------- Gestion par le coach connecté ------------------ */
+
+    private function monCoach(): array
+    {
+        $user = Auth::exigerRole('coach');
+        $coach = (new Coach())->parProprietaire((int) $user['id']);
+        if (!$coach) {
+            Response::erreur('Fiche coach introuvable.', 404);
+        }
+        return $coach;
+    }
+
+    /** POST /coachs/moi/tarifs */
+    public function ajouterTarif(array $params): void
+    {
+        $coach = $this->monCoach();
+        (new Validator(Request::corps()))->requis('nom')->requis('prix')->ouEchouer();
+        (new Coach())->ajouterTarif($coach['id'], Request::corps());
+        Response::ok((new Coach())->complet($coach['id']), 201);
+    }
+
+    /** DELETE /tarifs/:id */
+    public function supprimerTarif(array $params): void
+    {
+        $coach = $this->monCoach();
+        (new Coach())->supprimerTarif($coach['id'], $params['id']);
+        Response::ok(true);
+    }
+
+    /** PUT /coachs/moi/disponibilites  { dispo: {Lun:[..], ..} } */
+    public function majDisponibilites(array $params): void
+    {
+        $coach = $this->monCoach();
+        $dispo = Request::champ('dispo', []);
+        (new Coach())->majDisponibilites($coach['id'], is_array($dispo) ? $dispo : []);
+        Response::ok((new Coach())->complet($coach['id']));
+    }
+
+    /** POST /coachs/moi/diplomes */
+    public function ajouterDiplome(array $params): void
+    {
+        $coach = $this->monCoach();
+        (new Validator(Request::corps()))->requis('titre')->requis('ecole')->ouEchouer();
+        (new Coach())->ajouterDiplome($coach['id'], Request::corps());
+        Response::ok((new Coach())->complet($coach['id']), 201);
+    }
+
+    /** POST /coachs/moi/galerie  { image, legende } */
+    public function ajouterMedia(array $params): void
+    {
+        $coach = $this->monCoach();
+        (new Validator(Request::corps()))->requis('image', 'Image requise (URL ou data-URL)')->ouEchouer();
+        (new Coach())->ajouterMedia($coach['id'], Request::corps());
+        Response::ok((new Coach())->complet($coach['id']), 201);
+    }
+
+    /** DELETE /galerie/:id */
+    public function supprimerMedia(array $params): void
+    {
+        $coach = $this->monCoach();
+        (new Coach())->supprimerMedia($coach['id'], (int) $params['id']);
+        Response::ok(true);
+    }
+
+    /** POST /coachs/moi/posts  { texte, image?, video? } */
+    public function ajouterPost(array $params): void
+    {
+        $coach = $this->monCoach();
+        $d = Request::corps();
+        if (empty($d['texte']) && empty($d['image']) && empty($d['video'])) {
+            Response::erreur('Publication vide.', 422);
+        }
+        (new Coach())->ajouterPost($coach['id'], $d);
+        Response::ok((new Coach())->complet($coach['id']), 201);
+    }
+
+    /** DELETE /posts/:id */
+    public function supprimerPost(array $params): void
+    {
+        $coach = $this->monCoach();
+        (new Coach())->supprimerPost($coach['id'], (int) $params['id']);
+        Response::ok(true);
     }
 }

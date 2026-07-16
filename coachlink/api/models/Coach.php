@@ -121,4 +121,70 @@ class Coach extends Model
         if (($c['anciennete_mois'] ?? 0) <= 6) $badges[] = 'nouveau';
         return $badges;
     }
+
+    /* -------------------- Gestion par le coach lui-même --------------- */
+
+    public function ajouterTarif(string $coachId, array $t): void
+    {
+        $this->pdo()->prepare("INSERT INTO tarifs (id, coach_id, nom, type, prix, duree, description) VALUES (?,?,?,?,?,?,?)")
+            ->execute([$coachId . '_' . uniqid(), $coachId, $t['nom'], $t['type'] ?? 'seance', (int) $t['prix'], (int) ($t['duree'] ?? 60), $t['description'] ?? '']);
+    }
+
+    public function supprimerTarif(string $coachId, string $tarifId): void
+    {
+        $this->pdo()->prepare("DELETE FROM tarifs WHERE id = ? AND coach_id = ?")->execute([$tarifId, $coachId]);
+    }
+
+    /** Remplace toutes les disponibilités par la grille fournie {Lun:[h], …}. */
+    public function majDisponibilites(string $coachId, array $dispo): void
+    {
+        $pdo = $this->pdo();
+        $pdo->prepare("DELETE FROM disponibilites WHERE coach_id = ?")->execute([$coachId]);
+        $ins = $pdo->prepare("INSERT INTO disponibilites (coach_id, jour, heure) VALUES (?,?,?)");
+        foreach ($dispo as $jour => $heures) {
+            foreach ((array) $heures as $h) {
+                $ins->execute([$coachId, $jour, $h]);
+            }
+        }
+    }
+
+    /** Remplace la liste des spécialités. */
+    public function majSpecialites(string $coachId, array $ids): void
+    {
+        $pdo = $this->pdo();
+        $pdo->prepare("DELETE FROM coach_specialites WHERE coach_id = ?")->execute([$coachId]);
+        $ins = $pdo->prepare("INSERT INTO coach_specialites (coach_id, specialite) VALUES (?,?)");
+        foreach ($ids as $s) $ins->execute([$coachId, $s]);
+    }
+
+    public function ajouterDiplome(string $coachId, array $d): int
+    {
+        $this->pdo()->prepare("INSERT INTO diplomes (coach_id, titre, ecole, annee, statut) VALUES (?,?,?,?, 'en_attente')")
+            ->execute([$coachId, $d['titre'], $d['ecole'], (int) ($d['annee'] ?? 0)]);
+        return (int) $this->pdo()->lastInsertId();
+    }
+
+    public function ajouterMedia(string $coachId, array $m): int
+    {
+        $this->pdo()->prepare("INSERT INTO galerie (coach_id, image, legende, date) VALUES (?,?,?,?)")
+            ->execute([$coachId, $m['image'], $m['legende'] ?? '', date('c')]);
+        return (int) $this->pdo()->lastInsertId();
+    }
+
+    public function supprimerMedia(string $coachId, int $mediaId): void
+    {
+        $this->pdo()->prepare("DELETE FROM galerie WHERE id = ? AND coach_id = ?")->execute([$mediaId, $coachId]);
+    }
+
+    public function ajouterPost(string $coachId, array $p): int
+    {
+        $this->pdo()->prepare("INSERT INTO posts (coach_id, texte, image, video, likes, date) VALUES (?,?,?,?,0,?)")
+            ->execute([$coachId, $p['texte'] ?? '', $p['image'] ?? null, $p['video'] ?? null, date('c')]);
+        return (int) $this->pdo()->lastInsertId();
+    }
+
+    public function supprimerPost(string $coachId, int $postId): void
+    {
+        $this->pdo()->prepare("DELETE FROM posts WHERE id = ? AND coach_id = ?")->execute([$postId, $coachId]);
+    }
 }
