@@ -254,6 +254,34 @@
 }
 
 /* ==========================================================================
+   Grands écrans de bureau : densité des grilles & confort de lecture
+   ========================================================================== */
+@media (min-width: 1920px) {
+  /* Cartes coach un peu plus grandes, davantage par ligne. */
+  .grille-coachs { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  /* Colonne latérale plus large (profil, tableaux de bord). */
+  .deux-colonnes { grid-template-columns: 1fr 400px; }
+  .deux-colonnes--inverse { grid-template-columns: 400px 1fr; }
+  /* Longueur de ligne maîtrisée pour les paragraphes (lisibilité). */
+  .carte-corps > p, .hero p.accroche { max-width: 80ch; }
+}
+
+@media (min-width: 2560px) {
+  .grille-coachs { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
+  .grille-auto { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .deux-colonnes { grid-template-columns: 1fr 460px; }
+  .deux-colonnes--inverse { grid-template-columns: 460px 1fr; }
+  /* Les statistiques peuvent s'aérer davantage. */
+  .stat-carte__valeur { font-size: var(--fs-3xl); }
+}
+
+@media (min-width: 3840px) {
+  .grille-coachs { grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); }
+  .deux-colonnes { grid-template-columns: 1fr 560px; }
+  .deux-colonnes--inverse { grid-template-columns: 560px 1fr; }
+}
+
+/* ==========================================================================
    Barre de navigation inférieure — ressenti « application mobile »
    (masquée sur ordinateur, affichée uniquement sur téléphone)
    ========================================================================== */

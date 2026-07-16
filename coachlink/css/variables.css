@@ -124,3 +124,56 @@
     --vert-validation-clair: #12321f;
   }
 }
+
+/* ==========================================================================
+   Paliers grands écrans de bureau — la plateforme grandit proportionnellement
+   (largeurs, typographie et espacements) pour occuper 24"→27"→32"→4K→45"
+   sans marges vides ni éléments minuscules. On surcharge les tokens : tout le
+   design (bâti sur ces variables) s'adapte automatiquement.
+   ========================================================================== */
+
+/* Grand écran de bureau (~1600px+, 27") */
+@media (min-width: 1600px) {
+  :root {
+    --largeur-max: 1440px;
+    --largeur-sidebar: 268px;
+  }
+}
+
+/* Très grand écran (~1920px+, 27-32" Full HD/QHD) */
+@media (min-width: 1920px) {
+  :root {
+    --largeur-max: 1680px;
+    --largeur-sidebar: 288px;
+    --hauteur-entete: 72px;
+    --fs-md: 1.06rem; --fs-lg: 1.2rem; --fs-xl: 1.5rem;
+    --fs-2xl: 1.95rem; --fs-3xl: 2.5rem; --fs-4xl: 3.4rem;
+    --e-5: 28px; --e-6: 40px; --e-7: 56px; --e-8: 80px;
+  }
+}
+
+/* Écran QHD/4K large (~2560px+, 32") */
+@media (min-width: 2560px) {
+  :root {
+    --largeur-max: 2160px;
+    --largeur-sidebar: 340px;
+    --hauteur-entete: 84px;
+    --fs-sm: 0.95rem; --fs-md: 1.18rem; --fs-lg: 1.38rem; --fs-xl: 1.75rem;
+    --fs-2xl: 2.25rem; --fs-3xl: 3rem; --fs-4xl: 4.3rem;
+    --e-3: 16px; --e-4: 20px; --e-5: 32px; --e-6: 48px; --e-7: 72px; --e-8: 100px;
+    --r-lg: 20px; --r-xl: 28px;
+  }
+}
+
+/* Écran géant 4K/45" (~3840px+) */
+@media (min-width: 3840px) {
+  :root {
+    --largeur-max: 3200px;
+    --largeur-sidebar: 420px;
+    --hauteur-entete: 100px;
+    --fs-sm: 1.1rem; --fs-md: 1.4rem; --fs-lg: 1.65rem; --fs-xl: 2.1rem;
+    --fs-2xl: 2.7rem; --fs-3xl: 3.6rem; --fs-4xl: 5.2rem;
+    --e-3: 20px; --e-4: 26px; --e-5: 40px; --e-6: 60px; --e-7: 92px; --e-8: 130px;
+    --r-md: 14px; --r-lg: 24px; --r-xl: 34px;
+  }
+}

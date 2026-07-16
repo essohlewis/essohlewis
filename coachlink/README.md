@@ -93,7 +93,8 @@ coachlink/
 ### 📱 Expérience adaptative (app mobile / bureau)
 - Sur **téléphone**, l'interface adopte les codes d'une **application mobile native** : **barre de navigation inférieure** (tab bar) avec bouton central « Match » mis en avant (style FAB), badges de messages non lus, cibles tactiles confortables, pleine largeur et respect des encoches (safe-area).
 - Sur **ordinateur**, l'interface conserve une présentation **desktop** classique : barre de navigation supérieure et **sidebars** de tableaux de bord. La barre inférieure est masquée.
-- La bascule est purement CSS (points de rupture) : aucune duplication de code, un seul code source pour les deux plateformes.
+- **Grands écrans de bureau** : la plateforme **grandit proportionnellement** sur les grands moniteurs (24" → 27" → 32" → 4K → 45"). Des paliers (`1600 / 1920 / 2560 / 3840 px`) élargissent le conteneur, la sidebar et augmentent typographie et espacements — plus de marges vides, un rendu dense et agréable qui occupe vraiment l'écran, tout en gardant des longueurs de ligne lisibles. Les grilles de coachs affichent davantage de cartes par ligne à mesure que l'écran s'agrandit.
+- La bascule est purement CSS (points de rupture + tokens) : aucune duplication de code, un seul code source pour toutes les tailles d'écran.
 
 ## 🎨 Design
 
