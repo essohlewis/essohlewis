@@ -37,9 +37,13 @@
       vignettes.appendChild(el("div", { class: "compare-bar__vide", text: "+" }));
     }
 
+    const categorie = compareService.categorieActuelle();
     barre.appendChild(el("div", { class: "compare-bar__inner conteneur" }, [
       el("div", { class: "rangee gap-3" }, [
-        el("strong", { class: "texte-sm", html: CL.icon("graphique", 18) + " Comparateur" }),
+        el("div", { class: "pile" }, [
+          el("strong", { class: "texte-sm", html: CL.icon("graphique", 18) + " Comparateur" }),
+          categorie ? el("span", { class: "texte-xs texte-faible", text: "Catégorie : " + categorie }) : null,
+        ]),
         vignettes,
       ]),
       el("div", { class: "rangee gap-2" }, [
@@ -54,6 +58,7 @@
     if (coachs.length < 2) return CL.toast.info("Comparateur", "Ajoutez au moins 2 coachs.");
 
     const lignes = [
+      ["Catégorie", (c) => el("span", { class: "badge badge-reactif", text: c.categorie })],
       ["Titre", (c) => format.tronquer(c.titre, 40)],
       ["TrustScore", (c) => jauge(coachService.trustScore(c))],
       ["Note", (c) => el("span", { class: "rangee gap-2" }, [ui.etoiles(c.note), el("strong", { text: format.note(c.note) })])],
@@ -86,8 +91,9 @@
       ]))),
     ]);
 
+    const categorie = compareService.categorieActuelle();
     CL.modal.ouvrir({
-      titre: "Comparaison de " + coachs.length + " coachs",
+      titre: "Comparaison — " + (categorie || "coachs") + " (" + coachs.length + ")",
       large: true,
       contenu: el("div", { class: "table-wrap", style: "border:none" }, [table]),
     });

@@ -42,6 +42,10 @@
       e.stopPropagation();
       const r = CL.compareService.basculer(coach.id);
       if (r.plein) { CL.toast.info("Comparateur plein", "3 coachs maximum. Retirez-en un d'abord."); return; }
+      if (r.categorieDifferente) {
+        CL.toast.erreur("Catégories différentes", "On ne compare que des coachs de la catégorie « " + r.categorie + " ». Videz le comparateur pour changer de catégorie.");
+        return;
+      }
       btnCompare.style.color = r.actif ? "var(--bleu-confiance)" : "var(--texte-doux)";
       CL.toast.succes(r.actif ? "Ajouté au comparateur" : "Retiré du comparateur", nom);
     });

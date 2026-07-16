@@ -15,20 +15,41 @@
     contient(id) { return compareService.liste().includes(id); },
     nombre() { return compareService.liste().length; },
 
-    /** Ajoute/retire un coach. Retourne { actif, plein }. */
+    /** Catégorie de la sélection en cours (ou null si vide). */
+    categorieActuelle() {
+      const l = compareService.liste();
+      if (!l.length) return null;
+      const c = CL.coachService.obtenir(l[0]);
+      return c ? c.categorie : null;
+    },
+
+    /**
+     * Ajoute/retire un coach au comparateur.
+     * Règle métier : on ne compare que des coachs de la MÊME catégorie
+     * (un coach sportif ne se compare pas à un coach nutrition, etc.).
+     * @returns {{actif:boolean, plein?:boolean, categorieDifferente?:boolean, categorie?:string}}
+     */
     basculer(id) {
       let l = compareService.liste();
       if (l.includes(id)) {
         l = l.filter((x) => x !== id);
         storage.ecrire(CLE, l);
         window.dispatchEvent(new CustomEvent("cl:compare"));
-        return { actif: false, plein: false };
+        return { actif: false };
       }
       if (l.length >= MAX) return { actif: false, plein: true };
+
+      // Vérifie la cohérence de catégorie.
+      const nouveau = CL.coachService.obtenir(id);
+      const catActuelle = compareService.categorieActuelle();
+      if (catActuelle && nouveau && nouveau.categorie !== catActuelle) {
+        return { actif: false, categorieDifferente: true, categorie: catActuelle };
+      }
+
       l.push(id);
       storage.ecrire(CLE, l);
       window.dispatchEvent(new CustomEvent("cl:compare"));
-      return { actif: true, plein: false };
+      return { actif: true };
     },
 
     retirer(id) {
