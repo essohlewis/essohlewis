@@ -204,9 +204,16 @@
     },
   };
 
-  // Activation possible sans modifier ce fichier : définissez dans la console
-  //   localStorage.cl_api_base = "http://127.0.0.1:8000"
-  // puis rechargez. (Pratique pour les tests et la première mise en service.)
+  // 1) Configuration de déploiement (production) : window.CL_CONFIG est défini
+  //    par un fichier js/config.js facultatif chargé avant ce script
+  //    (voir js/config.example.js et DEPLOIEMENT.md).
+  if (window.CL_CONFIG) {
+    if (window.CL_CONFIG.apiBase) API.base = window.CL_CONFIG.apiBase;
+    if (typeof window.CL_CONFIG.apiActif === "boolean") API.actif = window.CL_CONFIG.apiActif;
+  }
+
+  // 2) Surcharge locale (dev/tests) sans modifier de fichier : dans la console
+  //    localStorage.cl_api_base = "http://127.0.0.1:8000" ; puis rechargez.
   try {
     const baseSauve = localStorage.getItem("cl_api_base");
     if (baseSauve) { API.base = baseSauve; API.actif = true; }

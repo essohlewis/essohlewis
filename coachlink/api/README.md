@@ -131,6 +131,11 @@ location.reload();
 L'app bascule alors sur le backend. Pour revenir hors-ligne :
 `delete localStorage.cl_api_base; location.reload();`.
 
+> **En production**, ne comptez pas sur `localStorage` : créez `js/config.js`
+> (depuis `js/config.example.js`) avec `window.CL_CONFIG = { apiBase:"/api",
+> apiActif:true }` et chargez-le dans `index.html`. Voir **`DEPLOIEMENT.md`**
+> (Apache/Nginx + HTTPS + checklist de configuration et de sécurité).
+
 ### Ce qui est déjà branché (slices 1 & 2 — testés)
 **Slice 1**
 - **Authentification** : inscription / connexion / déconnexion via l'API,
