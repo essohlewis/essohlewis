@@ -58,9 +58,13 @@
     ]);
 
     /* --------------------------- Actions ---------------------------- */
+    // L'offre dépend de la catégorie : abonnement mensuel (sport, scolaire,
+    // arts, bien-être) ou uniquement rendez-vous ponctuel (nutrition,
+    // carrière, développement personnel…).
+    const pf = CL.profilCat.pour(coach);
     const actions = el("div", { class: "rangee rangee-wrap gap-2 mt-4 profil-actions", style: "padding:0 var(--e-5)" }, [
-      el("button", { class: "btn btn-cta btn-lg", html: CL.icon("calendrier", 18) + " Réserver une séance", onclick: () => ouvrirReservation(coach) }),
-      el("button", { class: "btn btn-primaire", html: CL.icon("etoile", 18) + " Abonnement mensuel", onclick: () => CL.ouvrirAbonnement(coach) }),
+      el("button", { class: "btn btn-cta btn-lg", html: CL.icon("calendrier", 18) + " " + pf.reserver, onclick: () => ouvrirReservation(coach) }),
+      pf.abonnement ? el("button", { class: "btn btn-primaire", html: CL.icon("etoile", 18) + " Abonnement mensuel", onclick: () => CL.ouvrirAbonnement(coach) }) : null,
       el("button", { class: "btn btn-primaire", html: CL.icon("message", 18) + " Contacter", onclick: () => contacter(coach) }),
       btnFav,
       el("button", { class: "btn btn-fantome", html: CL.icon("partager", 18) + " Partager", onclick: () => ouvrirPartage(coach) }),

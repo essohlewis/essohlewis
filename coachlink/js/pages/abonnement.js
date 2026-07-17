@@ -24,28 +24,33 @@
   CL.ouvrirAbonnement = function (coach) {
     if (!auth.estConnecte()) { CL.toast.info("Connexion requise", ""); location.hash = "#/connexion"; return; }
     const u = auth.courant();
+    const pf = CL.profilCat.pour(coach);
 
-    const objectif = el("select", { class: "select" }, abonnementService.OBJECTIFS.map((o) => el("option", { value: o, text: o })));
-    const seances = el("select", { class: "select" }, [1, 2, 3, 4, 5].map((n) => el("option", { value: n, text: n + " séance" + (n > 1 ? "s" : "") + " / semaine" })));
+    const objectif = el("select", { class: "select" }, pf.objectifs.map((o) => el("option", { value: o, text: o })));
+    const seances = el("select", { class: "select" }, [1, 2, 3, 4, 5].map((n) => el("option", { value: n, text: n + " " + (n > 1 ? pf.termePluriel : pf.terme) + " / semaine" })));
     const prixTarif = coachService.prixMin(coach) || 10000;
 
-    // Lieu
-    let lieuType = "salle_coach";
+    // Lieu (dépend de la catégorie : salle, cabinet, domicile, en ligne…).
+    let lieuType = pf.lieux[0];
     const zoneLieu = el("div", { class: "mt-2" });
     let locChamp = null;
     function rendreLieu() {
       CL.dom.vider(zoneLieu);
-      if (lieuType === "salle_coach") {
-        zoneLieu.appendChild(el("p", { class: "texte-sm texte-doux", text: "Les séances se dérouleront dans la salle habituelle du coach (" + (coach.commune || "à convenir") + ")." }));
+      const cfg = CL.profilCat.lieu(lieuType);
+      if (cfg.enLigne) {
+        zoneLieu.appendChild(el("p", { class: "texte-sm texte-doux", text: "Séances en visioconférence : le lien vous sera transmis après confirmation." }));
+        locChamp = null;
+      } else if (!cfg.adresse) {
+        zoneLieu.appendChild(el("p", { class: "texte-sm texte-doux", text: cfg.label + " (" + (coach.commune || "lieu à convenir") + ")." }));
         locChamp = null;
       } else {
-        locChamp = CL.localisation.champ({ ville: "Abidjan", commune: coach.commune }, { salle: lieuType === "salle_proposee" });
-        zoneLieu.appendChild(el("p", { class: "texte-sm texte-doux mb-2", text: lieuType === "domicile" ? "Indiquez votre domicile (position GPS recommandée)." : "Indiquez la salle de sport et sa localisation." }));
+        locChamp = CL.localisation.champ({ ville: "Abidjan", commune: coach.commune }, { salle: cfg.nomLieu });
+        zoneLieu.appendChild(el("p", { class: "texte-sm texte-doux mb-2", text: lieuType === "domicile" ? "Indiquez votre domicile (position GPS recommandée)." : "Indiquez le lieu (nom, immeuble/bâtiment/localité) et sa position." }));
         zoneLieu.appendChild(locChamp.el);
       }
     }
-    const radiosLieu = el("div", { class: "rangee gap-2 rangee-wrap mb-1" }, Object.entries(abonnementService.LIEUX).map(([k, lbl]) => {
-      const b = el("button", { class: "chip" + (k === lieuType ? " actif" : ""), type: "button", text: lbl });
+    const radiosLieu = el("div", { class: "rangee gap-2 rangee-wrap mb-1" }, pf.lieux.map((k) => {
+      const b = el("button", { class: "chip" + (k === lieuType ? " actif" : ""), type: "button", text: CL.profilCat.lieu(k).label });
       b.addEventListener("click", () => { lieuType = k; radiosLieu.querySelectorAll(".chip").forEach((x) => x.classList.remove("actif")); b.classList.add("actif"); rendreLieu(); });
       return b;
     }));
@@ -56,7 +61,7 @@
     const estim = el("div", { class: "texte-sm gras mt-1" });
     function majEstim() {
       const total = abonnementService.prixMensuel(prixSeance.value, seances.value);
-      estim.textContent = "≈ " + format.fcfa(total) + " / mois (hors abonnement à la salle)";
+      estim.textContent = "≈ " + format.fcfa(total) + " / mois" + (pf.salle ? " (hors abonnement à la salle)" : "");
     }
     const zonePrix = el("div", { class: "mt-2" }, [champ("Prix par séance (FCFA)", prixSeance, "× " + "séances/semaine × 4 semaines"), estim]);
     const radiosPrix = el("div", { class: "rangee gap-2 rangee-wrap" }, [["client", "Je propose un prix"], ["coach", "Laisser le coach fixer"]].map(([k, lbl], i) => {
@@ -74,12 +79,12 @@
     CL.modal.ouvrir({
       titre: "Abonnement mensuel avec " + coach.prenom,
       contenu: el("div", { class: "pile-4" }, [
-        el("p", { class: "texte-sm texte-doux", text: "Passez à un accompagnement suivi : votre coach vous prépare un programme mensuel selon vos objectifs et disponibilités." }),
+        el("p", { class: "texte-sm texte-doux", text: pf.accroche }),
         champ("Votre objectif", objectif),
         champ("Fréquence", seances),
-        el("div", {}, [el("label", { class: "champ", style: "font-weight:600;display:block;margin-bottom:6px", text: "Où se dérouleront les séances ?" }), radiosLieu, zoneLieu]),
+        el("div", {}, [el("label", { class: "champ", style: "font-weight:600;display:block;margin-bottom:6px", text: pf.questionLieu }), radiosLieu, zoneLieu]),
         el("div", {}, [el("label", { class: "champ", style: "font-weight:600;display:block;margin-bottom:6px", text: "Tarification" }), radiosPrix, zonePrix]),
-        el("label", { class: "rangee gap-2 texte-sm", style: "cursor:pointer" }, [inclutSalle, el("span", { text: "Inclure l'abonnement à la salle de sport dans le prix" })]),
+        pf.salle ? el("label", { class: "rangee gap-2 texte-sm", style: "cursor:pointer" }, [inclutSalle, el("span", { text: "Inclure l'abonnement à la salle de sport dans le prix" })]) : null,
       ]),
       pied: [
         el("button", { class: "btn btn-fantome", text: "Annuler", onclick: CL.modal.fermer }),
@@ -145,8 +150,9 @@
 
   /* -------------------------- Carte d'abonnement ------------------- */
   function carteAbonnement(a, vue, onChange) {
-    const lieu = abonnementService.LIEUX[a.lieuType] || a.lieuType;
-    const detailLieu = a.lieuType === "salle_coach" ? "Salle du coach" : (CL.localisation.resume(a) || "Lieu à préciser");
+    const cfgLieu = CL.profilCat.lieu(a.lieuType);
+    const lieu = cfgLieu.label;
+    const detailLieu = cfgLieu.enLigne ? "Visioconférence" : (cfgLieu.adresse ? (CL.localisation.resume(a) || "Lieu à préciser") : "Chez le coach");
 
     const entete = el("div", { class: "rangee entre rangee-wrap gap-3" }, [
       el("div", {}, [
@@ -261,7 +267,7 @@
       contenu: el("div", { class: "pile-4" }, [
         el("div", { class: "carte carte-corps", style: "background:var(--surface-2)" }, [
           el("div", { class: "texte-sm", text: "Objectif : " + a.objectif }),
-          el("div", { class: "texte-sm", html: CL.icon("localisation", 13) + " " + (abonnementService.LIEUX[a.lieuType] || a.lieuType) + (CL.localisation.resume(a) ? " — " + CL.localisation.resume(a) : "") }),
+          el("div", { class: "texte-sm", html: CL.icon("localisation", 13) + " " + CL.profilCat.lieu(a.lieuType).label + (CL.localisation.resume(a) ? " — " + CL.localisation.resume(a) : "") }),
         ]),
         el("div", {}, [el("label", { class: "champ", style: "font-weight:600;display:block;margin-bottom:6px", text: "Créneaux hebdomadaires (cliquez pour placer les séances)" }), compteur, el("div", { class: "calendrier" }, [grille])]),
         champ("Prix par séance (FCFA)", prixSeance), estim,
