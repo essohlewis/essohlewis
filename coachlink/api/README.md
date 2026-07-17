@@ -281,6 +281,15 @@ Tant que `cl_api_base` n'est pas défini, l'app fonctionne 100 % hors-ligne.
   contrôleur `AbonnementController`, service front `abonnementService`, pages
   client/coach dédiées, hydratation par rôle.
 
+**Slice 12 — internationalisation (FR · EN · ES · DE)**
+- Sélecteur de langue (icône 🌐 dans l'en-tête) : **français, anglais, espagnol,
+  allemand**. Le contenu est écrit en français ; `js/utils/i18n.js` applique une
+  **couche de traduction du DOM** (dictionnaire de phrases FR → langue cible) et
+  suit les ajouts dynamiques (modales, toasts, navigation) via `MutationObserver`.
+- Langue **persistée** (`localStorage`) + `<html lang>` mis à jour. Les libellés
+  non traduits restent en français (repli propre). 100 % côté client, sans clé
+  ni service externe. Extensible : ajoutez une langue = un dictionnaire de plus.
+
 ### Reste (améliorations, non bloquantes)
 HTTPS/prod, notifications push (WebSocket/SSE pour remplacer le polling),
 rafraîchissement/révocation de token, journalisation structurée.

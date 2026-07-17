@@ -99,6 +99,28 @@
     setTimeout(() => document.addEventListener("click", fermeSurClicExterne), 0);
   }
 
+  /** Menu de sélection de la langue (FR · EN · ES · DE). */
+  function menuLangue(ancre) {
+    if (ancre.querySelector(".notif-panneau")) { fermerPanneaux(); return; }
+    fermerPanneaux();
+    const active = CL.i18n.langue();
+    const menu = el("div", { class: "notif-panneau", style: "width:180px" }, [
+      el("div", { style: "padding:10px 14px;border-bottom:1px solid var(--bordure)" }, [
+        el("strong", { class: "texte-sm", html: CL.icon("globe", 16) + " Langue / Language" }),
+      ]),
+      el("div", { style: "padding:6px" }, CL.i18n.langues.map((code) => {
+        const b = el("button", {
+          class: "sidebar__lien" + (code === active ? " actif" : ""), style: "width:100%",
+          html: CL.i18n.drapeaux[code] + " " + esc(CL.i18n.noms[code]) + (code === active ? " ✓" : ""),
+        });
+        b.addEventListener("click", () => { fermerPanneaux(); CL.i18n.definirLangue(code); });
+        return b;
+      })),
+    ]);
+    ancre.appendChild(menu);
+    setTimeout(() => document.addEventListener("click", fermeSurClicExterne), 0);
+  }
+
   /* ------------------------------ En-tête ---------------------------- */
   function rendreEntete() {
     const hote = document.getElementById("entete");
@@ -137,6 +159,13 @@
     const accueilRole = u ? (u.role === "coach" ? "#/espace-coach" : u.role === "admin" ? "#/admin" : "#/") : "#/";
 
     const actions = el("div", { class: "entete__actions" });
+
+    // Sélecteur de langue (FR · EN · ES · DE)
+    const ancreLangue = el("div", { style: "position:relative" });
+    const btnLangue = el("button", { class: "btn-icone btn-fantome", "aria-label": "Changer de langue / Change language", title: "Langue / Language", html: CL.icon("globe", 20) });
+    btnLangue.addEventListener("click", (e) => { e.stopPropagation(); menuLangue(ancreLangue); });
+    ancreLangue.appendChild(btnLangue);
+    actions.appendChild(ancreLangue);
 
     // Bouton thème
     actions.appendChild(el("button", {
