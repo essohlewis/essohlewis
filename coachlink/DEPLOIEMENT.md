@@ -4,6 +4,11 @@ Ce guide décrit la mise en ligne de **CoachLink CI** (front statique + API PHP)
 sur un serveur, en **HTTPS**, avec activation progressive des intégrations
 (Mobile Money, email, connexion sociale).
 
+> **Voie rapide (automatisée)** : le dossier **`deploy/`** fournit un kit
+> clé-en-main — configs Apache/Nginx, provisionnement (`install-server.sh`),
+> génération des secrets + config (`setup.sh`), et une répétition HTTPS locale.
+> Voir **`deploy/README.md`**. Le présent document en donne le détail complet.
+
 > Rien de secret n'est versionné : tous les identifiants vivent dans
 > `api/config/config.php` (ignoré par git) et `js/config.js` (ignoré par git).
 
