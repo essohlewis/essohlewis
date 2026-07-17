@@ -131,11 +131,16 @@
       if (!a) return { ok: false, message: "Abonnement introuvable." };
       if (abonnementService.moisRegle(a, mois)) return { ok: false, message: "Ce mois est déjà réglé." };
       a.paiements = a.paiements || [];
+      // Règlement SOUS SÉQUESTRE (libere:false) : crédité au portefeuille du coach
+      // seulement quand toutes les séances du mois auront été validées par QR.
       a.paiements.unshift({
         id: CL.dom.uid("abp"), mois, montant: a.prixMensuel, operateur: paiement.operateur,
         reference: "AB" + Date.now().toString().slice(-8), date: new Date().toISOString(),
+        seancesPrevues: (Number(a.seancesSemaine) || 1) * 4, seancesValidees: 0, libere: false,
       });
       if (a.statut !== "actif") { a.statut = "actif"; a.dateDebut = new Date().toISOString(); }
+      // Jeton de présence (graine du QR rotatif de l'abonnement).
+      if (!a.jeton) a.jeton = "CLQR-abo" + a.id + "-" + Math.random().toString(16).slice(2, 18);
       // Le client accepte et signe le contrat en activant l'abonnement.
       if (!a.contratRef) a.contratRef = "CTR-" + a.id + "-" + Math.random().toString(16).slice(2, 10);
       if (!a.contratClientLe) a.contratClientLe = new Date().toISOString();
@@ -176,7 +181,9 @@
             const l = toutes(); const cur = l.find((x) => String(x.id) === String(a.id));
             if (cur && !abonnementService.moisRegle(cur, mois)) {
               cur.paiements = cur.paiements || [];
-              cur.paiements.unshift({ id: CL.dom.uid("abp"), mois, montant: cur.prixMensuel, operateur: "Auto (renouvellement)", reference: "AR" + Date.now().toString().slice(-8), date: new Date().toISOString() });
+              if (!cur.jeton) cur.jeton = "CLQR-abo" + cur.id + "-" + Math.random().toString(16).slice(2, 18);
+              cur.paiements.unshift({ id: CL.dom.uid("abp"), mois, montant: cur.prixMensuel, operateur: "Auto (renouvellement)", reference: "AR" + Date.now().toString().slice(-8), date: new Date().toISOString(),
+                seancesPrevues: (Number(cur.seancesSemaine) || 1) * 4, seancesValidees: 0, libere: false });
               sauver(l);
               CL.notifications.ajouter(u.id, { type: "paiement", texte: `Abonnement avec ${cur.coachNom} renouvelé automatiquement (${mois}) : ${CL.format.fcfa(cur.prixMensuel)}.`, lien: "#/client/abonnements" });
               notifierCoach(cur, `${cur.clientNom} — renouvellement automatique réglé (${mois}).`);
@@ -193,6 +200,51 @@
       }
       if (rappels.size) CL.storage.ecrire("cl_abo_rappels", Array.from(rappels).slice(-400));
       return n;
+    },
+
+    /** Règlement du mois (objet paiement) ou null. */
+    paiementDuMois(a, mois) { return (a.paiements || []).find((p) => p.mois === mois) || null; },
+
+    /** Progression des séances du mois : { validees, prevues, libere }. */
+    progresMois(a, mois) {
+      const p = abonnementService.paiementDuMois(a, mois || abonnementService.moisCourant());
+      if (!p) return { validees: 0, prevues: (Number(a.seancesSemaine) || 1) * 4, libere: false, regle: false };
+      return { validees: Number(p.seancesValidees) || 0, prevues: Number(p.seancesPrevues) || (Number(a.seancesSemaine) || 1) * 4, libere: !!p.libere, regle: true };
+    },
+
+    /**
+     * Le coach valide une séance d'abonnement via le QR rotatif du client.
+     * Comptabilise la séance du mois ; libère la mensualité au portefeuille dès
+     * que toutes les séances prévues sont validées. Renvoie { ok, validees?, prevues?, libere?, message? }.
+     */
+    async validerSeance(id, code) {
+      if (_api()) {
+        try {
+          const a = CL.API.mapAbonnement(await CL.API.abonnementValiderSeance(id, String(code || "").trim()));
+          _remplacer(a);
+          const p = abonnementService.paiementDuMois(a, abonnementService.moisCourant());
+          return { ok: true, validees: p ? p.seancesValidees : 0, prevues: p ? p.seancesPrevues : 0, libere: p ? p.libere : false };
+        } catch (e) { return { ok: false, message: (e && e.message) || "Code de présence invalide ou expiré." }; }
+      }
+      const l = toutes(); const a = l.find((x) => String(x.id) === String(id));
+      if (!a) return { ok: false, message: "Abonnement introuvable." };
+      if (!a.jeton) return { ok: false, message: "Abonnement non actif (aucun règlement)." };
+      const fen = CL.otp ? CL.otp.fenetreValide(a.jeton, code) : null;
+      if (fen === null) return { ok: false, message: "Code de présence invalide ou expiré." };
+      const mois = abonnementService.moisCourant();
+      const p = abonnementService.paiementDuMois(a, mois);
+      if (!p) return { ok: false, message: "Le mois en cours n'est pas encore réglé." };
+      a.fenetresValidees = a.fenetresValidees || [];
+      if (a.fenetresValidees.indexOf(fen) !== -1) return { ok: false, message: "Cette séance vient déjà d'être validée." };
+      a.fenetresValidees.push(fen);
+      p.seancesValidees = (Number(p.seancesValidees) || 0) + 1;
+      p.libere = p.seancesValidees >= (Number(p.seancesPrevues) || 0);
+      sauver(l);
+      if (CL.notifications) {
+        CL.notifications.ajouter(a.clientId, { type: "confirmation", texte: `Séance d'abonnement validée (${p.seancesValidees}/${p.seancesPrevues}).`, lien: "#/client/abonnements" });
+        if (p.libere) notifierCoach(a, `Toutes les séances du mois validées : ${CL.format.fcfa(p.montant)} crédités sur votre portefeuille.`);
+      }
+      return { ok: true, validees: p.seancesValidees, prevues: p.seancesPrevues, libere: p.libere };
     },
   };
 

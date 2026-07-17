@@ -236,6 +236,26 @@
     if (a.inclutSalle) corps.appendChild(el("div", { class: "texte-xs texte-faible mt-1", text: "Abonnement à la salle inclus dans le prix." }));
     else corps.appendChild(el("div", { class: "texte-xs texte-faible mt-1", text: "Abonnement à la salle non inclus." }));
 
+    // Séquestre : progression des séances validées du mois courant.
+    if (a.statut === "actif") {
+      const pr = abonnementService.progresMois(a);
+      if (pr.regle) {
+        const barre = el("div", { style: "height:7px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin-top:4px" }, [
+          el("div", { style: "height:100%;width:" + Math.round(100 * pr.validees / Math.max(1, pr.prevues)) + "%;background:" + (pr.libere ? "var(--vert-validation)" : "var(--orange-cta)") }),
+        ]);
+        corps.appendChild(el("div", { class: "mt-2 carte carte-corps", style: "background:var(--surface-2);padding:10px 12px" }, [
+          el("div", { class: "rangee entre gap-2" }, [
+            el("strong", { class: "texte-sm", text: "Séances validées ce mois : " + pr.validees + " / " + pr.prevues }),
+            pr.libere ? el("span", { class: "badge badge-verifie", text: "Mensualité créditée ✓" }) : el("span", { class: "badge badge-neutre", text: "Sous séquestre" }),
+          ]),
+          barre,
+          el("div", { class: "texte-xs texte-faible mt-1", text: pr.libere
+            ? "Toutes les séances ont été validées : la mensualité a été créditée au portefeuille du coach."
+            : "La mensualité (" + format.fcfa(a.prixMensuel) + ") sera versée au coach une fois les " + pr.prevues + " séances validées par QR." }),
+        ]));
+      }
+    }
+
     // Actions selon la vue + le statut.
     const actions = el("div", { class: "rangee gap-2 rangee-wrap mt-3" });
     if (vue === "coach") {
@@ -246,6 +266,10 @@
         actions.appendChild(el("button", { class: "btn btn-fantome btn-sm", text: "Refuser", onclick: async () => { await abonnementService.changerStatut(a.id, "annule"); CL.toast.info("Refusé", ""); onChange && onChange(); } }));
       }
       if (a.statut === "actif") {
+        const pr = abonnementService.progresMois(a);
+        if (pr.regle && !pr.libere) {
+          actions.appendChild(el("button", { class: "btn btn-succes btn-sm", html: CL.icon("qrcode", 15) + " Valider une séance (QR)", onclick: () => validerSeanceCoach(a, onChange) }));
+        }
         actions.appendChild(el("button", { class: "btn btn-fantome btn-sm", text: "Terminer", onclick: async () => { await abonnementService.changerStatut(a.id, "termine"); CL.toast.info("Abonnement terminé", ""); onChange && onChange(); } }));
       }
     } else { // client
@@ -253,6 +277,8 @@
         const mois = abonnementService.moisCourant();
         if (abonnementService.moisRegle(a, mois)) {
           actions.appendChild(el("span", { class: "badge badge-verifie", text: "Mois en cours réglé ✓" }));
+          // Le client présente son QR de présence rotatif à chaque séance.
+          if (a.jeton) actions.appendChild(el("button", { class: "btn btn-cta btn-sm", html: CL.icon("qrcode", 15) + " Mon QR de présence", onclick: () => CL.montrerQrPresence(a.jeton, "QR de présence — abonnement", "À chaque séance, présentez ce QR code à votre coach (ou dictez le code) pour valider votre présence. La mensualité ne lui sera versée qu'une fois toutes les séances validées.") }));
         } else {
           actions.appendChild(el("button", { class: "btn btn-succes btn-sm", html: CL.icon("portefeuille", 15) + " Payer le mois (" + format.fcfa(a.prixMensuel) + ")", onclick: () => payerMois(a) }));
         }
@@ -290,6 +316,21 @@
 
   function resumeProgramme(prog) {
     return Object.keys(prog).filter((j) => (prog[j] || []).length).map((j) => j + " " + prog[j].join("/")).join(" · ");
+  }
+
+  /* Coach : valide UNE séance d'abonnement (QR rotatif du client → décompte). */
+  function validerSeanceCoach(a, onChange) {
+    CL.scanQr.modal({
+      titre: "Valider une séance — " + a.clientNom,
+      phrase: "Scannez le QR de présence du client (ou saisissez son code à 6 chiffres) pour comptabiliser cette séance. La mensualité sera créditée à votre portefeuille une fois toutes les séances du mois validées.",
+      boutonValider: "Valider la séance",
+      onValider: (valeur) => abonnementService.validerSeance(a.id, valeur),
+      onSucces: (res) => {
+        if (res.libere) CL.toast.succes("Mois complet ✅", "Toutes les séances validées : mensualité créditée à votre portefeuille.");
+        else CL.toast.succes("Séance validée ✅", "Séances du mois : " + res.validees + " / " + res.prevues + ".");
+        onChange && onChange();
+      },
+    });
   }
 
   /* ------------- Coach : construit le programme + le prix --------- */

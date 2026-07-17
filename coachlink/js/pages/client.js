@@ -127,17 +127,18 @@
     });
   }
 
-  // QR de présence : le client le présente au coach en fin de séance ; le coach
-  // le scanne (ou saisit le code) pour libérer le paiement vers son portefeuille.
-  function montrerQrPresence(r) {
+  // QR de présence rotatif (réutilisable) : le client le présente au coach ; le
+  // coach le scanne (ou saisit le code) pour valider la séance. Le code se
+  // régénère toutes les 30 s ; le secret n'est jamais affiché.
+  function montrerQrPresence(secret, titre, phrase) {
     const zoneQr = el("div", { style: "display:flex;justify-content:center;align-items:center;min-height:230px" });
     const codeAff = el("div", { class: "badge badge-neutre", style: "font-family:monospace;font-size:1.5rem;letter-spacing:4px" });
     const compte = el("div", { class: "texte-xs texte-faible" });
     let fenetreAff = null;
 
     function rendre() {
-      if (!CL.otp) { zoneQr.innerHTML = CL.qrcode ? CL.qrcode.svg(r.jeton, { size: 230 }) : ""; return; }
-      const et = CL.otp.courant(r.jeton);
+      if (!CL.otp) { zoneQr.innerHTML = CL.qrcode ? CL.qrcode.svg(secret, { size: 230 }) : ""; return; }
+      const et = CL.otp.courant(secret);
       if (et.fenetre !== fenetreAff) { // nouvelle fenêtre → nouveau QR + nouveau code
         fenetreAff = et.fenetre;
         zoneQr.innerHTML = CL.qrcode ? CL.qrcode.svg(et.payload, { size: 230 }) : "";
@@ -149,9 +150,9 @@
     const timer = setInterval(() => { if (!zoneQr.isConnected) { clearInterval(timer); return; } rendre(); }, 1000);
 
     CL.modal.ouvrir({
-      titre: "Mon QR de présence",
+      titre: titre || "Mon QR de présence",
       contenu: el("div", { class: "pile-3 texte-centre" }, [
-        el("p", { class: "texte-sm texte-doux", text: "Présentez ce QR code (ou dictez le code) à votre coach à la fin de la séance « " + r.tarifNom + " » pour confirmer votre présence." }),
+        phrase ? el("p", { class: "texte-sm texte-doux", text: phrase }) : null,
         zoneQr,
         codeAff,
         compte,
@@ -160,6 +161,7 @@
       pied: [el("button", { class: "btn btn-primaire", text: "Fermer", onclick: CL.modal.fermer })],
     });
   }
+  CL.montrerQrPresence = montrerQrPresence;
 
   // Ligne « lieu » d'une réservation (selon la catégorie : cabinet, domicile,
   // salle, studio, bureau convenu ou visioconférence).
@@ -189,7 +191,7 @@
         actions.appendChild(el("button", { class: "btn btn-fantome btn-sm", text: "Annuler", onclick: () => { bookingService.changerStatut(r.id, "annulee"); CL.toast.info("Annulée", ""); onChange ? onChange() : CL.router.rendre(); } }));
       }
       if (r.statut === "confirmee" && r.jeton && !r.presenceValidee) {
-        actions.appendChild(el("button", { class: "btn btn-cta btn-sm", html: CL.icon("qrcode", 15) + " Mon QR de présence", onclick: () => montrerQrPresence(r) }));
+        actions.appendChild(el("button", { class: "btn btn-cta btn-sm", html: CL.icon("qrcode", 15) + " Mon QR de présence", onclick: () => montrerQrPresence(r.jeton, "Mon QR de présence", "Présentez ce QR code (ou dictez le code) à votre coach à la fin de la séance « " + r.tarifNom + " » pour confirmer votre présence.") }));
       }
       if (r.statut === "terminee" && !r.avisLaisse && coach) {
         actions.appendChild(el("button", { class: "btn btn-cta btn-sm", text: "Laisser un avis", onclick: () => CL.ouvrirAvis(coach, r) }));

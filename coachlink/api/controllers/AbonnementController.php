@@ -196,6 +196,30 @@ class AbonnementController
         Response::ok($model->complet((int) $params['id']));
     }
 
+    /** POST /abonnements/:id/valider-seance  { code } — le coach valide une séance par QR. */
+    public function validerSeance(array $params): void
+    {
+        $user  = Auth::exigerRole('coach');
+        $model = new Abonnement();
+        $abo   = $model->trouver((int) $params['id']);
+        $coach = (new Coach())->parProprietaire((int) $user['id']);
+        if (!$abo || !$coach || $abo['coach_id'] !== $coach['id']) {
+            Response::erreur('Abonnement introuvable.', 404);
+        }
+        $res = $model->validerSeance((int) $params['id'], (string) Request::champ('code'));
+        if (!$res['ok']) {
+            Response::erreur($res['message'] ?? 'Validation impossible.', 422);
+        }
+        // Notifications : à chaque séance, et à la libération de la mensualité.
+        (new Notification())->ajouter((int) $abo['client_id'], 'confirmation',
+            'Séance d\'abonnement validée (' . $res['validees'] . '/' . $res['prevues'] . ').', '#/client/abonnements');
+        if (!empty($res['libere'])) {
+            (new Notification())->ajouter((int) $user['id'], 'paiement',
+                'Toutes les séances du mois sont validées : mensualité créditée sur votre portefeuille.', '#/espace-coach/portefeuille');
+        }
+        Response::ok($model->complet((int) $params['id']));
+    }
+
     /* ------------------------------------------------------------------ */
     private function peutVoir(array $user, array $abo): bool
     {

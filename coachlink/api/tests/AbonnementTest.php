@@ -82,6 +82,50 @@ class AbonnementTest extends ApiTestCase
         $this->assertSame('2026-07', $a['paiements'][0]['mois']);
     }
 
+    public function testSeancesValideesLiberentLaMensualiteDuSequestre(): void
+    {
+        [$coachId, $clientId] = $this->contexte();
+        $m = new Abonnement();
+        // seancesSemaine = 1 → 4 séances prévues sur le mois.
+        $a = $m->creer(['clientId' => $clientId, 'coachId' => $coachId, 'objectif' => 'Forme', 'seancesSemaine' => 1, 'prixSeance' => 15000]);
+        $id = (int) $a['id'];
+        $m->changerStatut($id, 'actif');
+        $mois = date('Y-m');
+        $m->enregistrerPaiement($id, ['mois' => $mois, 'montant' => 60000, 'operateur' => 'orange', 'reference' => 'AB1']);
+
+        $abo = $m->trouver($id);
+        $jeton = $abo['jeton'];
+        $this->assertNotEmpty($jeton, 'un jeton de présence est généré au règlement');
+
+        // Sous séquestre : le règlement existe mais n'est pas libéré.
+        $this->assertSame(0, (int) $m->complet($id)['paiements'][0]['libere']);
+        $this->assertSame(4, (int) $m->complet($id)['paiements'][0]['seances_prevues']);
+
+        $base = Otp::fenetre();
+        // 3 séances validées (fenêtres distinctes) → toujours sous séquestre.
+        for ($i = 0; $i < 3; $i++) {
+            $w = $base + $i * 3; $t = $w * 30;
+            $r = $m->validerSeance($id, Otp::code($jeton, $w), $t);
+            $this->assertTrue($r['ok']);
+            $this->assertFalse($r['libere']);
+        }
+        $this->assertSame(0, (int) $m->complet($id)['paiements'][0]['libere']);
+
+        // 4e séance → décompte complet → mensualité LIBÉRÉE.
+        $w = $base + 9; $t = $w * 30;
+        $r = $m->validerSeance($id, Otp::code($jeton, $w), $t);
+        $this->assertTrue($r['ok']);
+        $this->assertTrue($r['libere']);
+        $this->assertSame(4, $r['validees']);
+        $this->assertSame(1, (int) $m->complet($id)['paiements'][0]['libere']);
+
+        // Anti-doublon : la même fenêtre ne compte pas deux fois.
+        $w2 = $base + 30; $t2 = $w2 * 30;
+        $this->assertTrue($m->validerSeance($id, Otp::code($jeton, $w2), $t2)['ok']);
+        $rejeu = $m->validerSeance($id, Otp::code($jeton, $w2), $t2);
+        $this->assertFalse($rejeu['ok']);
+    }
+
     public function testRenouvellementAutomatique(): void
     {
         [$coachId, $clientId] = $this->contexte();

@@ -71,6 +71,7 @@ $router->patch('/abonnements/:id/statut',    [AbonnementController::class, 'stat
 $router->post('/abonnements/:id/payer',      [AbonnementController::class, 'payer']);
 $router->patch('/abonnements/:id/auto',       [AbonnementController::class, 'auto']);
 $router->post('/abonnements/:id/renouveler',  [AbonnementController::class, 'renouveler']);
+$router->post('/abonnements/:id/valider-seance', [AbonnementController::class, 'validerSeance']);
 
 // --- Notifications -------------------------------------------------------
 $router->get('/notifications',              [NotificationController::class, 'index']);

@@ -56,10 +56,18 @@ function coachlink_creer_tables(PDO $pdo, bool $sqlite): void
       prix_seance INT DEFAULT 0, prix_mensuel INT DEFAULT 0, inclut_salle INT DEFAULT 0,
       fixe_par VARCHAR(10) DEFAULT 'client', programme TEXT, statut VARCHAR(15) DEFAULT 'demande',
       contrat_ref VARCHAR(40), contrat_coach_le VARCHAR(40), contrat_client_le VARCHAR(40),
-      auto_renouvellement INT DEFAULT 0,
+      auto_renouvellement INT DEFAULT 0, jeton VARCHAR(40),
       date_debut VARCHAR(40), date_fin VARCHAR(40), cree_le VARCHAR(40))$suffixe");
+    // Un règlement mensuel est mis SOUS SÉQUESTRE : il n'est libéré vers le
+    // portefeuille du coach (libere = 1) que lorsque toutes les séances prévues
+    // du mois ont été validées par QR (seances_validees = seances_prevues).
     $pdo->exec("CREATE TABLE IF NOT EXISTS abonnement_paiements (id $PK, abonnement_id INT, mois VARCHAR(7),
-      montant INT, operateur VARCHAR(40), reference VARCHAR(40), date VARCHAR(40))$suffixe");
+      montant INT, operateur VARCHAR(40), reference VARCHAR(40), date VARCHAR(40),
+      seances_prevues INT DEFAULT 0, seances_validees INT DEFAULT 0, libere INT DEFAULT 0)$suffixe");
+    // Séances d'abonnement validées (présence prouvée par QR). Unicité par
+    // (abonnement, fenêtre OTP) pour empêcher tout double comptage.
+    $pdo->exec("CREATE TABLE IF NOT EXISTS abonnement_seances (id $PK, abonnement_id INT, mois VARCHAR(7),
+      fenetre INT, date VARCHAR(40))$suffixe");
 
     // Retraits du portefeuille coach vers Mobile Money (débits).
     $pdo->exec("CREATE TABLE IF NOT EXISTS portefeuille_retraits (id $PK, coach_id VARCHAR(40), montant INT,

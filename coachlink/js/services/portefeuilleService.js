@@ -27,9 +27,10 @@
       });
       storage.lire(storage.CLES.abonnements, []).forEach((a) => {
         if (a.coachId !== coachId) return;
-        (a.paiements || []).forEach((p) => ops.push({ type: "abonnement",
+        // Uniquement les mensualités LIBÉRÉES du séquestre (toutes séances validées).
+        (a.paiements || []).forEach((p) => { if (!p.libere) return; ops.push({ type: "abonnement",
           libelle: "Abonnement (" + p.mois + ") — " + a.clientNom, montant: Number(p.montant) || 0,
-          reference: p.reference, date: p.date }));
+          reference: p.reference, date: p.date }); });
       });
       storage.lire(storage.CLES.retraits, []).forEach((rt) => {
         if (rt.coachId !== coachId) return;

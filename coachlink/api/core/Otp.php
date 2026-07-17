@@ -47,22 +47,28 @@ class Otp
         return str_pad((string) (self::hash($secret . '|' . $fenetre) % 1000000), 6, '0', STR_PAD_LEFT);
     }
 
-    /** Valide un code saisi/scané en tolérant la fenêtre courante ± $tol (défaut 1). */
-    public static function valide(string $secret, string $saisi, ?int $t = null, int $tol = 1): bool
+    /** Fenêtre correspondante si le code est valide (± $tol), sinon null. */
+    public static function fenetreValide(string $secret, string $saisi, ?int $t = null, int $tol = 1): ?int
     {
         $saisi = trim($saisi);
         if (preg_match('/(\d{6})$/', $saisi, $m)) {
             $saisi = $m[1]; // accepte le code brut ou le payload complet CLQR-<fenetre>-<code>
         }
         if (!preg_match('/^\d{6}$/', $saisi)) {
-            return false;
+            return null;
         }
         $f = self::fenetre($t);
         for ($d = -$tol; $d <= $tol; $d++) {
             if (hash_equals(self::code($secret, $f + $d), $saisi)) {
-                return true;
+                return $f + $d;
             }
         }
-        return false;
+        return null;
+    }
+
+    /** Valide un code saisi/scané en tolérant la fenêtre courante ± $tol (défaut 1). */
+    public static function valide(string $secret, string $saisi, ?int $t = null, int $tol = 1): bool
+    {
+        return self::fenetreValide($secret, $saisi, $t, $tol) !== null;
     }
 }

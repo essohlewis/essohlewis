@@ -44,14 +44,19 @@
       return { fenetre: f, code: code(secret, f), payload: payload(secret, f), resteSec: PERIODE - Math.floor((now / 1000) % PERIODE) };
     },
 
-    /** Valide un code saisi/scané en tolérant la fenêtre courante ± `tol` (défaut 1). */
-    valide: function (secret, saisi, t, tol) {
+    /** Fenêtre correspondante (nombre) si le code est valide (± `tol`), sinon null. */
+    fenetreValide: function (secret, saisi, t, tol) {
       saisi = String(saisi == null ? "" : saisi).trim();
       var m = saisi.match(/(\d{6})$/); if (m) saisi = m[1]; // accepte le code brut ou le payload complet
-      if (!/^\d{6}$/.test(saisi)) return false;
+      if (!/^\d{6}$/.test(saisi)) return null;
       var f = fenetre(t); tol = tol == null ? 1 : tol;
-      for (var d = -tol; d <= tol; d++) if (code(secret, f + d) === saisi) return true;
-      return false;
+      for (var d = -tol; d <= tol; d++) if (code(secret, f + d) === saisi) return f + d;
+      return null;
+    },
+
+    /** Valide un code saisi/scané en tolérant la fenêtre courante ± `tol` (défaut 1). */
+    valide: function (secret, saisi, t, tol) {
+      return this.fenetreValide(secret, saisi, t, tol) !== null;
     },
   };
 })();

@@ -37,11 +37,12 @@ class PortefeuilleController
             ];
         }
 
-        // Règlements mensuels d'abonnement.
+        // Règlements mensuels d'abonnement — UNIQUEMENT ceux libérés du séquestre
+        // (toutes les séances du mois validées par QR).
         $paiements = $model->requete(
             "SELECT ap.*, a.client_nom, a.objectif FROM abonnement_paiements ap
              JOIN abonnements a ON a.id = ap.abonnement_id
-             WHERE a.coach_id = ? ORDER BY ap.id DESC",
+             WHERE a.coach_id = ? AND ap.libere = 1 ORDER BY ap.id DESC",
             [$coach['id']]
         );
         foreach ($paiements as $p) {
@@ -121,7 +122,7 @@ class PortefeuilleController
         foreach ($model->requete("SELECT * FROM reservations WHERE coach_id = ? AND presence_validee = 1", [$coachId]) as $r) {
             $credit += (int) ($r['paye'] ? ($r['paiement_montant'] ?: $r['prix']) : $r['prix']);
         }
-        foreach ($model->requete("SELECT ap.montant FROM abonnement_paiements ap JOIN abonnements a ON a.id = ap.abonnement_id WHERE a.coach_id = ?", [$coachId]) as $p) {
+        foreach ($model->requete("SELECT ap.montant FROM abonnement_paiements ap JOIN abonnements a ON a.id = ap.abonnement_id WHERE a.coach_id = ? AND ap.libere = 1", [$coachId]) as $p) {
             $credit += (int) $p['montant'];
         }
         $debit = 0;

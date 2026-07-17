@@ -181,98 +181,14 @@
     ]);
   }
 
-  /**
-   * Scan caméra d'un QR. Utilise BarcodeDetector s'il existe, sinon jsQR
-   * (décodeur JS autonome) sur les images de la vidéo — fonctionne sur tous les
-   * navigateurs. Renvoie une fonction d'arrêt. Peut lever (caméra refusée…).
-   */
-  async function scannerQrCamera(container, onDetecte) {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-    const video = el("video", { style: "width:100%;max-width:300px;border-radius:10px;background:#000", autoplay: "autoplay", muted: "muted", playsinline: "playsinline" });
-    video.setAttribute("muted", ""); video.setAttribute("playsinline", "");
-    video.srcObject = stream; try { await video.play(); } catch (_) { /* certains navigateurs jouent après l'insertion */ }
-    CL.dom.vider(container); container.appendChild(video);
-
-    const detector = ("BarcodeDetector" in window) ? new window.BarcodeDetector({ formats: ["qr_code"] }) : null;
-    let canvas = null, cctx = null;
-    if (!detector) { canvas = document.createElement("canvas"); cctx = canvas.getContext("2d", { willReadFrequently: true }); }
-
-    let actif = true;
-    function arreter() { actif = false; try { stream.getTracks().forEach((t) => t.stop()); } catch (_) {} CL.dom.vider(container); }
-    async function tick() {
-      if (!actif) return;
-      try {
-        if (detector) {
-          const codes = await detector.detect(video);
-          if (codes && codes.length) { const v = codes[0].rawValue; arreter(); onDetecte(v); return; }
-        } else if (video.videoWidth && window.jsQR) {
-          canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-          cctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const img = cctx.getImageData(0, 0, canvas.width, canvas.height);
-          const res = window.jsQR(img.data, img.width, img.height, { inversionAttempts: "attemptBoth" });
-          if (res && res.data) { arreter(); onDetecte(res.data); return; }
-        }
-      } catch (_) { /* trame illisible → on réessaie */ }
-      if (actif) requestAnimationFrame(tick);
-    }
-    tick();
-    return arreter;
-  }
-
   /* Le coach scanne (caméra) ou saisit le QR de présence → séance terminée + fonds libérés. */
   function validerPresenceCoach(r, onChange) {
-    const code = el("input", { class: "input", inputmode: "numeric", placeholder: "Code à 6 chiffres", maxlength: "6", style: "font-family:monospace;letter-spacing:4px;text-align:center;font-size:1.2rem" });
-    const zoneScan = el("div", { style: "display:flex;justify-content:center" });
-    let arreterScan = null;
-
-    async function soumettre(valeur, btn) {
-      if (btn) btn.disabled = true;
-      const res = await bookingService.validerPresence(r.id, valeur);
-      if (!res.ok) { if (btn) btn.disabled = false; return CL.toast.erreur("Validation impossible", res.message || ""); }
-      if (arreterScan) { arreterScan(); arreterScan = null; }
-      CL.modal.fermer();
-      CL.toast.succes("Présence validée ✅", format.fcfa(r.prix) + " crédités sur votre portefeuille.");
-      onChange && onChange();
-    }
-
-    const btnCam = el("button", { class: "btn btn-primaire btn-bloc", html: CL.icon("qrcode", 16) + " Scanner le QR avec la caméra" });
-    const libelleScan = () => { btnCam.innerHTML = CL.icon("qrcode", 16) + " Scanner le QR avec la caméra"; };
-    btnCam.addEventListener("click", async () => {
-      // Déjà en cours → on arrête.
-      if (arreterScan) { arreterScan(); arreterScan = null; libelleScan(); return; }
-      // Caméra indisponible (navigateur ancien ou contexte non sécurisé).
-      if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) {
-        return CL.toast.erreur("Caméra indisponible",
-          window.isSecureContext ? "Ce navigateur ne permet pas l'accès à la caméra. Saisissez le code à 6 chiffres."
-                                 : "La caméra nécessite une connexion sécurisée (HTTPS). Saisissez le code à 6 chiffres.");
-      }
-      btnCam.disabled = true;
-      try {
-        arreterScan = await scannerQrCamera(zoneScan, (valeur) => { arreterScan = null; libelleScan(); btnCam.disabled = false; soumettre(valeur, null); });
-        btnCam.innerHTML = CL.icon("fermer", 16) + " Arrêter la caméra";
-        btnCam.disabled = false;
-      } catch (e) {
-        btnCam.disabled = false; libelleScan();
-        const nom = e && e.name;
-        const msg = nom === "NotAllowedError" ? "Autorisez l'accès à la caméra dans votre navigateur, puis réessayez."
-          : nom === "NotFoundError" ? "Aucune caméra détectée sur cet appareil."
-          : "Impossible d'ouvrir la caméra. Saisissez le code à 6 chiffres.";
-        CL.toast.erreur("Caméra", msg);
-      }
-    });
-
-    CL.modal.ouvrir({
+    CL.scanQr.modal({
       titre: "Valider la présence — " + r.clientNom,
-      contenu: el("div", { class: "pile-3" }, [
-        el("p", { class: "texte-sm texte-doux", text: "Scannez le QR de présence du client avec la caméra, ou saisissez le code à 6 chiffres affiché sur son écran, pour confirmer que la séance « " + r.tarifNom + " » a bien eu lieu. Le montant sera crédité sur votre portefeuille." }),
-        btnCam,
-        zoneScan,
-        el("div", { class: "champ" }, [el("label", { text: "Code de présence (valable 30 s)" }), code]),
-      ]),
-      pied: [
-        el("button", { class: "btn btn-fantome", text: "Annuler", onclick: () => { if (arreterScan) arreterScan(); CL.modal.fermer(); } }),
-        el("button", { class: "btn btn-succes", html: CL.icon("check", 16) + " Valider & encaisser", onclick: (e) => soumettre(code.value, e.currentTarget) }),
-      ],
+      phrase: "Scannez le QR de présence du client avec la caméra, ou saisissez le code à 6 chiffres affiché sur son écran, pour confirmer que la séance « " + r.tarifNom + " » a bien eu lieu. Le montant sera crédité sur votre portefeuille.",
+      boutonValider: "Valider & encaisser",
+      onValider: (valeur) => bookingService.validerPresence(r.id, valeur),
+      onSucces: () => { CL.toast.succes("Présence validée ✅", format.fcfa(r.prix) + " crédités sur votre portefeuille."); onChange && onChange(); },
     });
   }
 

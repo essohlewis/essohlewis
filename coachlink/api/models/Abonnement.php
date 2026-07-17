@@ -106,17 +106,75 @@ class Abonnement extends Model
         $this->maj($id, $champs);
     }
 
-    /** Enregistre le règlement d'un mois. */
+    /** Jeton secret (graine du QR de présence rotatif de l'abonnement). */
+    public static function genererJeton(int $id): string
+    {
+        return 'CLQR-abo' . $id . '-' . bin2hex(random_bytes(8));
+    }
+
+    /**
+     * Enregistre le règlement d'un mois — SOUS SÉQUESTRE : libere = 0.
+     * Le montant n'ira au portefeuille du coach qu'après validation de toutes
+     * les séances prévues du mois (seances_prevues = séances/semaine × 4).
+     */
     public function enregistrerPaiement(int $id, array $p): array
     {
+        $abo = $this->trouver($id);
+        $prevues = (int) ($p['seancesPrevues'] ?? (max(1, (int) ($abo['seances_semaine'] ?? 1)) * 4));
+        // Génère le jeton de présence de l'abonnement s'il n'existe pas encore.
+        if ($abo && empty($abo['jeton'])) {
+            $this->maj($id, ['jeton' => self::genererJeton($id)]);
+        }
         $this->pdo()->prepare(
-            "INSERT INTO abonnement_paiements (abonnement_id, mois, montant, operateur, reference, date)
-             VALUES (?,?,?,?,?,?)"
+            "INSERT INTO abonnement_paiements (abonnement_id, mois, montant, operateur, reference, date, seances_prevues, seances_validees, libere)
+             VALUES (?,?,?,?,?,?,?,0,0)"
         )->execute([
             $id, $p['mois'] ?? date('Y-m'), (int) ($p['montant'] ?? 0),
-            $p['operateur'] ?? '', $p['reference'] ?? '', date('c'),
+            $p['operateur'] ?? '', $p['reference'] ?? '', date('c'), $prevues,
         ]);
         return $this->complet($id);
+    }
+
+    /**
+     * Le coach valide UNE séance d'abonnement via le QR rotatif du client.
+     * Comptabilise la séance du mois courant ; libère la mensualité vers le
+     * portefeuille dès que toutes les séances prévues ont été validées.
+     * @return array{ok:bool, message?:string, validees?:int, prevues?:int, libere?:bool}
+     */
+    public function validerSeance(int $id, string $code, ?int $t = null): array
+    {
+        $abo = $this->trouver($id);
+        if (!$abo) {
+            return ['ok' => false, 'message' => 'Abonnement introuvable.'];
+        }
+        if (empty($abo['jeton'])) {
+            return ['ok' => false, 'message' => 'Abonnement non actif (aucun règlement).'];
+        }
+        $fen = Otp::fenetreValide((string) $abo['jeton'], $code, $t);
+        if ($fen === null) {
+            return ['ok' => false, 'message' => 'Code de présence invalide ou expiré.'];
+        }
+        $mois = date('Y-m', $t ?? time());
+        $paie = $this->requete("SELECT * FROM abonnement_paiements WHERE abonnement_id = ? AND mois = ?", [$id, $mois]);
+        if (empty($paie)) {
+            return ['ok' => false, 'message' => 'Le mois en cours n\'est pas encore réglé.'];
+        }
+        $p = $paie[0];
+        // Anti-doublon : une même fenêtre OTP ne compte qu'une seule fois.
+        $deja = $this->requete("SELECT 1 FROM abonnement_seances WHERE abonnement_id = ? AND fenetre = ?", [$id, $fen]);
+        if (!empty($deja)) {
+            return ['ok' => false, 'message' => 'Cette séance vient déjà d\'être validée.'];
+        }
+        $this->pdo()->prepare("INSERT INTO abonnement_seances (abonnement_id, mois, fenetre, date) VALUES (?,?,?,?)")
+            ->execute([$id, $mois, $fen, date('c')]);
+
+        $validees = (int) $p['seances_validees'] + 1;
+        $prevues  = (int) $p['seances_prevues'];
+        $libere   = $validees >= $prevues ? 1 : 0;
+        $this->pdo()->prepare("UPDATE abonnement_paiements SET seances_validees = ?, libere = ? WHERE id = ?")
+            ->execute([$validees, $libere, (int) $p['id']]);
+
+        return ['ok' => true, 'validees' => $validees, 'prevues' => $prevues, 'libere' => (bool) $libere];
     }
 
     /** True si le mois donné (Y-m) est déjà réglé. */
