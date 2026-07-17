@@ -174,6 +174,27 @@
       return { ok: true, reservation: r };
     },
 
+    /** Le coach ajuste le lieu du rendez-vous. Renvoie la résa mise à jour ou false. */
+    majLieu(resaId, loc) {
+      const liste = toutes();
+      const r = liste.find((b) => b.id === resaId);
+      if (!r) return false;
+      Object.assign(r, {
+        lieuType: loc.lieuType || r.lieuType || "", lieuNom: loc.lieuNom || "", adresse: loc.adresse || "",
+        ville: loc.ville || "", commune: loc.commune || "", quartier: loc.quartier || "",
+        lat: loc.lat || "", lng: loc.lng || "",
+      });
+      sauver(liste);
+      if (bookingService._api()) {
+        CL.API.patch("/reservations/" + resaId + "/lieu", loc).catch(() => {});
+      } else {
+        CL.notifications.ajouter(r.clientId, {
+          type: "reservation", texte: `Votre coach a précisé le lieu de « ${r.tarifNom} ».`, lien: "#/client/reservations",
+        });
+      }
+      return r;
+    },
+
     /** Change le statut (côté coach ou client). */
     changerStatut(resaId, statut) {
       const liste = toutes();

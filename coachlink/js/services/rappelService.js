@@ -37,12 +37,18 @@
     return Math.round((b - a) / 86400000);
   }
 
-  /** Dans la fenêtre de rappel : à venir, aujourd'hui ou demain (J-1). */
-  function dansFenetre(occ) {
-    if (!occ || occ <= new Date()) return false;
-    return ecartJours(occ) <= 1;
+  // Fenêtres de rappel configurables (préférences utilisateur) :
+  //   j1 = la veille (J-1) ; h2 = deux heures avant la séance.
+  const FENETRES = [
+    { cle: "j1", actif: (occ, now) => ecartJours(occ) === 1, quand: () => "demain" },
+    { cle: "h2", actif: (occ, now) => (occ - now) / 3600000 <= 2, quand: () => "dans moins de 2 h" },
+  ];
+  function fenetresActivees() {
+    const r = (storage.lire(storage.CLES.prefs, {}) || {}).rappels || {};
+    return FENETRES.filter((f) => r[f.cle] !== false); // activées par défaut
   }
-  function quand(occ) { return ecartJours(occ) <= 0 ? "aujourd'hui" : "demain"; }
+  /** Une occurrence est-elle éligible et non passée ? */
+  function eligible(occ) { return occ && occ > new Date(); }
 
   function nomCoach(coachId) {
     const c = CL.coachService && CL.coachService.obtenir(coachId);
@@ -60,7 +66,7 @@
   }
 
   const rappels = {
-    prochaineOccurrence, dansFenetre,
+    prochaineOccurrence, eligible,
 
     /** Génère les rappels dus pour l'utilisateur courant. Renvoie le nombre créé. */
     verifier() {
@@ -70,6 +76,9 @@
       const monCoach = estCoach && CL.coachCourant ? CL.coachCourant() : null;
       if (estCoach && !monCoach) return 0;
 
+      const fenetres = fenetresActivees();
+      if (!fenetres.length) return 0;
+      const now = new Date();
       const envoyes = new Set(storage.lire(CLE_ENVOYES, []));
       let n = 0;
       const emettre = (cle, texte, lien) => {
@@ -77,19 +86,26 @@
         CL.notifications.ajouter(u.id, { type: "rappel", texte, lien });
         envoyes.add(cle); n++;
       };
+      // Pour une occurrence donnée, émet un rappel par fenêtre active éligible.
+      const planifier = (occ, base, phrase, lien) => {
+        if (!eligible(occ)) return;
+        const jour = occ.toISOString().slice(0, 10);
+        fenetres.forEach((f) => {
+          if (!f.actif(occ, now)) return;
+          emettre(base + "@" + jour + ":" + f.cle, phrase(f.quand()), lien);
+        });
+      };
 
       // 1) Réservations ponctuelles confirmées.
       storage.lire(storage.CLES.bookings, []).forEach((r) => {
         if (r.statut !== "confirmee") return;
         const pourMoi = estCoach ? r.coachId === monCoach.id : r.clientId === u.id;
         if (!pourMoi) return;
-        const occ = prochaineOccurrence(r.jour, r.heure);
-        if (!dansFenetre(occ)) return;
-        const cle = "resa:" + r.id + "@" + occ.toISOString().slice(0, 10);
         const qui = estCoach ? (r.clientNom || "votre client") : nomCoach(r.coachId);
         const terme = termePour(r.coachId);
         const lien = estCoach ? "#/espace-coach/reservations" : "#/client/reservations";
-        emettre(cle, "Rappel : votre " + terme + " avec " + qui + " a lieu " + quand(occ) + " à " + r.heure + lieuTexte(r) + ".", lien);
+        planifier(prochaineOccurrence(r.jour, r.heure), "resa:" + r.id,
+          (q) => "Rappel : votre " + terme + " avec " + qui + " a lieu " + q + " à " + r.heure + lieuTexte(r) + ".", lien);
       });
 
       // 2) Séances programmées d'un abonnement actif.
@@ -97,15 +113,13 @@
         if (a.statut !== "actif" || !a.programme) return;
         const pourMoi = estCoach ? a.coachId === monCoach.id : a.clientId === u.id;
         if (!pourMoi) return;
+        const qui = estCoach ? (a.clientNom || "votre client") : (a.coachNom || "votre coach");
+        const terme = termePour(a.coachId);
+        const lien = estCoach ? "#/espace-coach/abonnements" : "#/client/abonnements";
         Object.keys(a.programme).forEach((j) => {
           (a.programme[j] || []).forEach((h) => {
-            const occ = prochaineOccurrence(j, h);
-            if (!dansFenetre(occ)) return;
-            const cle = "abo:" + a.id + ":" + j + h + "@" + occ.toISOString().slice(0, 10);
-            const qui = estCoach ? (a.clientNom || "votre client") : (a.coachNom || "votre coach");
-            const terme = termePour(a.coachId);
-            const lien = estCoach ? "#/espace-coach/abonnements" : "#/client/abonnements";
-            emettre(cle, "Rappel : votre " + terme + " d'abonnement avec " + qui + " a lieu " + quand(occ) + " à " + h + ".", lien);
+            planifier(prochaineOccurrence(j, h), "abo:" + a.id + ":" + j + h,
+              (q) => "Rappel : votre " + terme + " d'abonnement avec " + qui + " a lieu " + q + " à " + h + ".", lien);
           });
         });
       });

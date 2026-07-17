@@ -32,6 +32,7 @@
 
     { motif: /^\/espace-coach$/, page: "coachAccueil", shell: "dash", role: "coach" },
     { motif: /^\/espace-coach\/reservations$/, page: "coachReservations", shell: "dash", role: "coach" },
+    { motif: /^\/espace-coach\/agenda$/, page: "coachAgenda", shell: "dash", role: "coach" },
     { motif: /^\/espace-coach\/abonnements$/, page: "coachAbonnements", shell: "dash", role: "coach" },
     { motif: /^\/espace-coach\/profil$/, page: "coachProfil", shell: "dash", role: "coach" },
     { motif: /^\/espace-coach\/mur$/, page: "coachMur", shell: "dash", role: "coach" },
@@ -88,6 +89,7 @@
       return CL.layout.sidebar("Espace coach", [
         { href: "#/espace-coach", icone: "dashboard", label: "Tableau de bord" },
         { href: "#/espace-coach/reservations", icone: "calendrier", label: "Demandes", compteur: nbDemandes || null },
+        { href: "#/espace-coach/agenda", icone: "horloge", label: "Agenda" },
         { href: "#/espace-coach/abonnements", icone: "etoile", label: "Abonnements" },
         { href: "#/espace-coach/profil", icone: "utilisateur", label: "Mon profil" },
         { href: "#/espace-coach/mur", icone: "document", label: "Mon mur" },

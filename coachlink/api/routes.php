@@ -51,6 +51,7 @@ $router->get('/reservations/mes',         [ReservationController::class, 'mes'])
 $router->get('/reservations/coach',       [ReservationController::class, 'pourCoach']);
 $router->post('/reservations/:id/payer',  [ReservationController::class, 'payer']);
 $router->patch('/reservations/:id/statut', [ReservationController::class, 'statut']);
+$router->patch('/reservations/:id/lieu',   [ReservationController::class, 'lieu']);
 
 // Webhook de confirmation Mobile Money (appelé par l'opérateur).
 $router->post('/paiements/callback', [PaiementController::class, 'callback']);

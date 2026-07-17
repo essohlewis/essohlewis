@@ -45,6 +45,13 @@ class ReservationFlowTest extends ApiTestCase
         $this->assertSame('Riviera 3', $frais['quartier']);
         $this->assertSame('5.3600', $frais['lat']);
         $this->assertSame('-3.9900', $frais['lng']);
+
+        // Le coach ajuste ensuite le lieu (ex. propose son cabinet).
+        $maj = $r->majLieu((int) $resa['id'], [
+            'lieuType' => 'cabinet_coach', 'ville' => 'Abidjan', 'commune' => 'Plateau',
+        ]);
+        $this->assertSame('cabinet_coach', $maj['lieu_type']);
+        $this->assertSame('Plateau', $maj['commune']);
     }
 
     public function testPaiementAvecRemisePromo(): void

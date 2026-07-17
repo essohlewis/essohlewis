@@ -76,4 +76,20 @@ class Reservation extends Model
     {
         $this->maj($id, ['statut' => $statut]);
     }
+
+    /** Met à jour le lieu du rendez-vous (ajusté par le coach). */
+    public function majLieu(int $id, array $d): array
+    {
+        $this->maj($id, [
+            'lieu_type' => $d['lieuType'] ?? '',
+            'lieu_nom'  => $d['lieuNom'] ?? '',
+            'adresse'   => $d['adresse'] ?? '',
+            'ville'     => $d['ville'] ?? '',
+            'commune'   => $d['commune'] ?? '',
+            'quartier'  => $d['quartier'] ?? '',
+            'lat'       => $d['lat'] ?? '',
+            'lng'       => $d['lng'] ?? '',
+        ]);
+        return $this->trouver($id);
+    }
 }

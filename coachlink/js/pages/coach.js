@@ -87,16 +87,81 @@
     return el("div", {}, [el("div", { class: "page-entete" }, [el("div", {}, [el("h1", { text: "Demandes de réservation" }), el("p", { text: "Acceptez, refusez et suivez vos séances." })])]), filtres, liste]);
   };
 
+  /* --------------------------- Agenda de la semaine --------------- */
+  CL.pages.coachAgenda = function () {
+    const err = garde(); if (err) return err;
+    const c = moncoach();
+    const ORDRE = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+
+    // Collecte : séances confirmées (ponctuelles) + séances d'abonnements actifs.
+    const evs = [];
+    bookingService.parCoach(c.id).filter((r) => r.statut === "confirmee").forEach((r) => {
+      evs.push({ jour: r.jour, heure: r.heure || "", titre: r.clientNom, sous: r.tarifNom, type: "resa", lieuType: r.lieuType });
+    });
+    (CL.abonnementService ? CL.abonnementService.parCoach(c.id) : []).filter((a) => a.statut === "actif" && a.programme).forEach((a) => {
+      Object.keys(a.programme).forEach((j) => (a.programme[j] || []).forEach((h) => {
+        evs.push({ jour: j, heure: h, titre: a.clientNom, sous: "Abonnement", type: "abo", lieuType: a.lieuType });
+      }));
+    });
+
+    const entete = el("div", { class: "page-entete" }, [el("div", {}, [
+      el("h1", { text: "Agenda de la semaine" }),
+      el("p", { text: "Vos séances confirmées et vos abonnements actifs, jour par jour." }),
+    ])]);
+
+    if (!evs.length) {
+      return el("div", {}, [entete, ui.vide("calendrier", "Agenda vide", "Vos séances confirmées et vos abonnements actifs apparaîtront ici.")]);
+    }
+
+    const lieuCourt = (t) => {
+      if (!t || !CL.profilCat) return "";
+      const cfg = CL.profilCat.lieu(t);
+      return cfg.enLigne ? "En ligne" : cfg.label;
+    };
+    const puce = (e) => el("div", {
+      class: "carte carte-corps", style: "padding:8px 10px;border-left:3px solid " + (e.type === "abo" ? "var(--orange-cta)" : "var(--bleu-confiance)"),
+    }, [
+      el("div", { class: "gras texte-sm", text: e.heure }),
+      el("div", { class: "texte-xs", text: esc(e.titre) }),
+      el("div", { class: "texte-xs texte-faible", text: e.sous + (lieuCourt(e.lieuType) ? " · " + lieuCourt(e.lieuType) : "") }),
+    ]);
+
+    const colonnes = ORDRE.map((j) => {
+      const items = evs.filter((e) => e.jour === j).sort((a, b) => String(a.heure).localeCompare(String(b.heure)));
+      return el("div", { style: "min-width:150px" }, [
+        el("div", { class: "gras mb-2 texte-centre", style: "padding:6px;border-radius:8px;background:var(--surface-2)", text: j + (items.length ? " (" + items.length + ")" : "") }),
+        items.length ? el("div", { class: "pile-2" }, items.map(puce)) : el("div", { class: "texte-xs texte-faible texte-centre mt-2", text: "—" }),
+      ]);
+    });
+
+    const total = evs.length;
+    return el("div", {}, [
+      entete,
+      el("div", { class: "rangee gap-3 mb-4 rangee-wrap" }, [
+        CL.statCarte ? CL.statCarte("calendrier", "var(--bleu-confiance)", total, "Séances cette semaine") : el("div", { text: total + " séances" }),
+      ]),
+      el("div", { style: "display:grid;grid-template-columns:repeat(7,minmax(150px,1fr));gap:10px;overflow-x:auto;padding-bottom:6px" }, colonnes),
+      el("div", { class: "rangee gap-4 mt-3 texte-xs texte-faible" }, [
+        el("span", { html: "<span style='display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--bleu-confiance);vertical-align:middle;margin-right:5px'></span> Séance ponctuelle" }),
+        el("span", { html: "<span style='display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--orange-cta);vertical-align:middle;margin-right:5px'></span> Abonnement" }),
+      ]),
+    ]);
+  };
+
   function carteDemandeCoach(r, onChange) {
     const st = bookingService.STATUTS[r.statut];
     const actions = el("div", { class: "rangee gap-2 rangee-wrap" });
     if (r.statut === "en_attente") {
-      actions.appendChild(el("button", { class: "btn btn-succes btn-sm", html: CL.icon("check", 16) + " Accepter", onclick: () => { bookingService.changerStatut(r.id, "confirmee"); CL.toast.succes("Confirmée", "Le client a été notifié."); onChange(); } }));
+      actions.appendChild(el("button", { class: "btn btn-succes btn-sm", html: CL.icon("check", 16) + " Accepter", onclick: () => ouvrirLieuCoach(r, true, onChange) }));
       actions.appendChild(el("button", { class: "btn btn-fantome btn-sm", text: "Refuser", onclick: () => { bookingService.changerStatut(r.id, "refusee"); CL.toast.info("Refusée", ""); onChange(); } }));
     } else if (r.statut === "confirmee") {
+      actions.appendChild(el("button", { class: "btn btn-fantome btn-sm", html: CL.icon("localisation", 15) + " Ajuster le lieu", onclick: () => ouvrirLieuCoach(r, false, onChange) }));
       actions.appendChild(el("button", { class: "btn btn-primaire btn-sm", html: CL.icon("check", 16) + " Marquer terminée", onclick: () => { bookingService.changerStatut(r.id, "terminee"); CL.toast.succes("Séance terminée", "Le client pourra laisser un avis."); onChange(); } }));
     }
     actions.appendChild(el("button", { class: "btn btn-fantome btn-sm", html: CL.icon("message", 16) + " Message", onclick: () => contacterClient(r) }));
+
+    const cfgLieu = r.lieuType ? CL.profilCat.lieu(r.lieuType) : null;
+    const detailLieu = cfgLieu ? (cfgLieu.enLigne ? "Visioconférence" : (cfgLieu.adresse ? (CL.localisation.resume(r) || cfgLieu.label) : cfgLieu.label)) : "";
 
     return el("div", { class: "carte carte-corps" }, [
       el("div", { class: "rangee entre rangee-wrap gap-3" }, [
@@ -106,6 +171,7 @@
             el("strong", { text: r.clientNom }),
             el("div", { class: "texte-sm texte-doux", text: r.tarifNom + " · " + format.fcfa(r.prix) }),
             el("div", { class: "texte-xs texte-faible", html: CL.icon("calendrier", 13) + " " + r.jour + " à " + r.heure }),
+            cfgLieu ? el("div", { class: "texte-xs texte-faible", html: CL.icon("localisation", 13) + " " + (cfgLieu.enLigne ? "" : cfgLieu.label + (detailLieu && detailLieu !== cfgLieu.label ? " — " + detailLieu : "")) + (cfgLieu.enLigne ? "Visioconférence" : "") }) : null,
             r.message ? el("p", { class: "texte-sm mt-2", style: "background:var(--surface-2);padding:8px 12px;border-radius:8px", text: "« " + r.message + " »" }) : null,
           ]),
         ]),
@@ -113,6 +179,55 @@
       ]),
       el("div", { class: "mt-3", style: "border-top:1px solid var(--bordure);padding-top:12px" }, [actions]),
     ]);
+  }
+
+  /* Le coach vérifie / ajuste le lieu, puis confirme (ou met à jour) le RDV. */
+  function ouvrirLieuCoach(r, confirmer, onChange) {
+    const c = moncoach();
+    const pf = CL.profilCat.pour(c);
+    let lieuType = r.lieuType || pf.lieux[0];
+    const zone = el("div", { class: "mt-2" });
+    let locChamp = null;
+    function rendre() {
+      CL.dom.vider(zone);
+      const cfg = CL.profilCat.lieu(lieuType);
+      if (cfg.enLigne) {
+        zone.appendChild(el("p", { class: "texte-sm texte-doux", text: "Rendez-vous en visioconférence : partagez le lien au client par messagerie." }));
+        locChamp = null;
+      } else if (!cfg.adresse) {
+        zone.appendChild(el("p", { class: "texte-sm texte-doux", text: cfg.label + " (" + (c.commune || "lieu à convenir") + ")." }));
+        locChamp = null;
+      } else {
+        locChamp = CL.localisation.champ(
+          { lieuNom: r.lieuNom, adresse: r.adresse, ville: r.ville || "Abidjan", commune: r.commune || c.commune, quartier: r.quartier, lat: r.lat, lng: r.lng },
+          { salle: cfg.nomLieu }
+        );
+        zone.appendChild(locChamp.el);
+      }
+    }
+    const radios = el("div", { class: "rangee gap-2 rangee-wrap mb-1" }, pf.lieux.map((k) => {
+      const b = el("button", { class: "chip" + (k === lieuType ? " actif" : ""), type: "button", text: CL.profilCat.lieu(k).label });
+      b.addEventListener("click", () => { lieuType = k; radios.querySelectorAll(".chip").forEach((x) => x.classList.remove("actif")); b.classList.add("actif"); rendre(); });
+      return b;
+    }));
+    rendre();
+    CL.modal.ouvrir({
+      titre: (confirmer ? "Confirmer — " : "Lieu du rendez-vous — ") + r.clientNom,
+      contenu: el("div", { class: "pile-4" }, [
+        el("p", { class: "texte-sm texte-doux", text: confirmer ? "Vérifiez ou ajustez le lieu proposé, puis confirmez la séance." : "Ajustez le lieu du rendez-vous : le client sera notifié." }),
+        el("div", {}, [el("label", { class: "champ", style: "font-weight:600;display:block;margin-bottom:6px", text: pf.questionLieu }), radios, zone]),
+      ]),
+      pied: [
+        el("button", { class: "btn btn-fantome", text: "Annuler", onclick: CL.modal.fermer }),
+        el("button", { class: "btn btn-cta", text: confirmer ? "Confirmer la séance" : "Enregistrer le lieu", onclick: () => {
+          const loc = locChamp ? locChamp.valeur() : {};
+          bookingService.majLieu(r.id, Object.assign({ lieuType }, loc));
+          if (confirmer) { bookingService.changerStatut(r.id, "confirmee"); CL.toast.succes("Confirmée", "Le client a été notifié."); }
+          else CL.toast.succes("Lieu mis à jour", "Le client a été notifié.");
+          CL.modal.fermer(); onChange && onChange();
+        } }),
+      ],
+    });
   }
 
   async function contacterClient(r) {

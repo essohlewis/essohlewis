@@ -95,6 +95,25 @@ class ReservationController
         Response::ok($resa);
     }
 
+    /** PATCH /reservations/:id/lieu — le coach ajuste le lieu du rendez-vous. */
+    public function lieu(array $params): void
+    {
+        $user  = Auth::exigerRole('coach');
+        $model = new Reservation();
+        $resa  = $model->trouver((int) $params['id']);
+        $coach = (new Coach())->parProprietaire((int) $user['id']);
+        if (!$resa || !$coach || $resa['coach_id'] !== $coach['id']) {
+            Response::erreur('Réservation introuvable.', 404);
+        }
+        $d = Request::corps();
+        $resa = $model->majLieu((int) $params['id'], $d);
+
+        // Prévient le client de la précision / modification du lieu.
+        (new Notification())->ajouter((int) $resa['client_id'], 'reservation',
+            'Votre coach a précisé le lieu de « ' . $resa['tarif_nom'] .' ».', '#/client/reservations');
+        Response::ok($resa);
+    }
+
     /** PATCH /reservations/:id/statut  { statut } */
     public function statut(array $params): void
     {

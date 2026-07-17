@@ -41,11 +41,20 @@
 
     const toggleNotifs = interrupteur("Notifications par email", prefs.emailNotifs !== false, (v) => { prefs.emailNotifs = v; storage.ecrire(storage.CLES.prefs, prefs); });
 
+    // Rappels de rendez-vous (J-1 et 2 h avant), activés par défaut.
+    const rap = prefs.rappels || {};
+    const majRap = () => { prefs.rappels = rap; storage.ecrire(storage.CLES.prefs, prefs); };
+    const toggleRapJ1 = interrupteur("Rappel la veille (J-1)", rap.j1 !== false, (v) => { rap.j1 = v; majRap(); });
+    const toggleRapH2 = interrupteur("Rappel 2 h avant la séance", rap.h2 !== false, (v) => { rap.h2 = v; majRap(); });
+
     const cartePref = el("div", { class: "carte carte-corps pile-4" }, [
       el("h3", { text: "Préférences" }),
       toggleTheme,
       el("div", { class: "champ" }, [el("label", { text: "Langue de l'interface" }), selLangue, el("div", { class: "aide", text: "Structure multilingue prête (FR par défaut)." })]),
       toggleNotifs,
+      el("div", { class: "champ" }, [el("label", { text: "Rappels de rendez-vous" }), el("div", { class: "aide", text: "Recevez une alerte avant vos séances, consultations et cours." })]),
+      toggleRapJ1,
+      toggleRapH2,
     ]);
 
     /* --------------------- Zone dangereuse ----------------------- */
