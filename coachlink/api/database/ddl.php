@@ -34,6 +34,8 @@ function coachlink_creer_tables(PDO $pdo, bool $sqlite): void
     $pdo->exec("CREATE TABLE IF NOT EXISTS posts (id $PK, coach_id VARCHAR(40), texte TEXT, image LONGTEXT, video VARCHAR(255), likes INT DEFAULT 0, date VARCHAR(40))$suffixe");
     $pdo->exec("CREATE TABLE IF NOT EXISTS reservations (id $PK, coach_id VARCHAR(40), client_id INT, client_nom VARCHAR(120),
       tarif_id VARCHAR(50), tarif_nom VARCHAR(120), prix INT, duree INT, jour VARCHAR(3), heure VARCHAR(5), message TEXT,
+      lieu_type VARCHAR(20), lieu_nom VARCHAR(160), adresse VARCHAR(200), ville VARCHAR(80), commune VARCHAR(80),
+      quartier VARCHAR(120), lat VARCHAR(24), lng VARCHAR(24),
       statut VARCHAR(15) DEFAULT 'en_attente', avis_laisse INT DEFAULT 0, paye INT DEFAULT 0, paiement_op VARCHAR(40),
       paiement_numero VARCHAR(30), paiement_montant INT, paiement_remise INT, paiement_promo VARCHAR(40),
       paiement_ref VARCHAR(40), paiement_date VARCHAR(40), cree_le VARCHAR(40))$suffixe");

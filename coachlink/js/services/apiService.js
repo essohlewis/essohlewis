@@ -157,6 +157,9 @@
         id: r.id, coachId: r.coach_id, clientId: Number(r.client_id), clientNom: r.client_nom,
         tarifId: r.tarif_id, tarifNom: r.tarif_nom, prix: Number(r.prix), duree: Number(r.duree),
         jour: r.jour, heure: r.heure, message: r.message, statut: r.statut,
+        lieuType: r.lieu_type || "", lieuNom: r.lieu_nom || "", adresse: r.adresse || "",
+        ville: r.ville || "", commune: r.commune || "", quartier: r.quartier || "",
+        lat: r.lat || "", lng: r.lng || "",
         avisLaisse: !!Number(r.avis_laisse), creeLe: r.cree_le,
         paiement: Number(r.paye) ? {
           operateur: r.paiement_op, numero: r.paiement_numero, montant: Number(r.paiement_montant),

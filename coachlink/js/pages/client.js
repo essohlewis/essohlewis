@@ -127,6 +127,21 @@
     });
   }
 
+  // Ligne « lieu » d'une réservation (selon la catégorie : cabinet, domicile,
+  // salle, studio, bureau convenu ou visioconférence).
+  function ligneLieu(r) {
+    if (!r || !r.lieuType) return null;
+    const cfg = CL.profilCat.lieu(r.lieuType);
+    const detail = cfg.enLigne ? "" : (cfg.adresse ? (CL.localisation.resume(r) || "") : "");
+    const txt = cfg.label + (detail ? " — " + detail : "");
+    const bloc = el("div", { class: "texte-xs texte-faible", html: CL.icon("localisation", 13) + " " + txt });
+    if ((r.lat && r.lng) || r.adresse) {
+      bloc.appendChild(document.createTextNode(" · "));
+      bloc.appendChild(el("a", { class: "btn-lien", href: CL.localisation.lienMaps(r), target: "_blank", rel: "noopener", text: "Google Maps" }));
+    }
+    return bloc;
+  }
+
   function carteReservation(r, vue, onChange) {
     const coach = coachService.obtenir(r.coachId);
     const st = bookingService.STATUTS[r.statut];
@@ -156,6 +171,7 @@
             el("strong", { text: r.tarifNom }),
             el("div", { class: "texte-sm texte-doux", text: coach ? coachService.nomComplet(coach) : r.clientNom }),
             el("div", { class: "texte-xs texte-faible", html: CL.icon("calendrier", 13) + " " + r.jour + " à " + r.heure + " · " + format.fcfa(r.prix) }),
+            ligneLieu(r),
           ]),
         ]),
         el("div", { class: "pile", style: "align-items:flex-end;gap:8px" }, [

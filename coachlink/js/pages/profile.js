@@ -358,6 +358,35 @@
 
     const message = el("textarea", { class: "textarea", placeholder: "Un message pour le coach (objectif, niveau…) — facultatif", rows: "2" });
 
+    // Lieu du rendez-vous — dépend de la catégorie (cabinet / bureau / domicile /
+    // salle / studio / en ligne). Indispensable pour un nutritionniste ou un
+    // coach pro qui reçoit dans un bureau, un immeuble ou une localité précise.
+    const pf = CL.profilCat.pour(coach);
+    let lieuType = pf.lieux[0];
+    const zoneLieuR = el("div", { class: "mt-2" });
+    let locChampR = null;
+    function rendreLieuR() {
+      CL.dom.vider(zoneLieuR);
+      const cfg = CL.profilCat.lieu(lieuType);
+      if (cfg.enLigne) {
+        zoneLieuR.appendChild(el("p", { class: "texte-sm texte-doux", text: "Rendez-vous en visioconférence : le lien vous sera transmis après confirmation." }));
+        locChampR = null;
+      } else if (!cfg.adresse) {
+        zoneLieuR.appendChild(el("p", { class: "texte-sm texte-doux", text: cfg.label + " (" + (coach.commune || "lieu à convenir") + ")." }));
+        locChampR = null;
+      } else {
+        locChampR = CL.localisation.champ({ ville: "Abidjan", commune: coach.commune }, { salle: cfg.nomLieu });
+        zoneLieuR.appendChild(el("p", { class: "texte-sm texte-doux mb-2", text: lieuType === "domicile" ? "Indiquez votre domicile (position GPS recommandée)." : "Indiquez le lieu (nom, immeuble/bâtiment/localité) et sa position." }));
+        zoneLieuR.appendChild(locChampR.el);
+      }
+      majRecap();
+    }
+    const radiosLieuR = el("div", { class: "rangee gap-2 rangee-wrap mb-1" }, pf.lieux.map((k) => {
+      const b = el("button", { class: "chip" + (k === lieuType ? " actif" : ""), type: "button", text: CL.profilCat.lieu(k).label });
+      b.addEventListener("click", () => { lieuType = k; radiosLieuR.querySelectorAll(".chip").forEach((x) => x.classList.remove("actif")); b.classList.add("actif"); rendreLieuR(); });
+      return b;
+    }));
+
     function tarif() { return coach.tarifs.find((t) => t.id === choix.tarifId); }
     function majRecap() {
       const t = tarif();
@@ -366,14 +395,16 @@
         el("div", { class: "recap-ligne" }, [el("span", { text: "Prestation" }), el("strong", { text: t.nom })]),
         el("div", { class: "recap-ligne" }, [el("span", { text: "Durée" }), el("span", { text: t.duree + " min" })]),
         el("div", { class: "recap-ligne" }, [el("span", { text: "Créneau" }), el("strong", { text: choix.jour ? choix.jour + " à " + choix.heure : "À choisir" })]),
+        el("div", { class: "recap-ligne" }, [el("span", { text: "Lieu" }), el("span", { text: CL.profilCat.lieu(lieuType).label })]),
         el("div", { class: "recap-total mt-2" }, [el("span", { text: "Total" }), el("span", { text: format.fcfa(t.prix) })]),
       ]));
     }
-    majRecap();
+    rendreLieuR();
 
     const contenu = el("div", { class: "pile-4" }, [
       el("div", { class: "champ" }, [el("label", { text: "Prestation" }), selTarif]),
       cal,
+      el("div", {}, [el("label", { class: "champ", style: "font-weight:600;display:block;margin-bottom:6px", text: pf.questionLieu }), radiosLieuR, zoneLieuR]),
       el("div", { class: "champ" }, [el("label", { text: "Message (facultatif)" }), message]),
       infoCreneau,
     ]);
@@ -389,10 +420,14 @@
           const t = tarif();
           const btn = e.currentTarget; btn.disabled = true;
           try {
+            const loc = locChampR ? locChampR.valeur() : {};
             const resa = await bookingService.creer({
               coachId: coach.id, clientId: u.id, clientNom: u.prenom + " " + u.nom,
               tarifId: t.id, tarifNom: t.nom, prix: t.prix, duree: t.duree,
               jour: choix.jour, heure: choix.heure, message: message.value.trim(),
+              lieuType, lieuNom: loc.lieuNom || "", adresse: loc.adresse || "",
+              ville: loc.ville || "", commune: loc.commune || "", quartier: loc.quartier || "",
+              lat: loc.lat || "", lng: loc.lng || "",
             });
             CL.modal.fermer();
             ouvrirPaiement(coach, resa);

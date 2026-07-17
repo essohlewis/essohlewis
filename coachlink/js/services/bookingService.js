@@ -86,6 +86,9 @@
           coachId: donnees.coachId, tarifId: donnees.tarifId, tarifNom: donnees.tarifNom,
           prix: donnees.prix, duree: donnees.duree, jour: donnees.jour, heure: donnees.heure,
           message: donnees.message || "",
+          lieuType: donnees.lieuType || "", lieuNom: donnees.lieuNom || "", adresse: donnees.adresse || "",
+          ville: donnees.ville || "", commune: donnees.commune || "", quartier: donnees.quartier || "",
+          lat: donnees.lat || "", lng: donnees.lng || "",
         });
         const resa = CL.API.mapReservation(brut);
         const liste = toutes(); liste.unshift(resa); sauver(liste); // reflète localement (le serveur notifie le coach)

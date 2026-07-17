@@ -24,6 +24,29 @@ class ReservationFlowTest extends ApiTestCase
         $this->assertSame('confirmee', $r->trouver((int) $resa['id'])['statut']);
     }
 
+    public function testLieuDuRendezVousPersiste(): void
+    {
+        $this->creerCoach('c1');
+        $clientId = (new User())->creer([
+            'role' => 'client', 'prenom' => 'N', 'nom' => 'D', 'email' => 'n@d.ci', 'motDePasse' => 'secret123',
+        ]);
+        $r = new Reservation();
+        // Ex. nutritionniste : rendez-vous au domicile de la cliente, géolocalisé.
+        $resa = $r->creer([
+            'coachId' => 'c1', 'clientId' => $clientId, 'clientNom' => 'N D',
+            'tarifId' => 't1', 'tarifNom' => 'Consultation', 'prix' => 15000, 'duree' => 45,
+            'jour' => 'Mer', 'heure' => '11:00',
+            'lieuType' => 'domicile', 'adresse' => 'Rue L112', 'ville' => 'Abidjan',
+            'commune' => 'Cocody', 'quartier' => 'Riviera 3', 'lat' => '5.3600', 'lng' => '-3.9900',
+        ]);
+        $frais = $r->trouver((int) $resa['id']);
+        $this->assertSame('domicile', $frais['lieu_type']);
+        $this->assertSame('Cocody', $frais['commune']);
+        $this->assertSame('Riviera 3', $frais['quartier']);
+        $this->assertSame('5.3600', $frais['lat']);
+        $this->assertSame('-3.9900', $frais['lng']);
+    }
+
     public function testPaiementAvecRemisePromo(): void
     {
         $this->creerCoach('c1');
