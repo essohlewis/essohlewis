@@ -74,13 +74,16 @@ class Abonnement extends Model
         if (!$a) return [];
         $seances    = max(1, (int) ($d['seancesSemaine'] ?? $a['seances_semaine']));
         $prixSeance = (int) ($d['prixSeance'] ?? $a['prix_seance']);
+        // Le coach fixe et signe les termes du contrat en proposant le programme.
         $this->maj($id, [
-            'programme'       => json_encode($d['programme'] ?? []),
-            'seances_semaine' => $seances,
-            'prix_seance'     => $prixSeance,
-            'prix_mensuel'    => $prixSeance * $seances * 4,
-            'lieu_nom'        => $d['lieuNom'] ?? $a['lieu_nom'],
-            'statut'          => 'propose',
+            'programme'        => json_encode($d['programme'] ?? []),
+            'seances_semaine'  => $seances,
+            'prix_seance'      => $prixSeance,
+            'prix_mensuel'     => $prixSeance * $seances * 4,
+            'lieu_nom'         => $d['lieuNom'] ?? $a['lieu_nom'],
+            'statut'           => 'propose',
+            'contrat_ref'      => $a['contrat_ref'] ?: ('CTR-' . $id . '-' . bin2hex(random_bytes(4))),
+            'contrat_coach_le' => date('c'),
         ]);
         return $this->complet($id);
     }
@@ -91,6 +94,14 @@ class Abonnement extends Model
         if ($statut === 'actif') {
             $champs['date_debut'] = date('c');
             $champs['date_fin']   = date('c', strtotime('+1 month'));
+            // Le client accepte et signe le contrat en activant l'abonnement.
+            $a = $this->trouver($id);
+            if ($a && empty($a['contrat_client_le'])) {
+                $champs['contrat_client_le'] = date('c');
+                if (empty($a['contrat_ref'])) {
+                    $champs['contrat_ref'] = 'CTR-' . $id . '-' . bin2hex(random_bytes(4));
+                }
+            }
         }
         $this->maj($id, $champs);
     }

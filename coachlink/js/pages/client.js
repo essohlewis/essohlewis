@@ -127,6 +127,22 @@
     });
   }
 
+  // QR de présence : le client le présente au coach en fin de séance ; le coach
+  // le scanne (ou saisit le code) pour libérer le paiement vers son portefeuille.
+  function montrerQrPresence(r) {
+    const svg = CL.qrcode ? CL.qrcode.svg(r.jeton, { size: 230 }) : "";
+    CL.modal.ouvrir({
+      titre: "Mon QR de présence",
+      contenu: el("div", { class: "pile-3 texte-centre" }, [
+        el("p", { class: "texte-sm texte-doux", text: "Présentez ce QR code à votre coach à la fin de la séance « " + r.tarifNom + " » pour confirmer votre présence." }),
+        el("div", { style: "display:flex;justify-content:center", html: svg }),
+        el("div", { class: "badge badge-neutre", style: "font-family:monospace;letter-spacing:.5px", text: r.jeton }),
+        el("p", { class: "texte-xs texte-faible", text: "Code de secours si le scan est impossible." }),
+      ]),
+      pied: [el("button", { class: "btn btn-primaire", text: "Fermer", onclick: CL.modal.fermer })],
+    });
+  }
+
   // Ligne « lieu » d'une réservation (selon la catégorie : cabinet, domicile,
   // salle, studio, bureau convenu ou visioconférence).
   function ligneLieu(r) {
@@ -153,6 +169,9 @@
       }
       if (r.statut === "en_attente" || r.statut === "confirmee") {
         actions.appendChild(el("button", { class: "btn btn-fantome btn-sm", text: "Annuler", onclick: () => { bookingService.changerStatut(r.id, "annulee"); CL.toast.info("Annulée", ""); onChange ? onChange() : CL.router.rendre(); } }));
+      }
+      if (r.statut === "confirmee" && r.jeton && !r.presenceValidee) {
+        actions.appendChild(el("button", { class: "btn btn-cta btn-sm", html: CL.icon("qrcode", 15) + " Mon QR de présence", onclick: () => montrerQrPresence(r) }));
       }
       if (r.statut === "terminee" && !r.avisLaisse && coach) {
         actions.appendChild(el("button", { class: "btn btn-cta btn-sm", text: "Laisser un avis", onclick: () => CL.ouvrirAvis(coach, r) }));

@@ -156,7 +156,7 @@
       actions.appendChild(el("button", { class: "btn btn-fantome btn-sm", text: "Refuser", onclick: () => { bookingService.changerStatut(r.id, "refusee"); CL.toast.info("Refusée", ""); onChange(); } }));
     } else if (r.statut === "confirmee") {
       actions.appendChild(el("button", { class: "btn btn-fantome btn-sm", html: CL.icon("localisation", 15) + " Ajuster le lieu", onclick: () => ouvrirLieuCoach(r, false, onChange) }));
-      actions.appendChild(el("button", { class: "btn btn-primaire btn-sm", html: CL.icon("check", 16) + " Marquer terminée", onclick: () => { bookingService.changerStatut(r.id, "terminee"); CL.toast.succes("Séance terminée", "Le client pourra laisser un avis."); onChange(); } }));
+      actions.appendChild(el("button", { class: "btn btn-succes btn-sm", html: CL.icon("qrcode", 15) + " Valider la présence (QR)", onclick: () => validerPresenceCoach(r, onChange) }));
     }
     actions.appendChild(el("button", { class: "btn btn-fantome btn-sm", html: CL.icon("message", 16) + " Message", onclick: () => contacterClient(r) }));
 
@@ -180,6 +180,59 @@
       el("div", { class: "mt-3", style: "border-top:1px solid var(--bordure);padding-top:12px" }, [actions]),
     ]);
   }
+
+  /* Le coach scanne / saisit le QR de présence → séance terminée + fonds libérés. */
+  function validerPresenceCoach(r, onChange) {
+    const code = el("input", { class: "input", placeholder: "Code du QR (CLQR-…)", style: "font-family:monospace" });
+    CL.modal.ouvrir({
+      titre: "Valider la présence — " + r.clientNom,
+      contenu: el("div", { class: "pile-3" }, [
+        el("p", { class: "texte-sm texte-doux", text: "Scannez le QR de présence du client (ou saisissez son code) pour confirmer que la séance « " + r.tarifNom + " » a bien eu lieu. Le montant sera crédité sur votre portefeuille." }),
+        el("div", { class: "champ" }, [el("label", { text: "Code du QR de présence" }), code]),
+      ]),
+      pied: [
+        el("button", { class: "btn btn-fantome", text: "Annuler", onclick: CL.modal.fermer }),
+        el("button", { class: "btn btn-succes", html: CL.icon("check", 16) + " Valider & encaisser", onclick: async (e) => {
+          e.currentTarget.disabled = true;
+          const res = await bookingService.validerPresence(r.id, code.value);
+          if (!res.ok) { e.currentTarget.disabled = false; return CL.toast.erreur("Validation impossible", res.message || ""); }
+          CL.modal.fermer();
+          CL.toast.succes("Présence validée ✅", format.fcfa(r.prix) + " crédités sur votre portefeuille.");
+          onChange && onChange();
+        } }),
+      ],
+    });
+  }
+
+  /* ----------------------- Portefeuille du coach ------------------ */
+  CL.pages.coachPortefeuille = function () {
+    const err = garde(); if (err) return err;
+    const c = moncoach();
+    const zone = el("div", { class: "pile-4" }, [el("div", { class: "texte-doux", text: "Chargement…" })]);
+    CL.portefeuille.pour(c.id).then(({ solde, operations }) => {
+      CL.dom.vider(zone);
+      zone.appendChild(el("div", { class: "carte carte-corps", style: "background:var(--bleu-confiance-clair)" }, [
+        el("div", { class: "texte-sm texte-doux", text: "Solde disponible" }),
+        el("div", { style: "font-size:var(--fs-2xl);font-weight:800", text: format.fcfa(solde) }),
+        el("div", { class: "texte-xs texte-faible mt-1", text: "Crédité après validation de présence (séances) et règlements d'abonnement." }),
+      ]));
+      if (!operations.length) {
+        zone.appendChild(ui.vide("portefeuille", "Aucune opération", "Vos gains apparaîtront ici après vos premières séances validées."));
+      } else {
+        zone.appendChild(el("div", { class: "pile-2" }, operations.map((o) => el("div", { class: "carte carte-corps rangee entre rangee-wrap gap-2" }, [
+          el("div", {}, [
+            el("strong", { text: o.libelle }),
+            el("div", { class: "texte-xs texte-faible", text: (o.type === "abonnement" ? "Abonnement" : "Séance") + " · " + (o.reference || "") + (o.date ? " · " + format.date(o.date) : "") }),
+          ]),
+          el("strong", { style: "color:var(--vert-validation)", text: "+ " + format.fcfa(o.montant) }),
+        ]))));
+      }
+    });
+    return el("div", {}, [
+      el("div", { class: "page-entete" }, [el("div", {}, [el("h1", { text: "Mon portefeuille" }), el("p", { text: "Vos gains, séance après séance." })])]),
+      zone,
+    ]);
+  };
 
   /* Le coach vérifie / ajuste le lieu, puis confirme (ou met à jour) le RDV. */
   function ouvrirLieuCoach(r, confirmer, onChange) {

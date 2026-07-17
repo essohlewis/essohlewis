@@ -114,6 +114,27 @@ class ReservationController
         Response::ok($resa);
     }
 
+    /** POST /reservations/:id/valider-presence  { code } — le coach scanne le QR. */
+    public function validerPresence(array $params): void
+    {
+        $user  = Auth::exigerRole('coach');
+        $model = new Reservation();
+        $resa  = $model->trouver((int) $params['id']);
+        $coach = (new Coach())->parProprietaire((int) $user['id']);
+        if (!$resa || !$coach || $resa['coach_id'] !== $coach['id']) {
+            Response::erreur('Réservation introuvable.', 404);
+        }
+        $res = $model->validerPresence((int) $params['id'], (string) Request::champ('code'));
+        if (!$res['ok']) {
+            Response::erreur($res['message'] ?? 'Validation impossible.', 422);
+        }
+        $resa = $res['resa'];
+        // Notifie le client : séance confirmée présente + fonds libérés au coach.
+        (new Notification())->ajouter((int) $resa['client_id'], 'confirmation',
+            'Présence validée pour « ' . $resa['tarif_nom'] . ' ». Merci et à bientôt !', '#/client/reservations');
+        Response::ok($resa);
+    }
+
     /** PATCH /reservations/:id/statut  { statut } */
     public function statut(array $params): void
     {
@@ -134,7 +155,7 @@ class ReservationController
         $notif = new Notification();
         $coach = (new Coach())->trouver($resa['coach_id']);
         if ($statut === 'confirmee') {
-            $notif->ajouter((int) $resa['client_id'], 'confirmation', 'Votre séance « ' . $resa['tarif_nom'] . ' » est confirmée !', '#/client/reservations');
+            $notif->ajouter((int) $resa['client_id'], 'confirmation', 'Votre séance « ' . $resa['tarif_nom'] . ' » est confirmée ! Présentez votre QR de présence au coach en fin de séance.', '#/client/reservations');
         } elseif ($statut === 'refusee') {
             $notif->ajouter((int) $resa['client_id'], 'refus', 'Votre demande « ' . $resa['tarif_nom'] . ' » a été refusée.', '#/client/reservations');
         } elseif ($statut === 'terminee') {

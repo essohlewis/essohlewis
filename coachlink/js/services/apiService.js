@@ -127,6 +127,8 @@
     reserver(d)   { return API.post("/reservations", d); },
     mesResas()    { return API.get("/reservations/mes"); },
     payer(id, d)  { return API.post("/reservations/" + id + "/payer", d); },
+    validerPresence(id, code) { return API.post("/reservations/" + id + "/valider-presence", { code }); },
+    portefeuille() { return API.get("/portefeuille"); },
     // Notifications
     notifications() { return API.get("/notifications"); },
 
@@ -160,6 +162,7 @@
         lieuType: r.lieu_type || "", lieuNom: r.lieu_nom || "", adresse: r.adresse || "",
         ville: r.ville || "", commune: r.commune || "", quartier: r.quartier || "",
         lat: r.lat || "", lng: r.lng || "",
+        jeton: r.jeton || "", presenceValidee: !!Number(r.presence_validee), presenceLe: r.presence_le || "",
         avisLaisse: !!Number(r.avis_laisse), creeLe: r.cree_le,
         paiement: Number(r.paye) ? {
           operateur: r.paiement_op, numero: r.paiement_numero, montant: Number(r.paiement_montant),
@@ -206,6 +209,7 @@
         inclutSalle: !!Number(a.inclut_salle), fixePar: a.fixe_par,
         programme: prog && typeof prog === "object" ? prog : {},
         statut: a.statut, dateDebut: a.date_debut, dateFin: a.date_fin, creeLe: a.cree_le,
+        contratRef: a.contrat_ref || "", contratCoachLe: a.contrat_coach_le || "", contratClientLe: a.contrat_client_le || "",
         paiements: (a.paiements || []).map((p) => ({
           id: p.id, mois: p.mois, montant: Number(p.montant) || 0,
           operateur: p.operateur, reference: p.reference, date: p.date,

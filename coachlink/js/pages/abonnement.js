@@ -20,6 +20,62 @@
     return el("span", { class: "pastille-statut " + cls, text: lbl });
   }
 
+  /* --------------------- Contrat d'accompagnement ----------------- */
+  function texteContrat(a) {
+    const lieu = CL.profilCat ? CL.profilCat.lieu(a.lieuType).label : a.lieuType;
+    const detail = CL.localisation && CL.localisation.resume(a) ? " — " + CL.localisation.resume(a) : "";
+    const prog = Object.keys(a.programme || {}).filter((j) => (a.programme[j] || []).length).map((j) => j + " " + a.programme[j].join("/")).join(" · ") || "à convenir";
+    const d = (iso) => iso ? new Date(iso).toLocaleString("fr-FR") : "—";
+    return [
+      "CONTRAT D'ACCOMPAGNEMENT MENSUEL — CoachLink CI",
+      "Référence : " + (a.contratRef || "—"),
+      "",
+      "Entre le coach : " + a.coachNom,
+      "Et le client   : " + a.clientNom,
+      "",
+      "Objet : accompagnement « " + a.objectif + " »",
+      "Fréquence : " + a.seancesSemaine + " séance(s) / semaine",
+      "Programme hebdomadaire : " + prog,
+      "Lieu : " + lieu + detail,
+      "Tarif mensuel : " + format.fcfa(a.prixMensuel) + " (hors abonnement salle)",
+      "Abonnement salle inclus : " + (a.inclutSalle ? "oui" : "non"),
+      "Période : " + d(a.dateDebut) + (a.dateFin ? " → " + d(a.dateFin) : ""),
+      "",
+      "Signatures (horodatage électronique) :",
+      "  Coach  : " + d(a.contratCoachLe),
+      "  Client : " + d(a.contratClientLe),
+      "",
+      "Ce contrat vaut preuve de l'accord des parties sur la plateforme CoachLink CI.",
+    ].join("\n");
+  }
+
+  function telechargerContrat(a) {
+    const blob = new Blob([texteContrat(a)], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const lien = el("a", { href: url, download: "contrat-" + (a.contratRef || a.id) + ".txt" });
+    document.body.appendChild(lien); lien.click(); lien.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function ouvrirContrat(a) {
+    CL.modal.ouvrir({
+      titre: "Contrat d'accompagnement",
+      contenu: el("div", { class: "pile-3" }, [
+        el("div", { class: "badge badge-verifie", text: "Preuve conservée · " + (a.contratRef || "") }),
+        el("pre", { style: "white-space:pre-wrap;font-family:inherit;font-size:var(--fs-sm);background:var(--surface-2);padding:14px;border-radius:10px;margin:0", text: texteContrat(a) }),
+        el("div", { class: "rangee gap-4 texte-xs texte-faible" }, [
+          el("span", { text: (a.contratCoachLe ? "✅" : "⏳") + " Signé coach" }),
+          el("span", { text: (a.contratClientLe ? "✅" : "⏳") + " Signé client" }),
+        ]),
+      ]),
+      pied: [
+        el("button", { class: "btn btn-fantome", text: "Fermer", onclick: CL.modal.fermer }),
+        el("button", { class: "btn btn-primaire", html: CL.icon("document", 16) + " Télécharger", onclick: () => telechargerContrat(a) }),
+      ],
+    });
+  }
+  CL.ouvrirContratAbonnement = ouvrirContrat;
+
   /* ==================== DEMANDE D'ABONNEMENT (client) =============== */
   CL.ouvrirAbonnement = function (coach) {
     if (!auth.estConnecte()) { CL.toast.info("Connexion requise", ""); location.hash = "#/connexion"; return; }
@@ -205,6 +261,11 @@
         actions.appendChild(el("button", { class: "btn btn-fantome btn-sm", text: "Annuler", onclick: async () => { await abonnementService.changerStatut(a.id, "annule"); CL.toast.info("Annulé", ""); location.hash = "#/client/abonnements"; CL.router.rendre(); } }));
       }
       if (a.coachId) actions.appendChild(el("a", { class: "btn btn-primaire btn-sm", href: "#/coach/" + a.coachId, text: "Voir le coach" }));
+    }
+
+    // Contrat (preuve) dès qu'il existe (proposé par le coach ou accepté par le client).
+    if (a.contratRef) {
+      actions.appendChild(el("button", { class: "btn btn-fantome btn-sm", html: CL.icon("document", 15) + " Contrat", onclick: () => ouvrirContrat(a) }));
     }
 
     // Historique des règlements.

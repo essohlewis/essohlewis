@@ -19,9 +19,43 @@ class ReservationFlowTest extends ApiTestCase
         $this->assertCount(1, $r->parClient($clientId));
         $this->assertCount(1, $r->parCoach('c1'));
 
-        // Transition de statut.
+        // Transition de statut → génère le jeton de présence (QR).
         $r->changerStatut((int) $resa['id'], 'confirmee');
-        $this->assertSame('confirmee', $r->trouver((int) $resa['id'])['statut']);
+        $confirmee = $r->trouver((int) $resa['id']);
+        $this->assertSame('confirmee', $confirmee['statut']);
+        $this->assertNotEmpty($confirmee['jeton']);
+    }
+
+    public function testValidationPresenceParQr(): void
+    {
+        $this->creerCoach('c1');
+        $clientId = (new User())->creer([
+            'role' => 'client', 'prenom' => 'P', 'nom' => 'Q', 'email' => 'p@q.ci', 'motDePasse' => 'secret123',
+        ]);
+        $r = new Reservation();
+        $resa = $r->creer([
+            'coachId' => 'c1', 'clientId' => $clientId, 'clientNom' => 'P Q',
+            'tarifId' => 't1', 'tarifNom' => 'Solo', 'prix' => 10000, 'duree' => 60, 'jour' => 'Jeu', 'heure' => '15:00',
+        ]);
+        $id = (int) $resa['id'];
+        $r->changerStatut($id, 'confirmee');
+        $jeton = $r->trouver($id)['jeton'];
+
+        // Mauvais code → refusé, la séance reste confirmée.
+        $ko = $r->validerPresence($id, 'CLQR-mauvais');
+        $this->assertFalse($ko['ok']);
+        $this->assertSame('confirmee', $r->trouver($id)['statut']);
+
+        // Bon code → présence validée, séance terminée.
+        $ok = $r->validerPresence($id, $jeton);
+        $this->assertTrue($ok['ok']);
+        $this->assertSame('terminee', $ok['resa']['statut']);
+        $this->assertSame(1, (int) $ok['resa']['presence_validee']);
+        $this->assertNotEmpty($ok['resa']['presence_le']);
+
+        // Rejeu impossible.
+        $rejeu = $r->validerPresence($id, $jeton);
+        $this->assertFalse($rejeu['ok']);
     }
 
     public function testLieuDuRendezVousPersiste(): void

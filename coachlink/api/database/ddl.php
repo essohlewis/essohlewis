@@ -36,6 +36,7 @@ function coachlink_creer_tables(PDO $pdo, bool $sqlite): void
       tarif_id VARCHAR(50), tarif_nom VARCHAR(120), prix INT, duree INT, jour VARCHAR(3), heure VARCHAR(5), message TEXT,
       lieu_type VARCHAR(20), lieu_nom VARCHAR(160), adresse VARCHAR(200), ville VARCHAR(80), commune VARCHAR(80),
       quartier VARCHAR(120), lat VARCHAR(24), lng VARCHAR(24),
+      jeton VARCHAR(40), presence_validee INT DEFAULT 0, presence_le VARCHAR(40),
       statut VARCHAR(15) DEFAULT 'en_attente', avis_laisse INT DEFAULT 0, paye INT DEFAULT 0, paiement_op VARCHAR(40),
       paiement_numero VARCHAR(30), paiement_montant INT, paiement_remise INT, paiement_promo VARCHAR(40),
       paiement_ref VARCHAR(40), paiement_date VARCHAR(40), cree_le VARCHAR(40))$suffixe");
@@ -54,6 +55,7 @@ function coachlink_creer_tables(PDO $pdo, bool $sqlite): void
       ville VARCHAR(80), commune VARCHAR(80), quartier VARCHAR(80), lat VARCHAR(30), lng VARCHAR(30),
       prix_seance INT DEFAULT 0, prix_mensuel INT DEFAULT 0, inclut_salle INT DEFAULT 0,
       fixe_par VARCHAR(10) DEFAULT 'client', programme TEXT, statut VARCHAR(15) DEFAULT 'demande',
+      contrat_ref VARCHAR(40), contrat_coach_le VARCHAR(40), contrat_client_le VARCHAR(40),
       date_debut VARCHAR(40), date_fin VARCHAR(40), cree_le VARCHAR(40))$suffixe");
     $pdo->exec("CREATE TABLE IF NOT EXISTS abonnement_paiements (id $PK, abonnement_id INT, mois VARCHAR(7),
       montant INT, operateur VARCHAR(40), reference VARCHAR(40), date VARCHAR(40))$suffixe");

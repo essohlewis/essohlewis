@@ -195,6 +195,36 @@
       return r;
     },
 
+    /**
+     * Le coach valide la présence via le code du QR : la séance passe « terminée »
+     * et les fonds sont libérés vers son portefeuille. Renvoie { ok, resa?, message? }.
+     */
+    async validerPresence(resaId, code) {
+      if (bookingService._api()) {
+        try {
+          const brut = await CL.API.validerPresence(resaId, String(code || "").trim());
+          const resa = CL.API.mapReservation(brut);
+          const liste = toutes(); const i = liste.findIndex((b) => b.id === resaId);
+          if (i >= 0) liste[i] = resa; else liste.unshift(resa); sauver(liste);
+          return { ok: true, resa };
+        } catch (e) { return { ok: false, message: (e && e.message) || "Code QR invalide." }; }
+      }
+      const liste = toutes();
+      const r = liste.find((b) => b.id === resaId);
+      if (!r) return { ok: false, message: "Réservation introuvable." };
+      if (r.presenceValidee) return { ok: false, message: "Présence déjà validée." };
+      if (!r.jeton || String(r.jeton) !== String(code || "").trim()) return { ok: false, message: "Code QR invalide." };
+      r.presenceValidee = true; r.presenceLe = new Date().toISOString(); r.statut = "terminee";
+      sauver(liste);
+      // Notifie les deux parties (le portefeuille du coach est crédité, cf. portefeuilleService).
+      CL.notifications.ajouter(r.clientId, { type: "confirmation", texte: `Présence validée pour « ${r.tarifNom} ». Merci et à bientôt !`, lien: "#/client/reservations" });
+      const coach = CL.coachService.obtenir(r.coachId);
+      if (coach && coach.proprietaire) {
+        CL.notifications.ajouter(coach.proprietaire, { type: "paiement", texte: `Séance « ${r.tarifNom} » validée : ${CL.format.fcfa(r.prix)} crédités sur votre portefeuille.`, lien: "#/espace-coach/portefeuille" });
+      }
+      return { ok: true, resa: r };
+    },
+
     /** Change le statut (côté coach ou client). */
     changerStatut(resaId, statut) {
       const liste = toutes();
@@ -211,10 +241,11 @@
 
       // Effets de bord : notifications + occupation créneau.
       if (statut === "confirmee") {
+        if (!r.jeton) { r.jeton = "CLQR-" + r.id + "-" + Math.random().toString(16).slice(2, 18); sauver(liste); }
         CL.coachService.reserverCreneau(r.coachId, r.jour, r.heure);
         CL.notifications.ajouter(r.clientId, {
           type: "confirmation",
-          texte: `Votre séance « ${r.tarifNom} » a été confirmée !`,
+          texte: `Votre séance « ${r.tarifNom} » a été confirmée ! Présentez votre QR de présence au coach en fin de séance.`,
           lien: "#/client/reservations",
         });
       } else if (statut === "refusee") {

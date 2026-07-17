@@ -43,6 +43,26 @@ class AbonnementTest extends ApiTestCase
         $this->assertSame(96000, (int) $a['prix_mensuel']); // 12000 × 2 × 4
         $this->assertArrayHasKey('Lun', $a['programme']);
         $this->assertSame(['08:00'], $a['programme']['Lun']);
+        // Le coach signe le contrat en proposant les termes.
+        $this->assertNotEmpty($a['contrat_ref']);
+        $this->assertNotEmpty($a['contrat_coach_le']);
+        $this->assertEmpty($a['contrat_client_le']);
+    }
+
+    public function testContratSigneParLesDeuxParties(): void
+    {
+        [$coachId, $clientId] = $this->contexte();
+        $m = new Abonnement();
+        $a = $m->creer(['clientId' => $clientId, 'coachId' => $coachId, 'objectif' => 'Forme', 'seancesSemaine' => 1, 'prixSeance' => 15000]);
+        $id = (int) $a['id'];
+        $a = $m->definirProgramme($id, ['programme' => ['Mar' => ['10:00']], 'seancesSemaine' => 1, 'prixSeance' => 15000]);
+        $ref = $a['contrat_ref'];
+        // Le client accepte en activant : sa signature est horodatée, la référence est conservée.
+        $m->changerStatut($id, 'actif');
+        $final = $m->trouver($id);
+        $this->assertSame($ref, $final['contrat_ref']);
+        $this->assertNotEmpty($final['contrat_client_le']);
+        $this->assertNotEmpty($final['contrat_coach_le']);
     }
 
     public function testActivationEtReglementMensuel(): void

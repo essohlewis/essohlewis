@@ -74,7 +74,43 @@ class Reservation extends Model
 
     public function changerStatut(int $id, string $statut): void
     {
-        $this->maj($id, ['statut' => $statut]);
+        $data = ['statut' => $statut];
+        // À la confirmation, on génère le jeton de présence (matérialisé en QR
+        // côté client) si absent : il servira de preuve de présence en fin de séance.
+        if ($statut === 'confirmee') {
+            $resa = $this->trouver($id);
+            if ($resa && empty($resa['jeton'])) {
+                $data['jeton'] = self::genererJeton($id);
+            }
+        }
+        $this->maj($id, $data);
+    }
+
+    /** Jeton de présence unique et non devinable. */
+    public static function genererJeton(int $id): string
+    {
+        return 'CLQR-' . $id . '-' . bin2hex(random_bytes(8));
+    }
+
+    /**
+     * Le coach valide la présence via le code du QR : preuve que la séance a bien
+     * eu lieu → la réservation passe « terminée » et les fonds sont libérés.
+     * @return array{ok:bool, resa?:array, message?:string}
+     */
+    public function validerPresence(int $id, string $code): array
+    {
+        $resa = $this->trouver($id);
+        if (!$resa) {
+            return ['ok' => false, 'message' => 'Réservation introuvable.'];
+        }
+        if ($resa['statut'] === 'terminee' && (int) $resa['presence_validee'] === 1) {
+            return ['ok' => false, 'message' => 'Présence déjà validée.'];
+        }
+        if (empty($resa['jeton']) || !hash_equals((string) $resa['jeton'], trim($code))) {
+            return ['ok' => false, 'message' => 'Code QR invalide.'];
+        }
+        $this->maj($id, ['presence_validee' => 1, 'presence_le' => date('c'), 'statut' => 'terminee']);
+        return ['ok' => true, 'resa' => $this->trouver($id)];
     }
 
     /** Met à jour le lieu du rendez-vous (ajusté par le coach). */

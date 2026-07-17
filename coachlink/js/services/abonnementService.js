@@ -84,6 +84,9 @@
       a.prixMensuel = abonnementService.prixMensuel(a.prixSeance, a.seancesSemaine);
       if (d.lieuNom) a.lieuNom = d.lieuNom;
       a.statut = "propose";
+      // Le coach fixe et signe les termes du contrat en proposant le programme.
+      if (!a.contratRef) a.contratRef = "CTR-" + a.id + "-" + Math.random().toString(16).slice(2, 10);
+      a.contratCoachLe = new Date().toISOString();
       sauver(l);
       if (CL.notifications) CL.notifications.ajouter(a.clientId, {
         type: "abonnement", texte: `Votre coach a préparé votre programme mensuel (${CL.format.fcfa(a.prixMensuel)}).`,
@@ -133,6 +136,9 @@
         reference: "AB" + Date.now().toString().slice(-8), date: new Date().toISOString(),
       });
       if (a.statut !== "actif") { a.statut = "actif"; a.dateDebut = new Date().toISOString(); }
+      // Le client accepte et signe le contrat en activant l'abonnement.
+      if (!a.contratRef) a.contratRef = "CTR-" + a.id + "-" + Math.random().toString(16).slice(2, 10);
+      if (!a.contratClientLe) a.contratClientLe = new Date().toISOString();
       sauver(l);
       notifierCoach(a, `${a.clientNom} a réglé son abonnement (${mois}).`);
       return { ok: true, abonnement: a };
