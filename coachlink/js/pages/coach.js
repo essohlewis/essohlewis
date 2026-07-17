@@ -181,21 +181,41 @@
     ]);
   }
 
-  /** Scan caméra d'un QR (BarcodeDetector natif). Renvoie une fonction d'arrêt. */
+  /**
+   * Scan caméra d'un QR. Utilise BarcodeDetector s'il existe, sinon jsQR
+   * (décodeur JS autonome) sur les images de la vidéo — fonctionne sur tous les
+   * navigateurs. Renvoie une fonction d'arrêt. Peut lever (caméra refusée…).
+   */
   async function scannerQrCamera(container, onDetecte) {
-    const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-    const video = el("video", { style: "width:100%;max-width:280px;border-radius:10px;background:#000", autoplay: "autoplay", muted: "muted", playsinline: "playsinline" });
-    video.srcObject = stream; try { await video.play(); } catch (_) { /* ignore */ }
+    const video = el("video", { style: "width:100%;max-width:300px;border-radius:10px;background:#000", autoplay: "autoplay", muted: "muted", playsinline: "playsinline" });
+    video.setAttribute("muted", ""); video.setAttribute("playsinline", "");
+    video.srcObject = stream; try { await video.play(); } catch (_) { /* certains navigateurs jouent après l'insertion */ }
     CL.dom.vider(container); container.appendChild(video);
+
+    const detector = ("BarcodeDetector" in window) ? new window.BarcodeDetector({ formats: ["qr_code"] }) : null;
+    let canvas = null, cctx = null;
+    if (!detector) { canvas = document.createElement("canvas"); cctx = canvas.getContext("2d", { willReadFrequently: true }); }
+
     let actif = true;
     function arreter() { actif = false; try { stream.getTracks().forEach((t) => t.stop()); } catch (_) {} CL.dom.vider(container); }
-    async function boucle() {
+    async function tick() {
       if (!actif) return;
-      try { const codes = await detector.detect(video); if (codes && codes.length) { const v = codes[0].rawValue; arreter(); onDetecte(v); return; } } catch (_) {}
-      if (actif) requestAnimationFrame(boucle);
+      try {
+        if (detector) {
+          const codes = await detector.detect(video);
+          if (codes && codes.length) { const v = codes[0].rawValue; arreter(); onDetecte(v); return; }
+        } else if (video.videoWidth && window.jsQR) {
+          canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+          cctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const img = cctx.getImageData(0, 0, canvas.width, canvas.height);
+          const res = window.jsQR(img.data, img.width, img.height, { inversionAttempts: "attemptBoth" });
+          if (res && res.data) { arreter(); onDetecte(res.data); return; }
+        }
+      } catch (_) { /* trame illisible → on réessaie */ }
+      if (actif) requestAnimationFrame(tick);
     }
-    boucle();
+    tick();
     return arreter;
   }
 
@@ -215,15 +235,30 @@
       onChange && onChange();
     }
 
-    const scanDispo = typeof window !== "undefined" && "BarcodeDetector" in window && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
     const btnCam = el("button", { class: "btn btn-primaire btn-bloc", html: CL.icon("qrcode", 16) + " Scanner le QR avec la caméra" });
-    if (!scanDispo) { btnCam.disabled = true; btnCam.title = "Scan caméra indisponible sur cet appareil — saisissez le code."; }
+    const libelleScan = () => { btnCam.innerHTML = CL.icon("qrcode", 16) + " Scanner le QR avec la caméra"; };
     btnCam.addEventListener("click", async () => {
-      if (arreterScan) { arreterScan(); arreterScan = null; btnCam.innerHTML = CL.icon("qrcode", 16) + " Scanner le QR avec la caméra"; return; }
+      // Déjà en cours → on arrête.
+      if (arreterScan) { arreterScan(); arreterScan = null; libelleScan(); return; }
+      // Caméra indisponible (navigateur ancien ou contexte non sécurisé).
+      if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) {
+        return CL.toast.erreur("Caméra indisponible",
+          window.isSecureContext ? "Ce navigateur ne permet pas l'accès à la caméra. Saisissez le code à 6 chiffres."
+                                 : "La caméra nécessite une connexion sécurisée (HTTPS). Saisissez le code à 6 chiffres.");
+      }
+      btnCam.disabled = true;
       try {
-        arreterScan = await scannerQrCamera(zoneScan, (valeur) => { arreterScan = null; soumettre(valeur, null); });
+        arreterScan = await scannerQrCamera(zoneScan, (valeur) => { arreterScan = null; libelleScan(); btnCam.disabled = false; soumettre(valeur, null); });
         btnCam.innerHTML = CL.icon("fermer", 16) + " Arrêter la caméra";
-      } catch (e) { CL.toast.erreur("Caméra", "Accès à la caméra refusé ou indisponible. Saisissez le code."); }
+        btnCam.disabled = false;
+      } catch (e) {
+        btnCam.disabled = false; libelleScan();
+        const nom = e && e.name;
+        const msg = nom === "NotAllowedError" ? "Autorisez l'accès à la caméra dans votre navigateur, puis réessayez."
+          : nom === "NotFoundError" ? "Aucune caméra détectée sur cet appareil."
+          : "Impossible d'ouvrir la caméra. Saisissez le code à 6 chiffres.";
+        CL.toast.erreur("Caméra", msg);
+      }
     });
 
     CL.modal.ouvrir({
