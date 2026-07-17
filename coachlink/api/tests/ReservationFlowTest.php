@@ -41,20 +41,23 @@ class ReservationFlowTest extends ApiTestCase
         $r->changerStatut($id, 'confirmee');
         $jeton = $r->trouver($id)['jeton'];
 
-        // Mauvais code → refusé, la séance reste confirmée.
-        $ko = $r->validerPresence($id, 'CLQR-mauvais');
+        // Le code affiché est rotatif (30 s) et dérivé du jeton secret.
+        $codeCourant = Otp::code($jeton, Otp::fenetre());
+
+        // Code d'une fenêtre lointaine (hors tolérance) → refusé.
+        $ko = $r->validerPresence($id, Otp::code($jeton, Otp::fenetre() + 1000));
         $this->assertFalse($ko['ok']);
         $this->assertSame('confirmee', $r->trouver($id)['statut']);
 
-        // Bon code → présence validée, séance terminée.
-        $ok = $r->validerPresence($id, $jeton);
+        // Code courant → présence validée, séance terminée.
+        $ok = $r->validerPresence($id, $codeCourant);
         $this->assertTrue($ok['ok']);
         $this->assertSame('terminee', $ok['resa']['statut']);
         $this->assertSame(1, (int) $ok['resa']['presence_validee']);
         $this->assertNotEmpty($ok['resa']['presence_le']);
 
-        // Rejeu impossible.
-        $rejeu = $r->validerPresence($id, $jeton);
+        // Rejeu impossible (présence déjà validée).
+        $rejeu = $r->validerPresence($id, $codeCourant);
         $this->assertFalse($rejeu['ok']);
     }
 

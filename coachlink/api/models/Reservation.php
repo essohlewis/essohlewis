@@ -106,8 +106,8 @@ class Reservation extends Model
         if ($resa['statut'] === 'terminee' && (int) $resa['presence_validee'] === 1) {
             return ['ok' => false, 'message' => 'Présence déjà validée.'];
         }
-        if (empty($resa['jeton']) || !hash_equals((string) $resa['jeton'], trim($code))) {
-            return ['ok' => false, 'message' => 'Code QR invalide.'];
+        if (empty($resa['jeton']) || !Otp::valide((string) $resa['jeton'], $code)) {
+            return ['ok' => false, 'message' => 'Code de présence invalide ou expiré.'];
         }
         $this->maj($id, ['presence_validee' => 1, 'presence_le' => date('c'), 'statut' => 'terminee']);
         return ['ok' => true, 'resa' => $this->trouver($id)];

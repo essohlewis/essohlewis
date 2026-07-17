@@ -213,7 +213,8 @@
       const r = liste.find((b) => b.id === resaId);
       if (!r) return { ok: false, message: "Réservation introuvable." };
       if (r.presenceValidee) return { ok: false, message: "Présence déjà validée." };
-      if (!r.jeton || String(r.jeton) !== String(code || "").trim()) return { ok: false, message: "Code QR invalide." };
+      var codeOk = CL.otp ? CL.otp.valide(r.jeton, code) : (String(r.jeton) === String(code || "").trim());
+      if (!r.jeton || !codeOk) return { ok: false, message: "Code de présence invalide ou expiré." };
       r.presenceValidee = true; r.presenceLe = new Date().toISOString(); r.statut = "terminee";
       sauver(liste);
       // Notifie les deux parties (le portefeuille du coach est crédité, cf. portefeuilleService).

@@ -130,14 +130,32 @@
   // QR de présence : le client le présente au coach en fin de séance ; le coach
   // le scanne (ou saisit le code) pour libérer le paiement vers son portefeuille.
   function montrerQrPresence(r) {
-    const svg = CL.qrcode ? CL.qrcode.svg(r.jeton, { size: 230 }) : "";
+    const zoneQr = el("div", { style: "display:flex;justify-content:center;align-items:center;min-height:230px" });
+    const codeAff = el("div", { class: "badge badge-neutre", style: "font-family:monospace;font-size:1.5rem;letter-spacing:4px" });
+    const compte = el("div", { class: "texte-xs texte-faible" });
+    let fenetreAff = null;
+
+    function rendre() {
+      if (!CL.otp) { zoneQr.innerHTML = CL.qrcode ? CL.qrcode.svg(r.jeton, { size: 230 }) : ""; return; }
+      const et = CL.otp.courant(r.jeton);
+      if (et.fenetre !== fenetreAff) { // nouvelle fenêtre → nouveau QR + nouveau code
+        fenetreAff = et.fenetre;
+        zoneQr.innerHTML = CL.qrcode ? CL.qrcode.svg(et.payload, { size: 230 }) : "";
+        codeAff.textContent = et.code;
+      }
+      compte.textContent = "Nouveau code dans " + et.resteSec + " s";
+    }
+    rendre();
+    const timer = setInterval(() => { if (!zoneQr.isConnected) { clearInterval(timer); return; } rendre(); }, 1000);
+
     CL.modal.ouvrir({
       titre: "Mon QR de présence",
       contenu: el("div", { class: "pile-3 texte-centre" }, [
-        el("p", { class: "texte-sm texte-doux", text: "Présentez ce QR code à votre coach à la fin de la séance « " + r.tarifNom + " » pour confirmer votre présence." }),
-        el("div", { style: "display:flex;justify-content:center", html: svg }),
-        el("div", { class: "badge badge-neutre", style: "font-family:monospace;letter-spacing:.5px", text: r.jeton }),
-        el("p", { class: "texte-xs texte-faible", text: "Code de secours si le scan est impossible." }),
+        el("p", { class: "texte-sm texte-doux", text: "Présentez ce QR code (ou dictez le code) à votre coach à la fin de la séance « " + r.tarifNom + " » pour confirmer votre présence." }),
+        zoneQr,
+        codeAff,
+        compte,
+        el("p", { class: "texte-xs texte-faible", html: CL.icon("bouclier", 13) + " Code sécurisé : il se régénère automatiquement toutes les 30 secondes." }),
       ]),
       pied: [el("button", { class: "btn btn-primaire", text: "Fermer", onclick: CL.modal.fermer })],
     });

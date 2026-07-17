@@ -183,12 +183,12 @@
 
   /* Le coach scanne / saisit le QR de présence → séance terminée + fonds libérés. */
   function validerPresenceCoach(r, onChange) {
-    const code = el("input", { class: "input", placeholder: "Code du QR (CLQR-…)", style: "font-family:monospace" });
+    const code = el("input", { class: "input", inputmode: "numeric", placeholder: "Code à 6 chiffres", maxlength: "6", style: "font-family:monospace;letter-spacing:4px;text-align:center;font-size:1.2rem" });
     CL.modal.ouvrir({
       titre: "Valider la présence — " + r.clientNom,
       contenu: el("div", { class: "pile-3" }, [
-        el("p", { class: "texte-sm texte-doux", text: "Scannez le QR de présence du client (ou saisissez son code) pour confirmer que la séance « " + r.tarifNom + " » a bien eu lieu. Le montant sera crédité sur votre portefeuille." }),
-        el("div", { class: "champ" }, [el("label", { text: "Code du QR de présence" }), code]),
+        el("p", { class: "texte-sm texte-doux", text: "Scannez le QR de présence du client (ou saisissez le code à 6 chiffres affiché sur son écran) pour confirmer que la séance « " + r.tarifNom + " » a bien eu lieu. Le montant sera crédité sur votre portefeuille." }),
+        el("div", { class: "champ" }, [el("label", { text: "Code de présence (valable 30 s)" }), code]),
       ]),
       pied: [
         el("button", { class: "btn btn-fantome", text: "Annuler", onclick: CL.modal.fermer }),
