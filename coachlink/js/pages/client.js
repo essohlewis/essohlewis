@@ -14,19 +14,29 @@
     const u = auth.courant();
     const resas = bookingService.parClient(u.id);
     const aVenir = resas.filter((r) => r.statut === "confirmee").length;
-    const enAttente = resas.filter((r) => r.statut === "en_attente").length;
-    const favoris = coachService.favoris().length;
     const aEvaluer = bookingService.aEvaluer(u.id).length;
+    const st = CL.insights ? CL.insights.statsClient(u.id) : { seancesRealisees: 0, totalInvesti: 0, coachsSuivis: 0, abonnementsActifs: 0 };
+    const rdv = CL.insights ? CL.insights.prochainRendezVous("client", { clientId: u.id }) : null;
 
     const page = el("div", {}, [
       enteteBienvenue(u, "Voici un aperçu de votre accompagnement."),
       el("div", { class: "grille grille-4 mb-5" }, [
         statCarte("calendrier", "var(--bleu-confiance)", aVenir, "Séances à venir"),
-        statCarte("horloge", "var(--orange-cta)", enAttente, "En attente"),
-        statCarte("coeur", "var(--rouge-alerte)", favoris, "Favoris"),
-        statCarte("etoile", "var(--vert-validation)", aEvaluer, "Avis à laisser"),
+        statCarte("etoile", "var(--jaune-etoile)", st.seancesRealisees, "Séances réalisées"),
+        statCarte("portefeuille", "var(--vert-validation)", format.fcfa(st.totalInvesti).replace(" FCFA", ""), "Total investi (FCFA)"),
+        statCarte("utilisateur", "var(--orange-cta)", st.coachsSuivis, "Coachs suivis"),
       ]),
     ]);
+
+    // Prochaine séance (mise en avant).
+    if (rdv) page.appendChild(carteProchainRdv(rdv, "#/client/reservations"));
+
+    // Ma progression : abonnements actifs (séances validées / prévues du mois).
+    const abosActifs = (CL.abonnementService ? CL.abonnementService.parClient(u.id) : []).filter((a) => a.statut === "actif");
+    if (abosActifs.length) {
+      page.appendChild(el("h3", { class: "mt-5 mb-3", text: "Ma progression ce mois" }));
+      page.appendChild(el("div", { class: "pile-3" }, abosActifs.map((a) => carteProgression(a))));
+    }
 
     if (aEvaluer > 0) {
       page.appendChild(el("div", { class: "carte carte-corps mb-5", style: "border-left:4px solid var(--orange-cta)" }, [
@@ -222,6 +232,39 @@
     ]);
   }
   CL.carteReservation = carteReservation;
+
+  // Carte « prochaine séance » (partagée client/coach).
+  function carteProchainRdv(rdv, lienHref) {
+    const lieu = (CL.profilCat && rdv.lieuType) ? CL.profilCat.lieu(rdv.lieuType).label : "";
+    return el("div", { class: "carte carte-corps mb-5", style: "border-left:4px solid var(--bleu-confiance);background:var(--bleu-confiance-clair)" }, [
+      el("div", { class: "rangee entre rangee-wrap gap-3" }, [
+        el("div", {}, [
+          el("div", { class: "texte-xs texte-faible", html: CL.icon("calendrier", 14) + " Prochaine séance" }),
+          el("strong", { style: "font-size:var(--fs-lg)", text: CL.insights.libelleQuand(rdv.occ) }),
+          el("div", { class: "texte-sm texte-doux", text: rdv.sous + " · avec " + rdv.avec + (lieu ? " · " + lieu : "") }),
+        ]),
+        el("a", { class: "btn btn-primaire", href: lienHref, text: "Voir" }),
+      ]),
+    ]);
+  }
+  CL.carteProchainRdv = carteProchainRdv;
+
+  // Carte de progression d'un abonnement (barre séances validées / prévues).
+  function carteProgression(a) {
+    const pr = CL.abonnementService.progresMois(a);
+    const pct = Math.round((100 * pr.validees) / Math.max(1, pr.prevues));
+    return el("div", { class: "carte carte-corps" }, [
+      el("div", { class: "rangee entre rangee-wrap gap-2" }, [
+        el("strong", { text: a.objectif + " — " + a.coachNom }),
+        el("span", { class: "texte-sm texte-doux", text: pr.validees + " / " + pr.prevues + " séances" }),
+      ]),
+      el("div", { style: "height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin-top:8px" }, [
+        el("div", { style: "height:100%;width:" + pct + "%;background:" + (pr.libere ? "var(--vert-validation)" : "var(--bleu-confiance)") }),
+      ]),
+      el("div", { class: "texte-xs texte-faible mt-1", text: pr.libere ? "Mois complet ✓" : "Présentez votre QR à chaque séance pour valider votre progression." }),
+    ]);
+  }
+  CL.carteProgression = carteProgression;
 
   function statCarte(icone, couleur, valeur, label) {
     return el("div", { class: "carte stat-carte" }, [

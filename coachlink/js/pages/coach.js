@@ -25,24 +25,30 @@
     const demandes = bookingService.parCoach(c.id);
     const enAttente = demandes.filter((r) => r.statut === "en_attente").length;
     const confirmees = demandes.filter((r) => r.statut === "confirmee").length;
-    const revenus = demandes.filter((r) => r.paiement).reduce((s, r) => s + r.prix, 0);
     const trust = coachService.trustScore(c);
+    const ins = CL.insights ? CL.insights.statsCoach(c) : { tauxPresence: null, revenusMois: 0, clientsActifs: 0 };
+    const rdv = CL.insights ? CL.insights.prochainRendezVous("coach", { coachId: c.id }) : null;
+    const revenus6 = CL.insights ? CL.insights.revenus6Mois(c.id) : [];
 
     const page = el("div", {}, [
       CL.enteteBienvenue(u, "Pilotez votre activité de coaching."),
       el("div", { class: "grille grille-4 mb-5" }, [
         CL.statCarte("horloge", "var(--orange-cta)", enAttente, "Demandes en attente"),
         CL.statCarte("calendrier", "var(--bleu-confiance)", confirmees, "Séances confirmées"),
-        CL.statCarte("etoile", "var(--jaune-etoile)", format.note(c.note), "Note moyenne"),
-        CL.statCarte("portefeuille", "var(--vert-validation)", format.fcfa(revenus).replace(" FCFA", ""), "Revenus (FCFA)"),
+        CL.statCarte("check", "var(--vert-validation)", ins.tauxPresence == null ? "—" : ins.tauxPresence + "%", "Taux de présence"),
+        CL.statCarte("portefeuille", "var(--vert-validation)", format.fcfa(ins.revenusMois).replace(" FCFA", ""), "Revenus du mois (FCFA)"),
       ]),
     ]);
 
+    // Prochaine séance (mise en avant).
+    if (rdv && CL.carteProchainRdv) page.appendChild(CL.carteProchainRdv(rdv, "#/espace-coach/agenda"));
+
     // TrustScore + graphique
+    const totalRevenus6 = revenus6.reduce((s, b) => s + b.montant, 0);
     page.appendChild(el("div", { class: "deux-colonnes" }, [
       el("div", { class: "carte carte-corps" }, [
-        el("div", { class: "rangee entre mb-3" }, [el("h3", { text: "Séances des 6 derniers mois" }), el("span", { class: "badge badge-verifie", text: "Simulation" })]),
-        graphiqueBarres(),
+        el("div", { class: "rangee entre mb-3" }, [el("h3", { text: "Revenus des 6 derniers mois" }), el("span", { class: "badge " + (totalRevenus6 ? "badge-verifie" : "badge-neutre"), text: totalRevenus6 ? format.fcfa(totalRevenus6) : "aucun gain" })]),
+        graphiqueBarres(revenus6),
       ]),
       el("div", { class: "carte carte-corps" }, [
         el("h4", { class: "mb-3", text: "Votre TrustScore" }),
@@ -709,14 +715,15 @@
     return carte;
   }
 
-  function graphiqueBarres() {
-    const donnees = [8, 12, 10, 16, 14, 20];
-    const mois = ["Fév", "Mar", "Avr", "Mai", "Jun", "Jui"];
-    const max = Math.max(...donnees);
-    return el("div", { class: "bar-chart" }, donnees.map((v, i) => el("div", { class: "bar-chart__col" }, [
-      el("strong", { class: "texte-sm", text: String(v) }),
-      el("div", { class: "bar-chart__barre", style: `height:${(v / max) * 100}%` }),
-      el("div", { class: "bar-chart__label", text: mois[i] }),
+  function graphiqueBarres(buckets) {
+    buckets = (buckets && buckets.length) ? buckets : [];
+    if (!buckets.length) return el("div", { class: "texte-sm texte-doux texte-centre", style: "padding:24px 0", text: "Vos revenus apparaîtront ici après vos premières séances validées." });
+    const max = Math.max(1, ...buckets.map((b) => b.montant));
+    const court = (n) => n >= 1000 ? Math.round(n / 1000) + "k" : String(n);
+    return el("div", { class: "bar-chart" }, buckets.map((b) => el("div", { class: "bar-chart__col" }, [
+      el("strong", { class: "texte-xs", text: b.montant ? court(b.montant) : "0" }),
+      el("div", { class: "bar-chart__barre", style: `height:${Math.max(2, (b.montant / max) * 100)}%` }),
+      el("div", { class: "bar-chart__label", text: b.label }),
     ])));
   }
 
