@@ -105,6 +105,19 @@
       if (!a) return null;
       a.statut = statut;
       if (statut === "actif") { a.dateDebut = new Date().toISOString(); }
+      // Résiliation → règlement au prorata des mois encore sous séquestre.
+      if (statut === "termine" || statut === "annule") {
+        (a.paiements || []).forEach((p) => {
+          if (p.libere) return;
+          const prevues = Math.max(1, Number(p.seancesPrevues) || 1);
+          const validees = Math.min(Number(p.seancesValidees) || 0, prevues);
+          const coach = Math.round((Number(p.montant) || 0) * validees / prevues);
+          p.montantLibere = coach; p.rembourse = (Number(p.montant) || 0) - coach; p.libere = true;
+          if (p.rembourse > 0 && CL.notifications) {
+            CL.notifications.ajouter(a.clientId, { type: "paiement", texte: `Abonnement résilié : remboursement de ${CL.format.fcfa(p.rembourse)} pour ${prevues - validees} séance(s) non effectuée(s) (${p.mois}).`, lien: "#/client/abonnements" });
+          }
+        });
+      }
       sauver(l);
       return a;
     },
@@ -136,7 +149,7 @@
       a.paiements.unshift({
         id: CL.dom.uid("abp"), mois, montant: a.prixMensuel, operateur: paiement.operateur,
         reference: "AB" + Date.now().toString().slice(-8), date: new Date().toISOString(),
-        seancesPrevues: (Number(a.seancesSemaine) || 1) * 4, seancesValidees: 0, libere: false,
+        seancesPrevues: (Number(a.seancesSemaine) || 1) * 4, seancesValidees: 0, libere: false, montantLibere: 0, rembourse: 0,
       });
       if (a.statut !== "actif") { a.statut = "actif"; a.dateDebut = new Date().toISOString(); }
       // Jeton de présence (graine du QR rotatif de l'abonnement).
@@ -183,7 +196,7 @@
               cur.paiements = cur.paiements || [];
               if (!cur.jeton) cur.jeton = "CLQR-abo" + cur.id + "-" + Math.random().toString(16).slice(2, 18);
               cur.paiements.unshift({ id: CL.dom.uid("abp"), mois, montant: cur.prixMensuel, operateur: "Auto (renouvellement)", reference: "AR" + Date.now().toString().slice(-8), date: new Date().toISOString(),
-                seancesPrevues: (Number(cur.seancesSemaine) || 1) * 4, seancesValidees: 0, libere: false });
+                seancesPrevues: (Number(cur.seancesSemaine) || 1) * 4, seancesValidees: 0, libere: false, montantLibere: 0, rembourse: 0 });
               sauver(l);
               CL.notifications.ajouter(u.id, { type: "paiement", texte: `Abonnement avec ${cur.coachNom} renouvelé automatiquement (${mois}) : ${CL.format.fcfa(cur.prixMensuel)}.`, lien: "#/client/abonnements" });
               notifierCoach(cur, `${cur.clientNom} — renouvellement automatique réglé (${mois}).`);
@@ -237,8 +250,11 @@
       a.fenetresValidees = a.fenetresValidees || [];
       if (a.fenetresValidees.indexOf(fen) !== -1) return { ok: false, message: "Cette séance vient déjà d'être validée." };
       a.fenetresValidees.push(fen);
+      a.seances = a.seances || [];
+      a.seances.push({ mois, fenetre: fen, date: new Date().toISOString() });
       p.seancesValidees = (Number(p.seancesValidees) || 0) + 1;
       p.libere = p.seancesValidees >= (Number(p.seancesPrevues) || 0);
+      if (p.libere) p.montantLibere = p.montant; // toutes les séances → mensualité intégrale
       sauver(l);
       if (CL.notifications) {
         CL.notifications.ajouter(a.clientId, { type: "confirmation", texte: `Séance d'abonnement validée (${p.seancesValidees}/${p.seancesPrevues}).`, lien: "#/client/abonnements" });

@@ -26,6 +26,22 @@
     const detail = CL.localisation && CL.localisation.resume(a) ? " — " + CL.localisation.resume(a) : "";
     const prog = Object.keys(a.programme || {}).filter((j) => (a.programme[j] || []).length).map((j) => j + " " + a.programme[j].join("/")).join(" · ") || "à convenir";
     const d = (iso) => iso ? new Date(iso).toLocaleString("fr-FR") : "—";
+
+    // Récapitulatif horodaté des séances validées (preuve d'exécution).
+    const seancesParMois = {};
+    (a.seances || []).forEach((s) => { (seancesParMois[s.mois] = seancesParMois[s.mois] || []).push(s.date); });
+    const recap = [];
+    const paie = (a.paiements || []).slice().sort((x, y) => String(x.mois).localeCompare(String(y.mois)));
+    if (paie.length) {
+      recap.push("", "DÉCOMPTE DES SÉANCES (preuve horodatée) :");
+      paie.forEach((p) => {
+        const etat = p.libere ? (Number(p.rembourse) > 0 ? "réglé au prorata" : "mensualité créditée au coach") : "sous séquestre (en attente)";
+        recap.push("  " + p.mois + " : " + (Number(p.seancesValidees) || 0) + "/" + (Number(p.seancesPrevues) || 0) + " séances validées — " + etat);
+        if (Number(p.rembourse) > 0) recap.push("    Part coach : " + format.fcfa(Number(p.montantLibere) || 0) + " · Remboursé au client : " + format.fcfa(p.rembourse));
+        (seancesParMois[p.mois] || []).forEach((dt, i) => recap.push("    Séance " + (i + 1) + " validée le " + d(dt)));
+      });
+    }
+
     return [
       "CONTRAT D'ACCOMPAGNEMENT MENSUEL — CoachLink CI",
       "Référence : " + (a.contratRef || "—"),
@@ -41,12 +57,17 @@
       "Abonnement salle inclus : " + (a.inclutSalle ? "oui" : "non"),
       "Période : " + d(a.dateDebut) + (a.dateFin ? " → " + d(a.dateFin) : ""),
       "",
+      "Modalité de règlement : la mensualité est versée au coach uniquement après",
+      "validation par QR de toutes les séances du mois. En cas de résiliation, la",
+      "part non effectuée est remboursée au client (prorata des séances).",
+    ].concat(recap).concat([
+      "",
       "Signatures (horodatage électronique) :",
       "  Coach  : " + d(a.contratCoachLe),
       "  Client : " + d(a.contratClientLe),
       "",
       "Ce contrat vaut preuve de l'accord des parties sur la plateforme CoachLink CI.",
-    ].join("\n");
+    ]).join("\n");
   }
 
   function telechargerContrat(a) {

@@ -27,9 +27,11 @@
       });
       storage.lire(storage.CLES.abonnements, []).forEach((a) => {
         if (a.coachId !== coachId) return;
-        // Uniquement les mensualités LIBÉRÉES du séquestre (toutes séances validées).
+        // Uniquement les mensualités LIBÉRÉES ; montant crédité = part du coach
+        // (intégrale si toutes séances validées, sinon prorata à la résiliation).
         (a.paiements || []).forEach((p) => { if (!p.libere) return; ops.push({ type: "abonnement",
-          libelle: "Abonnement (" + p.mois + ") — " + a.clientNom, montant: Number(p.montant) || 0,
+          libelle: "Abonnement (" + p.mois + ") — " + a.clientNom + ((Number(p.rembourse) || 0) > 0 ? " — prorata " + p.seancesValidees + "/" + p.seancesPrevues : ""),
+          montant: Number(p.montantLibere) || Number(p.montant) || 0,
           reference: p.reference, date: p.date }); });
       });
       storage.lire(storage.CLES.retraits, []).forEach((rt) => {

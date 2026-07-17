@@ -126,6 +126,29 @@ class AbonnementTest extends ApiTestCase
         $this->assertFalse($rejeu['ok']);
     }
 
+    public function testResiliationRembourseAuProrata(): void
+    {
+        [$coachId, $clientId] = $this->contexte();
+        $m = new Abonnement();
+        // 1 séance/sem → 4 prévues ; mensuel 60000.
+        $a = $m->creer(['clientId' => $clientId, 'coachId' => $coachId, 'objectif' => 'Forme', 'seancesSemaine' => 1, 'prixSeance' => 15000]);
+        $id = (int) $a['id'];
+        $m->changerStatut($id, 'actif');
+        $m->enregistrerPaiement($id, ['mois' => date('Y-m'), 'montant' => 60000, 'operateur' => 'orange', 'reference' => 'AB1']);
+        $jeton = $m->trouver($id)['jeton'];
+
+        // 1 séance validée sur 4.
+        $w = Otp::fenetre(); $t = $w * 30;
+        $this->assertTrue($m->validerSeance($id, Otp::code($jeton, $w), $t)['ok']);
+
+        // Résiliation → règlement au prorata : coach 1/4 = 15000, remboursé 45000.
+        $m->changerStatut($id, 'termine');
+        $p = $m->complet($id)['paiements'][0];
+        $this->assertSame(1, (int) $p['libere']);
+        $this->assertSame(15000, (int) $p['montant_libere']);
+        $this->assertSame(45000, (int) $p['rembourse']);
+    }
+
     public function testRenouvellementAutomatique(): void
     {
         [$coachId, $clientId] = $this->contexte();

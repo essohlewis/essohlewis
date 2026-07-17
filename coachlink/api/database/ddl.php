@@ -63,7 +63,8 @@ function coachlink_creer_tables(PDO $pdo, bool $sqlite): void
     // du mois ont été validées par QR (seances_validees = seances_prevues).
     $pdo->exec("CREATE TABLE IF NOT EXISTS abonnement_paiements (id $PK, abonnement_id INT, mois VARCHAR(7),
       montant INT, operateur VARCHAR(40), reference VARCHAR(40), date VARCHAR(40),
-      seances_prevues INT DEFAULT 0, seances_validees INT DEFAULT 0, libere INT DEFAULT 0)$suffixe");
+      seances_prevues INT DEFAULT 0, seances_validees INT DEFAULT 0, libere INT DEFAULT 0,
+      montant_libere INT DEFAULT 0, rembourse INT DEFAULT 0)$suffixe");
     // Séances d'abonnement validées (présence prouvée par QR). Unicité par
     // (abonnement, fenêtre OTP) pour empêcher tout double comptage.
     $pdo->exec("CREATE TABLE IF NOT EXISTS abonnement_seances (id $PK, abonnement_id INT, mois VARCHAR(7),

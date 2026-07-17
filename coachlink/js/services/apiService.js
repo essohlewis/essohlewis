@@ -219,7 +219,9 @@
           id: p.id, mois: p.mois, montant: Number(p.montant) || 0,
           operateur: p.operateur, reference: p.reference, date: p.date,
           seancesPrevues: Number(p.seances_prevues) || 0, seancesValidees: Number(p.seances_validees) || 0, libere: !!Number(p.libere),
+          montantLibere: Number(p.montant_libere) || 0, rembourse: Number(p.rembourse) || 0,
         })),
+        seances: (a.seances || []).map((s) => ({ mois: s.mois, fenetre: Number(s.fenetre) || 0, date: s.date })),
       };
     },
 

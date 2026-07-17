@@ -46,10 +46,12 @@ class PortefeuilleController
             [$coach['id']]
         );
         foreach ($paiements as $p) {
+            $credite = (int) ($p['montant_libere'] ?: $p['montant']);
             $ops[] = [
                 'type'      => 'abonnement',
-                'libelle'   => 'Abonnement (' . $p['mois'] . ') — ' . $p['client_nom'],
-                'montant'   => (int) $p['montant'],
+                'libelle'   => 'Abonnement (' . $p['mois'] . ') — ' . $p['client_nom']
+                             . ((int) $p['rembourse'] > 0 ? ' — prorata ' . $p['seances_validees'] . '/' . $p['seances_prevues'] : ''),
+                'montant'   => $credite,
                 'reference' => $p['reference'],
                 'date'      => $p['date'],
             ];
@@ -122,8 +124,8 @@ class PortefeuilleController
         foreach ($model->requete("SELECT * FROM reservations WHERE coach_id = ? AND presence_validee = 1", [$coachId]) as $r) {
             $credit += (int) ($r['paye'] ? ($r['paiement_montant'] ?: $r['prix']) : $r['prix']);
         }
-        foreach ($model->requete("SELECT ap.montant FROM abonnement_paiements ap JOIN abonnements a ON a.id = ap.abonnement_id WHERE a.coach_id = ? AND ap.libere = 1", [$coachId]) as $p) {
-            $credit += (int) $p['montant'];
+        foreach ($model->requete("SELECT ap.montant, ap.montant_libere FROM abonnement_paiements ap JOIN abonnements a ON a.id = ap.abonnement_id WHERE a.coach_id = ? AND ap.libere = 1", [$coachId]) as $p) {
+            $credit += (int) ($p['montant_libere'] ?: $p['montant']);
         }
         $debit = 0;
         foreach ((new Portefeuille())->parCoach($coachId) as $rt) {

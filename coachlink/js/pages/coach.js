@@ -206,8 +206,9 @@
         el("div", { class: "texte-sm texte-doux", text: "Solde disponible" }),
         el("div", { style: "font-size:var(--fs-2xl);font-weight:800", text: format.fcfa(solde) }),
         el("div", { class: "texte-xs texte-faible mt-1", text: "Crédité après validation de présence (séances) et règlements d'abonnement." }),
-        el("div", { class: "rangee gap-2 mt-3" }, [
+        el("div", { class: "rangee gap-2 mt-3 rangee-wrap" }, [
           el("button", { class: "btn btn-cta", html: CL.icon("portefeuille", 16) + " Retirer vers Mobile Money", onclick: () => ouvrirRetrait(solde) }),
+          el("button", { class: "btn btn-primaire", html: CL.icon("document", 16) + " Télécharger le relevé (PDF)", onclick: () => telechargerReleve(solde, operations) }),
         ]),
       ]));
       if (!operations.length) {
@@ -227,6 +228,36 @@
     }
 
     function charger() { CL.portefeuille.pour(c.id).then(({ solde, operations }) => afficher(solde, operations)); }
+
+    // Relevé PDF : gains (séances + mensualités) et retraits.
+    function telechargerReleve(solde, operations) {
+      if (!CL.pdf) return CL.toast.erreur("Indisponible", "Génération PDF impossible sur cet appareil.");
+      const doc = CL.pdf.creer();
+      doc.ligne("Relevé de portefeuille — CoachLink CI", null, { taille: 16, gras: true });
+      doc.saut(4);
+      doc.ligne("Coach : " + coachService.nomComplet(c), null, { taille: 11 });
+      doc.ligne("Édité le : " + new Date().toLocaleString("fr-FR"), null, { taille: 10 });
+      doc.ligne("Solde disponible : " + format.fcfa(solde), null, { taille: 12, gras: true });
+      doc.trait();
+      doc.ligne("Date", "Montant", { gras: true, taille: 11 });
+      doc.ligne("Opération", null, { gras: true, taille: 11 });
+      doc.saut(4);
+      let credits = 0, debits = 0;
+      (operations || []).forEach((o) => {
+        const m = Number(o.montant) || 0; if (m < 0) debits += -m; else credits += m;
+        const dt = o.date ? new Date(o.date).toLocaleDateString("fr-FR") : "—";
+        doc.ligne(dt + "   " + libelleType(o.type) + " · " + (o.reference || ""), (m < 0 ? "- " : "+ ") + format.fcfa(Math.abs(m)), { taille: 9 });
+        doc.ligne("   " + o.libelle, null, { taille: 9 });
+      });
+      doc.trait();
+      doc.ligne("Total crédité", "+ " + format.fcfa(credits), { taille: 11 });
+      doc.ligne("Total retiré", "- " + format.fcfa(debits), { taille: 11 });
+      doc.ligne("Solde", format.fcfa(solde), { taille: 13, gras: true });
+      doc.saut(14);
+      doc.ligne("Document généré par CoachLink CI — les gains d'abonnement ne figurent qu'une fois toutes les séances du mois validées.", null, { taille: 8 });
+      CL.pdf.telecharger(doc.blob(), "releve-portefeuille-" + new Date().toISOString().slice(0, 10) + ".pdf");
+      CL.toast.succes("Relevé généré", "Le PDF a été téléchargé.");
+    }
     charger();
 
     function ouvrirRetrait(soldeDispo) {

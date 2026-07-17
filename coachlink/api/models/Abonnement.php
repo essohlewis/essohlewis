@@ -23,6 +23,9 @@ class Abonnement extends Model
         $a['paiements']    = $this->requete(
             "SELECT * FROM abonnement_paiements WHERE abonnement_id = ? ORDER BY id DESC", [$a['id']]
         );
+        $a['seances']      = $this->requete(
+            "SELECT mois, fenetre, date FROM abonnement_seances WHERE abonnement_id = ? ORDER BY id", [$a['id']]
+        );
         return $a;
     }
 
@@ -104,6 +107,10 @@ class Abonnement extends Model
             }
         }
         $this->maj($id, $champs);
+        // À la résiliation, on solde les mois en séquestre au prorata des séances.
+        if ($statut === 'termine' || $statut === 'annule') {
+            $this->reglerAuProrata($id);
+        }
     }
 
     /** Jeton secret (graine du QR de présence rotatif de l'abonnement). */
@@ -171,10 +178,34 @@ class Abonnement extends Model
         $validees = (int) $p['seances_validees'] + 1;
         $prevues  = (int) $p['seances_prevues'];
         $libere   = $validees >= $prevues ? 1 : 0;
-        $this->pdo()->prepare("UPDATE abonnement_paiements SET seances_validees = ?, libere = ? WHERE id = ?")
-            ->execute([$validees, $libere, (int) $p['id']]);
+        // Toutes les séances validées → mensualité intégralement libérée.
+        $montantLibere = $libere ? (int) $p['montant'] : (int) $p['montant_libere'];
+        $this->pdo()->prepare("UPDATE abonnement_paiements SET seances_validees = ?, libere = ?, montant_libere = ? WHERE id = ?")
+            ->execute([$validees, $libere, $montantLibere, (int) $p['id']]);
 
         return ['ok' => true, 'validees' => $validees, 'prevues' => $prevues, 'libere' => (bool) $libere];
+    }
+
+    /**
+     * Règlement AU PRORATA à la résiliation : pour chaque mois réglé mais non
+     * finalisé, le coach reçoit la part des séances validées, la cliente est
+     * remboursée du reste. Renvoie [['mois','coach','rembourse'], …].
+     */
+    public function reglerAuProrata(int $id): array
+    {
+        $regles = [];
+        $paie = $this->requete("SELECT * FROM abonnement_paiements WHERE abonnement_id = ? AND libere = 0", [$id]);
+        foreach ($paie as $p) {
+            $montant  = (int) $p['montant'];
+            $prevues  = max(1, (int) $p['seances_prevues']);
+            $validees = (int) $p['seances_validees'];
+            $coach    = (int) round($montant * min($validees, $prevues) / $prevues);
+            $rembours = $montant - $coach;
+            $this->pdo()->prepare("UPDATE abonnement_paiements SET libere = 1, montant_libere = ?, rembourse = ? WHERE id = ?")
+                ->execute([$coach, $rembours, (int) $p['id']]);
+            $regles[] = ['mois' => $p['mois'], 'coach' => $coach, 'rembourse' => $rembours, 'validees' => $validees, 'prevues' => $prevues];
+        }
+        return $regles;
     }
 
     /** True si le mois donné (Y-m) est déjà réglé. */
