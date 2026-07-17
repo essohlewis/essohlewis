@@ -261,6 +261,7 @@
       demarrerAvecApi();
     } else {
       rendre();
+      CL.rappels && CL.rappels.verifier(); // rappels J-1 des rendez-vous à venir
     }
 
     // Enregistrement du service worker (PWA) — ignoré en file://.
@@ -276,6 +277,7 @@
       if (CL.auth.estConnecte()) {
         await CL.hydrate.donneesUtilisateur();
         CL.realtime && CL.realtime.demarrer(); // « temps réel » (polling)
+        CL.rappels && CL.rappels.verifier(); // rappels J-1 des rendez-vous à venir
       }
     } catch (e) {
       console.warn("API injoignable — bascule hors-ligne.", e);

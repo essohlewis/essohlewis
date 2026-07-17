@@ -13,6 +13,7 @@
     if (user.role === "coach") location.hash = "#/espace-coach";
     else if (user.role === "admin") location.hash = "#/admin";
     else location.hash = "#/client";
+    CL.rappels && CL.rappels.verifier(); // rappels J-1 des rendez-vous à venir
   }
 
   /* ============================ CONNEXION ========================== */

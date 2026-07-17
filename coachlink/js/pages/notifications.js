@@ -19,6 +19,7 @@
     avis: { icone: "etoile", couleur: "var(--jaune-etoile)" },
     paiement: { icone: "portefeuille", couleur: "var(--vert-validation)" },
     info: { icone: "cloche", couleur: "var(--texte-doux)" },
+    rappel: { icone: "calendrier", couleur: "var(--orange-cta)" },
   };
 
   CL.pages.notifications = function () {
