@@ -190,6 +190,26 @@
       return { id: m.id, de: Number(m.de), texte: m.texte, pieces: [], date: m.date, lu: !!Number(m.lu) };
     },
 
+    mapAbonnement(a) {
+      let prog = a.programme;
+      if (typeof prog === "string") { try { prog = JSON.parse(prog); } catch (_) { prog = {}; } }
+      return {
+        id: a.id, clientId: Number(a.client_id), clientNom: a.client_nom,
+        coachId: a.coach_id, coachNom: a.coach_nom, objectif: a.objectif,
+        seancesSemaine: Number(a.seances_semaine) || 1, lieuType: a.lieu_type,
+        lieuNom: a.lieu_nom, adresse: a.adresse, ville: a.ville, commune: a.commune,
+        quartier: a.quartier, lat: a.lat, lng: a.lng,
+        prixSeance: Number(a.prix_seance) || 0, prixMensuel: Number(a.prix_mensuel) || 0,
+        inclutSalle: !!Number(a.inclut_salle), fixePar: a.fixe_par,
+        programme: prog && typeof prog === "object" ? prog : {},
+        statut: a.statut, dateDebut: a.date_debut, dateFin: a.date_fin, creeLe: a.cree_le,
+        paiements: (a.paiements || []).map((p) => ({
+          id: p.id, mois: p.mois, montant: Number(p.montant) || 0,
+          operateur: p.operateur, reference: p.reference, date: p.date,
+        })),
+      };
+    },
+
     /** Conversation serveur (user_a/user_b) → format du front (participants/noms). */
     mapConversation(c) {
       const a = Number(c.user_a), b = Number(c.user_b);
@@ -262,16 +282,28 @@
         const resasP = u.role === "coach"
           ? API.get("/reservations/coach").catch(() => [])
           : API.mesResas().catch(() => []);
-        const [resas, notifs, convs, likes] = await Promise.all([
+        // Abonnements selon le rôle.
+        const aboP = u.role === "coach"
+          ? API.get("/abonnements/coach").catch(() => [])
+          : API.get("/abonnements/mes").catch(() => []);
+        const [resas, notifs, convs, likes, abos] = await Promise.all([
           resasP,
           API.notifications().catch(() => ({ items: [] })),
           API.get("/conversations").catch(() => []),
           likesP,
+          aboP,
         ]);
         CL.storage.ecrire(CL.storage.CLES.bookings, (resas || []).map(API.mapReservation));
         CL.storage.ecrire(CL.storage.CLES.notifications, ((notifs && notifs.items) || []).map(API.mapNotif));
         CL.storage.ecrire(CL.storage.CLES.conversations, (convs || []).map(API.mapConversation));
         CL.storage.ecrire(CL.storage.CLES.likes, likes || []);
+        CL.storage.ecrire(CL.storage.CLES.abonnements, (abos || []).map(API.mapAbonnement));
+
+        // Coach : s'assurer que sa propre fiche est dans le store (utile juste
+        // après l'inscription, quand le catalogue ne la contient pas encore).
+        if (u.role === "coach" && CL.hydrate.maFiche) {
+          await CL.hydrate.maFiche().catch(() => {});
+        }
 
         // Favoris (client) : on stocke la liste d'identifiants.
         if (u.role === "client") {

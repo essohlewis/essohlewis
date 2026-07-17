@@ -22,6 +22,7 @@
     favoris: "favoris",
     likes: "likes",
     litiges: "litiges",
+    abonnements: "abonnements",
     prefs: "prefs",
     seedFait: "seed_ok",
   };

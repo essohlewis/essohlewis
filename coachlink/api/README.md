@@ -89,6 +89,13 @@ Les routes protégées attendent un en-tête `Authorization: Bearer <token>`.
 | POST | `/reservations/:id/payer` | client | Paiement Mobile Money (+ promo) — passerelle |
 | PATCH| `/reservations/:id/statut` | connecté | Changer le statut |
 | POST | `/paiements/callback` | – (webhook) | Confirmation asynchrone d'un opérateur |
+| POST | `/abonnements` | client | Demander un abonnement mensuel |
+| GET  | `/abonnements/mes` | connecté | Mes abonnements (client) |
+| GET  | `/abonnements/coach` | coach | Demandes d'abonnement reçues |
+| GET  | `/abonnements/:id` | concerné | Détail d'un abonnement |
+| PATCH| `/abonnements/:id/programme` | coach | Fixer le programme hebdo + le prix |
+| PATCH| `/abonnements/:id/statut` | concerné | Changer le statut |
+| POST | `/abonnements/:id/payer` | client | Règlement mensuel (Mobile Money) |
 | GET  | `/notifications` | connecté | `{ items, nonLues }` |
 | PATCH| `/notifications/:id/lue` | connecté | Marquer lue |
 | POST | `/notifications/toutes-lues` | connecté | Tout marquer lu |
@@ -259,6 +266,20 @@ Tant que `cl_api_base` n'est pas défini, l'app fonctionne 100 % hors-ligne.
   (`#/connexion?oauth=<jwt>`). Front : `auth.connecterAvecToken` connecte
   l'utilisateur. **Repli** : si un réseau n'est pas configuré, le front bascule
   sur la simulation (hors-ligne) ou informe l'utilisateur.
+
+**Slice 11 — abonnements mensuels (programme d'accompagnement)**
+- Après une séance, le client peut passer à un **abonnement mensuel** : objectif,
+  nombre de séances/semaine, **lieu géolocalisé** (salle du coach / domicile /
+  salle proposée) via **GPS + Google Maps** (`js/utils/localisation.js`, sans clé
+  API), et tarification (prix fixé par le client ou le coach, **hors abonnement
+  à la salle**).
+- Le **coach** bâtit le **programme hebdomadaire** (grille selon ses
+  disponibilités) et fixe/confirme le prix → proposition au client.
+- **Règlements mensuels** via la passerelle Mobile Money ; historique des mois
+  réglés. Cycle : demande → propose → actif → terminé.
+- Tables `abonnements` + `abonnement_paiements`, modèle `Abonnement`,
+  contrôleur `AbonnementController`, service front `abonnementService`, pages
+  client/coach dédiées, hydratation par rôle.
 
 ### Reste (améliorations, non bloquantes)
 HTTPS/prod, notifications push (WebSocket/SSE pour remplacer le polling),

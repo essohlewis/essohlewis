@@ -18,9 +18,10 @@ $sqlite = Database::pilote() === 'sqlite';
 $fresh = in_array('--fresh', $argv, true);
 
 $tables = [
-    'resets', 'litiges', 'post_likes', 'favoris', 'notifications', 'messages',
-    'conversations', 'reservations', 'posts', 'galerie', 'avis', 'disponibilites',
-    'diplomes', 'tarifs', 'coach_langues', 'coach_specialites', 'coachs', 'users',
+    'abonnement_paiements', 'abonnements', 'resets', 'litiges', 'post_likes',
+    'favoris', 'notifications', 'messages', 'conversations', 'reservations',
+    'posts', 'galerie', 'avis', 'disponibilites', 'diplomes', 'tarifs',
+    'coach_langues', 'coach_specialites', 'coachs', 'users',
 ];
 if ($fresh) {
     if (!$sqlite) $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');

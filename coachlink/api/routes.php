@@ -55,6 +55,15 @@ $router->patch('/reservations/:id/statut', [ReservationController::class, 'statu
 // Webhook de confirmation Mobile Money (appelé par l'opérateur).
 $router->post('/paiements/callback', [PaiementController::class, 'callback']);
 
+// --- Abonnements mensuels ------------------------------------------------
+$router->post('/abonnements',                [AbonnementController::class, 'creer']);
+$router->get('/abonnements/mes',             [AbonnementController::class, 'mes']);
+$router->get('/abonnements/coach',           [AbonnementController::class, 'pourCoach']);
+$router->get('/abonnements/:id',             [AbonnementController::class, 'show']);
+$router->patch('/abonnements/:id/programme', [AbonnementController::class, 'programme']);
+$router->patch('/abonnements/:id/statut',    [AbonnementController::class, 'statut']);
+$router->post('/abonnements/:id/payer',      [AbonnementController::class, 'payer']);
+
 // --- Notifications -------------------------------------------------------
 $router->get('/notifications',              [NotificationController::class, 'index']);
 $router->patch('/notifications/:id/lue',    [NotificationController::class, 'lue']);

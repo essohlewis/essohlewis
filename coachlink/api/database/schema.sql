@@ -218,6 +218,47 @@ CREATE TABLE resets (
   INDEX idx_token (token)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- --- Abonnements mensuels -------------------------------------------------
+CREATE TABLE abonnements (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  client_id       INT NOT NULL,
+  client_nom      VARCHAR(120),
+  coach_id        VARCHAR(40) NOT NULL,
+  coach_nom       VARCHAR(120),
+  objectif        VARCHAR(160),
+  seances_semaine INT DEFAULT 1,
+  lieu_type       ENUM('salle_coach','domicile','salle_proposee') DEFAULT 'salle_coach',
+  lieu_nom        VARCHAR(160),
+  adresse         VARCHAR(200),
+  ville           VARCHAR(80),
+  commune         VARCHAR(80),
+  quartier        VARCHAR(80),
+  lat             VARCHAR(30),
+  lng             VARCHAR(30),
+  prix_seance     INT DEFAULT 0,
+  prix_mensuel    INT DEFAULT 0,
+  inclut_salle    TINYINT DEFAULT 0,
+  fixe_par        ENUM('client','coach') DEFAULT 'client',
+  programme       TEXT,
+  statut          ENUM('demande','propose','actif','termine','annule') DEFAULT 'demande',
+  date_debut      VARCHAR(40),
+  date_fin        VARCHAR(40),
+  cree_le         VARCHAR(40),
+  FOREIGN KEY (client_id) REFERENCES users(id)  ON DELETE CASCADE,
+  FOREIGN KEY (coach_id)  REFERENCES coachs(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE abonnement_paiements (
+  id             INT AUTO_INCREMENT PRIMARY KEY,
+  abonnement_id  INT NOT NULL,
+  mois           VARCHAR(7),
+  montant        INT,
+  operateur      VARCHAR(40),
+  reference      VARCHAR(40),
+  date           VARCHAR(40),
+  FOREIGN KEY (abonnement_id) REFERENCES abonnements(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- Compte administrateur par défaut (mot de passe : admin123).
