@@ -257,6 +257,17 @@
           actions.appendChild(el("button", { class: "btn btn-succes btn-sm", html: CL.icon("portefeuille", 15) + " Payer le mois (" + format.fcfa(a.prixMensuel) + ")", onclick: () => payerMois(a) }));
         }
       }
+      if (a.statut === "actif") {
+        const auto = el("button", { class: "btn btn-sm " + (a.autoRenouvellement ? "btn-primaire" : "btn-fantome"), html: CL.icon("eclair", 15, { fill: !!a.autoRenouvellement }) + (a.autoRenouvellement ? " Renouvellement auto : activé" : " Activer le renouvellement auto") });
+        auto.addEventListener("click", async () => {
+          auto.disabled = true;
+          const maj = await abonnementService.basculerAuto(a.id, !a.autoRenouvellement);
+          a.autoRenouvellement = maj ? !!maj.autoRenouvellement : !a.autoRenouvellement;
+          CL.toast.info("Renouvellement automatique", a.autoRenouvellement ? "Activé — le mois sera prélevé automatiquement." : "Désactivé.");
+          onChange && onChange();
+        });
+        actions.appendChild(auto);
+      }
       if (a.statut === "demande" || a.statut === "propose") {
         actions.appendChild(el("button", { class: "btn btn-fantome btn-sm", text: "Annuler", onclick: async () => { await abonnementService.changerStatut(a.id, "annule"); CL.toast.info("Annulé", ""); location.hash = "#/client/abonnements"; CL.router.rendre(); } }));
       }

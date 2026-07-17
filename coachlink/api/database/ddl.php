@@ -56,7 +56,13 @@ function coachlink_creer_tables(PDO $pdo, bool $sqlite): void
       prix_seance INT DEFAULT 0, prix_mensuel INT DEFAULT 0, inclut_salle INT DEFAULT 0,
       fixe_par VARCHAR(10) DEFAULT 'client', programme TEXT, statut VARCHAR(15) DEFAULT 'demande',
       contrat_ref VARCHAR(40), contrat_coach_le VARCHAR(40), contrat_client_le VARCHAR(40),
+      auto_renouvellement INT DEFAULT 0,
       date_debut VARCHAR(40), date_fin VARCHAR(40), cree_le VARCHAR(40))$suffixe");
     $pdo->exec("CREATE TABLE IF NOT EXISTS abonnement_paiements (id $PK, abonnement_id INT, mois VARCHAR(7),
       montant INT, operateur VARCHAR(40), reference VARCHAR(40), date VARCHAR(40))$suffixe");
+
+    // Retraits du portefeuille coach vers Mobile Money (débits).
+    $pdo->exec("CREATE TABLE IF NOT EXISTS portefeuille_retraits (id $PK, coach_id VARCHAR(40), montant INT,
+      operateur VARCHAR(40), numero VARCHAR(30), statut VARCHAR(15) DEFAULT 'effectue',
+      reference VARCHAR(40), date VARCHAR(40))$suffixe");
 }

@@ -181,25 +181,62 @@
     ]);
   }
 
-  /* Le coach scanne / saisit le QR de présence → séance terminée + fonds libérés. */
+  /** Scan caméra d'un QR (BarcodeDetector natif). Renvoie une fonction d'arrêt. */
+  async function scannerQrCamera(container, onDetecte) {
+    const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    const video = el("video", { style: "width:100%;max-width:280px;border-radius:10px;background:#000", autoplay: "autoplay", muted: "muted", playsinline: "playsinline" });
+    video.srcObject = stream; try { await video.play(); } catch (_) { /* ignore */ }
+    CL.dom.vider(container); container.appendChild(video);
+    let actif = true;
+    function arreter() { actif = false; try { stream.getTracks().forEach((t) => t.stop()); } catch (_) {} CL.dom.vider(container); }
+    async function boucle() {
+      if (!actif) return;
+      try { const codes = await detector.detect(video); if (codes && codes.length) { const v = codes[0].rawValue; arreter(); onDetecte(v); return; } } catch (_) {}
+      if (actif) requestAnimationFrame(boucle);
+    }
+    boucle();
+    return arreter;
+  }
+
+  /* Le coach scanne (caméra) ou saisit le QR de présence → séance terminée + fonds libérés. */
   function validerPresenceCoach(r, onChange) {
     const code = el("input", { class: "input", inputmode: "numeric", placeholder: "Code à 6 chiffres", maxlength: "6", style: "font-family:monospace;letter-spacing:4px;text-align:center;font-size:1.2rem" });
+    const zoneScan = el("div", { style: "display:flex;justify-content:center" });
+    let arreterScan = null;
+
+    async function soumettre(valeur, btn) {
+      if (btn) btn.disabled = true;
+      const res = await bookingService.validerPresence(r.id, valeur);
+      if (!res.ok) { if (btn) btn.disabled = false; return CL.toast.erreur("Validation impossible", res.message || ""); }
+      if (arreterScan) { arreterScan(); arreterScan = null; }
+      CL.modal.fermer();
+      CL.toast.succes("Présence validée ✅", format.fcfa(r.prix) + " crédités sur votre portefeuille.");
+      onChange && onChange();
+    }
+
+    const scanDispo = typeof window !== "undefined" && "BarcodeDetector" in window && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+    const btnCam = el("button", { class: "btn btn-primaire btn-bloc", html: CL.icon("qrcode", 16) + " Scanner le QR avec la caméra" });
+    if (!scanDispo) { btnCam.disabled = true; btnCam.title = "Scan caméra indisponible sur cet appareil — saisissez le code."; }
+    btnCam.addEventListener("click", async () => {
+      if (arreterScan) { arreterScan(); arreterScan = null; btnCam.innerHTML = CL.icon("qrcode", 16) + " Scanner le QR avec la caméra"; return; }
+      try {
+        arreterScan = await scannerQrCamera(zoneScan, (valeur) => { arreterScan = null; soumettre(valeur, null); });
+        btnCam.innerHTML = CL.icon("fermer", 16) + " Arrêter la caméra";
+      } catch (e) { CL.toast.erreur("Caméra", "Accès à la caméra refusé ou indisponible. Saisissez le code."); }
+    });
+
     CL.modal.ouvrir({
       titre: "Valider la présence — " + r.clientNom,
       contenu: el("div", { class: "pile-3" }, [
-        el("p", { class: "texte-sm texte-doux", text: "Scannez le QR de présence du client (ou saisissez le code à 6 chiffres affiché sur son écran) pour confirmer que la séance « " + r.tarifNom + " » a bien eu lieu. Le montant sera crédité sur votre portefeuille." }),
+        el("p", { class: "texte-sm texte-doux", text: "Scannez le QR de présence du client avec la caméra, ou saisissez le code à 6 chiffres affiché sur son écran, pour confirmer que la séance « " + r.tarifNom + " » a bien eu lieu. Le montant sera crédité sur votre portefeuille." }),
+        btnCam,
+        zoneScan,
         el("div", { class: "champ" }, [el("label", { text: "Code de présence (valable 30 s)" }), code]),
       ]),
       pied: [
-        el("button", { class: "btn btn-fantome", text: "Annuler", onclick: CL.modal.fermer }),
-        el("button", { class: "btn btn-succes", html: CL.icon("check", 16) + " Valider & encaisser", onclick: async (e) => {
-          e.currentTarget.disabled = true;
-          const res = await bookingService.validerPresence(r.id, code.value);
-          if (!res.ok) { e.currentTarget.disabled = false; return CL.toast.erreur("Validation impossible", res.message || ""); }
-          CL.modal.fermer();
-          CL.toast.succes("Présence validée ✅", format.fcfa(r.prix) + " crédités sur votre portefeuille.");
-          onChange && onChange();
-        } }),
+        el("button", { class: "btn btn-fantome", text: "Annuler", onclick: () => { if (arreterScan) arreterScan(); CL.modal.fermer(); } }),
+        el("button", { class: "btn btn-succes", html: CL.icon("check", 16) + " Valider & encaisser", onclick: (e) => soumettre(code.value, e.currentTarget) }),
       ],
     });
   }
@@ -209,25 +246,71 @@
     const err = garde(); if (err) return err;
     const c = moncoach();
     const zone = el("div", { class: "pile-4" }, [el("div", { class: "texte-doux", text: "Chargement…" })]);
-    CL.portefeuille.pour(c.id).then(({ solde, operations }) => {
+
+    function libelleType(t) { return t === "abonnement" ? "Abonnement" : t === "retrait" ? "Retrait" : "Séance"; }
+
+    function afficher(solde, operations) {
       CL.dom.vider(zone);
       zone.appendChild(el("div", { class: "carte carte-corps", style: "background:var(--bleu-confiance-clair)" }, [
         el("div", { class: "texte-sm texte-doux", text: "Solde disponible" }),
         el("div", { style: "font-size:var(--fs-2xl);font-weight:800", text: format.fcfa(solde) }),
         el("div", { class: "texte-xs texte-faible mt-1", text: "Crédité après validation de présence (séances) et règlements d'abonnement." }),
+        el("div", { class: "rangee gap-2 mt-3" }, [
+          el("button", { class: "btn btn-cta", html: CL.icon("portefeuille", 16) + " Retirer vers Mobile Money", onclick: () => ouvrirRetrait(solde) }),
+        ]),
       ]));
       if (!operations.length) {
         zone.appendChild(ui.vide("portefeuille", "Aucune opération", "Vos gains apparaîtront ici après vos premières séances validées."));
       } else {
-        zone.appendChild(el("div", { class: "pile-2" }, operations.map((o) => el("div", { class: "carte carte-corps rangee entre rangee-wrap gap-2" }, [
-          el("div", {}, [
-            el("strong", { text: o.libelle }),
-            el("div", { class: "texte-xs texte-faible", text: (o.type === "abonnement" ? "Abonnement" : "Séance") + " · " + (o.reference || "") + (o.date ? " · " + format.date(o.date) : "") }),
-          ]),
-          el("strong", { style: "color:var(--vert-validation)", text: "+ " + format.fcfa(o.montant) }),
-        ]))));
+        zone.appendChild(el("div", { class: "pile-2" }, operations.map((o) => {
+          const debit = (Number(o.montant) || 0) < 0;
+          return el("div", { class: "carte carte-corps rangee entre rangee-wrap gap-2" }, [
+            el("div", {}, [
+              el("strong", { text: o.libelle }),
+              el("div", { class: "texte-xs texte-faible", text: libelleType(o.type) + " · " + (o.reference || "") + (o.date ? " · " + format.date(o.date) : "") }),
+            ]),
+            el("strong", { style: "color:" + (debit ? "var(--rouge-alerte)" : "var(--vert-validation)"), text: (debit ? "− " : "+ ") + format.fcfa(Math.abs(o.montant)) }),
+          ]);
+        })));
       }
-    });
+    }
+
+    function charger() { CL.portefeuille.pour(c.id).then(({ solde, operations }) => afficher(solde, operations)); }
+    charger();
+
+    function ouvrirRetrait(soldeDispo) {
+      let operateur = bookingService.OPERATEURS[0].id;
+      const ops = el("div", { class: "rangee gap-2 rangee-wrap" }, bookingService.OPERATEURS.map((o, i) => {
+        const b = el("button", { class: "chip" + (i === 0 ? " actif" : ""), type: "button", text: o.nom });
+        b.addEventListener("click", () => { operateur = o.id; ops.querySelectorAll(".chip").forEach((x) => x.classList.remove("actif")); b.classList.add("actif"); });
+        return b;
+      }));
+      const montant = el("input", { class: "input", type: "number", min: "500", step: "500", value: String(soldeDispo || 0) });
+      const numero = el("input", { class: "input", placeholder: "Numéro Mobile Money (07/05/01)" });
+      CL.modal.ouvrir({
+        titre: "Retirer vers Mobile Money",
+        contenu: el("div", { class: "pile-3" }, [
+          el("p", { class: "texte-sm texte-doux", text: "Solde disponible : " + format.fcfa(soldeDispo) + ". Le virement est envoyé vers votre compte Mobile Money." }),
+          el("div", {}, [el("label", { class: "champ", style: "display:block;margin-bottom:6px", text: "Opérateur" }), ops]),
+          el("div", { class: "champ" }, [el("label", { text: "Montant (FCFA)" }), montant]),
+          el("div", { class: "champ" }, [el("label", { text: "Numéro" }), numero]),
+        ]),
+        pied: [
+          el("button", { class: "btn btn-fantome", text: "Annuler", onclick: CL.modal.fermer }),
+          el("button", { class: "btn btn-succes", html: CL.icon("check", 16) + " Confirmer le retrait", onclick: async (e) => {
+            const op = bookingService.OPERATEURS.find((o) => o.id === operateur);
+            if (op.prefixe && !CL.validation.telephoneCI(numero.value)) return CL.toast.erreur("Numéro invalide", "Format CI attendu (07/05/01).");
+            e.currentTarget.disabled = true;
+            const res = await CL.portefeuille.retirer(c.id, { montant: Number(montant.value), operateur: op.nom, numero: numero.value.trim() });
+            if (!res.ok) { e.currentTarget.disabled = false; return CL.toast.erreur("Retrait impossible", res.message || ""); }
+            CL.modal.fermer();
+            CL.toast.succes("Retrait effectué ✅", format.fcfa(Number(montant.value)) + " envoyés vers " + op.nom + ".");
+            if (res.operations) afficher(res.solde, res.operations); else charger();
+          } }),
+        ],
+      });
+    }
+
     return el("div", {}, [
       el("div", { class: "page-entete" }, [el("div", {}, [el("h1", { text: "Mon portefeuille" }), el("p", { text: "Vos gains, séance après séance." })])]),
       zone,

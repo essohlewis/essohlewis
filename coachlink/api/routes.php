@@ -56,6 +56,7 @@ $router->post('/reservations/:id/valider-presence', [ReservationController::clas
 
 // --- Portefeuille du coach --------------------------------------------------
 $router->get('/portefeuille', [PortefeuilleController::class, 'coach']);
+$router->post('/portefeuille/retrait', [PortefeuilleController::class, 'retrait']);
 
 // Webhook de confirmation Mobile Money (appelé par l'opérateur).
 $router->post('/paiements/callback', [PaiementController::class, 'callback']);
@@ -68,6 +69,8 @@ $router->get('/abonnements/:id',             [AbonnementController::class, 'show
 $router->patch('/abonnements/:id/programme', [AbonnementController::class, 'programme']);
 $router->patch('/abonnements/:id/statut',    [AbonnementController::class, 'statut']);
 $router->post('/abonnements/:id/payer',      [AbonnementController::class, 'payer']);
+$router->patch('/abonnements/:id/auto',       [AbonnementController::class, 'auto']);
+$router->post('/abonnements/:id/renouveler',  [AbonnementController::class, 'renouveler']);
 
 // --- Notifications -------------------------------------------------------
 $router->get('/notifications',              [NotificationController::class, 'index']);

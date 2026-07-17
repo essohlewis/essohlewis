@@ -81,4 +81,26 @@ class AbonnementTest extends ApiTestCase
         $this->assertCount(1, $a['paiements']);
         $this->assertSame('2026-07', $a['paiements'][0]['mois']);
     }
+
+    public function testRenouvellementAutomatique(): void
+    {
+        [$coachId, $clientId] = $this->contexte();
+        $m = new Abonnement();
+        $a = $m->creer(['clientId' => $clientId, 'coachId' => $coachId, 'objectif' => 'Forme', 'seancesSemaine' => 2, 'prixSeance' => 10000]);
+        $id = (int) $a['id'];
+        $m->changerStatut($id, 'actif');
+
+        // Désactivé par défaut, puis activable.
+        $this->assertSame(0, (int) $m->trouver($id)['auto_renouvellement']);
+        $maj = $m->definirAutoRenouvellement($id, true);
+        $this->assertSame(1, (int) $maj['auto_renouvellement']);
+
+        // Un prélèvement automatique règle le mois courant.
+        $this->assertFalse($m->moisRegle($id, '2026-08'));
+        $m->enregistrerPaiement($id, ['mois' => '2026-08', 'montant' => 80000, 'operateur' => 'Auto', 'reference' => 'AR999']);
+        $this->assertTrue($m->moisRegle($id, '2026-08'));
+
+        // Désactivation.
+        $this->assertSame(0, (int) $m->definirAutoRenouvellement($id, false)['auto_renouvellement']);
+    }
 }

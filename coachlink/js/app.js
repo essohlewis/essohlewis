@@ -266,6 +266,7 @@
     } else {
       rendre();
       CL.rappels && CL.rappels.verifier(); // rappels J-1 des rendez-vous à venir
+      CL.abonnementService && CL.abonnementService.verifierRenouvellements && CL.abonnementService.verifierRenouvellements();
     }
 
     // Enregistrement du service worker (PWA) — ignoré en file://.
@@ -282,6 +283,7 @@
         await CL.hydrate.donneesUtilisateur();
         CL.realtime && CL.realtime.demarrer(); // « temps réel » (polling)
         CL.rappels && CL.rappels.verifier(); // rappels J-1 des rendez-vous à venir
+      CL.abonnementService && CL.abonnementService.verifierRenouvellements && CL.abonnementService.verifierRenouvellements();
       }
     } catch (e) {
       console.warn("API injoignable — bascule hors-ligne.", e);

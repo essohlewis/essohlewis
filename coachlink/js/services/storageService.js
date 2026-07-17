@@ -23,6 +23,7 @@
     likes: "likes",
     litiges: "litiges",
     abonnements: "abonnements",
+    retraits: "retraits",
     prefs: "prefs",
     seedFait: "seed_ok",
   };
@@ -116,6 +117,7 @@
     if (!lire(CLES.conversations)) ecrire(CLES.conversations, []);
     if (!lire(CLES.notifications)) ecrire(CLES.notifications, []);
     if (!lire(CLES.favoris)) ecrire(CLES.favoris, []);
+    if (!lire(CLES.retraits)) ecrire(CLES.retraits, []);
     ecrire(CLES.seedFait, true);
   }
 

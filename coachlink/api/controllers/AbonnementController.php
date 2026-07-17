@@ -151,6 +151,51 @@ class AbonnementController
         Response::ok($model->complet((int) $params['id']));
     }
 
+    /** PATCH /abonnements/:id/auto  { actif } — le client (dés)active le renouvellement auto. */
+    public function auto(array $params): void
+    {
+        $user  = Auth::exigerRole('client');
+        $model = new Abonnement();
+        $abo   = $model->trouver((int) $params['id']);
+        if (!$abo || (int) $abo['client_id'] !== (int) $user['id']) {
+            Response::erreur('Abonnement introuvable.', 404);
+        }
+        $actif = (bool) Request::champ('actif');
+        Response::ok($model->definirAutoRenouvellement((int) $params['id'], $actif));
+    }
+
+    /** POST /abonnements/:id/renouveler — prélèvement automatique du mois courant. */
+    public function renouveler(array $params): void
+    {
+        $user  = Auth::exigerRole('client');
+        $model = new Abonnement();
+        $abo   = $model->trouver((int) $params['id']);
+        if (!$abo || (int) $abo['client_id'] !== (int) $user['id']) {
+            Response::erreur('Abonnement introuvable.', 404);
+        }
+        if ($abo['statut'] !== 'actif' || (int) $abo['auto_renouvellement'] !== 1) {
+            Response::erreur('Renouvellement automatique non activé.', 409);
+        }
+        $mois = Request::corps()['mois'] ?? date('Y-m');
+        if ($model->moisRegle((int) $params['id'], $mois)) {
+            Response::ok($model->complet((int) $params['id'])); // déjà réglé, rien à faire
+        }
+
+        // Prélèvement automatique (moyen enregistré) — simulateur.
+        $ref = 'AR' . substr((string) (time() . random_int(10, 99)), -8);
+        $model->enregistrerPaiement((int) $params['id'], [
+            'mois' => $mois, 'montant' => (int) $abo['prix_mensuel'], 'operateur' => 'Auto', 'reference' => $ref,
+        ]);
+        (new Notification())->ajouter((int) $user['id'], 'paiement',
+            'Abonnement renouvelé automatiquement pour ' . $mois . ' (' . number_format((int) $abo['prix_mensuel'], 0, ',', ' ') . ' FCFA).', '#/client/abonnements');
+        $coach = (new Coach())->trouver($abo['coach_id']);
+        if ($coach && $coach['proprietaire']) {
+            (new Notification())->ajouter((int) $coach['proprietaire'], 'paiement',
+                $abo['client_nom'] . ' — renouvellement automatique réglé (' . $mois . ').', '#/espace-coach/abonnements');
+        }
+        Response::ok($model->complet((int) $params['id']));
+    }
+
     /* ------------------------------------------------------------------ */
     private function peutVoir(array $user, array $abo): bool
     {

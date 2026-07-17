@@ -125,4 +125,11 @@ class Abonnement extends Model
         $r = $this->requete("SELECT 1 FROM abonnement_paiements WHERE abonnement_id = ? AND mois = ?", [$id, $mois]);
         return !empty($r);
     }
+
+    /** Active/désactive le renouvellement automatique. */
+    public function definirAutoRenouvellement(int $id, bool $actif): array
+    {
+        $this->maj($id, ['auto_renouvellement' => $actif ? 1 : 0]);
+        return $this->complet($id);
+    }
 }

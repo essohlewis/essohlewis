@@ -129,6 +129,9 @@
     payer(id, d)  { return API.post("/reservations/" + id + "/payer", d); },
     validerPresence(id, code) { return API.post("/reservations/" + id + "/valider-presence", { code }); },
     portefeuille() { return API.get("/portefeuille"); },
+    retirerPortefeuille(d) { return API.post("/portefeuille/retrait", d); },
+    abonnementAuto(id, actif) { return API.patch("/abonnements/" + id + "/auto", { actif }); },
+    abonnementRenouveler(id, mois) { return API.post("/abonnements/" + id + "/renouveler", { mois }); },
     // Notifications
     notifications() { return API.get("/notifications"); },
 
@@ -209,6 +212,7 @@
         inclutSalle: !!Number(a.inclut_salle), fixePar: a.fixe_par,
         programme: prog && typeof prog === "object" ? prog : {},
         statut: a.statut, dateDebut: a.date_debut, dateFin: a.date_fin, creeLe: a.cree_le,
+        autoRenouvellement: !!Number(a.auto_renouvellement),
         contratRef: a.contrat_ref || "", contratCoachLe: a.contrat_coach_le || "", contratClientLe: a.contrat_client_le || "",
         paiements: (a.paiements || []).map((p) => ({
           id: p.id, mois: p.mois, montant: Number(p.montant) || 0,
