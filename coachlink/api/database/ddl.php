@@ -54,7 +54,7 @@ function coachlink_creer_tables(PDO $pdo, bool $sqlite): void
       lieu_type VARCHAR(20) DEFAULT 'salle_coach', lieu_nom VARCHAR(160), adresse VARCHAR(200),
       ville VARCHAR(80), commune VARCHAR(80), quartier VARCHAR(80), lat VARCHAR(30), lng VARCHAR(30),
       prix_seance INT DEFAULT 0, prix_mensuel INT DEFAULT 0, inclut_salle INT DEFAULT 0,
-      fixe_par VARCHAR(10) DEFAULT 'client', programme TEXT, statut VARCHAR(15) DEFAULT 'demande',
+      fixe_par VARCHAR(10) DEFAULT 'client', programme TEXT, exercices TEXT, statut VARCHAR(15) DEFAULT 'demande',
       contrat_ref VARCHAR(40), contrat_coach_le VARCHAR(40), contrat_client_le VARCHAR(40),
       auto_renouvellement INT DEFAULT 0, jeton VARCHAR(40),
       date_debut VARCHAR(40), date_fin VARCHAR(40), cree_le VARCHAR(40))$suffixe");
@@ -74,4 +74,17 @@ function coachlink_creer_tables(PDO $pdo, bool $sqlite): void
     $pdo->exec("CREATE TABLE IF NOT EXISTS portefeuille_retraits (id $PK, coach_id VARCHAR(40), montant INT,
       operateur VARCHAR(40), numero VARCHAR(30), statut VARCHAR(15) DEFAULT 'effectue',
       reference VARCHAR(40), date VARCHAR(40))$suffixe");
+
+    // Défis lancés par le coach au client (le client valide la réussite).
+    $pdo->exec("CREATE TABLE IF NOT EXISTS defis (id $PK, coach_id VARCHAR(40), coach_nom VARCHAR(120),
+      client_id INT, client_nom VARCHAR(120), titre VARCHAR(160), description TEXT, echeance VARCHAR(20),
+      statut VARCHAR(15) DEFAULT 'propose', cree_le VARCHAR(40), valide_le VARCHAR(40))$suffixe");
+
+    // Notation bidirectionnelle : le coach évalue le sérieux du client.
+    $pdo->exec("CREATE TABLE IF NOT EXISTS evaluations_client (id $PK, client_id INT, coach_id VARCHAR(40),
+      coach_nom VARCHAR(120), note INT, texte TEXT, date VARCHAR(40))$suffixe");
+
+    // Suivi santé / progrès du client (mensurations + photo avant/après).
+    $pdo->exec("CREATE TABLE IF NOT EXISTS mesures (id $PK, client_id INT, date VARCHAR(40), poids DECIMAL(5,1),
+      tour_taille INT, tour_hanches INT, tour_bras INT, note VARCHAR(200), photo LONGTEXT)$suffixe");
 }

@@ -151,6 +151,22 @@ class AbonnementController
         Response::ok($model->complet((int) $params['id']));
     }
 
+    /** PATCH /abonnements/:id/exercices  { exercices } — le coach attache le programme détaillé. */
+    public function exercices(array $params): void
+    {
+        $user  = Auth::exigerRole('coach');
+        $model = new Abonnement();
+        $abo   = $model->trouver((int) $params['id']);
+        $coach = (new Coach())->parProprietaire((int) $user['id']);
+        if (!$abo || !$coach || $abo['coach_id'] !== $coach['id']) { Response::erreur('Abonnement introuvable.', 404); }
+        $exercices = Request::corps()['exercices'] ?? [];
+        if (!is_array($exercices)) { $exercices = []; }
+        $abo = $model->definirExercices((int) $params['id'], $exercices);
+        (new Notification())->ajouter((int) $abo['client_id'], 'info',
+            'Votre coach a mis à jour votre programme d\'entraînement.', '#/client/abonnements');
+        Response::ok($abo);
+    }
+
     /** PATCH /abonnements/:id/auto  { actif } — le client (dés)active le renouvellement auto. */
     public function auto(array $params): void
     {

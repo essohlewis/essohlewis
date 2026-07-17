@@ -254,6 +254,18 @@
     if (a.programme && Object.keys(a.programme).some((j) => (a.programme[j] || []).length)) {
       corps.appendChild(el("div", { class: "mt-2 texte-sm" }, [el("strong", { text: "Programme hebdomadaire : " }), el("span", { text: resumeProgramme(a.programme) })]));
     }
+
+    // Programme d'entraînement détaillé (exercices).
+    if (Array.isArray(a.exercices) && a.exercices.length) {
+      const details = el("details", { class: "mt-2" }, [
+        el("summary", { class: "texte-sm gras", style: "cursor:pointer", html: CL.icon("document", 14) + " Programme d'entraînement (" + a.exercices.length + " exercices)" }),
+        el("div", { class: "pile-2 mt-2" }, a.exercices.map((x) => el("div", { class: "carte carte-corps", style: "background:var(--surface-2);padding:8px 10px" }, [
+          el("strong", { class: "texte-sm", text: x.nom }),
+          el("div", { class: "texte-xs texte-doux", text: [x.series ? x.series + " séries" : null, x.repetitions ? x.repetitions + " répétitions" : null, x.repos ? "repos " + x.repos : null].filter(Boolean).join(" · ") + (x.note ? " — " + x.note : "") }),
+        ]))),
+      ]);
+      corps.appendChild(details);
+    }
     if (a.inclutSalle) corps.appendChild(el("div", { class: "texte-xs texte-faible mt-1", text: "Abonnement à la salle inclus dans le prix." }));
     else corps.appendChild(el("div", { class: "texte-xs texte-faible mt-1", text: "Abonnement à la salle non inclus." }));
 
@@ -291,6 +303,7 @@
         if (pr.regle && !pr.libere) {
           actions.appendChild(el("button", { class: "btn btn-succes btn-sm", html: CL.icon("qrcode", 15) + " Valider une séance (QR)", onclick: () => validerSeanceCoach(a, onChange) }));
         }
+        actions.appendChild(el("button", { class: "btn btn-primaire btn-sm", html: CL.icon("document", 15) + " Programme détaillé", onclick: () => ouvrirExercices(a, onChange) }));
         actions.appendChild(el("button", { class: "btn btn-fantome btn-sm", text: "Terminer", onclick: async () => { await abonnementService.changerStatut(a.id, "termine"); CL.toast.info("Abonnement terminé", ""); onChange && onChange(); } }));
       }
     } else { // client
@@ -337,6 +350,51 @@
 
   function resumeProgramme(prog) {
     return Object.keys(prog).filter((j) => (prog[j] || []).length).map((j) => j + " " + prog[j].join("/")).join(" · ");
+  }
+
+  /* Coach : éditeur du programme d'entraînement détaillé (exercices). */
+  function ouvrirExercices(a, onChange) {
+    const exos = JSON.parse(JSON.stringify(a.exercices || []));
+    const liste = el("div", { class: "pile-2" });
+    function rendre() {
+      CL.dom.vider(liste);
+      exos.forEach((x, i) => {
+        const nom = el("input", { class: "input", placeholder: "Exercice (ex : Squats)", value: x.nom || "" });
+        const series = el("input", { class: "input", type: "number", min: "0", placeholder: "Séries", value: x.series || "", style: "max-width:90px" });
+        const reps = el("input", { class: "input", type: "number", min: "0", placeholder: "Répét.", value: x.repetitions || "", style: "max-width:90px" });
+        const repos = el("input", { class: "input", placeholder: "Repos", value: x.repos || "", style: "max-width:100px" });
+        const note = el("input", { class: "input", placeholder: "Note", value: x.note || "" });
+        nom.addEventListener("input", () => x.nom = nom.value);
+        series.addEventListener("input", () => x.series = series.value);
+        reps.addEventListener("input", () => x.repetitions = reps.value);
+        repos.addEventListener("input", () => x.repos = repos.value);
+        note.addEventListener("input", () => x.note = note.value);
+        const del = el("button", { class: "btn-icone btn-fantome", title: "Retirer", html: CL.icon("poubelle", 15), onclick: () => { exos.splice(i, 1); rendre(); } });
+        liste.appendChild(el("div", { class: "carte carte-corps", style: "padding:8px" }, [
+          el("div", { class: "rangee gap-2 rangee-wrap" }, [nom, del]),
+          el("div", { class: "rangee gap-2 rangee-wrap mt-1" }, [series, reps, repos, note]),
+        ]));
+      });
+    }
+    rendre();
+    CL.modal.ouvrir({
+      titre: "Programme d'entraînement — " + a.clientNom,
+      large: true,
+      contenu: el("div", { class: "pile-3" }, [
+        el("p", { class: "texte-sm texte-doux", text: "Détaillez les exercices (séries, répétitions, repos). Le client les verra dans son abonnement." }),
+        liste,
+        el("button", { class: "btn btn-fantome btn-sm", html: CL.icon("plus", 15) + " Ajouter un exercice", onclick: () => { exos.push({ nom: "", series: "", repetitions: "", repos: "", note: "" }); rendre(); } }),
+      ]),
+      pied: [
+        el("button", { class: "btn btn-fantome", text: "Annuler", onclick: CL.modal.fermer }),
+        el("button", { class: "btn btn-cta", text: "Enregistrer le programme", onclick: async (e) => {
+          const nettoye = exos.filter((x) => (x.nom || "").trim()).map((x) => ({ nom: x.nom.trim(), series: x.series || "", repetitions: x.repetitions || "", repos: x.repos || "", note: x.note || "" }));
+          e.currentTarget.disabled = true;
+          await abonnementService.definirExercices(a.id, nettoye);
+          CL.modal.fermer(); CL.toast.succes("Programme enregistré 💪", "Le client a été notifié."); onChange && onChange();
+        } }),
+      ],
+    });
   }
 
   /* Coach : valide UNE séance d'abonnement (QR rotatif du client → décompte). */

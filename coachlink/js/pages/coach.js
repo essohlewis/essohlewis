@@ -82,6 +82,16 @@
       page.appendChild(el("div", { class: "deux-colonnes" }, [col1, col2]));
     }
 
+    // Défis lancés aux clients.
+    const mesDefis = CL.defiService ? CL.defiService.parCoach(c.id) : [];
+    page.appendChild(el("div", { class: "rangee entre mt-5 mb-3 rangee-wrap gap-2" }, [
+      el("h3", { html: "🔥 Défis" }),
+      el("button", { class: "btn btn-cta btn-sm", html: CL.icon("plus", 15) + " Lancer un défi", onclick: () => lancerDefi(c) }),
+    ]));
+    page.appendChild(mesDefis.length
+      ? el("div", { class: "pile-3" }, mesDefis.slice(0, 4).map((d) => CL.carteDefi(d, null, true)))
+      : ui.vide("eclair", "Aucun défi", "Lancez un défi à un client pour l'aider à rester motivé."));
+
     page.appendChild(el("div", { class: "rangee entre mt-5 mb-3" }, [el("h3", { text: "Dernières demandes" }), el("a", { class: "btn-lien", href: "#/espace-coach/reservations", text: "Tout voir" })]));
     const recentes = demandes.slice(0, 3);
     page.appendChild(recentes.length ? el("div", { class: "pile-3" }, recentes.map((r) => CL.carteReservation(r, "coach"))) : ui.vide("inbox", "Aucune demande", "Les demandes de vos clients apparaîtront ici."));
@@ -185,8 +195,13 @@
     } else if (r.statut === "confirmee") {
       actions.appendChild(el("button", { class: "btn btn-fantome btn-sm", html: CL.icon("localisation", 15) + " Ajuster le lieu", onclick: () => ouvrirLieuCoach(r, false, onChange) }));
       actions.appendChild(el("button", { class: "btn btn-succes btn-sm", html: CL.icon("qrcode", 15) + " Valider la présence (QR)", onclick: () => validerPresenceCoach(r, onChange) }));
+    } else if (r.statut === "terminee") {
+      actions.appendChild(el("button", { class: "btn btn-primaire btn-sm", html: CL.icon("etoile", 15) + " Évaluer le client", onclick: () => evaluerClient(r, onChange) }));
     }
     actions.appendChild(el("button", { class: "btn btn-fantome btn-sm", html: CL.icon("message", 16) + " Message", onclick: () => contacterClient(r) }));
+
+    // Note de sérieux du client (moyenne des évaluations coach).
+    const rc = CL.evaluationClientService ? CL.evaluationClientService.resume(r.clientId) : { nb: 0 };
 
     const cfgLieu = r.lieuType ? CL.profilCat.lieu(r.lieuType) : null;
     const detailLieu = cfgLieu ? (cfgLieu.enLigne ? "Visioconférence" : (cfgLieu.adresse ? (CL.localisation.resume(r) || cfgLieu.label) : cfgLieu.label)) : "";
@@ -196,7 +211,7 @@
         el("div", { class: "rangee gap-3" }, [
           ui.avatarNom(r.clientNom, "avatar-md", "#475569"),
           el("div", {}, [
-            el("strong", { text: r.clientNom }),
+            el("strong", {}, [document.createTextNode(r.clientNom), rc.nb ? el("span", { class: "texte-xs texte-faible", style: "margin-left:6px", html: CL.icon("etoile", 12, { fill: true }) + " " + rc.note }) : null]),
             el("div", { class: "texte-sm texte-doux", text: r.tarifNom + " · " + format.fcfa(r.prix) }),
             el("div", { class: "texte-xs texte-faible", html: CL.icon("calendrier", 13) + " " + r.jour + " à " + r.heure }),
             cfgLieu ? el("div", { class: "texte-xs texte-faible", html: CL.icon("localisation", 13) + " " + (cfgLieu.enLigne ? "" : cfgLieu.label + (detailLieu && detailLieu !== cfgLieu.label ? " — " + detailLieu : "")) + (cfgLieu.enLigne ? "Visioconférence" : "") }) : null,
@@ -371,6 +386,66 @@
           if (confirmer) { bookingService.changerStatut(r.id, "confirmee"); CL.toast.succes("Confirmée", "Le client a été notifié."); }
           else CL.toast.succes("Lieu mis à jour", "Le client a été notifié.");
           CL.modal.fermer(); onChange && onChange();
+        } }),
+      ],
+    });
+  }
+
+  /** Clients distincts du coach (réservations + abonnements). */
+  function clientsDuCoach(c) {
+    const map = {};
+    bookingService.parCoach(c.id).forEach((r) => { if (r.clientId) map[r.clientId] = r.clientNom; });
+    (CL.abonnementService ? CL.abonnementService.parCoach(c.id) : []).forEach((a) => { if (a.clientId) map[a.clientId] = a.clientNom; });
+    return Object.keys(map).map((id) => ({ id: isNaN(Number(id)) ? id : Number(id), nom: map[id] }));
+  }
+
+  /* Le coach lance un défi à un client. */
+  function lancerDefi(c) {
+    const clients = clientsDuCoach(c);
+    if (!clients.length) return CL.toast.info("Aucun client", "Vous n'avez pas encore de client à défier.");
+    const selClient = el("select", { class: "select" }, clients.map((cl) => el("option", { value: String(cl.id), text: cl.nom })));
+    const titre = el("input", { class: "input", placeholder: "Ex : 3 séances cette semaine 💪" });
+    const desc = el("textarea", { class: "textarea", rows: "2", placeholder: "Précisez le défi (facultatif)" });
+    const echeance = el("input", { class: "input", placeholder: "Échéance (ex : cette semaine, 20/07)" });
+    CL.modal.ouvrir({
+      titre: "Lancer un défi",
+      contenu: el("div", { class: "pile-3" }, [
+        el("div", { class: "champ" }, [el("label", { text: "Client" }), selClient]),
+        el("div", { class: "champ" }, [el("label", { text: "Défi" }), titre]),
+        el("div", { class: "champ" }, [el("label", { text: "Description" }), desc]),
+        el("div", { class: "champ" }, [el("label", { text: "Échéance" }), echeance]),
+      ]),
+      pied: [
+        el("button", { class: "btn btn-fantome", text: "Annuler", onclick: CL.modal.fermer }),
+        el("button", { class: "btn btn-cta", text: "Lancer le défi", onclick: async (e) => {
+          if (!titre.value.trim()) return CL.toast.erreur("Titre requis", "Décrivez le défi.");
+          e.currentTarget.disabled = true;
+          const cl = clients.find((x) => String(x.id) === selClient.value);
+          await CL.defiService.creer({ coachId: c.id, coachNom: coachService.nomComplet(c), clientId: cl.id, clientNom: cl.nom, titre: titre.value.trim(), description: desc.value.trim(), echeance: echeance.value.trim() });
+          CL.modal.fermer(); CL.toast.succes("Défi lancé 🔥", "Le client a été notifié."); CL.router.rendre();
+        } }),
+      ],
+    });
+  }
+
+  /* Le coach évalue le sérieux / la ponctualité du client. */
+  function evaluerClient(r, onChange) {
+    const saisie = ui.etoilesSaisie(5);
+    const texte = el("textarea", { class: "textarea", rows: "2", placeholder: "Ponctualité, sérieux, assiduité… (facultatif)" });
+    CL.modal.ouvrir({
+      titre: "Évaluer " + r.clientNom,
+      contenu: el("div", { class: "pile-3" }, [
+        el("p", { class: "texte-sm texte-doux", text: "Votre évaluation aide les autres coachs à mieux connaître ce client." }),
+        el("div", { class: "texte-centre" }, [saisie.element]),
+        el("div", { class: "champ" }, [el("label", { text: "Commentaire" }), texte]),
+      ]),
+      pied: [
+        el("button", { class: "btn btn-fantome", text: "Annuler", onclick: CL.modal.fermer }),
+        el("button", { class: "btn btn-cta", text: "Publier l'évaluation", onclick: async (e) => {
+          e.currentTarget.disabled = true;
+          const c = moncoach();
+          await CL.evaluationClientService.evaluer(r.clientId, { coachId: c.id, coachNom: coachService.nomComplet(c), note: saisie.valeur(), texte: texte.value.trim() });
+          CL.modal.fermer(); CL.toast.succes("Merci !", "Évaluation enregistrée."); onChange && onChange();
         } }),
       ],
     });

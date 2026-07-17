@@ -19,6 +19,7 @@ class Abonnement extends Model
     private function assembler(array $a): array
     {
         $a['programme']    = $a['programme'] ? (json_decode($a['programme'], true) ?: []) : [];
+        $a['exercices']    = !empty($a['exercices']) ? (json_decode($a['exercices'], true) ?: []) : [];
         $a['inclut_salle'] = (int) $a['inclut_salle'];
         $a['paiements']    = $this->requete(
             "SELECT * FROM abonnement_paiements WHERE abonnement_id = ? ORDER BY id DESC", [$a['id']]
@@ -219,6 +220,13 @@ class Abonnement extends Model
     public function definirAutoRenouvellement(int $id, bool $actif): array
     {
         $this->maj($id, ['auto_renouvellement' => $actif ? 1 : 0]);
+        return $this->complet($id);
+    }
+
+    /** Enregistre le programme d'entraînement détaillé (liste d'exercices). */
+    public function definirExercices(int $id, array $exercices): array
+    {
+        $this->maj($id, ['exercices' => json_encode(array_values($exercices))]);
         return $this->complet($id);
     }
 }

@@ -38,6 +38,24 @@
       page.appendChild(el("div", { class: "pile-3" }, abosActifs.map((a) => carteProgression(a))));
     }
 
+    // Mes défis (lancés par les coachs).
+    const defis = CL.defiService ? CL.defiService.parClient(u.id) : [];
+    const defisActifs = defis.filter((d) => d.statut === "propose");
+    if (defisActifs.length) {
+      page.appendChild(el("h3", { class: "mt-5 mb-3", html: "🔥 Mes défis" }));
+      page.appendChild(el("div", { class: "pile-3" }, defisActifs.map((d) => carteDefi(d, () => CL.router.rendre()))));
+    }
+
+    // Suivi santé (aperçu + accès).
+    const mesures = CL.mesureService ? CL.mesureService.parClient(u.id) : [];
+    page.appendChild(el("div", { class: "carte carte-corps mt-5 rangee entre rangee-wrap gap-3" }, [
+      el("div", {}, [
+        el("strong", { html: CL.icon("graphique", 18) + " Ma progression santé" }),
+        el("p", { class: "texte-sm texte-doux", text: mesures.length ? (mesures.length + " mesure(s) enregistrée(s)" + (CL.mesureService.variationPoids(u.id) != null ? " · " + (CL.mesureService.variationPoids(u.id) > 0 ? "+" : "") + CL.mesureService.variationPoids(u.id) + " kg" : "")) : "Suivez votre poids, vos mensurations et vos photos avant/après." }),
+      ]),
+      el("a", { class: "btn btn-primaire", href: "#/client/sante", text: "Ouvrir" }),
+    ]));
+
     // Mes badges & niveau (gamification).
     if (CL.gamification) page.appendChild(sectionBadges(u.id));
 
@@ -251,6 +269,24 @@
     ]);
   }
   CL.carteProchainRdv = carteProchainRdv;
+
+  // Carte d'un défi (client : validation ; coach : lecture seule).
+  function carteDefi(d, onChange, lectureSeule) {
+    const map = { propose: ["st-attente", "En cours"], reussi: ["st-termine", "Réussi 🎉"], echoue: ["st-annule", "Abandonné"] };
+    const bd = map[d.statut] || map.propose;
+    const actions = el("div", { class: "rangee gap-2 mt-2" });
+    if (!lectureSeule && d.statut === "propose") {
+      actions.appendChild(el("button", { class: "btn btn-succes btn-sm", html: CL.icon("check", 14) + " J'ai réussi", onclick: async () => { await CL.defiService.changerStatut(d.id, "reussi"); CL.toast.succes("Bravo ! 🎉", "Défi relevé."); onChange && onChange(); } }));
+      actions.appendChild(el("button", { class: "btn btn-fantome btn-sm", text: "Abandonner", onclick: async () => { await CL.defiService.changerStatut(d.id, "echoue"); CL.toast.info("Défi abandonné", ""); onChange && onChange(); } }));
+    }
+    return el("div", { class: "carte carte-corps" }, [
+      el("div", { class: "rangee entre rangee-wrap gap-2" }, [el("strong", { text: d.titre }), el("span", { class: "pastille-statut " + bd[0], text: bd[1] })]),
+      d.description ? el("p", { class: "texte-sm texte-doux mt-1", text: d.description }) : null,
+      el("div", { class: "texte-xs texte-faible mt-1", text: (lectureSeule ? "Pour " + d.clientNom : "Défi de " + d.coachNom) + (d.echeance ? " · échéance " + d.echeance : "") }),
+      actions.children.length ? actions : null,
+    ]);
+  }
+  CL.carteDefi = carteDefi;
 
   // Section « Mes badges » + niveau (gamification client).
   function sectionBadges(userId) {

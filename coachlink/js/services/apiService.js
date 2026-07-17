@@ -133,6 +133,16 @@
     abonnementAuto(id, actif) { return API.patch("/abonnements/" + id + "/auto", { actif }); },
     abonnementRenouveler(id, mois) { return API.post("/abonnements/" + id + "/renouveler", { mois }); },
     abonnementValiderSeance(id, code) { return API.post("/abonnements/" + id + "/valider-seance", { code }); },
+    abonnementExercices(id, exercices) { return API.patch("/abonnements/" + id + "/exercices", { exercices }); },
+    // Défis, notation client, mesures santé.
+    creerDefi(d) { return API.post("/defis", d); },
+    defiStatut(id, statut) { return API.patch("/defis/" + id + "/statut", { statut }); },
+    mesDefis() { return API.get("/defis/mes"); },
+    defisCoach() { return API.get("/defis/coach"); },
+    evaluerClient(clientId, d) { return API.post("/clients/" + clientId + "/evaluation", d); },
+    mesMesures() { return API.get("/mesures"); },
+    ajouterMesure(d) { return API.post("/mesures", d); },
+    supprimerMesure(id) { return API.supprimer("/mesures/" + id); },
     // Notifications
     notifications() { return API.get("/notifications"); },
 
@@ -203,6 +213,8 @@
     mapAbonnement(a) {
       let prog = a.programme;
       if (typeof prog === "string") { try { prog = JSON.parse(prog); } catch (_) { prog = {}; } }
+      let exos = a.exercices;
+      if (typeof exos === "string") { try { exos = JSON.parse(exos); } catch (_) { exos = []; } }
       return {
         id: a.id, clientId: Number(a.client_id), clientNom: a.client_nom,
         coachId: a.coach_id, coachNom: a.coach_nom, objectif: a.objectif,
@@ -212,6 +224,7 @@
         prixSeance: Number(a.prix_seance) || 0, prixMensuel: Number(a.prix_mensuel) || 0,
         inclutSalle: !!Number(a.inclut_salle), fixePar: a.fixe_par,
         programme: prog && typeof prog === "object" ? prog : {},
+        exercices: Array.isArray(exos) ? exos : [],
         statut: a.statut, dateDebut: a.date_debut, dateFin: a.date_fin, creeLe: a.cree_le,
         autoRenouvellement: !!Number(a.auto_renouvellement), jeton: a.jeton || "",
         contratRef: a.contrat_ref || "", contratCoachLe: a.contrat_coach_le || "", contratClientLe: a.contrat_client_le || "",
@@ -223,6 +236,20 @@
         })),
         seances: (a.seances || []).map((s) => ({ mois: s.mois, fenetre: Number(s.fenetre) || 0, date: s.date })),
       };
+    },
+
+    mapDefi(d) {
+      return { id: d.id, coachId: d.coach_id, coachNom: d.coach_nom, clientId: Number(d.client_id), clientNom: d.client_nom,
+        titre: d.titre, description: d.description, echeance: d.echeance, statut: d.statut, creeLe: d.cree_le, valideLe: d.valide_le };
+    },
+    mapEvaluationClient(e) {
+      return { id: e.id, clientId: Number(e.client_id), coachId: e.coach_id, coachNom: e.coach_nom, note: Number(e.note) || 0, texte: e.texte, date: e.date };
+    },
+    mapMesure(m) {
+      return { id: m.id, clientId: Number(m.client_id), date: m.date,
+        poids: m.poids != null ? Number(m.poids) : null, tourTaille: m.tour_taille != null ? Number(m.tour_taille) : null,
+        tourHanches: m.tour_hanches != null ? Number(m.tour_hanches) : null, tourBras: m.tour_bras != null ? Number(m.tour_bras) : null,
+        note: m.note || "", photo: m.photo || null };
     },
 
     /** Conversation serveur (user_a/user_b) → format du front (participants/noms). */
@@ -324,7 +351,13 @@
         if (u.role === "client") {
           const favs = await API.get("/favoris").catch(() => []);
           CL.storage.ecrire(CL.storage.CLES.favoris, (favs || []).map((c) => c.id));
+          const mesures = await API.mesMesures().catch(() => []);
+          CL.storage.ecrire(CL.storage.CLES.mesures, (mesures || []).map(API.mapMesure));
         }
+
+        // Défis (client & coach).
+        const defis = await (u.role === "coach" ? API.defisCoach() : API.mesDefis()).catch(() => []);
+        CL.storage.ecrire(CL.storage.CLES.defis, (defis || []).map(API.mapDefi));
       } catch (e) { console.warn("Hydratation utilisateur partielle", e); }
     },
 

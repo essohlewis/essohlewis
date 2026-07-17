@@ -24,6 +24,9 @@
     litiges: "litiges",
     abonnements: "abonnements",
     retraits: "retraits",
+    defis: "defis",
+    evaluationsClient: "evaluations_client",
+    mesures: "mesures",
     prefs: "prefs",
     seedFait: "seed_ok",
   };
@@ -118,6 +121,9 @@
     if (!lire(CLES.notifications)) ecrire(CLES.notifications, []);
     if (!lire(CLES.favoris)) ecrire(CLES.favoris, []);
     if (!lire(CLES.retraits)) ecrire(CLES.retraits, []);
+    if (!lire(CLES.defis)) ecrire(CLES.defis, []);
+    if (!lire(CLES.evaluationsClient)) ecrire(CLES.evaluationsClient, []);
+    if (!lire(CLES.mesures)) ecrire(CLES.mesures, []);
     ecrire(CLES.seedFait, true);
   }
 

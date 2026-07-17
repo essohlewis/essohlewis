@@ -215,6 +215,19 @@
       return n;
     },
 
+    /** Le coach attache/actualise le programme d'entraînement détaillé (exercices). */
+    async definirExercices(id, exercices) {
+      if (_api()) {
+        const a = CL.API.mapAbonnement(await CL.API.patch("/abonnements/" + id + "/exercices", { exercices }));
+        _remplacer(a); return a;
+      }
+      const l = toutes(); const a = l.find((x) => String(x.id) === String(id));
+      if (!a) return null;
+      a.exercices = exercices || []; sauver(l);
+      if (CL.notifications) CL.notifications.ajouter(a.clientId, { type: "info", texte: `Votre coach a mis à jour votre programme d'entraînement 💪`, lien: "#/client/abonnements" });
+      return a;
+    },
+
     /** Règlement du mois (objet paiement) ou null. */
     paiementDuMois(a, mois) { return (a.paiements || []).find((p) => p.mois === mois) || null; },
 

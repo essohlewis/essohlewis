@@ -29,6 +29,7 @@
     { motif: /^\/client\/abonnements$/, page: "clientAbonnements", shell: "dash", role: "client" },
     { motif: /^\/client\/favoris$/, page: "clientFavoris", shell: "dash", role: "client" },
     { motif: /^\/client\/avis$/, page: "clientAvis", shell: "dash", role: "client" },
+    { motif: /^\/client\/sante$/, page: "clientSante", shell: "dash", role: "client" },
 
     { motif: /^\/espace-coach$/, page: "coachAccueil", shell: "dash", role: "coach" },
     { motif: /^\/espace-coach\/reservations$/, page: "coachReservations", shell: "dash", role: "coach" },
@@ -78,6 +79,7 @@
         { href: "#/client/abonnements", icone: "etoile", label: "Mes abonnements" },
         { href: "#/client/favoris", icone: "coeur", label: "Mes favoris" },
         { href: "#/client/avis", icone: "etoile", label: "Mes avis" },
+        { href: "#/client/sante", icone: "graphique", label: "Ma santé" },
         { href: "#/messages", icone: "message", label: "Messagerie", compteur: nbMsg || null },
         { href: "#/notifications", icone: "cloche", label: "Notifications", compteur: nbNotif || null },
         { href: "#/recherche", icone: "recherche", label: "Trouver un coach" },

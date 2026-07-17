@@ -72,6 +72,17 @@ $router->post('/abonnements/:id/payer',      [AbonnementController::class, 'paye
 $router->patch('/abonnements/:id/auto',       [AbonnementController::class, 'auto']);
 $router->post('/abonnements/:id/renouveler',  [AbonnementController::class, 'renouveler']);
 $router->post('/abonnements/:id/valider-seance', [AbonnementController::class, 'validerSeance']);
+$router->patch('/abonnements/:id/exercices',  [AbonnementController::class, 'exercices']);
+
+// --- Défis, notation client, suivi santé ---------------------------------
+$router->post('/defis',              [DefiController::class, 'creer']);
+$router->get('/defis/mes',           [DefiController::class, 'mes']);
+$router->get('/defis/coach',         [DefiController::class, 'coach']);
+$router->patch('/defis/:id/statut',  [DefiController::class, 'statut']);
+$router->post('/clients/:id/evaluation', [EvaluationClientController::class, 'evaluer']);
+$router->get('/mesures',             [MesureController::class, 'mes']);
+$router->post('/mesures',            [MesureController::class, 'ajouter']);
+$router->delete('/mesures/:id',      [MesureController::class, 'supprimer']);
 
 // --- Notifications -------------------------------------------------------
 $router->get('/notifications',              [NotificationController::class, 'index']);
