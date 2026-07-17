@@ -29,7 +29,7 @@ function coachlink_creer_tables(PDO $pdo, bool $sqlite): void
     $pdo->exec("CREATE TABLE IF NOT EXISTS tarifs (id VARCHAR(50) PRIMARY KEY, coach_id VARCHAR(40), nom VARCHAR(120), type VARCHAR(20), prix INT, duree INT, description TEXT)$suffixe");
     $pdo->exec("CREATE TABLE IF NOT EXISTS diplomes (id $PK, coach_id VARCHAR(40), titre VARCHAR(160), ecole VARCHAR(160), annee INT, statut VARCHAR(15) DEFAULT 'en_attente', fichier LONGTEXT)$suffixe");
     $pdo->exec("CREATE TABLE IF NOT EXISTS disponibilites (id $PK, coach_id VARCHAR(40), jour VARCHAR(3), heure VARCHAR(5))$suffixe");
-    $pdo->exec("CREATE TABLE IF NOT EXISTS avis (id $PK, coach_id VARCHAR(40), auteur VARCHAR(120), note INT, texte TEXT, reponse TEXT, date VARCHAR(40))$suffixe");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS avis (id $PK, coach_id VARCHAR(40), auteur VARCHAR(120), note INT, texte TEXT, reponse TEXT, video VARCHAR(255), date VARCHAR(40))$suffixe");
     $pdo->exec("CREATE TABLE IF NOT EXISTS galerie (id $PK, coach_id VARCHAR(40), image LONGTEXT, legende VARCHAR(160), date VARCHAR(40))$suffixe");
     $pdo->exec("CREATE TABLE IF NOT EXISTS posts (id $PK, coach_id VARCHAR(40), texte TEXT, image LONGTEXT, video VARCHAR(255), likes INT DEFAULT 0, date VARCHAR(40))$suffixe");
     $pdo->exec("CREATE TABLE IF NOT EXISTS reservations (id $PK, coach_id VARCHAR(40), client_id INT, client_nom VARCHAR(120),
@@ -41,7 +41,7 @@ function coachlink_creer_tables(PDO $pdo, bool $sqlite): void
       paiement_numero VARCHAR(30), paiement_montant INT, paiement_remise INT, paiement_promo VARCHAR(40),
       paiement_ref VARCHAR(40), paiement_date VARCHAR(40), cree_le VARCHAR(40))$suffixe");
     $pdo->exec("CREATE TABLE IF NOT EXISTS conversations (id $PK, user_a INT, user_b INT, nom_a VARCHAR(120), nom_b VARCHAR(120), maj_le VARCHAR(40))$suffixe");
-    $pdo->exec("CREATE TABLE IF NOT EXISTS messages (id $PK, conversation_id INT, de INT, texte TEXT, lu INT DEFAULT 0, date VARCHAR(40))$suffixe");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS messages (id $PK, conversation_id INT, de INT, texte TEXT, image LONGTEXT, lu INT DEFAULT 0, date VARCHAR(40))$suffixe");
     $pdo->exec("CREATE TABLE IF NOT EXISTS notifications (id $PK, pour INT, type VARCHAR(30), texte TEXT, lien VARCHAR(120), lu INT DEFAULT 0, date VARCHAR(40))$suffixe");
     $pdo->exec("CREATE TABLE IF NOT EXISTS favoris (user_id INT, coach_id VARCHAR(40))$suffixe");
     $pdo->exec("CREATE TABLE IF NOT EXISTS post_likes (post_id INT, user_id INT, PRIMARY KEY (post_id, user_id))$suffixe");

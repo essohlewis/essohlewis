@@ -38,6 +38,9 @@
       page.appendChild(el("div", { class: "pile-3" }, abosActifs.map((a) => carteProgression(a))));
     }
 
+    // Mes badges & niveau (gamification).
+    if (CL.gamification) page.appendChild(sectionBadges(u.id));
+
     if (aEvaluer > 0) {
       page.appendChild(el("div", { class: "carte carte-corps mb-5", style: "border-left:4px solid var(--orange-cta)" }, [
         el("div", { class: "rangee entre rangee-wrap gap-3" }, [
@@ -248,6 +251,31 @@
     ]);
   }
   CL.carteProchainRdv = carteProchainRdv;
+
+  // Section « Mes badges » + niveau (gamification client).
+  function sectionBadges(userId) {
+    const niv = CL.gamification.niveau(userId);
+    const badges = CL.gamification.badges(userId);
+    const barre = el("div", { style: "height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin-top:8px" }, [
+      el("div", { style: "height:100%;width:" + Math.round(niv.progres * 100) + "%;background:var(--orange-cta)" }),
+    ]);
+    const carteNiveau = el("div", { class: "carte carte-corps mb-3" }, [
+      el("div", { class: "rangee entre rangee-wrap gap-2" }, [
+        el("div", {}, [el("div", { class: "texte-xs texte-faible", text: "Niveau " + niv.niveau }), el("strong", { style: "font-size:var(--fs-lg)", text: niv.nom })]),
+        el("span", { class: "texte-sm texte-doux", text: niv.seances + " séance(s)" }),
+      ]),
+      barre,
+      el("div", { class: "texte-xs texte-faible mt-1", text: niv.suivant ? ("Plus que " + niv.restant + " séance(s) pour le niveau suivant.") : "Niveau maximum atteint 🏆" }),
+    ]);
+    const grille = el("div", { class: "grille grille-3" }, badges.map((b) => el("div", {
+      class: "carte carte-corps texte-centre", style: "opacity:" + (b.acquis ? "1" : "0.55"),
+    }, [
+      el("div", { style: "color:" + (b.acquis ? "var(--orange-cta)" : "var(--texte-faible)"), html: CL.icon(b.icone, 30, { fill: b.acquis }) }),
+      el("strong", { class: "texte-sm", text: b.titre }),
+      el("div", { class: "texte-xs texte-faible", text: b.acquis ? "Débloqué ✓" : b.desc }),
+    ])));
+    return el("div", {}, [el("h3", { class: "mt-5 mb-3", text: "Mes badges" }), carteNiveau, grille]);
+  }
 
   // Carte de progression d'un abonnement (barre séances validées / prévues).
   function carteProgression(a) {

@@ -15,6 +15,7 @@ class Review extends Model
             'note'     => (int) $d['note'],
             'texte'    => $d['texte'],
             'reponse'  => null,
+            'video'    => $d['video'] ?? null,
             'date'     => date('c'),
         ]);
         $this->recalculerNote($coachId);

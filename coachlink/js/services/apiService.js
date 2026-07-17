@@ -151,7 +151,7 @@
         specialites: c.specialites || [], langues: c.langues || [],
         tarifs: (c.tarifs || []).map((t) => ({ id: t.id, nom: t.nom, type: t.type, prix: Number(t.prix), duree: Number(t.duree), description: t.description })),
         diplomes: (c.diplomes || []).map((d) => ({ id: d.id, titre: d.titre, ecole: d.ecole, annee: d.annee, statut: d.statut })),
-        avis: (c.avis || []).map((a) => ({ id: a.id, auteur: a.auteur, note: Number(a.note), texte: a.texte, reponse: a.reponse, date: a.date })),
+        avis: (c.avis || []).map((a) => ({ id: a.id, auteur: a.auteur, note: Number(a.note), texte: a.texte, reponse: a.reponse, date: a.date, video: a.video || null })),
         galerie: (c.galerie || []).map((g) => ({ id: g.id, image: API.urlMedia(g.image), legende: g.legende, date: g.date })),
         posts: (c.posts || []).map((p) => ({ id: p.id, texte: p.texte, image: API.urlMedia(p.image), video: p.video, likes: Number(p.likes) || 0, date: p.date })),
         disponibilites: c.disponibilites || { Lun: [], Mar: [], Mer: [], Jeu: [], Ven: [], Sam: [], Dim: [] },
@@ -197,7 +197,7 @@
     },
 
     mapMessage(m) {
-      return { id: m.id, de: Number(m.de), texte: m.texte, pieces: [], date: m.date, lu: !!Number(m.lu) };
+      return { id: m.id, de: Number(m.de), texte: m.texte, pieces: m.image ? [{ type: "image", url: m.image }] : [], date: m.date, lu: !!Number(m.lu) };
     },
 
     mapAbonnement(a) {

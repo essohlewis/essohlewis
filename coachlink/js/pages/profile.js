@@ -287,6 +287,7 @@
         ui.etoiles(a.note),
       ]),
       el("p", { class: "mt-2", style: "color:var(--texte)", text: a.texte }),
+      a.video ? el("div", { class: "mt-2", style: "max-width:360px" }, [CL.media.elementVideo(a.video) || el("a", { class: "btn-lien texte-sm", href: a.video, target: "_blank", rel: "noopener", html: CL.icon("video", 14) + " Voir le témoignage vidéo" })]) : null,
       a.reponse ? el("div", { class: "avis-reponse" }, [el("strong", { class: "texte-sm", html: CL.icon("message", 14) + " Réponse de " + esc(nomCoach(coach)) }), el("p", { class: "texte-sm mt-2", text: a.reponse })]) : null,
     ]);
   }
@@ -547,19 +548,25 @@
   function ouvrirAvis(coach, resa) {
     const saisie = ui.etoilesSaisie(5);
     const texte = el("textarea", { class: "textarea", placeholder: "Partagez votre expérience avec ce coach…" });
+    const video = el("input", { class: "input", type: "url", placeholder: "https://youtu.be/… (facultatif)" });
     CL.modal.ouvrir({
       titre: "Évaluer " + nomCoach(coach),
       contenu: el("div", { class: "pile-4" }, [
         el("div", { class: "texte-centre" }, [el("p", { class: "mb-2", text: "Quelle note donnez-vous ?" }), saisie.element]),
         el("div", { class: "champ" }, [el("label", { text: "Votre commentaire" }), texte]),
+        el("div", { class: "champ" }, [el("label", { html: CL.icon("video", 15) + " Témoignage vidéo (facultatif)" }), video, el("div", { class: "aide", text: "Collez un lien YouTube, Vimeo ou une vidéo directe pour un témoignage plus vivant." })]),
       ]),
       pied: [
         el("button", { class: "btn btn-fantome", text: "Annuler", onclick: CL.modal.fermer }),
         el("button", { class: "btn btn-cta", text: "Publier l'avis", onclick: async (e) => {
           if (!texte.value.trim()) return CL.toast.erreur("Commentaire requis", "Écrivez quelques mots.");
+          const lienVideo = video.value.trim();
+          if (lienVideo && CL.media && CL.media.parseVideo && !CL.media.parseVideo(lienVideo)) {
+            return CL.toast.erreur("Lien vidéo invalide", "Utilisez un lien YouTube, Vimeo ou une vidéo directe (.mp4).");
+          }
           const u = auth.courant();
           e.currentTarget.disabled = true;
-          const ok = await coachService.ajouterAvis(coach.id, { auteur: u.prenom + " " + u.nom, note: saisie.valeur(), texte: texte.value.trim() });
+          const ok = await coachService.ajouterAvis(coach.id, { auteur: u.prenom + " " + u.nom, note: saisie.valeur(), texte: texte.value.trim(), video: lienVideo || null });
           if (!ok) { e.currentTarget.disabled = false; return; }
           if (resa) bookingService.marquerAvisLaisse(resa.id);
           CL.modal.fermer();

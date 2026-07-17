@@ -110,5 +110,34 @@
     return buckets;
   }
 
-  CL.insights = { libelleQuand, prochainRendezVous, statsClient, statsCoach, revenus6Mois };
+  /** Créneaux (jour + heure) les plus demandés au coach. */
+  function creneauxDemandes(coachId, n) {
+    const compte = {};
+    S().lire(S().CLES.bookings, []).forEach((r) => {
+      if (r.coachId !== coachId || !r.jour) return;
+      const k = r.jour + " · " + (r.heure || "");
+      compte[k] = (compte[k] || 0) + 1;
+    });
+    return Object.keys(compte).map((k) => ({ creneau: k, n: compte[k] })).sort((a, b) => b.n - a.n).slice(0, n || 3);
+  }
+
+  /** Clients à relancer : une séance terminée, mais plus rien de prévu. */
+  function clientsARelancer(coachId) {
+    const parClient = {};
+    S().lire(S().CLES.bookings, []).forEach((r) => { if (r.coachId === coachId) (parClient[r.clientId] = parClient[r.clientId] || []).push(r); });
+    const abosActifs = new Set(S().lire(S().CLES.abonnements, []).filter((a) => a.coachId === coachId && a.statut === "actif").map((a) => a.clientId));
+    const out = [];
+    Object.keys(parClient).forEach((cid) => {
+      const rs = parClient[cid];
+      const aTermine = rs.some((r) => r.statut === "terminee");
+      const aVenir = rs.some((r) => r.statut === "confirmee" || r.statut === "en_attente") || abosActifs.has(rs[0].clientId);
+      if (aTermine && !aVenir) {
+        const dernier = rs.map((r) => r.creeLe || "").sort().slice(-1)[0];
+        out.push({ clientId: rs[0].clientId, clientNom: rs[0].clientNom, dernier });
+      }
+    });
+    return out.sort((a, b) => String(b.dernier).localeCompare(String(a.dernier)));
+  }
+
+  CL.insights = { libelleQuand, prochainRendezVous, statsClient, statsCoach, revenus6Mois, creneauxDemandes, clientsARelancer };
 })();

@@ -72,8 +72,9 @@
     /** Envoie un message dans une conversation (asynchrone). */
     async envoyer(convId, expediteurId, texte, piecesJointes) {
       if (messageService._api()) {
+        const image = (piecesJointes && piecesJointes[0] && (piecesJointes[0].url || piecesJointes[0])) || "";
         const msg = CL.API.mapMessage(
-          await CL.API.post("/conversations/" + convId + "/messages", { texte })
+          await CL.API.post("/conversations/" + convId + "/messages", { texte, image })
         );
         const l = toutes();
         const c = l.find((x) => x.id === convId);

@@ -28,8 +28,10 @@ class MessageController
     public function envoyer(array $params): void
     {
         $user = Auth::exiger();
-        $texte = trim((string) Request::champ('texte'));
-        if ($texte === '') {
+        $d = Request::corps();
+        $texte = trim((string) ($d['texte'] ?? ''));
+        $image = (string) ($d['image'] ?? '');
+        if ($texte === '' && $image === '') {
             Response::erreur('Message vide.', 422);
         }
         $model = new Message();
@@ -37,7 +39,7 @@ class MessageController
         if (!$conv || !in_array((int) $user['id'], [(int) $conv['user_a'], (int) $conv['user_b']], true)) {
             Response::erreur('Conversation introuvable.', 404);
         }
-        $msg = $model->envoyer((int) $params['id'], (int) $user['id'], $texte);
+        $msg = $model->envoyer((int) $params['id'], (int) $user['id'], $texte, $image);
 
         $destinataire = (int) $conv['user_a'] === (int) $user['id'] ? (int) $conv['user_b'] : (int) $conv['user_a'];
         (new Notification())->ajouter($destinataire, 'message',

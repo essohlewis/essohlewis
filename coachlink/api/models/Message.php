@@ -46,12 +46,13 @@ class Message extends Model
         return $this->conversation((int) $this->pdo()->lastInsertId());
     }
 
-    public function envoyer(int $convId, int $de, string $texte): array
+    public function envoyer(int $convId, int $de, string $texte, string $image = ''): array
     {
         $id = (int) $this->inserer([
             'conversation_id' => $convId,
             'de'    => $de,
             'texte' => $texte,
+            'image' => $image,
             'lu'    => 0,
             'date'  => date('c'),
         ]);

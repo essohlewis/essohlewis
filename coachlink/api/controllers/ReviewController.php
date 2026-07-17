@@ -25,6 +25,7 @@ class ReviewController
             'auteur' => $user['prenom'] . ' ' . $user['nom'],
             'note'   => $note,
             'texte'  => $d['texte'],
+            'video'  => isset($d['video']) ? substr(trim((string) $d['video']), 0, 255) : null,
         ]);
 
         if ($coach['proprietaire']) {

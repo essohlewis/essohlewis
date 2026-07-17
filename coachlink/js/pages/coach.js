@@ -60,6 +60,28 @@
       ]),
     ]));
 
+    // Suggestions intelligentes : créneaux les plus demandés + clients à relancer.
+    const creneaux = CL.insights ? CL.insights.creneauxDemandes(c.id, 3) : [];
+    const relancer = CL.insights ? CL.insights.clientsARelancer(c.id) : [];
+    if (creneaux.length || relancer.length) {
+      const col1 = el("div", { class: "carte carte-corps" }, [
+        el("h4", { class: "mb-2", html: CL.icon("horloge", 16) + " Créneaux les plus demandés" }),
+        creneaux.length ? el("div", { class: "pile-2" }, creneaux.map((cr) => el("div", { class: "rangee entre" }, [
+          el("span", { class: "texte-sm", text: cr.creneau }),
+          el("span", { class: "badge badge-neutre", text: cr.n + " demande(s)" }),
+        ]))) : el("p", { class: "texte-sm texte-faible", text: "Pas encore assez de données." }),
+      ]);
+      const col2 = el("div", { class: "carte carte-corps" }, [
+        el("h4", { class: "mb-2", html: CL.icon("cloche", 16) + " Clients à relancer" }),
+        relancer.length ? el("div", { class: "pile-2" }, relancer.slice(0, 4).map((cl) => el("div", { class: "rangee entre rangee-wrap gap-2" }, [
+          el("span", { class: "texte-sm", text: cl.clientNom }),
+          el("button", { class: "btn btn-fantome btn-sm", html: CL.icon("message", 14) + " Relancer", onclick: () => contacterClient({ clientId: cl.clientId, clientNom: cl.clientNom }) }),
+        ]))) : el("p", { class: "texte-sm texte-faible", text: "Aucun client inactif — bravo !" }),
+      ]);
+      page.appendChild(el("h3", { class: "mt-5 mb-3", text: "Suggestions pour développer votre activité" }));
+      page.appendChild(el("div", { class: "deux-colonnes" }, [col1, col2]));
+    }
+
     page.appendChild(el("div", { class: "rangee entre mt-5 mb-3" }, [el("h3", { text: "Dernières demandes" }), el("a", { class: "btn-lien", href: "#/espace-coach/reservations", text: "Tout voir" })]));
     const recentes = demandes.slice(0, 3);
     page.appendChild(recentes.length ? el("div", { class: "pile-3" }, recentes.map((r) => CL.carteReservation(r, "coach"))) : ui.vide("inbox", "Aucune demande", "Les demandes de vos clients apparaîtront ici."));

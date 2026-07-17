@@ -65,10 +65,16 @@
         CL.dom.vider(corps);
         conv.messages.forEach((m) => {
           const moi = m.de === u.id;
-          corps.appendChild(el("div", { class: "bulle " + (moi ? "bulle-moi" : "bulle-autre") }, [
-            el("div", { text: m.texte }),
-            el("span", { class: "bulle__heure", text: format.heure(m.date) }),
-          ]));
+          const bulle = el("div", { class: "bulle " + (moi ? "bulle-moi" : "bulle-autre") });
+          (m.pieces || []).forEach((p) => {
+            const src = typeof p === "string" ? p : (p && (p.url || p.image || p.src));
+            if (src) bulle.appendChild(el("img", { src, loading: "lazy", style: "max-width:220px;width:100%;border-radius:10px;display:block;margin-bottom:4px" }));
+          });
+          if (m.texte) bulle.appendChild(el("div", { text: m.texte }));
+          // Accusé de lecture sur mes propres messages.
+          const suffixe = moi && m.lu ? " · Vu" : "";
+          bulle.appendChild(el("span", { class: "bulle__heure", text: format.heure(m.date) + suffixe }));
+          corps.appendChild(bulle);
         });
         corps.scrollTop = corps.scrollHeight;
       }
@@ -97,6 +103,7 @@
           setTimeout(() => {
             const conv2 = messageService.obtenir(conv.id);
             if (conv2) {
+              messageService.marquerLu(conv.id, autre); // l'interlocuteur « lit » → accusé de lecture
               messageService.envoyer(conv.id, autre, reponseAuto(txt));
               rafraichirConv();
               if (convActiveId === conv.id) { rendreMessages(); }
@@ -106,11 +113,22 @@
         }
       }
 
+      // Partage de photo (programme, exercice, lieu…).
+      async function joindrePhoto() {
+        if (!CL.media || !CL.media.choisirImage) return;
+        try {
+          const dataUrl = await CL.media.choisirImage(1100, 0.7);
+          if (!dataUrl) return;
+          await messageService.envoyer(conv.id, u.id, "", [{ type: "image", url: dataUrl }]);
+          rafraichirConv(); rendreMessages(); rafraichirListe();
+        } catch (e) { CL.toast.erreur("Photo", "Envoi impossible."); }
+      }
+
       saisie.addEventListener("keydown", (e) => { if (e.key === "Enter") envoyer(); });
       zoneChat.appendChild(entete);
       zoneChat.appendChild(corps);
       zoneChat.appendChild(el("div", { class: "chat__saisie" }, [
-        el("button", { class: "btn-icone btn-fantome", title: "Pièce jointe", html: CL.icon("trombone", 20), onclick: () => CL.toast.info("Pièces jointes", "Bientôt disponible via l'API.") }),
+        el("button", { class: "btn-icone btn-fantome", title: "Envoyer une photo", "aria-label": "Envoyer une photo", html: CL.icon("image", 20), onclick: joindrePhoto }),
         saisie,
         el("button", { class: "btn-icone btn-primaire", "aria-label": "Envoyer", html: CL.icon("envoyer", 20), onclick: envoyer }),
       ]));

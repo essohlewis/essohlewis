@@ -139,7 +139,7 @@
     async ajouterAvis(coachId, avis) {
       if (CL.API && CL.API.actif) {
         try {
-          await CL.API.post("/coachs/" + coachId + "/avis", { note: avis.note, texte: avis.texte });
+          await CL.API.post("/coachs/" + coachId + "/avis", { note: avis.note, texte: avis.texte, video: avis.video || null });
           // Recharge le coach à jour (note recalculée côté serveur).
           if (CL.hydrate) await CL.hydrate.coach(coachId);
           return true;
@@ -151,7 +151,7 @@
       c.avis = c.avis || [];
       c.avis.unshift({
         id: CL.dom.uid("a"), auteur: avis.auteur, note: avis.note, texte: avis.texte,
-        date: new Date().toISOString(), reponse: null,
+        video: avis.video || null, date: new Date().toISOString(), reponse: null,
       });
       c.nbAvis = c.avis.length;
       c.note = Math.round((c.avis.reduce((s, a) => s + a.note, 0) / c.avis.length) * 10) / 10;
