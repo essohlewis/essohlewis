@@ -815,3 +815,107 @@ body.seller-mode .bottom-nav { display: none !important; }
 .onboard-hero .oh-ico { width: 72px; height: 72px; border-radius: 20px; background: linear-gradient(135deg, var(--brand), var(--brand-dark)); display: grid; place-items: center; font-size: 34px; margin: 0 auto 14px; box-shadow: var(--shadow-brand); }
 .onboard-steps { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 8px 0 22px; }
 .onboard-steps span { font-size: 12.5px; color: var(--text-2); background: var(--surface-2); border: 1px solid var(--border); padding: 6px 12px; border-radius: var(--r-full); font-weight: 600; }
+
+/* =========================================================================
+   Composants espace client (lot d'améliorations)
+   ========================================================================= */
+
+/* Boutons utilitaires */
+.btn-outline { background: transparent; border: 1.5px solid var(--brand); color: var(--brand); }
+.btn-outline:hover { background: var(--brand-soft); }
+.btn-link-inline { background: none; border: none; color: var(--brand); font-weight: 600; font-size: 13.5px; cursor: pointer; padding: 0; text-decoration: underline; }
+.btn-link-inline:hover { color: var(--brand-dark); }
+
+/* Rangée horizontale défilante (réutilisable desktop + mobile) */
+.scroll-row { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; }
+.scroll-row::-webkit-scrollbar { height: 6px; }
+.scroll-row::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 999px; }
+.scroll-row > .product-card { min-width: 190px; max-width: 210px; flex: 0 0 auto; }
+
+/* Code coupon / bon d'achat */
+.coupon-code { display: inline-block; font-family: monospace; font-size: 22px; font-weight: 800; letter-spacing: 3px; color: var(--brand-dark); background: var(--brand-soft); border: 2px dashed var(--brand); border-radius: var(--r); padding: 12px 22px; }
+
+/* Rangées d'activité (alertes, recherches, historique de prix) */
+.activity-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.activity-row:last-child { border-bottom: none; }
+.activity-row a { font-weight: 600; }
+.chips-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* Champs inline (barre de filtres annuaire boutiques) */
+.inline-field { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.inline-field select { padding: 7px 10px; border-radius: var(--r-sm); border: 1.5px solid var(--border-strong); background: var(--surface); color: var(--text); font-size: 13.5px; }
+
+/* Annuaire des boutiques */
+.stores-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.store-card { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow-sm); transition: transform var(--t-fast), box-shadow var(--t-fast); }
+.store-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.store-card-banner { height: 72px; background: linear-gradient(120deg, var(--brand), var(--brand-dark)); background-size: cover; background-position: center; }
+.store-card-body { display: flex; gap: 12px; padding: 0 16px 12px; margin-top: -26px; align-items: flex-end; }
+.store-card-logo { width: 56px; height: 56px; border-radius: 14px; object-fit: cover; border: 3px solid var(--surface); background: var(--surface); box-shadow: var(--shadow-sm); }
+.store-card-main { flex: 1; padding-bottom: 2px; }
+.store-card-name { font-weight: 700; font-size: 15.5px; display: flex; align-items: center; gap: 6px; }
+.store-card-meta { font-size: 12.5px; color: var(--text-2); margin-top: 2px; }
+.store-card-stats { display: flex; flex-wrap: wrap; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--border); font-size: 12.5px; color: var(--text-2); }
+
+/* Historique de prix + sparkline */
+.price-hist { }
+.sparkline { width: 100%; height: auto; display: block; margin-bottom: 10px; }
+.price-hist-stats { display: flex; justify-content: space-around; gap: 10px; text-align: center; margin: 6px 0 14px; }
+.price-hist-stats > div { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.price-hist-stats strong { font-size: 16px; }
+.price-hist-rows { max-height: 180px; overflow-y: auto; }
+.price-hist-note { margin-top: 12px; background: var(--accent-soft); color: var(--accent); border-radius: var(--r-sm); padding: 10px 12px; font-size: 13px; font-weight: 600; text-align: center; }
+
+/* Questions & réponses publiques */
+.qna-ask { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }
+.qna-ask textarea { width: 100%; resize: vertical; }
+.qna-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.qna-item:last-child { border-bottom: none; }
+.qna-q, .qna-a { display: flex; gap: 10px; align-items: flex-start; }
+.qna-a { margin-top: 8px; padding: 10px 12px; background: var(--brand-soft); border-radius: var(--r-sm); }
+.qna-icon { flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 12px; background: var(--surface-3); color: var(--text-2); }
+.qna-a .qna-icon { background: var(--brand); color: var(--text-on-brand); }
+.qna-q strong, .qna-a strong { font-size: 13px; }
+.qna-answer-form { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+.qna-answer-form textarea { width: 100%; resize: vertical; }
+.qna-pending { margin-top: 8px; font-size: 12.5px; font-style: italic; }
+
+/* Badges / succès (profil) */
+.badges-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
+.badge-tile { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; padding: 14px 8px; border-radius: var(--r); border: 1px solid var(--border); background: var(--surface-2); opacity: .55; filter: grayscale(1); transition: transform var(--t-fast); }
+.badge-tile.on { opacity: 1; filter: none; border-color: var(--brand); background: var(--brand-soft); }
+.badge-tile.on:hover { transform: translateY(-2px); }
+.badge-emoji { font-size: 30px; }
+.badge-name { font-weight: 700; font-size: 13px; }
+.badge-state { font-size: 11px; color: var(--text-3); }
+.badge-tile.on .badge-state { color: var(--accent); font-weight: 600; }
+
+/* Note de problème de commande */
+.order-problem-note { margin-top: 10px; background: var(--danger-soft); color: var(--danger); border-radius: var(--r-sm); padding: 8px 12px; font-size: 12.5px; font-weight: 600; }
+
+/* =========================================================================
+   Assistant virtuel (chatbot)
+   ========================================================================= */
+#chatbotRoot { position: fixed; right: 18px; bottom: 20px; z-index: 900; }
+.chatbot-fab { width: 56px; height: 56px; border-radius: 50%; border: none; background: linear-gradient(135deg, var(--brand), var(--brand-dark)); color: #fff; font-size: 26px; cursor: pointer; box-shadow: var(--shadow-brand); transition: transform var(--t-fast); }
+.chatbot-fab:hover { transform: scale(1.06); }
+.chatbot-fab:active { transform: scale(.94); }
+.chatbot-panel { position: absolute; right: 0; bottom: 70px; width: min(340px, calc(100vw - 36px)); height: 460px; max-height: calc(100vh - 140px); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; overflow: hidden; animation: chatIn var(--t); }
+.chatbot-panel[hidden] { display: none; }
+@keyframes chatIn { from { opacity: 0; transform: translateY(12px) scale(.96); } to { opacity: 1; transform: none; } }
+.chatbot-head { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; background: linear-gradient(120deg, var(--brand), var(--brand-dark)); color: #fff; font-weight: 700; font-size: 15px; }
+.chatbot-head button { background: rgba(255,255,255,.2); border: none; color: #fff; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 14px; }
+.chatbot-body { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; background: var(--surface-2); }
+.chat-msg { max-width: 82%; padding: 9px 13px; border-radius: 14px; font-size: 13.5px; line-height: 1.4; }
+.chat-msg.bot { align-self: flex-start; background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.chat-msg.user { align-self: flex-end; background: var(--brand); color: var(--text-on-brand); border-bottom-right-radius: 4px; }
+.chat-msg .chat-link { color: var(--brand); font-weight: 700; }
+.chat-msg.bot .chat-link { color: var(--brand-dark); }
+.chat-suggestions { display: flex; flex-wrap: wrap; gap: 6px; }
+.chat-chip { background: var(--surface); border: 1px solid var(--brand); color: var(--brand); border-radius: var(--r-full); padding: 6px 12px; font-size: 12.5px; cursor: pointer; font-weight: 600; }
+.chat-chip:hover { background: var(--brand-soft); }
+.chatbot-input { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--border); background: var(--surface); }
+.chatbot-input input { flex: 1; padding: 10px 12px; border-radius: var(--r-full); border: 1.5px solid var(--border-strong); background: var(--surface-2); color: var(--text); font-size: 13.5px; }
+.chatbot-input button { width: 40px; border: none; border-radius: 50%; background: var(--brand); color: var(--text-on-brand); font-size: 16px; cursor: pointer; }
+/* Le chatbot est réservé à l'espace client */
+body.seller-mode #chatbotRoot { display: none; }

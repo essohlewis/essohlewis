@@ -29,6 +29,8 @@ window.MP = window.MP || {};
     alerts: "alerts",            // [ {id, userId, productId, type:"price"|"restock", targetPrice} ]
     recent: "recent",            // { userId: [productId] } — articles vus récemment
     searchHist: "searchhist",    // { userId: [terme] } — historique de recherche
+    questions: "questions",      // [ {id, productId, storeId, userId, question, answer, ...} ]
+    savedSearches: "savedsearch",// [ {id, userId, label, filters, createdAt} ]
     session: "session",          // { userId }
     theme: "theme",              // "light" | "dark"
     seeded: "seeded",            // bool

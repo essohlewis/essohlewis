@@ -64,6 +64,24 @@ Données de démo : **4 boutiques**, **16 articles**, quelques avis, abonnements
 - **Programme de fidélité** (points, paliers Bronze/Argent/Or) + **parrainage**.
 - **Centre d'aide / FAQ**, **signalement** d'article, **préférences de notifications**, **taille du texte** (accessibilité).
 
+##### 🆕 Nouveau lot d'innovations client
+- **Annuaire des boutiques** (`#/stores`) : toutes les boutiques classées par **réputation** (note, ventes, nombre d'articles), badge **vendeur fiable**, filtre par commune.
+- **Page « Mon activité »** (`#/activity`) : vus récemment, recherches récentes, **alertes prix/réassort** et **alertes de recherche** gérables au même endroit.
+- **Cagnotte fidélité convertible** : conversion des points en **bon d'achat** (10 pts = 500 FCFA, code généré valable sur toutes les boutiques).
+- **Badges & succès** débloquables (premier achat, client fidèle, explorateur, bon critique, collectionneur).
+- **Réduction de bienvenue** : bon d'achat de **1 000 FCFA offert** à l'inscription (dès 5 000 FCFA d'achats).
+- **Questions & réponses publiques** sur chaque fiche article (le vendeur répond publiquement).
+- **Faire une offre / négociation** : sur les articles marqués « prix négociable », le client propose son prix (transmis via la messagerie).
+- **Souvent achetés ensemble** (co-occurrence dans les commandes) sur la fiche article.
+- **Historique de prix** avec **mini-graphe (sparkline)** et repère « prix le plus bas ».
+- **Alertes de recherche enregistrées** : notification dès qu'un nouvel article correspond aux critères.
+- **Tri « près de chez moi »** (articles des boutiques de ma commune en premier).
+- **Signalement de problème sur une commande** (colis non reçu, article endommagé…) → vendeur + admin notifiés.
+- **Partage enrichi** : copie du lien, partage natif du navigateur (Web Share) en plus de WhatsApp/affiche.
+- **Rappel de panier abandonné** (notification après un délai si le panier n'est pas vide).
+- **Multi-langue Français / English** (sélecteur dans le profil, chrome traduit).
+- **Contraste élevé** (accessibilité) et **assistant virtuel** flottant (chatbot d'aide à réponses guidées).
+
 ### Vendeur — espace dédié (back-office)
 L'espace vendeur est un **véritable back-office distinct de l'espace client** : barre latérale sombre de navigation, en-tête « Espace Vendeur » (le chrome d'achat — recherche, panier, favoris, nav basse mobile — est masqué), et zone de travail professionnelle.
 
@@ -184,11 +202,14 @@ marketplace/
 │   └── responsive.css   # tablette & mobile (app-like)
 ├── js/
 │   ├── db.js            # abstraction localStorage (namespace MP.DB)
+│   ├── i18n.js          # multi-langue (français / english)
 │   ├── ui.js            # formatage, échappement XSS, toasts, modales, upload base64
 │   ├── notifications.js # notifications client-side
 │   ├── auth.js          # inscription, connexion, session, rôles
 │   ├── store.js         # boutiques, abonnements, avis boutique
-│   ├── products.js      # CRUD articles, vues, avis, recherche/filtres
+│   ├── products.js      # CRUD articles, vues, avis, recherche/filtres, historique prix
+│   ├── coupons.js       # codes promo (boutique + bons globaux fidélité/bienvenue)
+│   ├── client.js        # vus récemment, alertes, comparateur, fidélité, Q&A, alertes de recherche
 │   ├── cart.js          # panier multi-boutiques
 │   ├── orders.js        # commandes (paiement à la livraison)
 │   ├── seed.js          # données de démonstration

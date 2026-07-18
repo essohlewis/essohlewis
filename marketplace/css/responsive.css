@@ -117,6 +117,13 @@
   .scroll-row { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; scrollbar-width: none; }
   .scroll-row::-webkit-scrollbar { display: none; }
   .scroll-row .product-card { min-width: 160px; scroll-snap-align: start; }
+
+  /* Assistant virtuel : au-dessus de la nav basse sur mobile */
+  #chatbotRoot { right: 14px; bottom: calc(var(--bottomnav-h) + 14px); }
+  .chatbot-fab { width: 50px; height: 50px; font-size: 23px; }
+
+  /* Annuaire boutiques : une colonne fluide */
+  .stores-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 400px) {

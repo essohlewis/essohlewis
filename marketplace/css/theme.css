@@ -82,6 +82,27 @@
   --shadow-brand: 0 8px 22px rgba(251, 146, 60, 0.22);
 }
 
+/* ---------- Contraste élevé (accessibilité) ---------- */
+:root[data-contrast="high"] {
+  --border: #94a0b0;
+  --border-strong: #5b6675;
+  --text-2: #333a45;
+  --text-3: #565e6b;
+  --brand: #d95400;
+  --accent: #0a7d43;
+}
+:root[data-contrast="high"][data-theme="dark"] {
+  --border: #6a7686;
+  --border-strong: #8b98a8;
+  --text: #ffffff;
+  --text-2: #d5dae2;
+  --text-3: #aeb6c2;
+  --brand: #ffa24d;
+  --accent: #4ade80;
+}
+:root[data-contrast="high"] .btn,
+:root[data-contrast="high"] .card { border-width: 2px; }
+
 /* Icône thème : afficher lune en clair, soleil en sombre */
 :root[data-theme="dark"] .ico-moon { display: none; }
 :root[data-theme="dark"] .ico-sun { display: block; }

@@ -50,6 +50,7 @@ window.MP = window.MP || {};
         message: `${store.name} a publié un nouvel article : « ${product.title} »`,
         link: "#/product/" + product.id,
       });
+      if (window.MP.SavedSearches) window.MP.SavedSearches.notifyMatches(product);
     }
     return { ok: true, product };
   }
@@ -66,6 +67,7 @@ window.MP = window.MP || {};
       createdAt: existing.createdAt,
       cartAdds: existing.cartAdds || 0, // préserve le compteur de conversion
       history: existing.history || [],
+      priceLog: existing.priceLog || [], // suivi numérique du prix effectif (sparkline)
     });
 
     // Historique des modifications (prix, stock, statut, promo).
@@ -75,6 +77,13 @@ window.MP = window.MP || {};
     if (existing.status !== product.status) changes.push(`Statut : ${existing.status} → ${product.status}`);
     if ((existing.promoPrice || 0) !== (product.promoPrice || 0)) changes.push(`Promo : ${existing.promoPrice || 0} → ${product.promoPrice || 0} FCFA`);
     if (changes.length) product.history = (product.history || []).concat([{ at: Date.now(), changes }]).slice(-30);
+
+    // Journal numérique du prix effectif (pour l'historique de prix côté client).
+    const oldEff = effectivePrice(existing), newEff = effectivePrice(product);
+    if (oldEff !== newEff) {
+      if (!product.priceLog.length) product.priceLog.push({ at: existing.createdAt || Date.now(), price: oldEff });
+      product.priceLog = product.priceLog.concat([{ at: Date.now(), price: newEff }]).slice(-30);
+    }
 
     if (!DB.update(K, id, product)) return { ok: false, error: "Espace de stockage plein : réduisez le nombre ou la taille des images." };
 
@@ -114,6 +123,7 @@ window.MP = window.MP || {};
       },
       status: ["published", "draft", "unpublished"].includes(data.status) ? data.status : "draft",
       featured: !!data.featured,                       // article « à la une »
+      negotiable: !!data.negotiable,                   // le client peut proposer un prix
       promoUntil: data.promoUntil ? Number(data.promoUntil) : 0, // fin de promo (timestamp, 0 = illimitée)
       restockDate: data.restockDate ? Number(data.restockDate) : 0, // date de réappro prévue (rupture)
       cartAdds: base.cartAdds || 0,                    // compteur d'ajouts au panier (conversion)
@@ -300,9 +310,38 @@ window.MP = window.MP || {};
     return list;
   }
 
+  /** Points d'historique de prix (incluant le prix effectif actuel). */
+  function priceHistory(product) {
+    const log = (product.priceLog || []).slice();
+    const cur = effectivePrice(product);
+    if (!log.length || log[log.length - 1].price !== cur) log.push({ at: Date.now(), price: cur });
+    return log;
+  }
+
+  /** Articles fréquemment achetés avec celui-ci (co-occurrence dans les commandes). */
+  function boughtTogether(productId, limit) {
+    const counts = {};
+    window.MP.DB.all(window.MP.DB.KEYS.orders).forEach((o) => {
+      const ids = (o.items || []).map((it) => it.productId);
+      if (!ids.includes(productId)) return;
+      ids.forEach((id) => { if (id !== productId) counts[id] = (counts[id] || 0) + 1; });
+    });
+    let ids = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+    let list = ids.map((id) => get(id)).filter((p) => p && p.status === "published");
+    // Complète avec des articles de la même boutique si peu de co-occurrences.
+    if (list.length < (limit || 3)) {
+      const p = get(productId);
+      if (p) {
+        const extra = byStore(p.storeId).filter((x) => x.id !== productId && !list.find((l) => l.id === x.id));
+        list = list.concat(extra);
+      }
+    }
+    return list.slice(0, limit || 3);
+  }
+
   window.MP.Products = {
     all, get, byStore, published, create, update, remove,
     addView, decrementStock, addCartCount, effectivePrice, promoActive, quickSet, margin,
-    reviews, rating, addReview, voteHelpful, replyReview, search,
+    reviews, rating, addReview, voteHelpful, replyReview, search, priceHistory, boughtTogether,
   };
 })();

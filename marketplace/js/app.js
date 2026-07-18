@@ -7,7 +7,7 @@
   "use strict";
 
   const { DB, UI, Auth, Store, Products, Cart, Orders, Notifications, Router, Seed, Coupons, Messages, Expenses,
-    Recent, SearchHist, Alerts, Compare, Loyalty } = window.MP;
+    Recent, SearchHist, Alerts, Compare, Loyalty, Questions, SavedSearches, I18n } = window.MP;
 
   const V = () => document.getElementById("view");
   const SB = () => document.getElementById("sidebar");
@@ -400,6 +400,16 @@
       feedList = Products.published().filter((p) => subs.includes(p.storeId)).sort((a, b) => b.createdAt - a.createdAt);
     } else {
       feedList = Products.search(filters);
+      // Tri « près de chez moi » : les articles des boutiques de ma commune d'abord.
+      if (filters.sort === "nearby" && user && user.commune) {
+        const storeMap = {};
+        Store.all().forEach((s) => { storeMap[s.id] = s; });
+        feedList = feedList.slice().sort((a, b) => {
+          const ca = storeMap[a.storeId] && storeMap[a.storeId].commune === user.commune ? 0 : 1;
+          const cb = storeMap[b.storeId] && storeMap[b.storeId].commune === user.commune ? 0 : 1;
+          return ca - cb || b.createdAt - a.createdAt;
+        });
+      }
     }
 
     const onboard = (user && !(user.prefCategories && user.prefCategories.length) && !hasFilters)
@@ -411,6 +421,8 @@
       <a href="#/" class="chip ${q.tab !== "suivis" ? "active" : ""}">🏠 Pour vous</a>
       ${user ? `<a href="#/?tab=suivis" class="chip ${q.tab === "suivis" ? "active" : ""}">➕ Suivis</a>` : ""}
       <a href="#/deals" class="chip">🔥 Bons plans</a>
+      <a href="#/stores" class="chip">🏪 Boutiques</a>
+      ${user ? `<a href="#/activity" class="chip">📊 Mon activité</a>` : ""}
       ${Compare.count() ? `<a href="#/compare" class="chip">⚖️ Comparer (${Compare.count()})</a>` : ""}
     </div>`;
 
@@ -508,6 +520,7 @@
               <option value="discount" ${f.sort === "discount" ? "selected" : ""}>Meilleures promos</option>
               <option value="price_asc" ${f.sort === "price_asc" ? "selected" : ""}>Prix croissant</option>
               <option value="price_desc" ${f.sort === "price_desc" ? "selected" : ""}>Prix décroissant</option>
+              ${Auth.isLogged() && Auth.current().commune ? `<option value="nearby" ${f.sort === "nearby" ? "selected" : ""}>📍 Près de chez moi</option>` : ""}
             </select>
           </label>
         </div>
@@ -547,6 +560,7 @@
         </div>
         <button class="btn btn-primary btn-block" id="fApply">Appliquer</button>
         <button class="btn btn-ghost btn-block mt-8" id="fReset">Réinitialiser</button>
+        ${Auth.isLogged() ? `<button class="btn btn-outline btn-block mt-8" id="fSaveSearch">🔔 Créer une alerte de recherche</button>` : ""}
       </div>`;
   }
 
@@ -582,6 +596,34 @@
     if (resetBtn) resetBtn.addEventListener("click", () => Router.go("#/"));
     const sortSel = sb.querySelector("#fSort");
     if (sortSel) sortSel.addEventListener("change", apply);
+    const saveBtn = sb.querySelector("#fSaveSearch");
+    if (saveBtn) saveBtn.addEventListener("click", () => {
+      const cat = UI.CATEGORIES.find((c) => c.id === f.category);
+      const parts = [];
+      if (cat) parts.push(cat.label);
+      const commune = sb.querySelector("#fCommune").value;
+      const max = sb.querySelector("#fMax").value;
+      if (commune) parts.push(commune);
+      if (max) parts.push("≤ " + UI.fcfa(max));
+      const defLabel = parts.length ? parts.join(" · ") : "Nouveaux articles";
+      UI.modal({
+        title: "🔔 Alerte de recherche",
+        body: `<p class="text-muted" style="margin:0 0 12px;font-size:13.5px">Vous serez notifié dès qu'un nouvel article correspondant est publié.</p>
+          <div class="field"><label>Nom de l'alerte</label><input type="text" id="ssLabel" value="${UI.esc(defLabel)}" /></div>`,
+        footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-primary" id="ssGo">Créer l'alerte</button>`,
+        onMount(m, close) {
+          m.querySelector("#ssGo").addEventListener("click", () => {
+            const label = m.querySelector("#ssLabel").value.trim() || defLabel;
+            const filters = {};
+            if (f.category) filters.category = f.category;
+            if (max) filters.maxPrice = max;
+            const r = SavedSearches.add(filters, label);
+            if (!r.ok) { UI.toast(r.error, "error"); return; }
+            UI.toast("🔔 Alerte de recherche créée.", "success"); close();
+          });
+        },
+      });
+    });
   }
 
   /* ============================================================
@@ -679,6 +721,127 @@
       </div>`);
   }
 
+  /* ============================================================
+     VUE : Annuaire des boutiques (réputation, tri)
+     ============================================================ */
+  function viewStores(params) {
+    const q = params.query || {};
+    const sort = q.sort || "note";
+    const commune = q.commune || "";
+    let stores = Store.all().filter((s) => !s.suspended);
+    if (commune) stores = stores.filter((s) => s.commune === commune);
+    const meta = stores.map((s) => {
+      const rt = Store.rating(s.id);
+      const rel = sellerReliability(s.id);
+      const nbProducts = Products.byStore(s.id).length;
+      return { s, rt, rel, nbProducts };
+    });
+    meta.sort((a, b) => {
+      if (sort === "note") return (b.rt.avg - a.rt.avg) || (b.rt.count - a.rt.count);
+      if (sort === "articles") return b.nbProducts - a.nbProducts;
+      if (sort === "commandes") return b.rel.orders - a.rel.orders;
+      return a.s.name.localeCompare(b.s.name);
+    });
+    const communes = Array.from(new Set(Store.all().map((s) => s.commune))).sort();
+    const sortOpts = [["note", "Mieux notées"], ["articles", "Plus d'articles"], ["commandes", "Plus de ventes"], ["nom", "Nom (A-Z)"]];
+    const cards = meta.map(({ s, rt, rel, nbProducts }) => `
+      <a href="#/store/${s.id}" class="store-card">
+        <div class="store-card-banner" style="${s.banner ? `background-image:url('${UI.esc(s.banner)}')` : (s.themeColor ? `background:${UI.esc(s.themeColor)}` : "")}"></div>
+        <div class="store-card-body">
+          <img class="store-card-logo" src="${UI.safeImg(s.logo, s.name)}" alt="" />
+          <div class="store-card-main">
+            <div class="store-card-name">${UI.esc(s.name)}${rel.delivRate >= 90 && rel.orders >= 5 ? ` <span class="verified-badge" title="Vendeur fiable">✔️</span>` : ""}</div>
+            <div class="store-card-meta">📍 ${UI.esc(s.commune)}</div>
+            <div class="store-card-meta">${rt.count ? UI.starsHTML(rt.avg) + ` <span class="text-muted">(${rt.count})</span>` : `<span class="text-muted">Nouvelle boutique</span>`}</div>
+          </div>
+        </div>
+        <div class="store-card-stats">
+          <span>📦 ${nbProducts} article(s)</span>
+          <span>🚚 ${rel.orders} vente(s)</span>
+          ${rel.orders ? `<span>✅ ${rel.delivRate}% livrées</span>` : ""}
+        </div>
+      </a>`).join("");
+    layout(`
+      <div class="page-head"><div><div class="page-title">🏪 Nos boutiques</div><div class="page-sub">${stores.length} boutique(s) — payez à la livraison</div></div></div>
+      <div class="filter-bar">
+        <label class="inline-field">Trier
+          <select id="stSort">${sortOpts.map(([v, l]) => `<option value="${v}" ${sort === v ? "selected" : ""}>${l}</option>`).join("")}</select>
+        </label>
+        <label class="inline-field">Commune
+          <select id="stCommune"><option value="">Toutes</option>${communes.map((c) => `<option value="${UI.esc(c)}" ${commune === c ? "selected" : ""}>${UI.esc(c)}</option>`).join("")}</select>
+        </label>
+      </div>
+      ${stores.length ? `<div class="stores-grid">${cards}</div>` : emptyState("🏪", "Aucune boutique", "Aucune boutique ne correspond à ce filtre.")}`);
+    const rebuild = () => {
+      const s = document.getElementById("stSort").value;
+      const c = document.getElementById("stCommune").value;
+      Router.go(`#/stores?sort=${encodeURIComponent(s)}${c ? "&commune=" + encodeURIComponent(c) : ""}`);
+    };
+    document.getElementById("stSort").addEventListener("change", rebuild);
+    document.getElementById("stCommune").addEventListener("change", rebuild);
+  }
+
+  /* ============================================================
+     VUE : Mon activité (vus, recherches, alertes, comparaison)
+     ============================================================ */
+  function viewActivity() {
+    if (!requireAuth()) return;
+    const user = Auth.current();
+    const recent = Recent.list();
+    const hist = SearchHist.list();
+    const priceAlerts = Alerts.forUser(user.id);
+    const saved = SavedSearches.forUser(user.id);
+    const cmp = Compare.list().map((id) => Products.get(id)).filter((p) => p);
+
+    const histHTML = hist.length
+      ? `<div class="chips-row">${hist.map((t) => `<a href="#/search?q=${encodeURIComponent(t)}" class="chip">🔎 ${UI.esc(t)}</a>`).join("")} <button class="btn btn-ghost btn-sm" id="clrHist">Effacer</button></div>`
+      : `<p class="text-muted">Aucune recherche récente.</p>`;
+
+    const alertsHTML = priceAlerts.length
+      ? priceAlerts.map((a) => { const p = Products.get(a.productId); if (!p) return ""; return `<div class="activity-row"><a href="#/product/${p.id}">${UI.esc(p.title)}</a><span class="text-muted">${a.type === "price" ? "Prix ≤ " + UI.fcfa(a.targetPrice) : "Retour en stock"}</span><button class="btn btn-ghost btn-sm" data-delalert="${a.id}">✕</button></div>`; }).join("")
+      : `<p class="text-muted">Aucune alerte active. Créez-en depuis une fiche article.</p>`;
+
+    const savedHTML = saved.length
+      ? saved.map((s) => `<div class="activity-row"><a href="#/search?${savedSearchToQuery(s.filters)}">🔔 ${UI.esc(s.label)}</a><button class="btn btn-ghost btn-sm" data-delsaved="${s.id}">✕</button></div>`).join("")
+      : `<p class="text-muted">Aucune alerte de recherche enregistrée.</p>`;
+
+    layout(`
+      <div class="page-head"><div><div class="page-title">📊 Mon activité</div><div class="page-sub">Votre historique et vos alertes</div></div></div>
+      ${recent.length ? `<div class="section-title">🕘 Vus récemment <button class="btn btn-ghost btn-sm" id="clrRecent" style="float:right">Effacer</button></div>${gridHTML(recent)}` : ""}
+      <div class="section-title">🔎 Recherches récentes</div><div class="card card-pad">${histHTML}</div>
+      <div class="section-title">🔔 Mes alertes prix / réassort</div><div class="card card-pad">${alertsHTML}</div>
+      <div class="section-title">📌 Mes alertes de recherche</div><div class="card card-pad">${savedHTML}</div>
+      ${cmp.length ? `<div class="section-title">⚖️ Comparateur (${cmp.length})</div>${gridHTML(cmp)}` : ""}`);
+
+    const cr = document.getElementById("clrRecent");
+    if (cr) cr.addEventListener("click", () => { Recent.clear(); Router.resolve(); });
+    const ch = document.getElementById("clrHist");
+    if (ch) ch.addEventListener("click", () => { SearchHist.clear(); Router.resolve(); });
+    V().querySelectorAll("[data-delalert]").forEach((b) => b.addEventListener("click", () => { Alerts.remove(b.getAttribute("data-delalert")); UI.toast("Alerte supprimée.", "info"); Router.resolve(); }));
+    V().querySelectorAll("[data-delsaved]").forEach((b) => b.addEventListener("click", () => { SavedSearches.remove(b.getAttribute("data-delsaved")); UI.toast("Alerte de recherche supprimée.", "info"); Router.resolve(); }));
+  }
+
+  /** Convertit des filtres de recherche enregistrés en query-string. */
+  function savedSearchToQuery(f) {
+    const parts = [];
+    if (f.q) parts.push("q=" + encodeURIComponent(f.q));
+    if (f.category) parts.push("cat=" + encodeURIComponent(f.category));
+    if (f.maxPrice) parts.push("max=" + encodeURIComponent(f.maxPrice));
+    return parts.join("&");
+  }
+
+  /** Rappel de panier abandonné : notifie l'utilisateur connecté si son panier n'est pas vide. */
+  function abandonedCartReminder() {
+    if (!Auth.isLogged()) return;
+    if (Cart.count() <= 0) return;
+    // Une seule fois par session.
+    if (sessionStorage.getItem("cartReminded")) return;
+    sessionStorage.setItem("cartReminded", "1");
+    const u = Auth.current();
+    Notifications.push(u.id, { type: "info", message: `🛒 Vous avez ${Cart.count()} article(s) dans votre panier. Finalisez votre commande — paiement à la livraison !`, link: "#/cart" });
+    UI.refreshBadges();
+  }
+
   /** Barre de comparaison flottante (visible dès qu'un article est ajouté). */
   function renderCompareBar() {
     const root = document.getElementById("compareBarRoot");
@@ -763,16 +926,21 @@
             <div style="flex:1"><div class="sm-name">${UI.esc(store.name)}</div>
               <div class="sm-meta">📍 ${UI.esc(store.commune)} · Voir la boutique →</div></div>
           </a>
+          ${(p.priceLog && p.priceLog.length) ? `<button class="btn-link-inline" id="priceHistBtn" style="margin-top:6px">📉 Voir l'historique de prix</button>` : ""}
           ${!isOwner ? `<div class="flex gap-8 wrap mt-8">
               <button class="btn btn-ghost btn-sm" id="cmpBtn">${Compare.has(p.id) ? "✓ Dans le comparateur" : "⚖️ Comparer"}</button>
               <button class="btn btn-ghost btn-sm" id="shareBtn">${SICON.wa} Partager</button>
               ${p.stock <= 0 ? `<button class="btn btn-ghost btn-sm" id="restockAlert">🔔 Alerte réassort</button>` : `<button class="btn btn-ghost btn-sm" id="priceAlert">🔔 Alerte prix</button>`}
               <button class="btn btn-ghost btn-sm" id="reportBtn">⚑ Signaler</button>
             </div>
+            ${p.negotiable && !out ? `<button class="btn btn-outline btn-block mt-8" id="offerBtn">🤝 Faire une offre</button>` : ""}
             <button class="btn btn-ghost btn-block mt-8" id="askSeller">${SICON.chat} Poser une question au vendeur</button>`
             : `<button class="btn btn-ghost btn-block mt-8" id="posterBtn">🖼️ Générer une affiche promotionnelle</button>`}
         </div>
       </div>
+      ${(() => { const bt = Products.boughtTogether(p.id, 4); return bt.length ? `<div class="section-title">🧩 Souvent achetés ensemble</div><div class="scroll-row">${bt.map(productCard).join("")}</div>` : ""; })()}
+      <div class="section-title">💬 Questions & réponses</div>
+      <div class="card card-pad" id="qnaBox">${qnaHTML(p, isOwner)}</div>
       <div class="section-title">Avis & notes</div>
       <div class="card card-pad" id="reviewsBox">${reviewsHTML(p.id, "product")}</div>
       ${(() => { const sim = similarProducts(p, 6); return sim.length ? `<div class="section-title">Vous aimerez aussi</div>${gridHTML(sim)}` : ""; })()}
@@ -859,15 +1027,23 @@
     const shareBtn = document.getElementById("shareBtn");
     if (shareBtn) shareBtn.addEventListener("click", () => {
       const price = Products.effectivePrice(p);
-      const txt = `🛍️ ${p.title}\n💰 ${UI.fcfa(price)}\n🏪 ${store.name} — 📍 ${store.commune}\n💵 Paiement à la livraison sur Marché CI.`;
+      const link = location.origin + location.pathname + "#/product/" + p.id;
+      const txt = `🛍️ ${p.title}\n💰 ${UI.fcfa(price)}\n🏪 ${store.name} — 📍 ${store.commune}\n💵 Paiement à la livraison sur Marché CI.\n🔗 ${link}`;
       UI.modal({
         title: "Partager cet article",
         body: `<p class="text-muted" style="margin:0 0 12px;font-size:13.5px">Faites découvrir cet article à vos proches.</p>
-          <div class="flex gap-8 wrap"><button class="btn wa-btn" id="shWa">${SICON.wa} WhatsApp</button>
-          <button class="btn btn-ghost" id="shPoster">🖼️ Créer une affiche</button></div>`,
+          <div class="flex gap-8 wrap">
+            <button class="btn wa-btn" id="shWa">${SICON.wa} WhatsApp</button>
+            <button class="btn btn-ghost" id="shCopy">🔗 Copier le lien</button>
+            <button class="btn btn-ghost" id="shPoster">🖼️ Créer une affiche</button>
+            ${navigator.share ? `<button class="btn btn-ghost" id="shNative">📤 Autre…</button>` : ""}
+          </div>`,
         onMount(m, close) {
           m.querySelector("#shWa").addEventListener("click", () => { waShare(txt); close(); });
           m.querySelector("#shPoster").addEventListener("click", () => { close(); generateProductPoster(p); });
+          m.querySelector("#shCopy").addEventListener("click", () => { copyToClipboard(link); UI.toast("Lien copié ✓", "success"); });
+          const nat = m.querySelector("#shNative");
+          if (nat) nat.addEventListener("click", () => { navigator.share({ title: p.title, text: txt, url: link }).catch(() => {}); close(); });
         },
       });
     });
@@ -899,7 +1075,138 @@
       Router.go("#/messages?s=" + encodeURIComponent(store.id));
     });
 
+    // --- Historique de prix ---
+    const priceHistBtn = document.getElementById("priceHistBtn");
+    if (priceHistBtn) priceHistBtn.addEventListener("click", () => openPriceHistory(p));
+
+    // --- Faire une offre (négociation) ---
+    const offerBtn = document.getElementById("offerBtn");
+    if (offerBtn) offerBtn.addEventListener("click", () => {
+      if (!Auth.isLogged()) { UI.toast("Connectez-vous pour faire une offre.", "info"); Router.go("#/login"); return; }
+      openOfferModal(p, store);
+    });
+
+    // --- Q&A public : wiring ---
+    wireQna(p, store, isOwner);
+
     wireReviews(p.id, "product", store.ownerId);
+  }
+
+  /* ============================================================
+     Historique de prix (modale + mini-graphe SVG)
+     ============================================================ */
+  function openPriceHistory(p) {
+    const hist = Products.priceHistory(p);
+    const cur = Products.effectivePrice(p);
+    const min = Math.min.apply(null, hist.map((h) => h.price));
+    const max = Math.max.apply(null, hist.map((h) => h.price));
+    UI.modal({
+      title: "📉 Historique de prix",
+      body: `<div class="price-hist">
+          ${sparklineSVG(hist.map((h) => h.price))}
+          <div class="price-hist-stats">
+            <div><span class="text-muted">Prix actuel</span><strong style="color:var(--brand)">${UI.fcfa(cur)}</strong></div>
+            <div><span class="text-muted">Le plus bas</span><strong>${UI.fcfa(min)}</strong></div>
+            <div><span class="text-muted">Le plus haut</span><strong>${UI.fcfa(max)}</strong></div>
+          </div>
+          <div class="price-hist-rows">${hist.slice().reverse().map((h) => `<div class="activity-row"><span class="text-muted">${UI.dateFR(h.at)}</span><strong>${UI.fcfa(h.price)}</strong></div>`).join("")}</div>
+          ${cur <= min ? `<div class="price-hist-note">✅ C'est actuellement le prix le plus bas observé !</div>` : ""}
+        </div>`,
+      footer: `<button class="btn btn-primary" data-close>Fermer</button>`,
+    });
+  }
+
+  /** Génère un mini-graphe (sparkline) SVG à partir d'une série de prix. */
+  function sparklineSVG(values) {
+    if (values.length < 2) return `<div class="text-muted" style="text-align:center;padding:12px">Pas assez de données pour tracer une courbe.</div>`;
+    const w = 300, h = 90, pad = 6;
+    const min = Math.min.apply(null, values), max = Math.max.apply(null, values);
+    const span = max - min || 1;
+    const pts = values.map((v, i) => {
+      const x = pad + (i / (values.length - 1)) * (w - 2 * pad);
+      const y = pad + (1 - (v - min) / span) * (h - 2 * pad);
+      return [x, y];
+    });
+    const line = pts.map((pt) => pt.join(",")).join(" ");
+    const area = `${pad},${h - pad} ${line} ${w - pad},${h - pad}`;
+    return `<svg viewBox="0 0 ${w} ${h}" class="sparkline" preserveAspectRatio="none" role="img" aria-label="Courbe de prix">
+      <polygon points="${area}" fill="var(--brand)" opacity="0.12"></polygon>
+      <polyline points="${line}" fill="none" stroke="var(--brand)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></polyline>
+      ${pts.map((pt) => `<circle cx="${pt[0].toFixed(1)}" cy="${pt[1].toFixed(1)}" r="2.5" fill="var(--brand)"></circle>`).join("")}
+    </svg>`;
+  }
+
+  /* ============================================================
+     Négociation : faire une offre au vendeur
+     ============================================================ */
+  function openOfferModal(p, store) {
+    const cur = Products.effectivePrice(p);
+    UI.modal({
+      title: "🤝 Faire une offre",
+      body: `<p class="text-muted" style="margin:0 0 12px;font-size:13.5px">Proposez votre prix pour « ${UI.esc(p.title)} ». Le vendeur reçoit votre offre et peut l'accepter via la messagerie. Prix affiché : <strong>${UI.fcfa(cur)}</strong>.</p>
+        <div class="field"><label>Votre offre (FCFA)</label><input type="number" id="offPrice" min="1" value="${Math.round(cur * 0.9)}" /></div>
+        <div class="field mt-8"><label>Quantité</label><input type="number" id="offQty" min="1" value="1" /></div>
+        <div class="field mt-8"><label>Message (optionnel)</label><textarea id="offMsg" placeholder="Bonjour, seriez-vous d'accord pour ce prix ?"></textarea></div>`,
+      footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-primary" id="offGo">Envoyer l'offre</button>`,
+      onMount(m, close) {
+        m.querySelector("#offGo").addEventListener("click", () => {
+          const price = Number(m.querySelector("#offPrice").value);
+          const qty = Math.max(1, Number(m.querySelector("#offQty").value) || 1);
+          if (!(price > 0)) { UI.toast("Montant invalide.", "error"); return; }
+          const note = m.querySelector("#offMsg").value.trim();
+          const u = Auth.current();
+          const text = `🤝 Offre : ${UI.fcfa(price)} × ${qty} pour « ${p.title} » (au lieu de ${UI.fcfa(cur)}).${note ? "\n" + note : ""}`;
+          Messages.send({ storeId: store.id, buyerId: u.id, buyerName: u.name, from: "buyer", text, productId: p.id });
+          UI.toast("Offre envoyée au vendeur ✓", "success");
+          close();
+          Router.go("#/messages?s=" + encodeURIComponent(store.id));
+        });
+      },
+    });
+  }
+
+  /* ============================================================
+     Questions & réponses publiques (produit)
+     ============================================================ */
+  function qnaHTML(p, isOwner) {
+    const list = Questions.forProduct(p.id);
+    let head = "";
+    if (!isOwner) {
+      head = Auth.isLogged()
+        ? `<div class="qna-ask"><textarea id="qnaText" placeholder="Posez une question publique sur cet article…" rows="2"></textarea><button class="btn btn-primary btn-sm" id="qnaSend">Publier ma question</button></div>`
+        : `<a href="#/login" class="btn btn-ghost btn-sm">Connectez-vous pour poser une question</a>`;
+    }
+    const items = list.length
+      ? list.map((q) => `<div class="qna-item">
+          <div class="qna-q"><span class="qna-icon">Q</span><div><strong>${UI.esc(q.userName || "Client")}</strong> — ${UI.dateFR(q.createdAt)}<div>${UI.esc(q.question)}</div></div></div>
+          ${q.answer ? `<div class="qna-a"><span class="qna-icon">R</span><div><strong>Réponse du vendeur</strong><div>${UI.esc(q.answer)}</div></div></div>`
+            : (isOwner ? `<div class="qna-answer-form"><textarea data-ansfield="${q.id}" placeholder="Répondre publiquement…" rows="2"></textarea><button class="btn btn-primary btn-sm" data-ans="${q.id}">Répondre</button></div>`
+              : `<div class="qna-pending text-muted">En attente de réponse du vendeur…</div>`)}
+        </div>`).join("")
+      : `<p class="text-muted" style="text-align:center;padding:14px 0">Aucune question pour le moment. ${isOwner ? "" : "Soyez le premier à en poser une !"}</p>`;
+    return head + (list.length ? `<div class="divider"></div>` : "") + items;
+  }
+
+  function wireQna(p, store, isOwner) {
+    const box = document.getElementById("qnaBox");
+    if (!box) return;
+    const refresh = () => { box.innerHTML = qnaHTML(p, isOwner); wireQna(p, store, isOwner); };
+    const sendBtn = box.querySelector("#qnaSend");
+    if (sendBtn) sendBtn.addEventListener("click", () => {
+      const t = box.querySelector("#qnaText").value.trim();
+      if (!t) { UI.toast("Écrivez votre question.", "info"); return; }
+      const r = Questions.ask(p.id, store.id, t);
+      if (!r.ok) { UI.toast(r.error, "error"); return; }
+      UI.toast("Question publiée ✓", "success"); refresh();
+    });
+    box.querySelectorAll("[data-ans]").forEach((b) => b.addEventListener("click", () => {
+      const id = b.getAttribute("data-ans");
+      const field = box.querySelector(`[data-ansfield="${id}"]`);
+      const t = field ? field.value.trim() : "";
+      if (!t) { UI.toast("Écrivez une réponse.", "info"); return; }
+      Questions.answer(id, t);
+      UI.toast("Réponse publiée ✓", "success"); refresh();
+    }));
   }
 
   /* ============================================================
@@ -1397,6 +1704,31 @@
       else UI.toast("Ces articles ne sont plus disponibles.", "error");
     }));
     V().querySelectorAll("[data-rate]").forEach((b) => b.addEventListener("click", () => openRateDeliveryModal(b.getAttribute("data-rate"))));
+    V().querySelectorAll("[data-problem]").forEach((b) => b.addEventListener("click", () => openOrderProblemModal(b.getAttribute("data-problem"))));
+  }
+
+  /** Signaler un problème sur une commande (au vendeur + admin). */
+  function openOrderProblemModal(orderId) {
+    const o = Orders.get(orderId);
+    if (!o) return;
+    const reasons = ["Colis non reçu", "Article endommagé", "Article non conforme", "Retard de livraison", "Erreur de montant", "Autre"];
+    UI.modal({
+      title: "⚠️ Signaler un problème",
+      body: `<p class="text-muted" style="margin:0 0 12px;font-size:13.5px">Commande N° ${UI.esc(o.number)} — ${UI.esc(o.storeName)}. Le vendeur sera informé et vous recontactera.</p>
+        <div class="field"><label>Type de problème</label><select id="opReason">${reasons.map((r) => `<option>${r}</option>`).join("")}</select></div>
+        <div class="field mt-8"><label>Description</label><textarea id="opNote" placeholder="Décrivez le problème rencontré…"></textarea></div>`,
+      footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-danger" id="opGo">Envoyer le signalement</button>`,
+      onMount(m, close) {
+        m.querySelector("#opGo").addEventListener("click", () => {
+          const reason = m.querySelector("#opReason").value + (m.querySelector("#opNote").value.trim() ? " — " + m.querySelector("#opNote").value.trim() : "");
+          DB.update(DB.KEYS.orders, orderId, { problem: { reason, resolved: false, at: Date.now() } });
+          const store = Store.get(o.storeId);
+          if (store) Notifications.push(store.ownerId, { type: "order", message: `⚠️ Problème signalé sur la commande N° ${o.number} : ${reason}`, link: "#/seller/orders" });
+          DB.all(DB.KEYS.users).filter((u) => u.role === "admin").forEach((a) => Notifications.push(a.id, { type: "info", message: `⚠️ Litige commande N° ${o.number} (${o.storeName}) : ${reason}`, link: "#/admin" }));
+          UI.toast("Signalement envoyé. Le vendeur va vous recontacter.", "success"); close(); viewOrders();
+        });
+      },
+    });
   }
 
   function openRateDeliveryModal(orderId) {
@@ -1460,8 +1792,10 @@
         <button class="btn btn-ghost btn-sm" data-invoice="${o.id}">🧾 Reçu / facture</button>
         <button class="btn btn-ghost btn-sm" data-reorder="${o.id}">🔁 Commander à nouveau</button>
         ${o.status === "livree" && !o.deliveryRating ? `<button class="btn btn-accent btn-sm" data-rate="${o.id}">⭐ Noter la livraison</button>` : ""}
+        ${o.status !== "annulee" ? `<button class="btn btn-ghost btn-sm" data-problem="${o.id}">⚠️ Signaler un problème</button>` : ""}
         ${(o.status === "en_attente" || o.status === "confirmee") ? `<button class="btn btn-danger btn-sm" data-cancel="${o.id}">Annuler la commande</button>` : ""}
       </div>
+      ${o.problem ? `<div class="order-problem-note">⚠️ Problème signalé : ${UI.esc(o.problem.reason)}${o.problem.resolved ? " <span class=\"text-muted\">(traité)</span>" : " <span class=\"text-muted\">(en cours de traitement)</span>"}</div>` : ""}
       ${o.deliveryRating ? `<div class="text-muted" style="font-size:13px;margin-top:6px">Votre note de livraison : ${UI.starsHTML(o.deliveryRating.stars)}${o.deliveryRating.comment ? " — " + UI.esc(o.deliveryRating.comment) : ""}</div>` : ""}
     </div>`;
   }
@@ -1602,7 +1936,7 @@
             Cart.mergeGuestInto(res.user.id);
             UI.toast("Compte créé ✓", "success");
             if (res.user.role === "vendor") { renderHeaderUser(); Router.go("#/seller/store"); }
-            else afterAuth();
+            else { grantWelcomeDiscount(res.user); afterAuth(); }
           } else UI.toast(res.error, "error");
         });
       }
@@ -1619,6 +1953,25 @@
     renderForm(mode);
   }
 
+  /** Offre de bienvenue : bon d'achat global offert au nouveau client. */
+  function grantWelcomeDiscount(user) {
+    const code = "BIENVENUE" + String(user.id).replace(/[^0-9]/g, "").slice(-4);
+    const c = Coupons.system({ code, type: "amount", value: 1000, maxUses: 1, minTotal: 5000 });
+    if (!c) return;
+    Notifications.push(user.id, { type: "info", message: `🎁 Bienvenue ! Profitez de 1 000 FCFA offerts sur votre 1re commande (dès 5 000 FCFA) avec le code ${code}.`, link: "#/" });
+    setTimeout(() => {
+      UI.modal({
+        title: "🎁 Cadeau de bienvenue !",
+        body: `<div style="text-align:center;padding:8px 0">
+            <p style="margin:0 0 10px">Merci de rejoindre Marché CI ! Voici <strong>1 000 FCFA offerts</strong> sur votre première commande (dès 5 000 FCFA d'achats).</p>
+            <div class="coupon-code">${code}</div>
+            <p class="text-muted" style="margin-top:12px;font-size:13px">Saisissez ce code au moment du paiement.</p>
+          </div>`,
+        footer: `<button class="btn btn-primary" data-close>Génial, merci !</button>`,
+      });
+    }, 400);
+  }
+
   /* ============================================================
      VUE : Profil
      ============================================================ */
@@ -1629,9 +1982,11 @@
     const communeOpts = UI.COMMUNES.map((c) => `<option value="${c}" ${user.commune === c ? "selected" : ""}>${c}</option>`).join("");
 
     const pts = Loyalty.points(user.id);
+    const avail = Loyalty.available(user.id);
     const tier = Loyalty.tier(pts);
     const progress = tier.next ? Math.min(100, Math.round(((pts - tier.min) / (tier.next - tier.min)) * 100)) : 100;
     const refCode = Loyalty.referralCode(user);
+    const badges = Loyalty.badges(user.id);
     const addresses = user.addresses || [];
     const prefs = user.notifPrefs || { newProduct: true, orderStatus: true, messages: true };
     const avatarSrc = user.avatar ? UI.safeImg(user.avatar, user.name) : "";
@@ -1654,10 +2009,21 @@
         </div>
         <div class="goal-bar" style="margin-top:12px;background:rgba(255,255,255,.25)"><div class="goal-fill" style="width:${progress}%;background:#fff;color:var(--brand-dark)">${progress >= 12 ? progress + "%" : ""}</div></div>
         <div class="flex-between wrap mt-16" style="gap:8px">
+          <div style="font-size:13px">💰 Cagnotte : <strong>${avail} pts</strong> ${avail >= 10 ? `— convertible en ${UI.fcfa(Math.floor(avail / 10) * 500)}` : "(min. 10 pts)"}</div>
+          <button class="btn btn-sm" id="redeemBtn" style="background:#fff;color:var(--brand-dark)" ${avail < 10 ? "disabled" : ""}>🎟️ Convertir en bon</button>
+        </div>
+        <div class="flex-between wrap mt-16" style="gap:8px">
           <div style="font-size:13px">🎁 Parrainage — code : <strong style="letter-spacing:1px">${refCode}</strong></div>
           <button class="btn btn-sm" id="refShare" style="background:#fff;color:var(--brand-dark)">${SICON.wa} Inviter un ami</button>
         </div>
       </div>
+
+      <div class="section-title">🏆 Mes badges</div>
+      <div class="card card-pad"><div class="badges-grid">
+        ${badges.map((b) => `<div class="badge-tile ${b.unlocked ? "on" : ""}" title="${b.unlocked ? "Débloqué" : (b.hint || "À débloquer")}">
+          <span class="badge-emoji">${b.icon}</span><span class="badge-name">${b.name}</span>
+          <span class="badge-state">${b.unlocked ? "✓ Débloqué" : (b.hint || "À débloquer")}</span></div>`).join("")}
+      </div></div>
 
       <div class="card card-pad mt-16">
         <form id="profForm" class="form-grid">
@@ -1685,6 +2051,10 @@
             <option value="large" ${user.fontScale === "large" ? "selected" : ""}>Grande</option>
             <option value="xlarge" ${user.fontScale === "xlarge" ? "selected" : ""}>Très grande</option>
           </select></div>
+        <div class="field"><label>Langue / Language</label>
+          <select id="pLang">${I18n.LANGS.map(([code, label]) => `<option value="${code}" ${I18n.get() === code ? "selected" : ""}>${label}</option>`).join("")}</select></div>
+        <div class="field"><label>Contraste élevé</label>
+          <label class="switch"><input type="checkbox" id="pContrast" ${user.highContrast ? "checked" : ""} /><span class="track"></span><span>Améliore la lisibilité (couleurs plus marquées)</span></label></div>
         <div class="field"><label>Notifications</label>
           <label class="radio-item"><input type="checkbox" id="prefNew" ${prefs.newProduct !== false ? "checked" : ""}/> Nouveautés & baisses de prix des boutiques suivies</label>
           <label class="radio-item"><input type="checkbox" id="prefOrd" ${prefs.orderStatus !== false ? "checked" : ""}/> Suivi de mes commandes</label>
@@ -1748,6 +2118,41 @@
     });
     document.getElementById("pFont").addEventListener("change", (e) => {
       Auth.updateProfile({ fontScale: e.target.value }); applyFontScale(e.target.value); UI.toast("Taille du texte mise à jour.", "success");
+    });
+
+    // Langue.
+    document.getElementById("pLang").addEventListener("change", (e) => {
+      I18n.set(e.target.value); Auth.updateProfile({ lang: e.target.value });
+      UI.toast(e.target.value === "en" ? "Language updated ✓" : "Langue mise à jour ✓", "success");
+    });
+
+    // Contraste élevé.
+    document.getElementById("pContrast").addEventListener("change", (e) => {
+      Auth.updateProfile({ highContrast: e.target.checked });
+      document.documentElement.setAttribute("data-contrast", e.target.checked ? "high" : "normal");
+      UI.toast(e.target.checked ? "Contraste élevé activé." : "Contraste normal.", "success");
+    });
+
+    // Conversion de la cagnotte fidélité en bon d'achat.
+    const redeemBtn = document.getElementById("redeemBtn");
+    if (redeemBtn) redeemBtn.addEventListener("click", () => {
+      const maxPts = Math.floor(Loyalty.available(user.id) / 10) * 10;
+      UI.modal({
+        title: "🎟️ Convertir mes points",
+        body: `<p class="text-muted" style="margin:0 0 12px;font-size:13.5px">10 points = 500 FCFA de réduction (bon d'achat valable sur toutes les boutiques). Vous avez <strong>${Loyalty.available(user.id)} pts</strong>.</p>
+          <div class="field"><label>Points à convertir (multiples de 10)</label><input type="number" id="rdPts" min="10" step="10" max="${maxPts}" value="${maxPts}" /></div>`,
+        footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-primary" id="rdGo">Générer mon bon</button>`,
+        onMount(m, close) {
+          m.querySelector("#rdGo").addEventListener("click", () => {
+            const n = Number(m.querySelector("#rdPts").value);
+            const r = Loyalty.redeem(user.id, n);
+            if (!r.ok) { UI.toast(r.error, "error"); return; }
+            close();
+            UI.modal({ title: "Bon d'achat généré 🎉", body: `<div style="text-align:center;padding:10px 0"><p style="margin:0 0 10px">Utilisez ce code au moment du paiement :</p><div class="coupon-code">${r.code}</div><p class="text-muted" style="margin-top:12px">Valeur : <strong>${UI.fcfa(r.value)}</strong></p></div>`, footer: `<button class="btn btn-primary" data-close>C'est noté</button>` });
+            viewProfile();
+          });
+        },
+      });
     });
 
     document.getElementById("logoutBtn").addEventListener("click", () => {
@@ -2295,6 +2700,20 @@
     window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank", "noopener");
   }
 
+  /** Copie du texte dans le presse-papiers (avec repli pour file://). */
+  function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+    } else fallbackCopy(text);
+  }
+  function fallbackCopy(text) {
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
   function shareProduct(p) {
     const store = Store.get(p.storeId);
     const price = Products.effectivePrice(p);
@@ -2744,7 +3163,8 @@
             <div class="field"><label>Fin de promo (optionnel) <span class="hint">— au-delà, le prix normal revient</span></label>
               <input type="date" id="pPromoUntil" value="${d.promoUntil ? new Date(d.promoUntil).toISOString().slice(0, 10) : ""}" /></div>
             <div class="field"><label>Mise en avant</label>
-              <label class="switch" style="margin-top:8px"><input type="checkbox" id="pFeatured" ${d.featured ? "checked" : ""} /><span class="track"></span><span>Article « à la une » (affiché en premier)</span></label></div>
+              <label class="switch" style="margin-top:8px"><input type="checkbox" id="pFeatured" ${d.featured ? "checked" : ""} /><span class="track"></span><span>Article « à la une » (affiché en premier)</span></label>
+              <label class="switch" style="margin-top:8px"><input type="checkbox" id="pNegotiable" ${d.negotiable ? "checked" : ""} /><span class="track"></span><span>Prix négociable (le client peut faire une offre)</span></label></div>
           </div>
           <div class="form-grid form-2col">
             <div class="field"><label>Stock</label><input type="number" id="pStock" value="${d.stock != null ? d.stock : 1}" min="0" /></div>
@@ -2797,6 +3217,7 @@
         condition: document.getElementById("pCond").value,
         status: document.getElementById("pStatus").value,
         featured: document.getElementById("pFeatured").checked,
+        negotiable: document.getElementById("pNegotiable").checked,
         promoUntil: document.getElementById("pPromoUntil").value ? new Date(document.getElementById("pPromoUntil").value).getTime() : 0,
         restockDate: document.getElementById("pRestock").value ? new Date(document.getElementById("pRestock").value).getTime() : 0,
         images: up.get(),
@@ -3626,6 +4047,82 @@
   }
 
   /* ============================================================
+     Assistant virtuel (chatbot d'aide — règles simples)
+     ============================================================ */
+  const BOT_INTENTS = [
+    { keys: ["paiement", "payer", "espèce", "cash", "carte", "mobile money"], answer: "💵 Le paiement se fait uniquement <strong>à la livraison, en espèces</strong>. Aucun paiement en ligne n'est requis." },
+    { keys: ["livraison", "livrer", "délai", "frais", "combien de temps"], answer: "🚚 Chaque vendeur fixe ses frais et délais de livraison selon votre commune. Le montant s'affiche sur la fiche article et au panier." },
+    { keys: ["commander", "acheter", "commande", "panier"], answer: "🛒 Ajoutez des articles au panier, puis validez en renseignant votre adresse. Vous payez à la réception !", link: "#/cart", linkLabel: "Voir mon panier" },
+    { keys: ["vendeur", "vendre", "boutique", "ouvrir"], answer: "🏪 Créez votre compte puis ouvrez votre boutique en quelques minutes.", link: "#/seller/store", linkLabel: "Ouvrir ma boutique" },
+    { keys: ["annuler", "annulation", "rembours"], answer: "❌ Vous pouvez annuler une commande tant qu'elle n'est pas livrée, depuis « Mes commandes ».", link: "#/orders", linkLabel: "Mes commandes" },
+    { keys: ["promo", "réduction", "code", "coupon", "bon plan"], answer: "🔥 Retrouvez toutes les promotions dans « Bons plans ». Les codes promo se saisissent au paiement.", link: "#/deals", linkLabel: "Voir les bons plans" },
+    { keys: ["fidélité", "point", "cagnotte", "parrain"], answer: "💛 Gagnez 1 point par 1 000 FCFA dépensés. 10 points = 500 FCFA de réduction, convertibles depuis votre profil.", link: "#/profile", linkLabel: "Mon profil" },
+    { keys: ["suivi", "suivre", "où est", "statut"], answer: "📦 Suivez l'avancement de vos commandes (reçue → confirmée → expédiée → livrée) dans « Mes commandes ».", link: "#/orders", linkLabel: "Mes commandes" },
+    { keys: ["contact", "vendeur", "question", "message"], answer: "💬 Depuis une fiche article, cliquez sur « Poser une question au vendeur » ou utilisez la messagerie." },
+    { keys: ["bonjour", "salut", "coucou", "bonsoir"], answer: "👋 Bonjour ! Je suis l'assistant Marché CI. Posez-moi une question ou choisissez un sujet ci-dessous." },
+    { keys: ["merci", "super", "génial", "ok"], answer: "😊 Avec plaisir ! N'hésitez pas si vous avez d'autres questions." },
+  ];
+  const BOT_SUGGESTIONS = ["Comment payer ?", "Frais de livraison ?", "Comment commander ?", "Devenir vendeur", "Mes points fidélité"];
+
+  function botReply(text) {
+    const t = (text || "").toLowerCase();
+    const hit = BOT_INTENTS.find((it) => it.keys.some((k) => t.includes(k)));
+    if (hit) return hit;
+    return { answer: "🤔 Je n'ai pas bien compris. Voici les sujets que je maîtrise :", suggestions: true };
+  }
+
+  function mountChatbot() {
+    if (document.getElementById("chatbotRoot")) return;
+    const root = document.createElement("div");
+    root.id = "chatbotRoot";
+    root.innerHTML = `
+      <button class="chatbot-fab" id="chatbotFab" aria-label="Assistant d'aide">💬</button>
+      <div class="chatbot-panel" id="chatbotPanel" hidden>
+        <div class="chatbot-head"><span>🤖 Assistant Marché CI</span><button id="chatbotClose" aria-label="Fermer">✕</button></div>
+        <div class="chatbot-body" id="chatbotBody"></div>
+        <form class="chatbot-input" id="chatbotForm">
+          <input type="text" id="chatbotText" placeholder="Écrivez votre question…" autocomplete="off" />
+          <button type="submit" aria-label="Envoyer">➤</button>
+        </form>
+      </div>`;
+    document.body.appendChild(root);
+
+    const panel = root.querySelector("#chatbotPanel");
+    const body = root.querySelector("#chatbotBody");
+    const addMsg = (html, who) => { const d = document.createElement("div"); d.className = "chat-msg " + who; d.innerHTML = html; body.appendChild(d); body.scrollTop = body.scrollHeight; };
+    const addSuggestions = () => {
+      const wrap = document.createElement("div"); wrap.className = "chat-suggestions";
+      BOT_SUGGESTIONS.forEach((s) => { const b = document.createElement("button"); b.className = "chat-chip"; b.textContent = s; b.addEventListener("click", () => handle(s)); wrap.appendChild(b); });
+      body.appendChild(wrap); body.scrollTop = body.scrollHeight;
+    };
+    const handle = (text) => {
+      addMsg(UI.esc(text), "user");
+      const r = botReply(text);
+      setTimeout(() => {
+        let html = r.answer;
+        if (r.link) html += `<div style="margin-top:8px"><a href="${r.link}" class="chat-link" data-chatlink="${r.link}">${r.linkLabel || "Ouvrir"} →</a></div>`;
+        addMsg(html, "bot");
+        if (r.suggestions) addSuggestions();
+        const cl = body.querySelector("[data-chatlink]:last-of-type");
+        body.querySelectorAll("[data-chatlink]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); Router.go(a.getAttribute("data-chatlink")); panel.hidden = true; }));
+      }, 260);
+    };
+
+    let greeted = false;
+    root.querySelector("#chatbotFab").addEventListener("click", () => {
+      panel.hidden = !panel.hidden;
+      if (!panel.hidden && !greeted) { greeted = true; addMsg("👋 Bonjour ! Je suis l'assistant Marché CI. Comment puis-je vous aider ?", "bot"); addSuggestions(); }
+    });
+    root.querySelector("#chatbotClose").addEventListener("click", () => { panel.hidden = true; });
+    root.querySelector("#chatbotForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const inp = root.querySelector("#chatbotText");
+      const v = inp.value.trim(); if (!v) return;
+      inp.value = ""; handle(v);
+    });
+  }
+
+  /* ============================================================
      Délégation globale : navigation [data-href] et favoris [data-fav]
      ============================================================ */
   function wireGlobalDelegation() {
@@ -3655,6 +4152,8 @@
     Router.on("#/search", viewSearch);
     Router.on("#/deals", viewDeals);
     Router.on("#/compare", viewCompare);
+    Router.on("#/stores", viewStores);
+    Router.on("#/activity", viewActivity);
     Router.on("#/help", viewHelp);
     Router.on("#/product/:id", viewProduct);
     Router.on("#/store/:id", viewStore);
@@ -3695,14 +4194,21 @@
     // Thème persistant (ou préférence système).
     const savedTheme = DB.get(DB.KEYS.theme, null) || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
     applyTheme(savedTheme);
-    // Accessibilité : taille d'affichage mémorisée.
+    // Multi-langue.
+    if (I18n) I18n.init();
+    // Accessibilité : taille d'affichage + contraste mémorisés.
     const cu = Auth.current();
     if (cu && cu.fontScale) applyFontScale(cu.fontScale);
+    if (cu && cu.highContrast) document.documentElement.setAttribute("data-contrast", "high");
+    // Rappel de panier abandonné (une fois par session, après un délai).
+    setTimeout(abandonedCartReminder, 60000);
     // En-tête + délégation + badges.
     wireHeader();
     wireGlobalDelegation();
     renderHeaderUser();
     UI.refreshBadges();
+    // Assistant virtuel flottant.
+    mountChatbot();
     // Routeur.
     registerRoutes();
     Router.start();

@@ -101,12 +101,18 @@ window.MP = window.MP || {};
     count() { return Compare.list().length; },
   };
 
-  /* ---------- Fidélité & parrainage ---------- */
+  /* ---------- Fidélité, cagnotte & parrainage ---------- */
   const Loyalty = {
-    // 1 point pour 1000 FCFA dépensés (commandes non annulées).
-    points(userId) {
+    // 1 point gagné pour 1000 FCFA dépensés (commandes non annulées).
+    earned(userId) {
       const spent = window.MP.Orders.byBuyer(userId).filter((o) => o.status !== "annulee").reduce((s, o) => s + o.total, 0);
       return Math.floor(spent / 1000);
+    },
+    points(userId) { return Loyalty.earned(userId); }, // rétro-compat (points gagnés)
+    /** Points disponibles = gagnés − déjà convertis. */
+    available(userId) {
+      const u = window.MP.DB.find(window.MP.DB.KEYS.users, userId);
+      return Math.max(0, Loyalty.earned(userId) - ((u && u.pointsRedeemed) || 0));
     },
     tier(points) {
       if (points >= 200) return { name: "Or", icon: "🥇", min: 200, next: null };
@@ -114,7 +120,80 @@ window.MP = window.MP || {};
       if (points >= 20) return { name: "Bronze", icon: "🥉", min: 20, next: 80 };
       return { name: "Nouveau", icon: "🌱", min: 0, next: 20 };
     },
+    /** Convertit des points en coupon global (10 pts = 500 FCFA). */
+    redeem(userId, points) {
+      points = Math.floor(points / 10) * 10;
+      if (points < 10) return { ok: false, error: "Minimum 10 points." };
+      if (points > Loyalty.available(userId)) return { ok: false, error: "Points insuffisants." };
+      const value = (points / 10) * 500;
+      const code = "FID" + Math.random().toString(36).slice(2, 7).toUpperCase();
+      const c = window.MP.Coupons.system({ code, type: "amount", value, maxUses: 1 });
+      if (!c) return { ok: false, error: "Conversion impossible." };
+      const u = window.MP.DB.find(window.MP.DB.KEYS.users, userId);
+      window.MP.DB.update(window.MP.DB.KEYS.users, userId, { pointsRedeemed: ((u && u.pointsRedeemed) || 0) + points });
+      return { ok: true, code, value };
+    },
     referralCode(user) { return "CI" + String(user.id).replace(/[^a-zA-Z0-9]/g, "").slice(-6).toUpperCase(); },
+    /** Badges/succès débloqués par l'acheteur. */
+    badges(userId) {
+      const orders = window.MP.Orders.byBuyer(userId).filter((o) => o.status !== "annulee");
+      const favs = (window.MP.DB.get(window.MP.DB.KEYS.favorites, {})[userId] || []).length;
+      const reviews = window.MP.DB.all(window.MP.DB.KEYS.reviews).filter((r) => r.userId === userId).length;
+      const communes = new Set(orders.map((o) => o.storeId)).size;
+      return [
+        { id: "first", icon: "🎉", name: "Premier achat", unlocked: orders.length >= 1 },
+        { id: "loyal", icon: "💛", name: "Client fidèle", unlocked: orders.length >= 5 },
+        { id: "explorer", icon: "🧭", name: "Explorateur", unlocked: communes >= 3, hint: "Commander dans 3 boutiques" },
+        { id: "critic", icon: "✍️", name: "Bon critique", unlocked: reviews >= 3, hint: "Publier 3 avis" },
+        { id: "collector", icon: "❤️", name: "Collectionneur", unlocked: favs >= 5, hint: "5 favoris" },
+      ];
+    },
+  };
+
+  /* ---------- Questions & réponses publiques ---------- */
+  const Questions = {
+    forProduct(productId) { return window.MP.DB.all(window.MP.DB.KEYS.questions).filter((q) => q.productId === productId).sort((a, b) => b.createdAt - a.createdAt); },
+    ask(productId, storeId, text) {
+      const user = window.MP.Auth.current();
+      if (!user) return { ok: false, error: "Connexion requise." };
+      const q = { id: window.MP.DB.uid("qst"), productId, storeId, userId: user.id, userName: user.name, question: String(text || "").trim(), answer: "", answeredAt: 0, createdAt: Date.now() };
+      if (!q.question) return { ok: false, error: "Question vide." };
+      window.MP.DB.insert(window.MP.DB.KEYS.questions, q);
+      const store = window.MP.Store.get(storeId);
+      if (store) window.MP.Notifications.push(store.ownerId, { type: "message", message: `Nouvelle question sur « ${window.MP.Products.get(productId).title} ».`, link: "#/product/" + productId });
+      return { ok: true };
+    },
+    answer(questionId, text) {
+      const q = window.MP.DB.find(window.MP.DB.KEYS.questions, questionId);
+      if (!q) return { ok: false };
+      window.MP.DB.update(window.MP.DB.KEYS.questions, questionId, { answer: String(text || "").trim(), answeredAt: Date.now() });
+      window.MP.Notifications.push(q.userId, { type: "message", message: `Le vendeur a répondu à votre question.`, link: "#/product/" + q.productId });
+      return { ok: true };
+    },
+    pendingForStore(storeId) { return window.MP.DB.all(window.MP.DB.KEYS.questions).filter((q) => q.storeId === storeId && !q.answer).length; },
+  };
+
+  /* ---------- Alertes de recherche ---------- */
+  const SavedSearches = {
+    forUser(userId) { return window.MP.DB.all(window.MP.DB.KEYS.savedSearches).filter((s) => s.userId === userId).sort((a, b) => b.createdAt - a.createdAt); },
+    add(filters, label) {
+      const user = window.MP.Auth.current();
+      if (!user) return { ok: false, error: "Connexion requise." };
+      window.MP.DB.insert(window.MP.DB.KEYS.savedSearches, { id: window.MP.DB.uid("sch"), userId: user.id, label: label || "Recherche", filters: filters || {}, createdAt: Date.now() });
+      return { ok: true };
+    },
+    remove(id) { window.MP.DB.removeItem(window.MP.DB.KEYS.savedSearches, id); },
+    /** Notifie les utilisateurs dont une recherche enregistrée correspond au nouvel article. */
+    notifyMatches(product) {
+      window.MP.DB.all(window.MP.DB.KEYS.savedSearches).forEach((s) => {
+        const f = s.filters || {};
+        let ok = true;
+        if (f.q && !((product.title + " " + product.description).toLowerCase().includes(String(f.q).toLowerCase()))) ok = false;
+        if (f.category && product.category !== f.category) ok = false;
+        if (f.maxPrice && window.MP.Products.effectivePrice(product) > Number(f.maxPrice)) ok = false;
+        if (ok) window.MP.Notifications.push(s.userId, { type: "new_product", message: `🔎 Nouveau résultat pour « ${s.label} » : ${product.title}.`, link: "#/product/" + product.id });
+      });
+    },
   };
 
   window.MP.Recent = Recent;
@@ -122,4 +201,6 @@ window.MP = window.MP || {};
   window.MP.Alerts = Alerts;
   window.MP.Compare = Compare;
   window.MP.Loyalty = Loyalty;
+  window.MP.Questions = Questions;
+  window.MP.SavedSearches = SavedSearches;
 })();

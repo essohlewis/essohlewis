@@ -17,7 +17,29 @@ window.MP = window.MP || {};
 
   function byCode(storeId, code) {
     const norm = String(code || "").trim().toUpperCase();
-    return all().find((c) => c.storeId === storeId && c.code.toUpperCase() === norm) || null;
+    // Cherche un coupon de la boutique, sinon un coupon global ("*").
+    return all().find((c) => c.storeId === storeId && c.code.toUpperCase() === norm)
+      || all().find((c) => c.storeId === "*" && c.code.toUpperCase() === norm)
+      || null;
+  }
+
+  /** Crée un coupon système (bienvenue, fidélité…), éventuellement global. */
+  function system(data) {
+    const coupon = {
+      id: DB.uid("cpn"),
+      storeId: data.storeId || "*",
+      code: String(data.code).toUpperCase(),
+      type: data.type,
+      value: data.type === "freeship" ? 0 : Math.round(Number(data.value) || 0),
+      minTotal: Math.round(Number(data.minTotal) || 0),
+      maxUses: Math.round(Number(data.maxUses) || 1),
+      uses: 0,
+      until: data.until || 0,
+      active: true,
+      system: true,
+      createdAt: Date.now(),
+    };
+    return DB.insert(K, coupon) ? coupon : null;
   }
 
   /** Crée un coupon pour la boutique du vendeur courant. */
@@ -84,5 +106,5 @@ window.MP = window.MP || {};
     if (c) DB.update(K, id, { uses: (c.uses || 0) + 1 });
   }
 
-  window.MP.Coupons = { all, byStore, byCode, create, update, remove, label, validate, redeem };
+  window.MP.Coupons = { all, byStore, byCode, create, system, update, remove, label, validate, redeem };
 })();
