@@ -105,7 +105,7 @@
       // Accueil
       "Coachs vérifiés & notés": "Verified & rated coaches",
       "Trouvez le ": "Find the ", "coach de confiance": "trusted coach", " qu'il vous faut.": " you need.",
-      "Sport, bien-être, business, scolaire, artistique… Réservez en toute confiance des coachs aux diplômes vérifiés, près de chez vous à Abidjan.": "Sport, wellness, business, tutoring, arts… Confidently book coaches with verified diplomas, near you in Abidjan.",
+      "Musculation, fitness, préparation physique, nutrition sportive, yoga, natation, sport santé… Réservez en toute confiance des coachs sportifs aux diplômes vérifiés, près de chez vous à Abidjan.": "Bodybuilding, fitness, physical prep, sports nutrition, yoga, swimming, health & fitness… Confidently book sports coaches with verified diplomas, near you in Abidjan.",
       "Trouver mon coach idéal": "Find my ideal coach", "Explorer les coachs": "Browse coaches",
       "Coachs actifs": "Active coaches", "Séances réalisées": "Sessions delivered", "Note moyenne": "Average rating",
       "Diplôme vérifié": "Verified diploma", "Explorez par catégorie": "Browse by category",
@@ -272,7 +272,7 @@
       // Accueil
       "Coachs vérifiés & notés": "Coaches verificados y valorados",
       "Trouvez le ": "Encuentra el ", "coach de confiance": "coach de confianza", " qu'il vous faut.": " que necesitas.",
-      "Sport, bien-être, business, scolaire, artistique… Réservez en toute confiance des coachs aux diplômes vérifiés, près de chez vous à Abidjan.": "Deporte, bienestar, negocios, escolar, artístico… Reserva con total confianza coaches con diplomas verificados, cerca de ti en Abiyán.",
+      "Musculation, fitness, préparation physique, nutrition sportive, yoga, natation, sport santé… Réservez en toute confiance des coachs sportifs aux diplômes vérifiés, près de chez vous à Abidjan.": "Musculación, fitness, preparación física, nutrición deportiva, yoga, natación, salud deportiva… Reserva con total confianza coaches deportivos con diplomas verificados, cerca de ti en Abiyán.",
       "Trouver mon coach idéal": "Encontrar mi coach ideal", "Explorer les coachs": "Explorar coaches",
       "Coachs actifs": "Coaches activos", "Séances réalisées": "Sesiones realizadas", "Note moyenne": "Valoración media",
       "Diplôme vérifié": "Diploma verificado", "Explorez par catégorie": "Explora por categoría",
@@ -438,7 +438,7 @@
       // Accueil
       "Coachs vérifiés & notés": "Verifizierte & bewertete Coaches",
       "Trouvez le ": "Finden Sie den ", "coach de confiance": "Coach Ihres Vertrauens", " qu'il vous faut.": ", den Sie brauchen.",
-      "Sport, bien-être, business, scolaire, artistique… Réservez en toute confiance des coachs aux diplômes vérifiés, près de chez vous à Abidjan.": "Sport, Wellness, Business, Schule, Kunst… Buchen Sie mit vollem Vertrauen Coaches mit verifizierten Diplomen, ganz in Ihrer Nähe in Abidjan.",
+      "Musculation, fitness, préparation physique, nutrition sportive, yoga, natation, sport santé… Réservez en toute confiance des coachs sportifs aux diplômes vérifiés, près de chez vous à Abidjan.": "Bodybuilding, Fitness, Athletiktraining, Sporternährung, Yoga, Schwimmen, Gesundheitssport… Buchen Sie mit vollem Vertrauen Sport-Coaches mit verifizierten Diplomen, ganz in Ihrer Nähe in Abidjan.",
       "Trouver mon coach idéal": "Meinen idealen Coach finden", "Explorer les coachs": "Coaches entdecken",
       "Coachs actifs": "Aktive Coaches", "Séances réalisées": "Durchgeführte Sitzungen", "Note moyenne": "Durchschnittsbewertung",
       "Diplôme vérifié": "Verifiziertes Diplom", "Explorez par catégorie": "Nach Kategorie stöbern",

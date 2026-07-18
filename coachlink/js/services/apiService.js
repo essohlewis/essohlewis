@@ -156,6 +156,8 @@
         note: Number(c.note) || 0, nbAvis: Number(c.nb_avis) || 0,
         nbSeances: Number(c.nb_seances) || 0, ancienneteMois: Number(c.anciennete_mois) || 0,
         tauxReponse: Number(c.taux_reponse) || 0, couleur: c.couleur || "#1b4dcc",
+        experienceAnnees: Number(c.experience_annees) || 0, clientsAccompagnes: Number(c.clients_accompagnes) || 0,
+        interventions: (function () { try { return typeof c.interventions === "string" ? (JSON.parse(c.interventions) || []) : (c.interventions || []); } catch (_) { return []; } })(),
         email: c.email, telephone: c.telephone,
         photo: API.urlMedia(c.photo), couverture: API.urlMedia(c.couverture),
         specialites: c.specialites || [], langues: c.langues || [],

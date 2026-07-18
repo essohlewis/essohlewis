@@ -1,16 +1,74 @@
 [
-  { "id": "sport",        "nom": "Sport & Fitness",        "emoji": "🏋️", "categorie": "Sportif" },
-  { "id": "nutrition",    "nom": "Nutrition & Diététique", "emoji": "🥗", "categorie": "Bien-être" },
-  { "id": "yoga",         "nom": "Yoga & Relaxation",      "emoji": "🧘", "categorie": "Bien-être" },
-  { "id": "business",     "nom": "Business & Entrepreneuriat", "emoji": "💼", "categorie": "Professionnel" },
-  { "id": "carriere",     "nom": "Carrière & Emploi",      "emoji": "📈", "categorie": "Professionnel" },
-  { "id": "devperso",     "nom": "Développement personnel", "emoji": "🌱", "categorie": "Bien-être" },
-  { "id": "scolaire",     "nom": "Soutien scolaire",       "emoji": "📚", "categorie": "Scolaire" },
-  { "id": "langues",      "nom": "Langues",                "emoji": "🗣️", "categorie": "Scolaire" },
-  { "id": "musique",      "nom": "Musique",                "emoji": "🎵", "categorie": "Artistique" },
-  { "id": "danse",        "nom": "Danse",                  "emoji": "💃", "categorie": "Artistique" },
-  { "id": "finance",      "nom": "Finance personnelle",    "emoji": "💰", "categorie": "Professionnel" },
-  { "id": "prisedeparole","nom": "Prise de parole",        "emoji": "🎤", "categorie": "Professionnel" },
-  { "id": "parentalite",  "nom": "Parentalité",            "emoji": "👨‍👩‍👧", "categorie": "Bien-être" },
-  { "id": "mental",       "nom": "Coaching mental",        "emoji": "🧠", "categorie": "Bien-être" }
+  {
+    "id": "sport",
+    "nom": "Musculation & Fitness",
+    "emoji": "🏋️",
+    "categorie": "Sportif"
+  },
+  {
+    "id": "prepaphysique",
+    "nom": "Préparation physique",
+    "emoji": "💪",
+    "categorie": "Sportif"
+  },
+  {
+    "id": "crossfit",
+    "nom": "CrossFit & HIIT",
+    "emoji": "🤸",
+    "categorie": "Sportif"
+  },
+  {
+    "id": "course",
+    "nom": "Course à pied & Cardio",
+    "emoji": "🏃",
+    "categorie": "Sportif"
+  },
+  {
+    "id": "natation",
+    "nom": "Natation",
+    "emoji": "🏊",
+    "categorie": "Sportif"
+  },
+  {
+    "id": "artsmartiaux",
+    "nom": "Boxe & Arts martiaux",
+    "emoji": "🥊",
+    "categorie": "Sportif"
+  },
+  {
+    "id": "cardiodanse",
+    "nom": "Cardio-danse & Fitness",
+    "emoji": "💃",
+    "categorie": "Sportif"
+  },
+  {
+    "id": "yoga",
+    "nom": "Yoga & Souplesse",
+    "emoji": "🧘",
+    "categorie": "Bien-être physique"
+  },
+  {
+    "id": "pilates",
+    "nom": "Pilates & Renforcement",
+    "emoji": "🧎",
+    "categorie": "Bien-être physique"
+  },
+  {
+    "id": "nutrition",
+    "nom": "Nutrition sportive",
+    "emoji": "🥗",
+    "categorie": "Nutrition"
+  },
+  {
+    "id": "reeducation",
+    "nom": "Réathlétisation & Récupération",
+    "emoji": "🩹",
+    "categorie": "Santé"
+  },
+  {
+    "id": "sportsante",
+    "nom": "Sport santé & Seniors",
+    "emoji": "🧓",
+    "categorie": "Santé"
+  }
 ]

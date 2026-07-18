@@ -20,7 +20,7 @@
         el("div", {}, [
           el("span", { class: "badge badge-verifie mb-4", html: CL.icon("bouclier", 14, { fill: true }) + " Coachs vérifiés & notés" }),
           el("h1", {}, [document.createTextNode("Trouvez le "), el("span", { class: "surligne", text: "coach de confiance" }), document.createTextNode(" qu'il vous faut.")]),
-          el("p", { class: "accroche", text: "Sport, bien-être, business, scolaire, artistique… Réservez en toute confiance des coachs aux diplômes vérifiés, près de chez vous à Abidjan." }),
+          el("p", { class: "accroche", text: "Musculation, fitness, préparation physique, nutrition sportive, yoga, natation, sport santé… Réservez en toute confiance des coachs sportifs aux diplômes vérifiés, près de chez vous à Abidjan." }),
           el("div", { class: "hero__cta" }, [
             el("a", { class: "btn btn-cta btn-lg", href: "#/coachmatch", html: CL.icon("eclair", 18, { fill: true }) + " Trouver mon coach idéal" }),
             el("a", { class: "btn btn-fantome btn-lg", href: "#/recherche", html: CL.icon("recherche", 18) + " Explorer les coachs" }),

@@ -59,52 +59,28 @@
       reserver: "Réserver une séance", questionLieu: "Où se dérouleront les séances ?",
       accroche: "Programmez un accompagnement régulier : des séances hebdomadaires au studio, à votre domicile ou en ligne.",
     },
-    professionnel: {
-      libelle: "Coaching professionnel",
-      lieux: ["cabinet_coach", "en_ligne", "lieu_pro"], salle: false,
-      objectifs: ["Recherche d'emploi", "Évolution de carrière", "Création d'entreprise", "Prise de parole", "Gestion financière", "Leadership / management"],
-      abonnement: false, terme: "session", termePluriel: "sessions",
-      reserver: "Réserver une session", questionLieu: "Où se déroulera la session ?",
-      accroche: "Réservez vos sessions à la carte : au cabinet, dans un bureau convenu (immeuble, bâtiment, localité) ou en visioconférence.",
-    },
-    accompagnement: {
-      libelle: "Développement personnel",
-      lieux: ["cabinet_coach", "domicile", "en_ligne"], salle: false,
-      objectifs: ["Confiance en soi", "Gestion du stress", "Objectifs de vie", "Relations / parentalité", "Motivation"],
-      abonnement: false, terme: "séance", termePluriel: "séances",
-      reserver: "Prendre rendez-vous", questionLieu: "Où se déroulera la séance ?",
-      accroche: "Avancez à votre rythme : prenez rendez-vous séance par séance, au cabinet, à votre domicile ou en ligne.",
-    },
-    scolaire: {
-      libelle: "Soutien scolaire & langues",
-      lieux: ["domicile", "chez_coach", "en_ligne", "etablissement"], salle: false,
-      objectifs: ["Soutien scolaire régulier", "Préparation d'examen", "Remise à niveau", "Méthodologie de travail", "Apprentissage d'une langue"],
-      abonnement: true, terme: "cours", termePluriel: "cours",
-      reserver: "Réserver un cours", questionLieu: "Où se dérouleront les cours ?",
-      accroche: "Mettez en place un suivi hebdomadaire : le professeur bâtit un programme mensuel de cours au domicile de l'élève, chez lui, en ligne ou en établissement.",
-    },
-    artistique: {
-      libelle: "Arts (musique, danse…)",
-      lieux: ["studio_coach", "domicile", "en_ligne"], salle: false,
-      objectifs: ["Initiation / découverte", "Perfectionnement", "Préparation scène / audition", "Loisir / plaisir"],
-      abonnement: true, terme: "cours", termePluriel: "cours",
-      reserver: "Réserver un cours", questionLieu: "Où se dérouleront les cours ?",
-      accroche: "Progressez avec un programme mensuel de cours réguliers, au studio, à votre domicile ou en ligne.",
+    sante: {
+      libelle: "Sport santé & réathlétisation",
+      lieux: ["domicile", "cabinet_coach", "salle_coach"], salle: false,
+      objectifs: ["Reprise après blessure", "Sport santé seniors", "Perte de poids encadrée", "Renforcement doux", "Mobilité & posture", "Remise en forme progressive"],
+      abonnement: true, terme: "séance", termePluriel: "séances",
+      reserver: "Réserver une séance", questionLieu: "Où se dérouleront les séances ?",
+      accroche: "Reprenez le sport en toute sécurité : votre coach santé bâtit un programme progressif et encadré selon votre condition physique.",
     },
   };
 
-  // Spécialité (voir seed.js) → profil métier.
+  // Spécialité (voir seed.js) → profil métier. 100 % sport & santé physique.
   const PAR_SPECIALITE = {
-    sport: "sportif", nutrition: "nutrition", yoga: "bienetre",
-    devperso: "accompagnement", mental: "accompagnement", parentalite: "accompagnement",
-    business: "professionnel", carriere: "professionnel", finance: "professionnel", prisedeparole: "professionnel",
-    scolaire: "scolaire", langues: "scolaire", musique: "artistique", danse: "artistique",
+    sport: "sportif", prepaphysique: "sportif", crossfit: "sportif", course: "sportif",
+    natation: "sportif", artsmartiaux: "sportif", cardiodanse: "sportif",
+    yoga: "bienetre", pilates: "bienetre",
+    nutrition: "nutrition",
+    reeducation: "sante", sportsante: "sante",
   };
 
   // Catégorie (voir seed.js) → profil de repli (si la spécialité est inconnue).
   const PAR_CATEGORIE = {
-    "Sportif": "sportif", "Bien-être": "accompagnement", "Professionnel": "professionnel",
-    "Scolaire": "scolaire", "Artistique": "artistique",
+    "Sportif": "sportif", "Bien-être physique": "bienetre", "Nutrition": "nutrition", "Santé": "sante",
   };
 
   function resoudre(coach) {

@@ -55,11 +55,12 @@ if (is_file($jsonPath)) {
         $pdo->beginTransaction();
         foreach ($coachs as $c) {
             $pdo->prepare("INSERT INTO coachs (id, proprietaire, prenom, nom, titre, categorie, commune, ville, bio,
-                note, nb_avis, nb_seances, anciennete_mois, taux_reponse, couleur, email, telephone, photo, couverture)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")->execute([
+                note, nb_avis, nb_seances, anciennete_mois, taux_reponse, experience_annees, clients_accompagnes, interventions, couleur, email, telephone, photo, couverture)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")->execute([
                 $c['id'], null, $c['prenom'], $c['nom'], $c['titre'], $c['categorie'], $c['commune'], $c['ville'] ?? 'Abidjan',
                 $c['bio'] ?? '', $c['note'] ?? 0, $c['nbAvis'] ?? 0, $c['nbSeances'] ?? 0, $c['ancienneteMois'] ?? 0,
-                $c['tauxReponse'] ?? 100, $c['couleur'] ?? '#1b4dcc', $c['email'] ?? '', $c['telephone'] ?? '',
+                $c['tauxReponse'] ?? 100, $c['experienceAnnees'] ?? 0, $c['clientsAccompagnes'] ?? 0,
+                json_encode($c['interventions'] ?? []), $c['couleur'] ?? '#1b4dcc', $c['email'] ?? '', $c['telephone'] ?? '',
                 $c['photo'] ?? null, $c['couverture'] ?? null,
             ]);
             foreach ($c['specialites'] ?? [] as $s) $pdo->prepare("INSERT INTO coach_specialites VALUES (?,?)")->execute([$c['id'], $s]);
@@ -89,7 +90,7 @@ $nbLitiges = (int) $pdo->query("SELECT COUNT(*) n FROM litiges")->fetch()['n'];
 if ($nbLitiges === 0) {
     $demo = [
         [null, 'Awa S.', 'Koffi Aka', 'Séance non honorée', 'ouvert', '2026-07-10'],
-        [null, 'Marc B.', 'Ismaël Traoré', 'Remboursement demandé', 'en_cours', '2026-07-12'],
+        [null, 'Marc B.', 'Didier Kouamé', 'Remboursement demandé', 'en_cours', '2026-07-12'],
     ];
     foreach ($demo as $l) {
         $pdo->prepare("INSERT INTO litiges (client_id, client_nom, coach_nom, motif, statut, date) VALUES (?,?,?,?,?,?)")->execute($l);

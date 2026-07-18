@@ -417,7 +417,7 @@
             ]),
           ]),
           colonnePied("Plateforme", [["Trouver un coach", "#/recherche"], ["Comment ça marche", "#/comment-ca-marche"], ["Devenir coach", "#/inscription"], ["Tarifs", "#/comment-ca-marche"]]),
-          colonnePied("Catégories", [["Sport & Fitness", "#/recherche?specialite=sport"], ["Bien-être", "#/recherche?specialite=yoga"], ["Business", "#/recherche?specialite=business"], ["Scolaire", "#/recherche?specialite=scolaire"]]),
+          colonnePied("Catégories", [["Musculation & Fitness", "#/recherche?specialite=sport"], ["Yoga & Pilates", "#/recherche?specialite=yoga"], ["Nutrition sportive", "#/recherche?specialite=nutrition"], ["Sport santé", "#/recherche?specialite=sportsante"]]),
           colonnePied("Support", [["Centre d'aide", "#/comment-ca-marche"], ["Confiance & sécurité", "#/comment-ca-marche"], ["Contact", "#/comment-ca-marche"], ["Espace admin", "#/admin"]]),
         ]),
         el("div", { class: "pied__bas" }, [

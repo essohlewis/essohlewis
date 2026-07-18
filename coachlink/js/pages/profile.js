@@ -51,7 +51,10 @@
           el("div", { class: "rangee rangee-wrap gap-2 mt-2" }, [
             el("span", { class: "rangee gap-2 texte-sm texte-doux", html: CL.icon("localisation", 16) + " " + esc(coach.commune) + ", " + esc(coach.ville) }),
             el("span", { class: "rangee gap-2 texte-sm texte-doux", html: CL.icon("globe", 16) + " " + esc(coach.langues.join(", ")) }),
+            coach.experienceAnnees ? el("span", { class: "rangee gap-2 texte-sm texte-doux", html: CL.icon("diplome", 16) + " " + coach.experienceAnnees + " ans d'expérience" }) : null,
+            coach.clientsAccompagnes ? el("span", { class: "rangee gap-2 texte-sm texte-doux", html: CL.icon("utilisateurs", 16) + " " + coach.clientsAccompagnes + " clients accompagnés" }) : null,
           ]),
+          (coach.interventions && coach.interventions.length) ? el("div", { class: "rangee rangee-wrap gap-2 mt-2" }, coach.interventions.map((i) => el("span", { class: "badge badge-neutre", text: i }))) : null,
           ui.badges(coach),
         ]),
       ]),

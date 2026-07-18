@@ -7,7 +7,7 @@
     "titre": "Coach sportif & préparateur physique",
     "specialites": [
       "sport",
-      "nutrition"
+      "prepaphysique"
     ],
     "categorie": "Sportif",
     "langues": [
@@ -17,7 +17,14 @@
     ],
     "commune": "Cocody",
     "ville": "Abidjan",
-    "bio": "Ancien athlète national, j'accompagne depuis 8 ans particuliers et entreprises vers une meilleure forme physique. Programmes personnalisés, remise en forme, perte de poids et préparation aux compétitions.",
+    "bio": "Ancien athlète national, j'accompagne depuis 8 ans vers une meilleure forme physique : remise en forme, perte de poids, prise de masse et préparation aux compétitions. Programmes personnalisés et suivi rigoureux.",
+    "experienceAnnees": 8,
+    "clientsAccompagnes": 210,
+    "interventions": [
+      "À domicile",
+      "En salle",
+      "En visio"
+    ],
     "tarifs": [
       {
         "id": "t1",
@@ -33,7 +40,7 @@
         "type": "pack",
         "prix": 130000,
         "duree": 60,
-        "description": "10 séances à utiliser sur 2 mois, suivi nutritionnel inclus."
+        "description": "10 séances sur 2 mois, plan d'entraînement inclus."
       },
       {
         "id": "t3",
@@ -41,7 +48,7 @@
         "type": "abonnement",
         "prix": 60000,
         "duree": 60,
-        "description": "8 séances / mois + plan alimentaire."
+        "description": "8 séances / mois + suivi de progression."
       }
     ],
     "diplomes": [
@@ -54,7 +61,7 @@
       },
       {
         "id": "d2",
-        "titre": "Certification Nutrition du sport",
+        "titre": "Certification Préparation physique",
         "ecole": "IFBB",
         "annee": 2019,
         "statut": "verifie"
@@ -110,106 +117,32 @@
     },
     "email": "koffi.aka@coachlink.ci",
     "telephone": "0701020304",
-    "couleur": "#1b4dcc",
-    "avis": [
-      {
-        "id": "a1",
-        "auteur": "Yannick D.",
-        "note": 5,
-        "texte": "Koffi est exigeant mais bienveillant. J'ai perdu 8 kg en 3 mois !",
-        "date": "2026-05-12",
-        "reponse": "Merci Yannick, continue comme ça 💪"
-      },
-      {
-        "id": "a2",
-        "auteur": "Sandra K.",
-        "note": 5,
-        "texte": "Programme au top, très professionnel.",
-        "date": "2026-06-02",
-        "reponse": null
-      },
-      {
-        "id": "a3",
-        "auteur": "Olivier T.",
-        "note": 4,
-        "texte": "Bon coach, parfois un peu en retard.",
-        "date": "2026-06-20",
-        "reponse": null
-      }
-    ],
-    "posts": [
-      {
-        "id": "p1",
-        "texte": "Séance de groupe ce matin à la Riviera 🏃‍♂️ Bravo à tous pour l'énergie !",
-        "image": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22800%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%231b4dcc%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%2312a150%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22800%22%20height%3D%22800%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22650%22%20cy%3D%22150%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.15)%22%2F%3E%3Ccircle%20cx%3D%22150%22%20cy%3D%22650%22%20r%3D%22140%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20text-anchor%3D%22middle%22%20font-family%3D%22Segoe%20UI%2C%20sans-serif%22%20font-size%3D%2254%22%20font-weight%3D%22700%22%20fill%3D%22%23ffffff%22%3ETeam%20Koffi%20%F0%9F%92%AA%3C%2Ftext%3E%3C%2Fsvg%3E",
-        "video": null,
-        "date": "2026-07-10",
-        "likes": 24
-      },
-      {
-        "id": "p2",
-        "texte": "Ma routine d'échauffement en vidéo 👇 À reproduire avant chaque séance !",
-        "image": null,
-        "video": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-        "date": "2026-07-08",
-        "likes": 37
-      },
-      {
-        "id": "p3",
-        "texte": "Rappel : l'hydratation est la clé de la performance. Buvez avant d'avoir soif 💧",
-        "image": null,
-        "video": null,
-        "date": "2026-07-05",
-        "likes": 15
-      }
-    ],
-    "photo": null,
-    "couverture": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22800%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%231b4dcc%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23ff7a1a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22800%22%20height%3D%22800%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22650%22%20cy%3D%22150%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.15)%22%2F%3E%3Ccircle%20cx%3D%22150%22%20cy%3D%22650%22%20r%3D%22140%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20text-anchor%3D%22middle%22%20font-family%3D%22Segoe%20UI%2C%20sans-serif%22%20font-size%3D%2254%22%20font-weight%3D%22700%22%20fill%3D%22%23ffffff%22%3E%3C%2Ftext%3E%3C%2Fsvg%3E",
-    "galerie": [
-      {
-        "id": "m1",
-        "image": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22800%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%231b4dcc%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%2312a150%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22800%22%20height%3D%22800%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22650%22%20cy%3D%22150%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.15)%22%2F%3E%3Ccircle%20cx%3D%22150%22%20cy%3D%22650%22%20r%3D%22140%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20text-anchor%3D%22middle%22%20font-family%3D%22Segoe%20UI%2C%20sans-serif%22%20font-size%3D%2254%22%20font-weight%3D%22700%22%20fill%3D%22%23ffffff%22%3ES%C3%A9ance%20collective%3C%2Ftext%3E%3C%2Fsvg%3E",
-        "legende": "Séance collective à la Riviera",
-        "date": "2026-06-01"
-      },
-      {
-        "id": "m2",
-        "image": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22800%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23123a9e%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%233b6fe6%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22800%22%20height%3D%22800%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22650%22%20cy%3D%22150%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.15)%22%2F%3E%3Ccircle%20cx%3D%22150%22%20cy%3D%22650%22%20r%3D%22140%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20text-anchor%3D%22middle%22%20font-family%3D%22Segoe%20UI%2C%20sans-serif%22%20font-size%3D%2254%22%20font-weight%3D%22700%22%20fill%3D%22%23ffffff%22%3EPr%C3%A9paration%20physique%3C%2Ftext%3E%3C%2Fsvg%3E",
-        "legende": "Préparation physique en salle",
-        "date": "2026-06-12"
-      },
-      {
-        "id": "m3",
-        "image": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22800%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23ff7a1a%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23e5650a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22800%22%20height%3D%22800%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22650%22%20cy%3D%22150%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.15)%22%2F%3E%3Ccircle%20cx%3D%22150%22%20cy%3D%22650%22%20r%3D%22140%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20text-anchor%3D%22middle%22%20font-family%3D%22Segoe%20UI%2C%20sans-serif%22%20font-size%3D%2254%22%20font-weight%3D%22700%22%20fill%3D%22%23ffffff%22%3ECourse%20matinale%3C%2Ftext%3E%3C%2Fsvg%3E",
-        "legende": "Course matinale au Parc",
-        "date": "2026-06-20"
-      },
-      {
-        "id": "m4",
-        "image": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22800%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%2312a150%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%231b4dcc%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22800%22%20height%3D%22800%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22650%22%20cy%3D%22150%22%20r%3D%2290%22%20fill%3D%22rgba(255%2C255%2C255%2C0.15)%22%2F%3E%3Ccircle%20cx%3D%22150%22%20cy%3D%22650%22%20r%3D%22140%22%20fill%3D%22rgba(255%2C255%2C255%2C0.10)%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20text-anchor%3D%22middle%22%20font-family%3D%22Segoe%20UI%2C%20sans-serif%22%20font-size%3D%2254%22%20font-weight%3D%22700%22%20fill%3D%22%23ffffff%22%3E%C3%89tirements%3C%2Ftext%3E%3C%2Fsvg%3E",
-        "legende": "Étirements & récupération",
-        "date": "2026-07-02"
-      }
-    ]
+    "couleur": "#1b4dcc"
   },
   {
     "id": "c2",
     "prenom": "Aya",
     "nom": "Kouassi",
     "genre": "f",
-    "titre": "Coach en nutrition & bien-être",
+    "titre": "Nutritionniste du sport & diététicienne",
     "specialites": [
-      "nutrition",
-      "devperso"
+      "nutrition"
     ],
-    "categorie": "Bien-être",
+    "categorie": "Nutrition",
     "langues": [
       "Français",
       "Anglais"
     ],
     "commune": "Marcory",
     "ville": "Abidjan",
-    "bio": "Diététicienne passionnée, je vous aide à retrouver équilibre alimentaire et énergie au quotidien, avec des recettes locales et accessibles.",
+    "bio": "Diététicienne du sport, j'optimise votre alimentation pour la performance, la perte de poids ou la prise de masse, avec des recettes locales et accessibles adaptées à votre entraînement.",
+    "experienceAnnees": 6,
+    "clientsAccompagnes": 260,
+    "interventions": [
+      "En cabinet",
+      "À domicile",
+      "En visio"
+    ],
     "tarifs": [
       {
         "id": "t1",
@@ -217,7 +150,7 @@
         "type": "seance",
         "prix": 20000,
         "duree": 90,
-        "description": "Analyse complète + plan personnalisé."
+        "description": "Analyse complète + plan alimentaire personnalisé."
       },
       {
         "id": "t2",
@@ -234,6 +167,13 @@
         "titre": "Licence Diététique",
         "ecole": "Université FHB",
         "annee": 2017,
+        "statut": "verifie"
+      },
+      {
+        "id": "d2",
+        "titre": "Certification Nutrition sportive",
+        "ecole": "IFBB",
+        "annee": 2020,
         "statut": "verifie"
       }
     ],
@@ -279,158 +219,37 @@
     "reseaux": {
       "facebook": "aya.nutrition",
       "linkedin": "aya-kouassi",
-      "instagram": "aya_bienetre"
+      "instagram": "aya_nutrisport"
     },
     "email": "aya.kouassi@coachlink.ci",
     "telephone": "0505060708",
-    "couleur": "#12a150",
-    "avis": [
-      {
-        "id": "a1",
-        "auteur": "Awa S.",
-        "note": 5,
-        "texte": "Aya a changé ma relation à la nourriture. Recettes locales géniales !",
-        "date": "2026-04-18",
-        "reponse": "Un plaisir de t'accompagner Awa 🌸"
-      },
-      {
-        "id": "a2",
-        "auteur": "Marc B.",
-        "note": 5,
-        "texte": "Très à l'écoute et compétente.",
-        "date": "2026-05-30",
-        "reponse": null
-      }
-    ],
-    "posts": [],
-    "photo": null,
-    "couverture": null,
-    "galerie": []
-  },
-  {
-    "id": "c3",
-    "prenom": "Ismaël",
-    "nom": "Traoré",
-    "genre": "h",
-    "titre": "Coach business & entrepreneuriat",
-    "specialites": [
-      "business",
-      "finance"
-    ],
-    "categorie": "Professionnel",
-    "langues": [
-      "Français",
-      "Anglais",
-      "Dioula"
-    ],
-    "commune": "Plateau",
-    "ville": "Abidjan",
-    "bio": "Consultant et mentor, j'accompagne les porteurs de projets et PME à structurer leur business model, lever des fonds et scaler en Afrique de l'Ouest.",
-    "tarifs": [
-      {
-        "id": "t1",
-        "nom": "Session stratégie",
-        "type": "seance",
-        "prix": 35000,
-        "duree": 90,
-        "description": "Diagnostic et feuille de route."
-      },
-      {
-        "id": "t2",
-        "nom": "Accompagnement 3 mois",
-        "type": "pack",
-        "prix": 300000,
-        "duree": 90,
-        "description": "Mentorat intensif, 2 sessions / semaine."
-      }
-    ],
-    "diplomes": [
-      {
-        "id": "d1",
-        "titre": "MBA Entrepreneuriat",
-        "ecole": "HEC Paris",
-        "annee": 2014,
-        "statut": "verifie"
-      },
-      {
-        "id": "d2",
-        "titre": "Certification Design Thinking",
-        "ecole": "IDEO U",
-        "annee": 2020,
-        "statut": "en_attente"
-      }
-    ],
-    "note": 4.7,
-    "nbAvis": 31,
-    "nbSeances": 180,
-    "ancienneteMois": 24,
-    "tauxReponse": 90,
-    "disponibilites": {
-      "Lun": [
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00"
-      ],
-      "Mar": [
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00"
-      ],
-      "Mer": [
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00"
-      ],
-      "Jeu": [
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00"
-      ],
-      "Ven": [
-        "08:00",
-        "09:00",
-        "10:00",
-        "11:00"
-      ],
-      "Sam": [],
-      "Dim": []
-    },
-    "reseaux": {
-      "facebook": "ismael.traore.biz",
-      "linkedin": "ismael-traore",
-      "instagram": ""
-    },
-    "email": "ismael.traore@coachlink.ci",
-    "telephone": "0102030405",
-    "couleur": "#123a9e",
-    "avis": [],
-    "posts": [],
-    "photo": null,
-    "couverture": null,
-    "galerie": []
+    "couleur": "#12a150"
   },
   {
     "id": "c4",
     "prenom": "Fatou",
     "nom": "Diallo",
     "genre": "f",
-    "titre": "Professeure de yoga & sophrologie",
+    "titre": "Professeure de yoga & pilates",
     "specialites": [
       "yoga",
-      "mental"
+      "pilates"
     ],
-    "categorie": "Bien-être",
+    "categorie": "Bien-être physique",
     "langues": [
       "Français",
       "Anglais"
     ],
     "commune": "Cocody",
     "ville": "Abidjan",
-    "bio": "Je propose des séances de yoga et de relaxation pour gérer le stress, améliorer la posture et retrouver la sérénité, en groupe ou en individuel.",
+    "bio": "Je propose des séances de yoga et de pilates pour améliorer la souplesse, renforcer les muscles profonds, corriger la posture et réduire les douleurs, en groupe ou en individuel.",
+    "experienceAnnees": 7,
+    "clientsAccompagnes": 300,
+    "interventions": [
+      "En studio",
+      "À domicile",
+      "En visio"
+    ],
     "tarifs": [
       {
         "id": "t1",
@@ -438,7 +257,7 @@
         "type": "seance",
         "prix": 12000,
         "duree": 60,
-        "description": "Yoga adapté à votre niveau."
+        "description": "Yoga ou pilates adapté à votre niveau."
       },
       {
         "id": "t2",
@@ -455,6 +274,13 @@
         "titre": "Yoga Alliance RYT-200",
         "ecole": "Yoga Alliance",
         "annee": 2018,
+        "statut": "verifie"
+      },
+      {
+        "id": "d2",
+        "titre": "Certification Pilates Mat",
+        "ecole": "Pilates Institute",
+        "annee": 2021,
         "statut": "verifie"
       }
     ],
@@ -509,559 +335,32 @@
     },
     "email": "fatou.diallo@coachlink.ci",
     "telephone": "0708091011",
-    "couleur": "#8b3ff0",
-    "avis": [
-      {
-        "id": "a1",
-        "auteur": "Nadia F.",
-        "note": 5,
-        "texte": "Séances apaisantes, je dors beaucoup mieux.",
-        "date": "2026-05-01",
-        "reponse": null
-      },
-      {
-        "id": "a2",
-        "auteur": "Éric M.",
-        "note": 5,
-        "texte": "Fatou est une excellente pédagogue.",
-        "date": "2026-06-11",
-        "reponse": "Merci Éric 🙏"
-      }
-    ],
-    "posts": [
-      {
-        "id": "p1",
-        "texte": "Nouvelle session de yoga au lever du soleil chaque samedi 🧘‍♀️ Places limitées.",
-        "image": null,
-        "date": "2026-07-08",
-        "likes": 31
-      }
-    ],
-    "photo": null,
-    "couverture": null,
-    "galerie": []
-  },
-  {
-    "id": "c5",
-    "prenom": "Serge",
-    "nom": "N'Guessan",
-    "genre": "h",
-    "titre": "Coach carrière & développement pro",
-    "specialites": [
-      "carriere",
-      "prisedeparole"
-    ],
-    "categorie": "Professionnel",
-    "langues": [
-      "Français",
-      "Anglais"
-    ],
-    "commune": "Plateau",
-    "ville": "Abidjan",
-    "bio": "RH de formation, je prépare les candidats aux entretiens, optimise CV et LinkedIn et coache la prise de parole en public.",
-    "tarifs": [
-      {
-        "id": "t1",
-        "nom": "Coaching entretien",
-        "type": "seance",
-        "prix": 18000,
-        "duree": 60,
-        "description": "Simulation d'entretien + feedback."
-      },
-      {
-        "id": "t2",
-        "nom": "Pack recherche d'emploi",
-        "type": "pack",
-        "prix": 75000,
-        "duree": 60,
-        "description": "CV + LinkedIn + 3 simulations."
-      }
-    ],
-    "diplomes": [
-      {
-        "id": "d1",
-        "titre": "Master Ressources Humaines",
-        "ecole": "INP-HB",
-        "annee": 2013,
-        "statut": "verifie"
-      }
-    ],
-    "note": 4.6,
-    "nbAvis": 24,
-    "nbSeances": 150,
-    "ancienneteMois": 18,
-    "tauxReponse": 88,
-    "disponibilites": {
-      "Lun": [
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00"
-      ],
-      "Mar": [
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00"
-      ],
-      "Mer": [],
-      "Jeu": [
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00"
-      ],
-      "Ven": [
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00"
-      ],
-      "Sam": [
-        "08:00",
-        "09:00",
-        "10:00",
-        "11:00"
-      ],
-      "Dim": []
-    },
-    "reseaux": {
-      "facebook": "",
-      "linkedin": "serge-nguessan",
-      "instagram": ""
-    },
-    "email": "serge.nguessan@coachlink.ci",
-    "telephone": "0712131415",
-    "couleur": "#1b4dcc",
-    "avis": [],
-    "posts": [],
-    "photo": null,
-    "couverture": null,
-    "galerie": []
-  },
-  {
-    "id": "c6",
-    "prenom": "Mariam",
-    "nom": "Bamba",
-    "genre": "f",
-    "titre": "Coach en développement personnel",
-    "specialites": [
-      "devperso",
-      "mental"
-    ],
-    "categorie": "Bien-être",
-    "langues": [
-      "Français"
-    ],
-    "commune": "Yopougon",
-    "ville": "Abidjan",
-    "bio": "J'aide mes clients à reprendre confiance, définir des objectifs de vie clairs et dépasser leurs blocages grâce à des outils concrets.",
-    "tarifs": [
-      {
-        "id": "t1",
-        "nom": "Séance de coaching",
-        "type": "seance",
-        "prix": 14000,
-        "duree": 60,
-        "description": "Objectifs, confiance, motivation."
-      },
-      {
-        "id": "t2",
-        "nom": "Programme transformation",
-        "type": "pack",
-        "prix": 120000,
-        "duree": 60,
-        "description": "10 séances sur 3 mois."
-      }
-    ],
-    "diplomes": [
-      {
-        "id": "d1",
-        "titre": "Certification Coach ICF",
-        "ecole": "ICF",
-        "annee": 2021,
-        "statut": "en_attente"
-      }
-    ],
-    "note": 4.5,
-    "nbAvis": 15,
-    "nbSeances": 90,
-    "ancienneteMois": 8,
-    "tauxReponse": 85,
-    "disponibilites": {
-      "Lun": [
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00"
-      ],
-      "Mar": [
-        "08:00",
-        "09:00",
-        "10:00",
-        "11:00"
-      ],
-      "Mer": [
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00"
-      ],
-      "Jeu": [],
-      "Ven": [
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00"
-      ],
-      "Sam": [
-        "08:00",
-        "09:00",
-        "10:00",
-        "11:00"
-      ],
-      "Dim": []
-    },
-    "reseaux": {
-      "facebook": "mariam.devperso",
-      "linkedin": "",
-      "instagram": "mariam_coach"
-    },
-    "email": "mariam.bamba@coachlink.ci",
-    "telephone": "0716171819",
-    "couleur": "#ff7a1a",
-    "avis": [],
-    "posts": [],
-    "photo": null,
-    "couverture": null,
-    "galerie": []
-  },
-  {
-    "id": "c7",
-    "prenom": "Jean-Marc",
-    "nom": "Yao",
-    "genre": "h",
-    "titre": "Professeur de mathématiques & physique",
-    "specialites": [
-      "scolaire"
-    ],
-    "categorie": "Scolaire",
-    "langues": [
-      "Français"
-    ],
-    "commune": "Abobo",
-    "ville": "Abidjan",
-    "bio": "Enseignant certifié, je donne des cours de soutien de la 6e à la Terminale (maths, physique-chimie) avec un taux de réussite élevé au BAC.",
-    "tarifs": [
-      {
-        "id": "t1",
-        "nom": "Cours particulier",
-        "type": "seance",
-        "prix": 8000,
-        "duree": 90,
-        "description": "À domicile, du collège au lycée."
-      },
-      {
-        "id": "t2",
-        "nom": "Abonnement mensuel",
-        "type": "abonnement",
-        "prix": 55000,
-        "duree": 90,
-        "description": "8 cours / mois."
-      }
-    ],
-    "diplomes": [
-      {
-        "id": "d1",
-        "titre": "CAPES Mathématiques",
-        "ecole": "ENS Abidjan",
-        "annee": 2012,
-        "statut": "verifie"
-      }
-    ],
-    "note": 4.8,
-    "nbAvis": 39,
-    "nbSeances": 620,
-    "ancienneteMois": 60,
-    "tauxReponse": 92,
-    "disponibilites": {
-      "Lun": [
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00"
-      ],
-      "Mar": [
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00"
-      ],
-      "Mer": [
-        "08:00",
-        "09:00",
-        "10:00",
-        "11:00"
-      ],
-      "Jeu": [
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00"
-      ],
-      "Ven": [
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00"
-      ],
-      "Sam": [
-        "08:00",
-        "09:00",
-        "10:00",
-        "11:00"
-      ],
-      "Dim": []
-    },
-    "reseaux": {
-      "facebook": "jm.yao.cours",
-      "linkedin": "",
-      "instagram": ""
-    },
-    "email": "jm.yao@coachlink.ci",
-    "telephone": "0720212223",
-    "couleur": "#12a150",
-    "avis": [],
-    "posts": [],
-    "photo": null,
-    "couverture": null,
-    "galerie": []
-  },
-  {
-    "id": "c8",
-    "prenom": "Clarisse",
-    "nom": "Gnahoré",
-    "genre": "f",
-    "titre": "Coach en langues (Anglais & Espagnol)",
-    "specialites": [
-      "langues"
-    ],
-    "categorie": "Scolaire",
-    "langues": [
-      "Français",
-      "Anglais",
-      "Espagnol"
-    ],
-    "commune": "Treichville",
-    "ville": "Abidjan",
-    "bio": "Cours d'anglais et d'espagnol pour tous niveaux : conversation, business english, préparation TOEFL/IELTS. Méthode immersive et ludique.",
-    "tarifs": [
-      {
-        "id": "t1",
-        "nom": "Cours de conversation",
-        "type": "seance",
-        "prix": 10000,
-        "duree": 60,
-        "description": "Pratique orale intensive."
-      },
-      {
-        "id": "t2",
-        "nom": "Pack TOEFL",
-        "type": "pack",
-        "prix": 90000,
-        "duree": 60,
-        "description": "10 séances de préparation."
-      }
-    ],
-    "diplomes": [
-      {
-        "id": "d1",
-        "titre": "Master Langues étrangères",
-        "ecole": "Université FHB",
-        "annee": 2016,
-        "statut": "verifie"
-      },
-      {
-        "id": "d2",
-        "titre": "Certification TEFL",
-        "ecole": "TEFL Org",
-        "annee": 2019,
-        "statut": "verifie"
-      }
-    ],
-    "note": 4.7,
-    "nbAvis": 28,
-    "nbSeances": 240,
-    "ancienneteMois": 26,
-    "tauxReponse": 94,
-    "disponibilites": {
-      "Lun": [
-        "08:00",
-        "09:00",
-        "10:00",
-        "11:00"
-      ],
-      "Mar": [
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00"
-      ],
-      "Mer": [
-        "08:00",
-        "09:00",
-        "10:00",
-        "11:00"
-      ],
-      "Jeu": [
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00"
-      ],
-      "Ven": [
-        "08:00",
-        "09:00",
-        "10:00",
-        "11:00"
-      ],
-      "Sam": [],
-      "Dim": []
-    },
-    "reseaux": {
-      "facebook": "",
-      "linkedin": "clarisse-gnahore",
-      "instagram": "clarisse_langues"
-    },
-    "email": "clarisse.gnahore@coachlink.ci",
-    "telephone": "0724252627",
-    "couleur": "#1b4dcc",
-    "avis": [],
-    "posts": [],
-    "photo": null,
-    "couverture": null,
-    "galerie": []
-  },
-  {
-    "id": "c9",
-    "prenom": "Bakary",
-    "nom": "Coulibaly",
-    "genre": "h",
-    "titre": "Professeur de guitare & piano",
-    "specialites": [
-      "musique"
-    ],
-    "categorie": "Artistique",
-    "langues": [
-      "Français",
-      "Dioula"
-    ],
-    "commune": "Adjamé",
-    "ville": "Abidjan",
-    "bio": "Musicien professionnel, j'enseigne la guitare et le piano aux enfants comme aux adultes, du solfège à l'improvisation.",
-    "tarifs": [
-      {
-        "id": "t1",
-        "nom": "Cours de guitare",
-        "type": "seance",
-        "prix": 9000,
-        "duree": 60,
-        "description": "Débutant à avancé."
-      },
-      {
-        "id": "t2",
-        "nom": "Pack 8 cours",
-        "type": "pack",
-        "prix": 64000,
-        "duree": 60,
-        "description": "Progression garantie."
-      }
-    ],
-    "diplomes": [
-      {
-        "id": "d1",
-        "titre": "Diplôme Conservatoire",
-        "ecole": "INSAAC",
-        "annee": 2011,
-        "statut": "verifie"
-      }
-    ],
-    "note": 4.6,
-    "nbAvis": 19,
-    "nbSeances": 200,
-    "ancienneteMois": 36,
-    "tauxReponse": 80,
-    "disponibilites": {
-      "Lun": [
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00"
-      ],
-      "Mar": [],
-      "Mer": [
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00"
-      ],
-      "Jeu": [
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00"
-      ],
-      "Ven": [
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00"
-      ],
-      "Sam": [
-        "08:00",
-        "09:00",
-        "10:00",
-        "11:00"
-      ],
-      "Dim": [
-        "08:00",
-        "09:00",
-        "10:00",
-        "11:00"
-      ]
-    },
-    "reseaux": {
-      "facebook": "bakary.music",
-      "linkedin": "",
-      "instagram": "bakary_guitare"
-    },
-    "email": "bakary.coulibaly@coachlink.ci",
-    "telephone": "0728293031",
-    "couleur": "#8b3ff0",
-    "avis": [],
-    "posts": [],
-    "photo": null,
-    "couverture": null,
-    "galerie": []
+    "couleur": "#8b3ff0"
   },
   {
     "id": "c10",
     "prenom": "Prisca",
     "nom": "Adjoua",
     "genre": "f",
-    "titre": "Coach de danse (Afro & moderne)",
+    "titre": "Coach cardio-danse & fitness",
     "specialites": [
-      "danse",
+      "cardiodanse",
       "sport"
     ],
-    "categorie": "Artistique",
+    "categorie": "Sportif",
     "langues": [
       "Français",
       "Anglais"
     ],
     "commune": "Cocody",
     "ville": "Abidjan",
-    "bio": "Danseuse et chorégraphe, je propose des cours d'Afrodance, danse moderne et fitness dansé pour tous les âges. Ambiance garantie !",
+    "bio": "Fitness dansé, Afrofit et Zumba : je transforme le sport en plaisir pour brûler des calories, tonifier le corps et retrouver le sourire. Ambiance garantie, tous niveaux !",
+    "experienceAnnees": 5,
+    "clientsAccompagnes": 140,
+    "interventions": [
+      "En salle",
+      "À domicile"
+    ],
     "tarifs": [
       {
         "id": "t1",
@@ -1077,15 +376,15 @@
         "type": "seance",
         "prix": 16000,
         "duree": 60,
-        "description": "Chorégraphie personnalisée."
+        "description": "Programme cardio-fitness personnalisé."
       }
     ],
     "diplomes": [
       {
         "id": "d1",
-        "titre": "Formation Chorégraphie",
-        "ecole": "INSAAC",
-        "annee": 2017,
+        "titre": "Certification Fitness de groupe",
+        "ecole": "Les Mills",
+        "annee": 2019,
         "statut": "verifie"
       }
     ],
@@ -1134,77 +433,78 @@
       "Dim": []
     },
     "reseaux": {
-      "facebook": "prisca.dance",
+      "facebook": "prisca.fitness",
       "linkedin": "",
-      "instagram": "prisca_afrodance"
+      "instagram": "prisca_afrofit"
     },
     "email": "prisca.adjoua@coachlink.ci",
     "telephone": "0732333435",
-    "couleur": "#ff7a1a",
-    "avis": [],
-    "posts": [
-      {
-        "id": "p1",
-        "texte": "Répétition pour le prochain showcase Afrodance 💃🔥 Qui vient danser ?",
-        "image": null,
-        "date": "2026-07-12",
-        "likes": 42
-      }
-    ],
-    "photo": null,
-    "couverture": null,
-    "galerie": []
+    "couleur": "#ff7a1a"
   },
   {
-    "id": "c11",
-    "prenom": "Emmanuel",
-    "nom": "Kouadio",
+    "id": "c13",
+    "prenom": "Yao",
+    "nom": "Brou",
     "genre": "h",
-    "titre": "Coach finance personnelle & investissement",
+    "titre": "Coach CrossFit & HIIT",
     "specialites": [
-      "finance",
-      "business"
+      "crossfit",
+      "prepaphysique"
     ],
-    "categorie": "Professionnel",
+    "categorie": "Sportif",
     "langues": [
       "Français",
       "Anglais"
     ],
-    "commune": "Plateau",
+    "commune": "Yopougon",
     "ville": "Abidjan",
-    "bio": "Conseiller financier, j'aide les particuliers à mieux gérer leur budget, épargner intelligemment et investir en bourse et immobilier.",
+    "bio": "Entraînements fonctionnels intenses (CrossFit, HIIT, circuit training) pour développer force, endurance et explosivité. Des WODs adaptés à tous les niveaux, du débutant au confirmé.",
+    "experienceAnnees": 6,
+    "clientsAccompagnes": 175,
+    "interventions": [
+      "En box",
+      "En salle"
+    ],
     "tarifs": [
       {
         "id": "t1",
-        "nom": "Consultation budget",
+        "nom": "WOD collectif",
         "type": "seance",
-        "prix": 22000,
-        "duree": 75,
-        "description": "Audit et plan d'épargne."
+        "prix": 8000,
+        "duree": 60,
+        "description": "Entraînement en petit groupe."
       },
       {
         "id": "t2",
-        "nom": "Suivi patrimoine",
-        "type": "abonnement",
-        "prix": 80000,
+        "nom": "Coaching perso",
+        "type": "seance",
+        "prix": 18000,
         "duree": 60,
-        "description": "Accompagnement mensuel."
+        "description": "Séance individuelle sur mesure."
+      },
+      {
+        "id": "t3",
+        "nom": "Abonnement mensuel",
+        "type": "abonnement",
+        "prix": 55000,
+        "duree": 60,
+        "description": "12 WODs / mois + suivi."
       }
     ],
     "diplomes": [
       {
         "id": "d1",
-        "titre": "Master Finance",
-        "ecole": "ESCA",
-        "annee": 2015,
+        "titre": "CrossFit Level 2 Trainer",
+        "ecole": "CrossFit Inc.",
+        "annee": 2020,
         "statut": "verifie"
       }
     ],
-    "note": 4.4,
-    "nbAvis": 11,
-    "nbSeances": 70,
-    "ancienneteMois": 14,
-    "tauxReponse": 82,
+    "note": 4.7,
+    "nbAvis": 28,
+    "nbSeances": 260,
+    "ancienneteMois": 26,
+    "tauxReponse": 93,
     "disponibilites": {
       "Lun": [
         "16:00",
@@ -1213,12 +513,115 @@
         "19:00"
       ],
       "Mar": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Mer": [
         "16:00",
         "17:00",
         "18:00",
         "19:00"
       ],
-      "Mer": [],
+      "Jeu": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Ven": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Sam": [
+        "08:00",
+        "09:00",
+        "10:00"
+      ],
+      "Dim": []
+    },
+    "reseaux": {
+      "facebook": "yao.crossfit",
+      "linkedin": "",
+      "instagram": "yaobrou_wod"
+    },
+    "email": "yao.brou@coachlink.ci",
+    "telephone": "0740414243",
+    "couleur": "#123a9e"
+  },
+  {
+    "id": "c14",
+    "prenom": "Awa",
+    "nom": "Sanogo",
+    "genre": "f",
+    "titre": "Coach running & cardio",
+    "specialites": [
+      "course",
+      "sport"
+    ],
+    "categorie": "Sportif",
+    "langues": [
+      "Français"
+    ],
+    "commune": "Marcory",
+    "ville": "Abidjan",
+    "bio": "Passionnée de course à pied, je vous prépare pour vos premiers 5 km, 10 km ou semi-marathon avec des plans progressifs, du travail de foulée et un suivi cardio personnalisé.",
+    "experienceAnnees": 5,
+    "clientsAccompagnes": 130,
+    "interventions": [
+      "En extérieur",
+      "En visio"
+    ],
+    "tarifs": [
+      {
+        "id": "t1",
+        "nom": "Sortie running coachée",
+        "type": "seance",
+        "prix": 9000,
+        "duree": 60,
+        "description": "Technique de course + cardio."
+      },
+      {
+        "id": "t2",
+        "nom": "Plan 10 km",
+        "type": "pack",
+        "prix": 45000,
+        "duree": 60,
+        "description": "8 semaines de préparation."
+      }
+    ],
+    "diplomes": [
+      {
+        "id": "d1",
+        "titre": "Brevet d'entraîneur d'athlétisme",
+        "ecole": "Fédération Ivoirienne d'Athlétisme",
+        "annee": 2019,
+        "statut": "verifie"
+      }
+    ],
+    "note": 4.8,
+    "nbAvis": 21,
+    "nbSeances": 150,
+    "ancienneteMois": 20,
+    "tauxReponse": 96,
+    "disponibilites": {
+      "Lun": [
+        "06:00",
+        "07:00"
+      ],
+      "Mar": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Mer": [
+        "06:00",
+        "07:00"
+      ],
       "Jeu": [
         "16:00",
         "17:00",
@@ -1226,77 +629,192 @@
         "19:00"
       ],
       "Ven": [
+        "06:00",
+        "07:00"
+      ],
+      "Sam": [
         "08:00",
         "09:00",
         "10:00",
         "11:00"
       ],
-      "Sam": [],
-      "Dim": []
+      "Dim": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ]
     },
     "reseaux": {
-      "facebook": "",
-      "linkedin": "emmanuel-kouadio",
-      "instagram": ""
+      "facebook": "awa.run",
+      "linkedin": "",
+      "instagram": "awasanogo_run"
     },
-    "email": "emmanuel.kouadio@coachlink.ci",
-    "telephone": "0736373839",
-    "couleur": "#123a9e",
-    "avis": [],
-    "posts": [],
-    "photo": null,
-    "couverture": null,
-    "galerie": []
+    "email": "awa.sanogo@coachlink.ci",
+    "telephone": "0744454647",
+    "couleur": "#12a150"
   },
   {
-    "id": "c12",
-    "prenom": "Rachelle",
-    "nom": "Boni",
-    "genre": "f",
-    "titre": "Coach parentalité & petite enfance",
+    "id": "c15",
+    "prenom": "Didier",
+    "nom": "Kouamé",
+    "genre": "h",
+    "titre": "Coach boxe & arts martiaux",
     "specialites": [
-      "parentalite",
-      "devperso"
+      "artsmartiaux",
+      "prepaphysique"
     ],
-    "categorie": "Bien-être",
+    "categorie": "Sportif",
     "langues": [
-      "Français"
+      "Français",
+      "Dioula"
     ],
-    "commune": "Bingerville",
+    "commune": "Abobo",
     "ville": "Abidjan",
-    "bio": "Éducatrice spécialisée, j'accompagne les parents dans l'éducation positive, la gestion des émotions de l'enfant et l'équilibre familial.",
+    "bio": "Ancien compétiteur, j'enseigne la boxe anglaise, le fitness-boxing et la self-défense. Idéal pour se défouler, se tonifier, gagner en confiance et apprendre à se protéger.",
+    "experienceAnnees": 12,
+    "clientsAccompagnes": 320,
+    "interventions": [
+      "En salle",
+      "À domicile"
+    ],
     "tarifs": [
       {
         "id": "t1",
-        "nom": "Séance parentalité",
+        "nom": "Cours de boxe",
         "type": "seance",
-        "prix": 13000,
-        "duree": 60,
-        "description": "Conseils personnalisés."
+        "prix": 10000,
+        "duree": 75,
+        "description": "Technique + cardio-boxing."
       },
       {
         "id": "t2",
-        "nom": "Pack sérénité familiale",
-        "type": "pack",
-        "prix": 100000,
+        "nom": "Self-défense",
+        "type": "seance",
+        "prix": 12000,
         "duree": 60,
-        "description": "8 séances de suivi."
+        "description": "Techniques de protection."
       }
     ],
     "diplomes": [
       {
         "id": "d1",
-        "titre": "Diplôme Éducateur de jeunes enfants",
-        "ecole": "INFS",
+        "titre": "BPJEPS Sports de combat",
+        "ecole": "INJS Abidjan",
+        "annee": 2012,
+        "statut": "verifie"
+      }
+    ],
+    "note": 4.9,
+    "nbAvis": 47,
+    "nbSeances": 540,
+    "ancienneteMois": 54,
+    "tauxReponse": 91,
+    "disponibilites": {
+      "Lun": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Mar": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Mer": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Jeu": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Ven": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Sam": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Dim": []
+    },
+    "reseaux": {
+      "facebook": "didier.boxe",
+      "linkedin": "",
+      "instagram": "didier_boxing"
+    },
+    "email": "didier.kouame@coachlink.ci",
+    "telephone": "0748495051",
+    "couleur": "#e11d48"
+  },
+  {
+    "id": "c16",
+    "prenom": "Nadège",
+    "nom": "Ehui",
+    "genre": "f",
+    "titre": "Coach pilates & renforcement",
+    "specialites": [
+      "pilates",
+      "yoga"
+    ],
+    "categorie": "Bien-être physique",
+    "langues": [
+      "Français",
+      "Anglais"
+    ],
+    "commune": "Plateau",
+    "ville": "Abidjan",
+    "bio": "Spécialiste du gainage et de la posture, je propose des séances de pilates et de renforcement doux pour un corps tonique, un dos solide et une meilleure mobilité au quotidien.",
+    "experienceAnnees": 9,
+    "clientsAccompagnes": 240,
+    "interventions": [
+      "En studio",
+      "À domicile",
+      "En visio"
+    ],
+    "tarifs": [
+      {
+        "id": "t1",
+        "nom": "Cours de pilates",
+        "type": "seance",
+        "prix": 13000,
+        "duree": 55,
+        "description": "Renforcement profond et posture."
+      },
+      {
+        "id": "t2",
+        "nom": "Pack posture 6 séances",
+        "type": "pack",
+        "prix": 66000,
+        "duree": 55,
+        "description": "Programme dos & gainage."
+      }
+    ],
+    "diplomes": [
+      {
+        "id": "d1",
+        "titre": "Certification Pilates Mat & Reformer",
+        "ecole": "Balanced Body",
         "annee": 2016,
         "statut": "verifie"
       }
     ],
     "note": 4.8,
-    "nbAvis": 21,
-    "nbSeances": 130,
-    "ancienneteMois": 20,
-    "tauxReponse": 91,
+    "nbAvis": 34,
+    "nbSeances": 360,
+    "ancienneteMois": 40,
+    "tauxReponse": 94,
     "disponibilites": {
       "Lun": [
         "08:00",
@@ -1305,17 +823,22 @@
         "11:00"
       ],
       "Mar": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Mer": [
         "08:00",
         "09:00",
         "10:00",
         "11:00"
       ],
-      "Mer": [],
       "Jeu": [
-        "08:00",
-        "09:00",
-        "10:00",
-        "11:00"
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
       ],
       "Ven": [
         "08:00",
@@ -1332,17 +855,218 @@
       "Dim": []
     },
     "reseaux": {
-      "facebook": "rachelle.parentalite",
-      "linkedin": "",
-      "instagram": "rachelle_parents"
+      "facebook": "nadege.pilates",
+      "linkedin": "nadege-ehui",
+      "instagram": "nadege_pilates"
     },
-    "email": "rachelle.boni@coachlink.ci",
-    "telephone": "0740414243",
-    "couleur": "#12a150",
-    "avis": [],
-    "posts": [],
-    "photo": null,
-    "couverture": null,
-    "galerie": []
+    "email": "nadege.ehui@coachlink.ci",
+    "telephone": "0752535455",
+    "couleur": "#0891b2"
+  },
+  {
+    "id": "c17",
+    "prenom": "Ibrahim",
+    "nom": "Touré",
+    "genre": "h",
+    "titre": "Maître-nageur & coach natation",
+    "specialites": [
+      "natation",
+      "sport"
+    ],
+    "categorie": "Sportif",
+    "langues": [
+      "Français",
+      "Anglais"
+    ],
+    "commune": "Cocody",
+    "ville": "Abidjan",
+    "bio": "Maître-nageur diplômé, j'apprends à nager aux débutants (adultes et enfants), corrige les techniques (crawl, brasse, dos) et prépare aux objectifs d'endurance en piscine.",
+    "experienceAnnees": 10,
+    "clientsAccompagnes": 400,
+    "interventions": [
+      "En piscine"
+    ],
+    "tarifs": [
+      {
+        "id": "t1",
+        "nom": "Cours de natation",
+        "type": "seance",
+        "prix": 14000,
+        "duree": 45,
+        "description": "Apprentissage ou perfectionnement."
+      },
+      {
+        "id": "t2",
+        "nom": "Pack 8 cours",
+        "type": "pack",
+        "prix": 100000,
+        "duree": 45,
+        "description": "Progression garantie."
+      }
+    ],
+    "diplomes": [
+      {
+        "id": "d1",
+        "titre": "BEESAN (Maître-nageur sauveteur)",
+        "ecole": "INJS Abidjan",
+        "annee": 2014,
+        "statut": "verifie"
+      }
+    ],
+    "note": 4.9,
+    "nbAvis": 52,
+    "nbSeances": 610,
+    "ancienneteMois": 58,
+    "tauxReponse": 96,
+    "disponibilites": {
+      "Lun": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Mar": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Mer": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Jeu": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Ven": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Sam": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Dim": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ]
+    },
+    "reseaux": {
+      "facebook": "ibrahim.natation",
+      "linkedin": "",
+      "instagram": "ibra_swim"
+    },
+    "email": "ibrahim.toure@coachlink.ci",
+    "telephone": "0756575859",
+    "couleur": "#2563eb"
+  },
+  {
+    "id": "c18",
+    "prenom": "Chantal",
+    "nom": "Koné",
+    "genre": "f",
+    "titre": "Coach sport santé & réathlétisation",
+    "specialites": [
+      "sportsante",
+      "reeducation"
+    ],
+    "categorie": "Santé",
+    "langues": [
+      "Français"
+    ],
+    "commune": "Treichville",
+    "ville": "Abidjan",
+    "bio": "Spécialiste de l'activité physique adaptée, j'accompagne la reprise du sport après blessure, le sport santé pour seniors et les personnes en surpoids, en toute sécurité et à leur rythme.",
+    "experienceAnnees": 15,
+    "clientsAccompagnes": 520,
+    "interventions": [
+      "À domicile",
+      "En cabinet"
+    ],
+    "tarifs": [
+      {
+        "id": "t1",
+        "nom": "Bilan forme & santé",
+        "type": "seance",
+        "prix": 18000,
+        "duree": 75,
+        "description": "Évaluation + programme adapté."
+      },
+      {
+        "id": "t2",
+        "nom": "Réathlétisation post-blessure",
+        "type": "abonnement",
+        "prix": 70000,
+        "duree": 60,
+        "description": "Reprise progressive encadrée, 8 séances / mois."
+      }
+    ],
+    "diplomes": [
+      {
+        "id": "d1",
+        "titre": "Licence APA-S (Activité Physique Adaptée)",
+        "ecole": "Université FHB",
+        "annee": 2009,
+        "statut": "verifie"
+      }
+    ],
+    "note": 5,
+    "nbAvis": 61,
+    "nbSeances": 720,
+    "ancienneteMois": 72,
+    "tauxReponse": 99,
+    "disponibilites": {
+      "Lun": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Mar": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Mer": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Jeu": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Ven": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Sam": [],
+      "Dim": []
+    },
+    "reseaux": {
+      "facebook": "chantal.sportsante",
+      "linkedin": "chantal-kone",
+      "instagram": "chantal_sportsante"
+    },
+    "email": "chantal.kone@coachlink.ci",
+    "telephone": "0760616263",
+    "couleur": "#16a34a"
   }
 ]

@@ -54,7 +54,7 @@
     resetOpenGraph() {
       socialService.majOpenGraph({
         titre: "CoachLink CI",
-        description: "Trouvez un coach de confiance en Côte d'Ivoire : sport, bien-être, business, scolaire et plus.",
+        description: "Trouvez un coach sportif de confiance en Côte d'Ivoire : musculation, fitness, préparation physique, nutrition sportive, yoga, natation, sport santé.",
         type: "website",
         url: location.origin + location.pathname,
       });
@@ -70,9 +70,9 @@
           resolve({
             prenom: "Aristide",
             nom: "Kouamé",
-            titre: "Consultant & coach professionnel certifié",
-            bio: "10 ans d'expérience en accompagnement de dirigeants et équipes. Passionné par le développement du potentiel humain.",
-            specialites: ["carriere", "business"],
+            titre: "Coach sportif & préparateur physique certifié",
+            bio: "10 ans d'expérience en coaching sportif et préparation physique. Passionné par la remise en forme et la performance.",
+            specialites: ["sport", "prepaphysique"],
             langues: ["Français", "Anglais"],
             reseaux: { linkedin: "aristide-kouame" },
           });

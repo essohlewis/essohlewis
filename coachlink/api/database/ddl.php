@@ -21,6 +21,7 @@ function coachlink_creer_tables(PDO $pdo, bool $sqlite): void
       titre VARCHAR(160) DEFAULT '', categorie VARCHAR(40) DEFAULT 'Bien-être', commune VARCHAR(60),
       ville VARCHAR(60) DEFAULT 'Abidjan', bio TEXT, note DECIMAL(2,1) DEFAULT 0, nb_avis INT DEFAULT 0,
       nb_seances INT DEFAULT 0, anciennete_mois INT DEFAULT 0, taux_reponse INT DEFAULT 100,
+      experience_annees INT DEFAULT 0, clients_accompagnes INT DEFAULT 0, interventions TEXT,
       couleur VARCHAR(20) DEFAULT '#1b4dcc', email VARCHAR(160), telephone VARCHAR(30),
       photo LONGTEXT, couverture LONGTEXT)$suffixe");
 
