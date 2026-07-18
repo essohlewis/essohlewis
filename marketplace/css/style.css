@@ -832,9 +832,6 @@ body.seller-mode .bottom-nav { display: none !important; }
 .scroll-row::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 999px; }
 .scroll-row > .product-card { min-width: 190px; max-width: 210px; flex: 0 0 auto; }
 
-/* Code coupon / bon d'achat */
-.coupon-code { display: inline-block; font-family: monospace; font-size: 22px; font-weight: 800; letter-spacing: 3px; color: var(--brand-dark); background: var(--brand-soft); border: 2px dashed var(--brand); border-radius: var(--r); padding: 12px 22px; }
-
 /* Rangées d'activité (alertes, recherches, historique de prix) */
 .activity-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .activity-row:last-child { border-bottom: none; }
@@ -879,16 +876,6 @@ body.seller-mode .bottom-nav { display: none !important; }
 .qna-answer-form { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
 .qna-answer-form textarea { width: 100%; resize: vertical; }
 .qna-pending { margin-top: 8px; font-size: 12.5px; font-style: italic; }
-
-/* Badges / succès (profil) */
-.badges-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
-.badge-tile { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; padding: 14px 8px; border-radius: var(--r); border: 1px solid var(--border); background: var(--surface-2); opacity: .55; filter: grayscale(1); transition: transform var(--t-fast); }
-.badge-tile.on { opacity: 1; filter: none; border-color: var(--brand); background: var(--brand-soft); }
-.badge-tile.on:hover { transform: translateY(-2px); }
-.badge-emoji { font-size: 30px; }
-.badge-name { font-weight: 700; font-size: 13px; }
-.badge-state { font-size: 11px; color: var(--text-3); }
-.badge-tile.on .badge-state { color: var(--accent); font-weight: 600; }
 
 /* Note de problème de commande */
 .order-problem-note { margin-top: 10px; background: var(--danger-soft); color: var(--danger); border-radius: var(--r-sm); padding: 8px 12px; font-size: 12.5px; font-weight: 600; }

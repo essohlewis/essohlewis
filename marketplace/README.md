@@ -67,9 +67,6 @@ Données de démo : **4 boutiques**, **16 articles**, quelques avis, abonnements
 ##### 🆕 Nouveau lot d'innovations client
 - **Annuaire des boutiques** (`#/stores`) : toutes les boutiques classées par **réputation** (note, ventes, nombre d'articles), badge **vendeur fiable**, filtre par commune.
 - **Page « Mon activité »** (`#/activity`) : vus récemment, recherches récentes, **alertes prix/réassort** et **alertes de recherche** gérables au même endroit.
-- **Cagnotte fidélité convertible** : conversion des points en **bon d'achat** (10 pts = 500 FCFA, code généré valable sur toutes les boutiques).
-- **Badges & succès** débloquables (premier achat, client fidèle, explorateur, bon critique, collectionneur).
-- **Réduction de bienvenue** : bon d'achat de **1 000 FCFA offert** à l'inscription (dès 5 000 FCFA d'achats).
 - **Questions & réponses publiques** sur chaque fiche article (le vendeur répond publiquement).
 - **Faire une offre / négociation** : sur les articles marqués « prix négociable », le client propose son prix (transmis via la messagerie).
 - **Souvent achetés ensemble** (co-occurrence dans les commandes) sur la fiche article.

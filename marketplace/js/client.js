@@ -101,53 +101,21 @@ window.MP = window.MP || {};
     count() { return Compare.list().length; },
   };
 
-  /* ---------- Fidélité, cagnotte & parrainage ---------- */
+  /* ---------- Fidélité & parrainage ---------- */
   const Loyalty = {
     // 1 point gagné pour 1000 FCFA dépensés (commandes non annulées).
     earned(userId) {
       const spent = window.MP.Orders.byBuyer(userId).filter((o) => o.status !== "annulee").reduce((s, o) => s + o.total, 0);
       return Math.floor(spent / 1000);
     },
-    points(userId) { return Loyalty.earned(userId); }, // rétro-compat (points gagnés)
-    /** Points disponibles = gagnés − déjà convertis. */
-    available(userId) {
-      const u = window.MP.DB.find(window.MP.DB.KEYS.users, userId);
-      return Math.max(0, Loyalty.earned(userId) - ((u && u.pointsRedeemed) || 0));
-    },
+    points(userId) { return Loyalty.earned(userId); },
     tier(points) {
       if (points >= 200) return { name: "Or", icon: "🥇", min: 200, next: null };
       if (points >= 80) return { name: "Argent", icon: "🥈", min: 80, next: 200 };
       if (points >= 20) return { name: "Bronze", icon: "🥉", min: 20, next: 80 };
       return { name: "Nouveau", icon: "🌱", min: 0, next: 20 };
     },
-    /** Convertit des points en coupon global (10 pts = 500 FCFA). */
-    redeem(userId, points) {
-      points = Math.floor(points / 10) * 10;
-      if (points < 10) return { ok: false, error: "Minimum 10 points." };
-      if (points > Loyalty.available(userId)) return { ok: false, error: "Points insuffisants." };
-      const value = (points / 10) * 500;
-      const code = "FID" + Math.random().toString(36).slice(2, 7).toUpperCase();
-      const c = window.MP.Coupons.system({ code, type: "amount", value, maxUses: 1 });
-      if (!c) return { ok: false, error: "Conversion impossible." };
-      const u = window.MP.DB.find(window.MP.DB.KEYS.users, userId);
-      window.MP.DB.update(window.MP.DB.KEYS.users, userId, { pointsRedeemed: ((u && u.pointsRedeemed) || 0) + points });
-      return { ok: true, code, value };
-    },
     referralCode(user) { return "CI" + String(user.id).replace(/[^a-zA-Z0-9]/g, "").slice(-6).toUpperCase(); },
-    /** Badges/succès débloqués par l'acheteur. */
-    badges(userId) {
-      const orders = window.MP.Orders.byBuyer(userId).filter((o) => o.status !== "annulee");
-      const favs = (window.MP.DB.get(window.MP.DB.KEYS.favorites, {})[userId] || []).length;
-      const reviews = window.MP.DB.all(window.MP.DB.KEYS.reviews).filter((r) => r.userId === userId).length;
-      const communes = new Set(orders.map((o) => o.storeId)).size;
-      return [
-        { id: "first", icon: "🎉", name: "Premier achat", unlocked: orders.length >= 1 },
-        { id: "loyal", icon: "💛", name: "Client fidèle", unlocked: orders.length >= 5 },
-        { id: "explorer", icon: "🧭", name: "Explorateur", unlocked: communes >= 3, hint: "Commander dans 3 boutiques" },
-        { id: "critic", icon: "✍️", name: "Bon critique", unlocked: reviews >= 3, hint: "Publier 3 avis" },
-        { id: "collector", icon: "❤️", name: "Collectionneur", unlocked: favs >= 5, hint: "5 favoris" },
-      ];
-    },
   };
 
   /* ---------- Questions & réponses publiques ---------- */

@@ -1936,7 +1936,7 @@
             Cart.mergeGuestInto(res.user.id);
             UI.toast("Compte créé ✓", "success");
             if (res.user.role === "vendor") { renderHeaderUser(); Router.go("#/seller/store"); }
-            else { grantWelcomeDiscount(res.user); afterAuth(); }
+            else afterAuth();
           } else UI.toast(res.error, "error");
         });
       }
@@ -1953,25 +1953,6 @@
     renderForm(mode);
   }
 
-  /** Offre de bienvenue : bon d'achat global offert au nouveau client. */
-  function grantWelcomeDiscount(user) {
-    const code = "BIENVENUE" + String(user.id).replace(/[^0-9]/g, "").slice(-4);
-    const c = Coupons.system({ code, type: "amount", value: 1000, maxUses: 1, minTotal: 5000 });
-    if (!c) return;
-    Notifications.push(user.id, { type: "info", message: `🎁 Bienvenue ! Profitez de 1 000 FCFA offerts sur votre 1re commande (dès 5 000 FCFA) avec le code ${code}.`, link: "#/" });
-    setTimeout(() => {
-      UI.modal({
-        title: "🎁 Cadeau de bienvenue !",
-        body: `<div style="text-align:center;padding:8px 0">
-            <p style="margin:0 0 10px">Merci de rejoindre Marché CI ! Voici <strong>1 000 FCFA offerts</strong> sur votre première commande (dès 5 000 FCFA d'achats).</p>
-            <div class="coupon-code">${code}</div>
-            <p class="text-muted" style="margin-top:12px;font-size:13px">Saisissez ce code au moment du paiement.</p>
-          </div>`,
-        footer: `<button class="btn btn-primary" data-close>Génial, merci !</button>`,
-      });
-    }, 400);
-  }
-
   /* ============================================================
      VUE : Profil
      ============================================================ */
@@ -1982,11 +1963,9 @@
     const communeOpts = UI.COMMUNES.map((c) => `<option value="${c}" ${user.commune === c ? "selected" : ""}>${c}</option>`).join("");
 
     const pts = Loyalty.points(user.id);
-    const avail = Loyalty.available(user.id);
     const tier = Loyalty.tier(pts);
     const progress = tier.next ? Math.min(100, Math.round(((pts - tier.min) / (tier.next - tier.min)) * 100)) : 100;
     const refCode = Loyalty.referralCode(user);
-    const badges = Loyalty.badges(user.id);
     const addresses = user.addresses || [];
     const prefs = user.notifPrefs || { newProduct: true, orderStatus: true, messages: true };
     const avatarSrc = user.avatar ? UI.safeImg(user.avatar, user.name) : "";
@@ -2009,21 +1988,10 @@
         </div>
         <div class="goal-bar" style="margin-top:12px;background:rgba(255,255,255,.25)"><div class="goal-fill" style="width:${progress}%;background:#fff;color:var(--brand-dark)">${progress >= 12 ? progress + "%" : ""}</div></div>
         <div class="flex-between wrap mt-16" style="gap:8px">
-          <div style="font-size:13px">💰 Cagnotte : <strong>${avail} pts</strong> ${avail >= 10 ? `— convertible en ${UI.fcfa(Math.floor(avail / 10) * 500)}` : "(min. 10 pts)"}</div>
-          <button class="btn btn-sm" id="redeemBtn" style="background:#fff;color:var(--brand-dark)" ${avail < 10 ? "disabled" : ""}>🎟️ Convertir en bon</button>
-        </div>
-        <div class="flex-between wrap mt-16" style="gap:8px">
           <div style="font-size:13px">🎁 Parrainage — code : <strong style="letter-spacing:1px">${refCode}</strong></div>
           <button class="btn btn-sm" id="refShare" style="background:#fff;color:var(--brand-dark)">${SICON.wa} Inviter un ami</button>
         </div>
       </div>
-
-      <div class="section-title">🏆 Mes badges</div>
-      <div class="card card-pad"><div class="badges-grid">
-        ${badges.map((b) => `<div class="badge-tile ${b.unlocked ? "on" : ""}" title="${b.unlocked ? "Débloqué" : (b.hint || "À débloquer")}">
-          <span class="badge-emoji">${b.icon}</span><span class="badge-name">${b.name}</span>
-          <span class="badge-state">${b.unlocked ? "✓ Débloqué" : (b.hint || "À débloquer")}</span></div>`).join("")}
-      </div></div>
 
       <div class="card card-pad mt-16">
         <form id="profForm" class="form-grid">
@@ -2131,28 +2099,6 @@
       Auth.updateProfile({ highContrast: e.target.checked });
       document.documentElement.setAttribute("data-contrast", e.target.checked ? "high" : "normal");
       UI.toast(e.target.checked ? "Contraste élevé activé." : "Contraste normal.", "success");
-    });
-
-    // Conversion de la cagnotte fidélité en bon d'achat.
-    const redeemBtn = document.getElementById("redeemBtn");
-    if (redeemBtn) redeemBtn.addEventListener("click", () => {
-      const maxPts = Math.floor(Loyalty.available(user.id) / 10) * 10;
-      UI.modal({
-        title: "🎟️ Convertir mes points",
-        body: `<p class="text-muted" style="margin:0 0 12px;font-size:13.5px">10 points = 500 FCFA de réduction (bon d'achat valable sur toutes les boutiques). Vous avez <strong>${Loyalty.available(user.id)} pts</strong>.</p>
-          <div class="field"><label>Points à convertir (multiples de 10)</label><input type="number" id="rdPts" min="10" step="10" max="${maxPts}" value="${maxPts}" /></div>`,
-        footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-primary" id="rdGo">Générer mon bon</button>`,
-        onMount(m, close) {
-          m.querySelector("#rdGo").addEventListener("click", () => {
-            const n = Number(m.querySelector("#rdPts").value);
-            const r = Loyalty.redeem(user.id, n);
-            if (!r.ok) { UI.toast(r.error, "error"); return; }
-            close();
-            UI.modal({ title: "Bon d'achat généré 🎉", body: `<div style="text-align:center;padding:10px 0"><p style="margin:0 0 10px">Utilisez ce code au moment du paiement :</p><div class="coupon-code">${r.code}</div><p class="text-muted" style="margin-top:12px">Valeur : <strong>${UI.fcfa(r.value)}</strong></p></div>`, footer: `<button class="btn btn-primary" data-close>C'est noté</button>` });
-            viewProfile();
-          });
-        },
-      });
     });
 
     document.getElementById("logoutBtn").addEventListener("click", () => {
@@ -4056,7 +4002,7 @@
     { keys: ["vendeur", "vendre", "boutique", "ouvrir"], answer: "🏪 Créez votre compte puis ouvrez votre boutique en quelques minutes.", link: "#/seller/store", linkLabel: "Ouvrir ma boutique" },
     { keys: ["annuler", "annulation", "rembours"], answer: "❌ Vous pouvez annuler une commande tant qu'elle n'est pas livrée, depuis « Mes commandes ».", link: "#/orders", linkLabel: "Mes commandes" },
     { keys: ["promo", "réduction", "code", "coupon", "bon plan"], answer: "🔥 Retrouvez toutes les promotions dans « Bons plans ». Les codes promo se saisissent au paiement.", link: "#/deals", linkLabel: "Voir les bons plans" },
-    { keys: ["fidélité", "point", "cagnotte", "parrain"], answer: "💛 Gagnez 1 point par 1 000 FCFA dépensés. 10 points = 500 FCFA de réduction, convertibles depuis votre profil.", link: "#/profile", linkLabel: "Mon profil" },
+    { keys: ["fidélité", "point", "cagnotte", "parrain"], answer: "💛 Gagnez des points à chaque commande et grimpez les paliers (Bronze, Argent, Or). Parrainez vos proches avec votre code depuis votre profil.", link: "#/profile", linkLabel: "Mon profil" },
     { keys: ["suivi", "suivre", "où est", "statut"], answer: "📦 Suivez l'avancement de vos commandes (reçue → confirmée → expédiée → livrée) dans « Mes commandes ».", link: "#/orders", linkLabel: "Mes commandes" },
     { keys: ["contact", "vendeur", "question", "message"], answer: "💬 Depuis une fiche article, cliquez sur « Poser une question au vendeur » ou utilisez la messagerie." },
     { keys: ["bonjour", "salut", "coucou", "bonsoir"], answer: "👋 Bonjour ! Je suis l'assistant Marché CI. Posez-moi une question ou choisissez un sujet ci-dessous." },
