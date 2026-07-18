@@ -6,7 +6,8 @@
 (function () {
   "use strict";
 
-  const { DB, UI, Auth, Store, Products, Cart, Orders, Notifications, Router, Seed, Coupons, Messages, Expenses } = window.MP;
+  const { DB, UI, Auth, Store, Products, Cart, Orders, Notifications, Router, Seed, Coupons, Messages, Expenses,
+    Recent, SearchHist, Alerts, Compare, Loyalty } = window.MP;
 
   const V = () => document.getElementById("view");
   const SB = () => document.getElementById("sidebar");
@@ -52,6 +53,7 @@
     // Vide la nav basse vendeur hors des vues back-office (onboarding, client…).
     const sbn = document.getElementById("sellerBottomNav");
     if (sbn) sbn.innerHTML = "";
+    renderCompareBar();
   }
 
   function requireAuth() {
@@ -142,6 +144,53 @@
       delivRate: Math.round((delivered / orders.length) * 100),
       avgHours: n ? Math.round(sum / n / 3600000) : 0,
     };
+  }
+
+  /** Texte d'estimation des frais de livraison selon la commune de l'acheteur. */
+  function deliveryEstimateText(store) {
+    const user = Auth.current();
+    if (user && user.commune) {
+      const fee = Store.deliveryFee(store, user.commune);
+      return `${fee > 0 ? UI.fcfa(fee) : "offerte"} vers ${UI.esc(user.commune)}${store.freeShipThreshold ? ` · offerte dès ${UI.fcfa(store.freeShipThreshold)}` : ""}`;
+    }
+    return `${(store.defaultFee || 0) > 0 ? "à partir de " + UI.fcfa(store.defaultFee) : "offerte"}${store.freeShipThreshold ? ` · offerte dès ${UI.fcfa(store.freeShipThreshold)}` : ""} (selon votre commune)`;
+  }
+
+  /** Signalement d'un article (transmis à la modération / admin). */
+  function openReportModal(p) {
+    const reasons = ["Contenu inapproprié", "Prix trompeur", "Article contrefait", "Article interdit", "Autre"];
+    UI.modal({
+      title: "Signaler cet article",
+      body: `<div class="field"><label>Motif</label><select id="rpReason">${reasons.map((r) => `<option>${r}</option>`).join("")}</select></div>
+        <div class="field mt-8"><label>Précision (optionnel)</label><textarea id="rpNote" placeholder="Décrivez le problème…"></textarea></div>`,
+      footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-danger" id="rpGo">Envoyer le signalement</button>`,
+      onMount(m, close) {
+        m.querySelector("#rpGo").addEventListener("click", () => {
+          const reason = m.querySelector("#rpReason").value + (m.querySelector("#rpNote").value.trim() ? " — " + m.querySelector("#rpNote").value.trim() : "");
+          // Notifie les administrateurs.
+          DB.all(DB.KEYS.users).filter((u) => u.role === "admin").forEach((a) => Notifications.push(a.id, { type: "info", message: `⚑ Article signalé : « ${p.title} » (${reason}).`, link: "#/product/" + p.id }));
+          UI.toast("Merci, votre signalement a été transmis à la modération.", "success"); close();
+        });
+      },
+    });
+  }
+
+  function openPriceAlertModal(p) {
+    const cur = Products.effectivePrice(p);
+    UI.modal({
+      title: "Alerte prix",
+      body: `<p class="text-muted" style="margin:0 0 12px;font-size:13.5px">Prix actuel : <strong>${UI.fcfa(cur)}</strong>. Nous vous préviendrons dès que le prix descend à ou sous votre seuil.</p>
+        <div class="field"><label>Me prévenir si le prix ≤ (FCFA)</label><input type="number" id="alPrice" min="1" value="${Math.round(cur * 0.9)}" /></div>`,
+      footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-primary" id="alGo">Créer l'alerte</button>`,
+      onMount(m, close) {
+        m.querySelector("#alGo").addEventListener("click", () => {
+          const target = Number(m.querySelector("#alPrice").value);
+          if (!(target > 0)) { UI.toast("Montant invalide.", "error"); return; }
+          Alerts.add(p.id, "price", target);
+          UI.toast("🔔 Alerte prix créée.", "success"); close();
+        });
+      },
+    });
   }
 
   /** Articles similaires (même boutique/catégorie), hors l'article courant. */
@@ -318,6 +367,7 @@
      ============================================================ */
   function viewHome(params) {
     const q = params.query || {};
+    const user = Auth.current();
     const filters = {
       category: q.cat || "",
       commune: q.commune || "",
@@ -325,9 +375,45 @@
       minPrice: q.min || "",
       maxPrice: q.max || "",
       sort: q.sort || "recent",
+      promoOnly: q.promo === "1",
+      inStock: q.stock === "1",
+      freeShip: q.free === "1",
+      condition: q.cond || "",
+      minRating: q.rating || "",
     };
+    const hasFilters = !!(filters.category || filters.commune || filters.storeId || filters.minPrice || filters.maxPrice ||
+      filters.promoOnly || filters.inStock || filters.freeShip || filters.condition || filters.minRating || q.tab === "suivis");
 
-    // Squelette de chargement (effet app-like), puis rendu réel.
+    // Sections découverte (uniquement en vue par défaut).
+    let sections = "";
+    if (!hasFilters) {
+      const recent = user ? Recent.list().slice(0, 10) : [];
+      if (recent.length) sections += `<div class="section-title">Vus récemment</div><div class="scroll-row">${recent.map(productCard).join("")}</div>`;
+      const reco = recommendedProducts(8);
+      if (reco.length) sections += `<div class="section-title">✨ Recommandé pour vous</div><div class="scroll-row">${reco.map(productCard).join("")}</div>`;
+    }
+
+    // Onglet « Suivis » (boutiques abonnées).
+    let feedList;
+    if (q.tab === "suivis" && user) {
+      const subs = DB.get(DB.KEYS.subscriptions, {})[user.id] || [];
+      feedList = Products.published().filter((p) => subs.includes(p.storeId)).sort((a, b) => b.createdAt - a.createdAt);
+    } else {
+      feedList = Products.search(filters);
+    }
+
+    const onboard = (user && !(user.prefCategories && user.prefCategories.length) && !hasFilters)
+      ? `<div class="card card-pad" style="margin-bottom:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <div style="flex:1"><strong>👋 Personnalisez votre fil</strong><div class="text-muted" style="font-size:13px">Choisissez vos catégories préférées pour des recommandations sur mesure.</div></div>
+          <button class="btn btn-primary btn-sm" id="onboardBtn">Choisir mes catégories</button></div>` : "";
+
+    const tabs = `<div class="filter-bar" style="margin-bottom:6px">
+      <a href="#/" class="chip ${q.tab !== "suivis" ? "active" : ""}">🏠 Pour vous</a>
+      ${user ? `<a href="#/?tab=suivis" class="chip ${q.tab === "suivis" ? "active" : ""}">➕ Suivis</a>` : ""}
+      <a href="#/deals" class="chip">🔥 Bons plans</a>
+      ${Compare.count() ? `<a href="#/compare" class="chip">⚖️ Comparer (${Compare.count()})</a>` : ""}
+    </div>`;
+
     layout(
       `<div class="hero-banner"><h1>Le marché en ligne de Côte d'Ivoire</h1>
         <p>Des centaines d'articles de vendeurs près de chez vous. Payez en espèces à la livraison.</p>
@@ -336,18 +422,57 @@
           <span class="hero-pill">💵 Paiement à la livraison</span>
           <span class="hero-pill">🏪 ${Store.all().length} boutiques</span>
         </div></div>` +
+      onboard + tabs + sections +
+      `<div class="section-title">${q.tab === "suivis" ? "Nouveautés de vos boutiques suivies" : hasFilters ? "Résultats" : "À découvrir"}</div>` +
       categoryChips(filters.category) + skeletonGrid(8),
       sidebarFilters(filters)
     );
 
-    // Rendu différé pour laisser apparaître le squelette.
     setTimeout(() => {
-      const list = Products.search(filters);
-      const grid = V().querySelector(".grid");
-      if (grid) grid.outerHTML = gridHTML(list, "Aucun article ne correspond à ces critères.");
+      // Le squelette est le dernier .grid du DOM (les sections utilisent .scroll-row).
+      const grids = V().querySelectorAll(".grid");
+      const target = grids[grids.length - 1];
+      if (target) target.outerHTML = gridHTML(feedList, q.tab === "suivis" ? "Abonnez-vous à des boutiques pour voir leurs nouveautés ici." : "Aucun article ne correspond à ces critères.");
       wireSidebar(filters);
       wireCategoryChips();
-    }, 180);
+      const ob = document.getElementById("onboardBtn");
+      if (ob) ob.addEventListener("click", openCategoryPrefs);
+    }, 160);
+  }
+
+  /** Recommandations basées sur les catégories des favoris + articles vus. */
+  function recommendedProducts(limit) {
+    const user = Auth.current();
+    const catScore = {};
+    if (user) {
+      (DB.get(DB.KEYS.favorites, {})[user.id] || []).forEach((id) => { const p = Products.get(id); if (p) catScore[p.category] = (catScore[p.category] || 0) + 2; });
+      Recent.list().forEach((p) => { catScore[p.category] = (catScore[p.category] || 0) + 1; });
+    }
+    const seen = new Set((user ? Recent.list() : []).map((p) => p.id));
+    let pool = Products.published().filter((p) => !seen.has(p.id));
+    const topCat = Object.keys(catScore).sort((a, b) => catScore[b] - catScore[a])[0];
+    if (topCat) pool.sort((a, b) => (b.category === topCat ? 1 : 0) - (a.category === topCat ? 1 : 0) || (b.views || 0) - (a.views || 0));
+    else pool.sort((a, b) => (b.views || 0) - (a.views || 0));
+    return pool.slice(0, limit || 8);
+  }
+
+  function openCategoryPrefs() {
+    const user = Auth.current();
+    const cur = (user && user.prefCategories) || [];
+    UI.modal({
+      title: "Vos catégories préférées",
+      body: `<p class="text-muted" style="margin:0 0 12px;font-size:13.5px">Sélectionnez ce qui vous intéresse.</p>
+        <div class="zone-chips">${UI.CATEGORIES.map((c) => `<span class="zone-chip ${cur.includes(c.id) ? "on" : ""}" data-cat="${c.id}">${c.icon} ${c.label}</span>`).join("")}</div>`,
+      footer: `<button class="btn btn-ghost" data-close>Plus tard</button><button class="btn btn-primary" id="prefGo">Enregistrer</button>`,
+      onMount(m, close) {
+        m.querySelectorAll(".zone-chip").forEach((c) => c.addEventListener("click", () => c.classList.toggle("on")));
+        m.querySelector("#prefGo").addEventListener("click", () => {
+          const picked = Array.from(m.querySelectorAll(".zone-chip.on")).map((c) => c.getAttribute("data-cat"));
+          Auth.updateProfile({ prefCategories: picked });
+          UI.toast("Préférences enregistrées ✓", "success"); close(); Router.resolve();
+        });
+      },
+    });
   }
 
   function categoryChips(active) {
@@ -379,9 +504,27 @@
             <select id="fSort">
               <option value="recent" ${f.sort === "recent" ? "selected" : ""}>Plus récents</option>
               <option value="popular" ${f.sort === "popular" ? "selected" : ""}>Populaires</option>
+              <option value="rating" ${f.sort === "rating" ? "selected" : ""}>Mieux notés</option>
+              <option value="discount" ${f.sort === "discount" ? "selected" : ""}>Meilleures promos</option>
               <option value="price_asc" ${f.sort === "price_asc" ? "selected" : ""}>Prix croissant</option>
               <option value="price_desc" ${f.sort === "price_desc" ? "selected" : ""}>Prix décroissant</option>
             </select>
+          </label>
+        </div>
+        <div class="filter-group">
+          <span style="font-weight:700;font-size:13px;display:block;margin-bottom:8px">Options</span>
+          <label class="radio-item"><input type="checkbox" id="fPromo" ${f.promoOnly ? "checked" : ""}/> En promotion</label>
+          <label class="radio-item"><input type="checkbox" id="fFree" ${f.freeShip ? "checked" : ""}/> Livraison offerte</label>
+          <label class="radio-item"><input type="checkbox" id="fStock" ${f.inStock ? "checked" : ""}/> En stock</label>
+        </div>
+        <div class="filter-group">
+          <label class="field"><span style="font-weight:700;font-size:13px">État</span>
+            <select id="fCond"><option value="">Tous</option><option value="neuf" ${f.condition === "neuf" ? "selected" : ""}>Neuf</option><option value="occasion" ${f.condition === "occasion" ? "selected" : ""}>Occasion</option></select>
+          </label>
+        </div>
+        <div class="filter-group">
+          <label class="field"><span style="font-weight:700;font-size:13px">Note minimale</span>
+            <select id="fRating"><option value="">Toutes</option><option value="4" ${f.minRating == 4 ? "selected" : ""}>★★★★ et +</option><option value="3" ${f.minRating == 3 ? "selected" : ""}>★★★ et +</option></select>
           </label>
         </div>
         <div class="filter-group">
@@ -412,18 +555,24 @@
     if (!sb) return;
     const apply = () => {
       const q = new URLSearchParams();
-      const cat = f.category;
-      if (cat) q.set("cat", cat);
+      if (f.category) q.set("cat", f.category);
       const commune = sb.querySelector("#fCommune").value;
       const store = sb.querySelector("#fStore").value;
       const sort = sb.querySelector("#fSort").value;
       const min = sb.querySelector("#fMin").value;
       const max = sb.querySelector("#fMax").value;
+      const cond = sb.querySelector("#fCond").value;
+      const rating = sb.querySelector("#fRating").value;
       if (commune) q.set("commune", commune);
       if (store) q.set("store", store);
       if (sort && sort !== "recent") q.set("sort", sort);
       if (min) q.set("min", min);
       if (max) q.set("max", max);
+      if (cond) q.set("cond", cond);
+      if (rating) q.set("rating", rating);
+      if (sb.querySelector("#fPromo").checked) q.set("promo", "1");
+      if (sb.querySelector("#fFree").checked) q.set("free", "1");
+      if (sb.querySelector("#fStock").checked) q.set("stock", "1");
       const qs = q.toString();
       Router.go("#/" + (qs ? "?" + qs : ""));
     };
@@ -463,12 +612,98 @@
   }
 
   /* ============================================================
+     VUE : Bons plans (promos + ventes flash)
+     ============================================================ */
+  function viewDeals() {
+    const now = Date.now();
+    const promos = Products.search({ promoOnly: true, sort: "discount" });
+    const flash = promos.filter((p) => p.promoUntil && p.promoUntil > now && p.promoUntil - now < 3 * 86400000);
+    const others = promos.filter((p) => !flash.includes(p));
+    layout(`
+      <div class="hero-banner" style="background:linear-gradient(120deg,#b91c1c,#f97316)"><h1>🔥 Bons plans du moment</h1>
+        <p>Promotions et ventes flash de toutes les boutiques. Payez à la livraison.</p>
+        <div class="hero-badges"><span class="hero-pill">${promos.length} article(s) en promo</span>${flash.length ? `<span class="hero-pill">⚡ ${flash.length} vente(s) flash</span>` : ""}</div></div>
+      ${flash.length ? `<div class="section-title">⚡ Ventes flash — dépêchez-vous !</div>${gridHTML(flash)}` : ""}
+      <div class="section-title">Toutes les promotions</div>
+      ${gridHTML(others.length ? others : promos, "Aucune promotion en cours pour le moment.")}`);
+  }
+
+  /* ============================================================
+     VUE : Comparateur d'articles
+     ============================================================ */
+  function viewCompare() {
+    const items = Compare.list().map((id) => Products.get(id)).filter((p) => p);
+    if (!items.length) { layout(emptyState("⚖️", "Comparateur vide", "Ajoutez des articles à comparer depuis leur fiche (bouton « Comparer »).", `<a href="#/" class="btn btn-primary">Explorer les articles</a>`)); return; }
+    const rows = [
+      ["Prix", (p) => `<strong style="color:var(--brand)">${UI.fcfa(Products.effectivePrice(p))}</strong>`],
+      ["Prix normal", (p) => Products.promoActive(p) ? `<span style="text-decoration:line-through;color:var(--text-3)">${UI.fcfa(p.price)}</span>` : "—"],
+      ["Boutique", (p) => { const s = Store.get(p.storeId); return s ? `<a href="#/store/${s.id}">${UI.esc(s.name)}</a>` : "—"; }],
+      ["Commune", (p) => { const s = Store.get(p.storeId); return s ? UI.esc(s.commune) : "—"; }],
+      ["Note", (p) => { const r = Products.rating(p.id); return r.count ? UI.starsHTML(r.avg) + ` (${r.count})` : "—"; }],
+      ["État", (p) => p.condition === "occasion" ? "Occasion" : "Neuf"],
+      ["Stock", (p) => p.stock > 0 ? p.stock + " dispo." : `<span class="status annulee">Rupture</span>`],
+    ];
+    layout(`
+      <div class="page-head"><div><div class="page-title">⚖️ Comparateur</div><div class="page-sub">${items.length} article(s)</div></div>
+        <button class="btn btn-ghost" id="clearCompare">Vider</button></div>
+      <div class="table-wrap"><table class="cmp-table">
+        <thead><tr><th></th>${items.map((p) => `<th><a href="#/product/${p.id}"><img src="${UI.safeImg(p.images && p.images[0], p.title)}" alt=""/><div class="cmp-title">${UI.esc(p.title)}</div></a><button class="btn btn-ghost btn-sm mt-8" data-uncmp="${p.id}">Retirer</button></th>`).join("")}</tr></thead>
+        <tbody>${rows.map(([label, fn]) => `<tr><td class="cmp-label">${label}</td>${items.map((p) => `<td>${fn(p)}</td>`).join("")}</tr>`).join("")}
+          <tr><td></td>${items.map((p) => `<td>${p.stock > 0 ? `<button class="btn btn-primary btn-sm" data-addcmp="${p.id}">+ Panier</button>` : "—"}</td>`).join("")}</tr>
+        </tbody></table></div>`);
+    document.getElementById("clearCompare").addEventListener("click", () => { Compare.clear(); Router.resolve(); renderCompareBar(); });
+    V().querySelectorAll("[data-uncmp]").forEach((b) => b.addEventListener("click", () => { Compare.toggle(b.getAttribute("data-uncmp")); Router.resolve(); renderCompareBar(); }));
+    V().querySelectorAll("[data-addcmp]").forEach((b) => b.addEventListener("click", () => { const r = Cart.add(b.getAttribute("data-addcmp"), 1, {}); UI.toast(r.ok ? "Ajouté au panier ✓" : r.error, r.ok ? "success" : "error"); }));
+  }
+
+  /* ============================================================
+     VUE : Centre d'aide / FAQ globale
+     ============================================================ */
+  function viewHelp() {
+    const faqs = [
+      ["Comment passer une commande ?", "Ajoutez des articles au panier, puis validez en renseignant vos coordonnées de livraison. Vous payez en espèces à la réception."],
+      ["Comment se fait le paiement ?", "Uniquement à la livraison, en espèces (cash on delivery). Aucun paiement en ligne n'est demandé."],
+      ["Quels sont les délais de livraison ?", "Ils dépendent de chaque vendeur et de votre commune. Le vendeur vous contacte pour convenir d'un créneau."],
+      ["Puis-je annuler une commande ?", "Oui, tant qu'elle n'est pas livrée, depuis « Mes commandes » en indiquant un motif."],
+      ["Comment contacter un vendeur ?", "Depuis une fiche article, cliquez sur « Poser une question au vendeur » ou utilisez son bouton WhatsApp."],
+      ["Comment suivre ma commande ?", "Dans « Mes commandes », une barre d'étapes indique l'avancement (reçue, confirmée, expédiée, livrée)."],
+      ["Comment utiliser un code promo ?", "Saisissez-le au moment du paiement, dans le champ « Code promo » du récapitulatif."],
+    ];
+    layout(`
+      <div class="page-head"><div><div class="page-title">Centre d'aide</div><div class="page-sub">Questions fréquentes & assistance</div></div></div>
+      <div class="card card-pad">${faqs.map(([q, a]) => `<div class="faq-item"><div class="faq-q">❓ ${UI.esc(q)}</div><div class="faq-a">${UI.esc(a)}</div></div>`).join("")}</div>
+      <div class="card card-pad mt-16">
+        <strong>Besoin d'aide supplémentaire ?</strong>
+        <p class="text-muted" style="margin:6px 0 12px;font-size:14px">Contactez directement la boutique concernée depuis sa vitrine ou une fiche article.</p>
+        <a href="#/" class="btn btn-primary">Parcourir les boutiques</a>
+      </div>`);
+  }
+
+  /** Barre de comparaison flottante (visible dès qu'un article est ajouté). */
+  function renderCompareBar() {
+    const root = document.getElementById("compareBarRoot");
+    if (!root) return;
+    const ids = Compare.list();
+    if (!ids.length || location.hash.indexOf("#/compare") === 0 || location.hash.indexOf("#/seller") === 0) { root.innerHTML = ""; return; }
+    const items = ids.map((id) => Products.get(id)).filter((p) => p);
+    if (!items.length) { root.innerHTML = ""; return; }
+    root.innerHTML = `<div class="compare-bar">
+      <div class="compare-thumbs">${items.map((p) => `<img src="${UI.safeImg(p.images && p.images[0], p.title)}" alt=""/>`).join("")}</div>
+      <a href="#/compare" class="btn btn-primary btn-sm">Comparer (${items.length})</a>
+      <button class="icon-btn" id="cmpBarClear" title="Vider" style="width:34px;height:34px">✕</button>
+    </div>`;
+    const c = document.getElementById("cmpBarClear");
+    if (c) c.addEventListener("click", () => { Compare.clear(); renderCompareBar(); });
+  }
+
+  /* ============================================================
      VUE : Fiche produit
      ============================================================ */
   function viewProduct(params) {
     const p = Products.get(params.id);
     if (!p) { layout(emptyState("😕", "Article introuvable", "Cet article n'existe plus.", `<a href="#/" class="btn btn-primary">Retour à l'accueil</a>`)); return; }
     Products.addView(p.id);
+    Recent.add(p.id);
     const store = Store.get(p.storeId);
     const price = Products.effectivePrice(p);
     const hasPromo = Products.promoActive(p);
@@ -522,13 +757,19 @@
             </button>
             <button class="btn btn-ghost btn-lg" id="pdFav"><span class="pc-fav ${favActive}" style="position:static;box-shadow:none;background:none;width:auto;height:auto"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 21s-6.7-4.35-9.33-8.36C.9 9.7 2.1 6 5.4 6a4.3 4.3 0 0 1 3.6 2 4.3 4.3 0 0 1 3.6-2c3.3 0 4.5 3.7 2.73 6.64C18.7 16.65 12 21 12 21z"/></svg></span>Favori</button>
           </div>
+          <div class="text-muted" style="font-size:13px;margin-top:10px">🚚 Livraison : ${deliveryEstimateText(store)}</div>
           <a href="#/store/${store.id}" class="store-mini">
             <img src="${UI.safeImg(store.logo, store.name)}" alt="" />
             <div style="flex:1"><div class="sm-name">${UI.esc(store.name)}</div>
               <div class="sm-meta">📍 ${UI.esc(store.commune)} · Voir la boutique →</div></div>
           </a>
-          ${!isOwner
-            ? `<button class="btn btn-ghost btn-block mt-8" id="askSeller">${SICON.chat} Poser une question au vendeur</button>`
+          ${!isOwner ? `<div class="flex gap-8 wrap mt-8">
+              <button class="btn btn-ghost btn-sm" id="cmpBtn">${Compare.has(p.id) ? "✓ Dans le comparateur" : "⚖️ Comparer"}</button>
+              <button class="btn btn-ghost btn-sm" id="shareBtn">${SICON.wa} Partager</button>
+              ${p.stock <= 0 ? `<button class="btn btn-ghost btn-sm" id="restockAlert">🔔 Alerte réassort</button>` : `<button class="btn btn-ghost btn-sm" id="priceAlert">🔔 Alerte prix</button>`}
+              <button class="btn btn-ghost btn-sm" id="reportBtn">⚑ Signaler</button>
+            </div>
+            <button class="btn btn-ghost btn-block mt-8" id="askSeller">${SICON.chat} Poser une question au vendeur</button>`
             : `<button class="btn btn-ghost btn-block mt-8" id="posterBtn">🖼️ Générer une affiche promotionnelle</button>`}
         </div>
       </div>
@@ -604,6 +845,48 @@
     const posterBtn = document.getElementById("posterBtn");
     if (posterBtn) posterBtn.addEventListener("click", () => generateProductPoster(p));
 
+    // --- Comparateur ---
+    const cmpBtn = document.getElementById("cmpBtn");
+    if (cmpBtn) cmpBtn.addEventListener("click", () => {
+      const r = Compare.toggle(p.id);
+      if (!r.ok) { UI.toast(r.error, "error"); return; }
+      cmpBtn.textContent = r.added ? "✓ Dans le comparateur" : "⚖️ Comparer";
+      renderCompareBar();
+      if (r.added) UI.toast("Ajouté au comparateur", "success");
+    });
+
+    // --- Partage acheteur (WhatsApp + affiche) ---
+    const shareBtn = document.getElementById("shareBtn");
+    if (shareBtn) shareBtn.addEventListener("click", () => {
+      const price = Products.effectivePrice(p);
+      const txt = `🛍️ ${p.title}\n💰 ${UI.fcfa(price)}\n🏪 ${store.name} — 📍 ${store.commune}\n💵 Paiement à la livraison sur Marché CI.`;
+      UI.modal({
+        title: "Partager cet article",
+        body: `<p class="text-muted" style="margin:0 0 12px;font-size:13.5px">Faites découvrir cet article à vos proches.</p>
+          <div class="flex gap-8 wrap"><button class="btn wa-btn" id="shWa">${SICON.wa} WhatsApp</button>
+          <button class="btn btn-ghost" id="shPoster">🖼️ Créer une affiche</button></div>`,
+        onMount(m, close) {
+          m.querySelector("#shWa").addEventListener("click", () => { waShare(txt); close(); });
+          m.querySelector("#shPoster").addEventListener("click", () => { close(); generateProductPoster(p); });
+        },
+      });
+    });
+
+    // --- Alertes prix / réassort ---
+    const priceAlert = document.getElementById("priceAlert");
+    if (priceAlert) priceAlert.addEventListener("click", () => {
+      if (!Auth.isLogged()) { UI.toast("Connectez-vous pour créer une alerte.", "info"); Router.go("#/login"); return; }
+      openPriceAlertModal(p);
+    });
+    const restockAlert = document.getElementById("restockAlert");
+    if (restockAlert) restockAlert.addEventListener("click", () => {
+      if (!Auth.isLogged()) { UI.toast("Connectez-vous pour créer une alerte.", "info"); Router.go("#/login"); return; }
+      Alerts.add(p.id, "restock", 0);
+      UI.toast("🔔 Vous serez prévenu dès le retour en stock.", "success");
+    });
+    const reportBtn = document.getElementById("reportBtn");
+    if (reportBtn) reportBtn.addEventListener("click", () => openReportModal(p));
+
     // --- Poser une question au vendeur ---
     const ask = document.getElementById("askSeller");
     if (ask) ask.addEventListener("click", () => {
@@ -636,23 +919,32 @@
     else if (!user) head += `<a href="#/login" class="btn btn-ghost btn-sm">Connectez-vous pour noter</a>`;
     head += `</div>`;
 
-    const items = list.length
-      ? list.map((r) => reviewItem(r)).join("")
+    // Tri : les plus utiles d'abord, puis les plus récents.
+    const sorted = list.slice().sort((a, b) => ((b.helpfulBy || []).length - (a.helpfulBy || []).length) || b.createdAt - a.createdAt);
+    const items = sorted.length
+      ? sorted.map((r) => reviewItem(r)).join("")
       : `<p class="text-muted" style="text-align:center;padding:20px 0">Aucun avis pour le moment. Soyez le premier !</p>`;
     return head + `<div class="divider"></div>` + items;
   }
 
   function reviewItem(r) {
     const initials = (r.userName || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+    const me = Auth.current();
+    const helpful = (r.helpfulBy || []).length;
+    const votedByMe = me && (r.helpfulBy || []).includes(me.id);
     return `<div class="review" data-review="${r.id}">
       <div class="review-head">
         <div class="review-avatar">${UI.esc(initials)}</div>
-        <div><strong>${UI.esc(r.userName)}</strong> ${UI.starsHTML(r.rating)}
+        <div><strong>${UI.esc(r.userName)}</strong> ${r.verified ? `<span class="verified-badge">✓ Achat vérifié</span>` : ""} ${UI.starsHTML(r.rating)}
           <div class="notif-time">${UI.timeAgo(r.createdAt)}</div></div>
       </div>
       ${r.comment ? `<p style="margin:6px 0 0">${UI.esc(r.comment)}</p>` : ""}
-      ${r.reply ? `<div class="review-reply"><strong>Réponse du vendeur :</strong> ${UI.esc(r.reply.text)}</div>`
-        : `<button class="btn btn-ghost btn-sm mt-8 reply-btn" data-reply="${r.id}" hidden>Répondre</button>`}
+      ${r.photo ? `<img class="review-photo" src="${UI.safeImg(r.photo, "avis")}" data-revphoto="${r.id}" alt="Photo de l'avis" />` : ""}
+      <div class="flex gap-8 mt-8" style="align-items:center">
+        <button class="btn btn-ghost btn-sm helpful-btn ${votedByMe ? "active" : ""}" data-helpful="${r.id}">👍 Utile${helpful ? ` (${helpful})` : ""}</button>
+        ${!r.reply ? `<button class="btn btn-ghost btn-sm reply-btn" data-reply="${r.id}" hidden>Répondre</button>` : ""}
+      </div>
+      ${r.reply ? `<div class="review-reply"><strong>Réponse du vendeur :</strong> ${UI.esc(r.reply.text)}</div>` : ""}
     </div>`;
   }
 
@@ -671,6 +963,14 @@
         b.addEventListener("click", () => openReplyModal(b.getAttribute("data-reply"), targetId, targetType));
       });
     }
+    // Vote « utile ».
+    box.querySelectorAll("[data-helpful]").forEach((b) => b.addEventListener("click", () => {
+      if (!Auth.isLogged()) { UI.toast("Connectez-vous pour voter.", "info"); return; }
+      Products.voteHelpful(b.getAttribute("data-helpful"));
+      Router.resolve();
+    }));
+    // Photo d'avis → visionneuse.
+    box.querySelectorAll("[data-revphoto]").forEach((img) => img.addEventListener("click", () => openLightbox([img.getAttribute("src")], 0)));
   }
 
   function starPicker(id) {
@@ -689,18 +989,25 @@
   }
 
   function openReviewModal(targetId, targetType) {
-    let rating = 0;
+    let rating = 0, photo = "";
     UI.modal({
       title: "Votre avis",
       body: `<div class="field"><label>Note</label>${starPicker("revStars")}</div>
         <div class="field mt-16"><label>Commentaire (optionnel)</label>
-        <textarea id="revComment" placeholder="Partagez votre expérience…"></textarea></div>`,
+        <textarea id="revComment" placeholder="Partagez votre expérience…"></textarea></div>
+        <div class="field mt-8"><label>Ajouter une photo (optionnel)</label>
+        <input type="file" id="revPhoto" accept="image/*" /><div class="upl-previews" id="revPhotoPrev"></div></div>`,
       footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-primary" id="submitReview">Publier</button>`,
       onMount(m, close) {
         wireStarPicker("revStars", (v) => (rating = v));
+        m.querySelector("#revPhoto").addEventListener("change", async (e) => {
+          const f = e.target.files[0]; if (!f) return;
+          try { photo = await UI.fileToDataURL(f, { maxSize: 900, maxBytes: 90 * 1024 }); m.querySelector("#revPhotoPrev").innerHTML = `<div class="upl-thumb"><img src="${photo}" alt=""/></div>`; }
+          catch (x) { UI.toast("Image invalide.", "error"); }
+        });
         m.querySelector("#submitReview").addEventListener("click", () => {
           if (!rating) { UI.toast("Sélectionnez une note.", "error"); return; }
-          const res = Products.addReview({ targetType, targetId, rating, comment: m.querySelector("#revComment").value });
+          const res = Products.addReview({ targetType, targetId, rating, comment: m.querySelector("#revComment").value, photo });
           if (res.ok) { UI.toast("Merci pour votre avis !", "success"); close(); Router.resolve(); }
           else UI.toast(res.error, "error");
         });
@@ -909,6 +1216,8 @@
             <h3 style="margin:0 0 4px">Coordonnées de livraison</h3>
             <p class="text-muted" style="margin:0 0 18px;font-size:13.5px">Le règlement s'effectue en espèces à la réception.</p>
             <form id="checkoutForm" class="form-grid">
+              ${(user.addresses || []).length ? `<div class="field"><label>Adresse enregistrée</label>
+                <select id="dSaved"><option value="">— Saisir manuellement —</option>${user.addresses.map((a) => `<option value="${a.id}">${UI.esc(a.label || a.name)} — ${UI.esc(a.commune)}</option>`).join("")}</select></div>` : ""}
               <div class="form-grid form-2col">
                 <div class="field"><label>Nom du destinataire *</label><input id="dName" value="${UI.esc(user.name)}" required /><span class="err">Nom requis.</span></div>
                 <div class="field"><label>Téléphone *</label><input id="dPhone" value="${UI.esc(user.phone)}" placeholder="07 00 00 00 00" required /><span class="err">Numéro invalide.</span></div>
@@ -983,6 +1292,18 @@
       else { btn.disabled = false; btn.textContent = "Valider la commande"; }
     }
     document.getElementById("dCommune").addEventListener("change", refreshSummary);
+
+    // Sélection d'une adresse enregistrée (carnet d'adresses).
+    const savedSel = document.getElementById("dSaved");
+    if (savedSel) savedSel.addEventListener("change", () => {
+      const a = (Auth.current().addresses || []).find((x) => x.id === savedSel.value);
+      if (!a) return;
+      document.getElementById("dName").value = a.name;
+      document.getElementById("dPhone").value = a.phone;
+      document.getElementById("dCommune").value = a.commune;
+      document.getElementById("dAddress").value = a.address;
+      refreshSummary();
+    });
 
     // Application d'un code promo.
     document.getElementById("applyCoupon").addEventListener("click", () => {
@@ -1069,6 +1390,31 @@
 
     V().querySelectorAll("[data-cancel]").forEach((b) => b.addEventListener("click", () => openCancelModal(b.getAttribute("data-cancel"), "buyer", viewOrders)));
     V().querySelectorAll("[data-invoice]").forEach((b) => b.addEventListener("click", () => printInvoice(Orders.get(b.getAttribute("data-invoice")))));
+    V().querySelectorAll("[data-reorder]").forEach((b) => b.addEventListener("click", () => {
+      const o = Orders.get(b.getAttribute("data-reorder")); let n = 0;
+      o.items.forEach((it) => { const r = Cart.add(it.productId, it.qty, it.variant); if (r.ok) n++; });
+      if (n) { UI.toast(`${n} article(s) remis au panier ✓`, "success"); Router.go("#/cart"); }
+      else UI.toast("Ces articles ne sont plus disponibles.", "error");
+    }));
+    V().querySelectorAll("[data-rate]").forEach((b) => b.addEventListener("click", () => openRateDeliveryModal(b.getAttribute("data-rate"))));
+  }
+
+  function openRateDeliveryModal(orderId) {
+    let stars = 0;
+    UI.modal({
+      title: "Noter la livraison",
+      body: `<div class="field"><label>Votre satisfaction</label>${starPicker("delStars")}</div>
+        <div class="field mt-16"><label>Commentaire (optionnel)</label><textarea id="delComment" placeholder="Rapidité, état du colis, contact du livreur…"></textarea></div>`,
+      footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-primary" id="delGo">Envoyer</button>`,
+      onMount(m, close) {
+        wireStarPicker("delStars", (v) => (stars = v));
+        m.querySelector("#delGo").addEventListener("click", () => {
+          if (!stars) { UI.toast("Sélectionnez une note.", "error"); return; }
+          Orders.rateDelivery(orderId, stars, m.querySelector("#delComment").value);
+          UI.toast("Merci pour votre retour !", "success"); close(); viewOrders();
+        });
+      },
+    });
   }
 
   /** Modale d'annulation de commande avec motif. */
@@ -1112,8 +1458,11 @@
       <div class="flex-between mt-8"><span class="text-muted">💵 À payer à la livraison (${UI.esc(o.delivery.commune)})</span><strong style="font-size:17px;color:var(--brand)">${UI.fcfa(o.total)}</strong></div>
       <div class="flex gap-8 wrap mt-8">
         <button class="btn btn-ghost btn-sm" data-invoice="${o.id}">🧾 Reçu / facture</button>
+        <button class="btn btn-ghost btn-sm" data-reorder="${o.id}">🔁 Commander à nouveau</button>
+        ${o.status === "livree" && !o.deliveryRating ? `<button class="btn btn-accent btn-sm" data-rate="${o.id}">⭐ Noter la livraison</button>` : ""}
         ${(o.status === "en_attente" || o.status === "confirmee") ? `<button class="btn btn-danger btn-sm" data-cancel="${o.id}">Annuler la commande</button>` : ""}
       </div>
+      ${o.deliveryRating ? `<div class="text-muted" style="font-size:13px;margin-top:6px">Votre note de livraison : ${UI.starsHTML(o.deliveryRating.stars)}${o.deliveryRating.comment ? " — " + UI.esc(o.deliveryRating.comment) : ""}</div>` : ""}
     </div>`;
   }
 
@@ -1279,11 +1628,38 @@
     const store = Store.byOwner(user.id);
     const communeOpts = UI.COMMUNES.map((c) => `<option value="${c}" ${user.commune === c ? "selected" : ""}>${c}</option>`).join("");
 
-    layout(`
-      <div class="page-head"><div><div class="page-title">Mon profil</div>
-        <div class="page-sub">${UI.esc(user.email)}</div></div></div>
+    const pts = Loyalty.points(user.id);
+    const tier = Loyalty.tier(pts);
+    const progress = tier.next ? Math.min(100, Math.round(((pts - tier.min) / (tier.next - tier.min)) * 100)) : 100;
+    const refCode = Loyalty.referralCode(user);
+    const addresses = user.addresses || [];
+    const prefs = user.notifPrefs || { newProduct: true, orderStatus: true, messages: true };
+    const avatarSrc = user.avatar ? UI.safeImg(user.avatar, user.name) : "";
 
-      <div class="card card-pad">
+    layout(`
+      <div class="page-head"><div style="display:flex;align-items:center;gap:14px">
+        <div style="position:relative">
+          <div class="avatar-lg" id="avatarPreview">${avatarSrc ? `<img src="${avatarSrc}" alt=""/>` : UI.esc((user.name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase())}</div>
+          <button class="avatar-edit" id="avatarEdit" title="Changer la photo">📷</button>
+          <input type="file" id="avatarInput" accept="image/*" hidden />
+        </div>
+        <div><div class="page-title">${UI.esc(user.name)}</div><div class="page-sub">${UI.esc(user.email)}</div></div>
+      </div></div>
+
+      <div class="card card-pad" style="background:linear-gradient(120deg,var(--brand-dark),var(--brand));color:#fff">
+        <div class="flex-between wrap">
+          <div><div style="font-size:13px;opacity:.9">Fidélité Marché CI</div>
+            <div style="font-size:22px;font-weight:800">${tier.icon} ${tier.name} · ${pts} pts</div></div>
+          <div style="text-align:right;font-size:12.5px;opacity:.9">${tier.next ? `Plus que ${tier.next - pts} pts pour le niveau suivant` : "Niveau maximum atteint 🎉"}</div>
+        </div>
+        <div class="goal-bar" style="margin-top:12px;background:rgba(255,255,255,.25)"><div class="goal-fill" style="width:${progress}%;background:#fff;color:var(--brand-dark)">${progress >= 12 ? progress + "%" : ""}</div></div>
+        <div class="flex-between wrap mt-16" style="gap:8px">
+          <div style="font-size:13px">🎁 Parrainage — code : <strong style="letter-spacing:1px">${refCode}</strong></div>
+          <button class="btn btn-sm" id="refShare" style="background:#fff;color:var(--brand-dark)">${SICON.wa} Inviter un ami</button>
+        </div>
+      </div>
+
+      <div class="card card-pad mt-16">
         <form id="profForm" class="form-grid">
           <div class="form-grid form-2col">
             <div class="field"><label>Nom complet</label><input id="pName" value="${UI.esc(user.name)}" /></div>
@@ -1293,6 +1669,29 @@
           <div class="field"><label>Adresse / point de repère</label><textarea id="pAddress">${UI.esc(user.address)}</textarea></div>
           <div><button class="btn btn-primary" type="submit">Enregistrer</button></div>
         </form>
+      </div>
+
+      <div class="section-title">Carnet d'adresses</div>
+      <div class="card card-pad">
+        <div id="addrList">${addresses.length ? addresses.map((a) => addressRow(a)).join("") : `<p class="text-muted" style="margin:0">Aucune adresse enregistrée. Ajoutez-en pour un paiement plus rapide.</p>`}</div>
+        <button class="btn btn-ghost btn-sm mt-16" id="addAddr">+ Ajouter une adresse</button>
+      </div>
+
+      <div class="section-title">Préférences & accessibilité</div>
+      <div class="card card-pad form-grid">
+        <div class="field"><label>Taille du texte</label>
+          <select id="pFont">
+            <option value="normal" ${(user.fontScale || "normal") === "normal" ? "selected" : ""}>Normale</option>
+            <option value="large" ${user.fontScale === "large" ? "selected" : ""}>Grande</option>
+            <option value="xlarge" ${user.fontScale === "xlarge" ? "selected" : ""}>Très grande</option>
+          </select></div>
+        <div class="field"><label>Notifications</label>
+          <label class="radio-item"><input type="checkbox" id="prefNew" ${prefs.newProduct !== false ? "checked" : ""}/> Nouveautés & baisses de prix des boutiques suivies</label>
+          <label class="radio-item"><input type="checkbox" id="prefOrd" ${prefs.orderStatus !== false ? "checked" : ""}/> Suivi de mes commandes</label>
+          <label class="radio-item"><input type="checkbox" id="prefMsg" ${prefs.messages !== false ? "checked" : ""}/> Messages des vendeurs</label>
+        </div>
+        <div><button class="btn btn-primary btn-sm" id="savePrefs">Enregistrer les préférences</button></div>
+        <a href="#/help" class="btn btn-ghost btn-sm" style="align-self:flex-start">❓ Centre d'aide</a>
       </div>
 
       <div class="section-title">Espace vendeur</div>
@@ -1320,9 +1719,83 @@
       if (res.ok) { UI.toast("Profil mis à jour ✓", "success"); renderHeaderUser(); }
       else UI.toast(res.error, "error");
     });
+
+    // Avatar.
+    document.getElementById("avatarEdit").addEventListener("click", () => document.getElementById("avatarInput").click());
+    document.getElementById("avatarInput").addEventListener("change", async (e) => {
+      const f = e.target.files[0]; if (!f) return;
+      try { const url = await UI.fileToDataURL(f, { maxSize: 300, maxBytes: 40 * 1024 }); Auth.updateProfile({ avatar: url }); UI.toast("Photo mise à jour ✓", "success"); renderHeaderUser(); viewProfile(); }
+      catch (x) { UI.toast("Image invalide.", "error"); }
+    });
+
+    // Parrainage.
+    document.getElementById("refShare").addEventListener("click", () => {
+      waShare(`Rejoignez-moi sur Marché CI 🛒, la marketplace ivoirienne (paiement à la livraison) ! Utilisez mon code de parrainage : ${refCode}`);
+    });
+
+    // Carnet d'adresses.
+    document.getElementById("addAddr").addEventListener("click", () => openAddressModal(null, viewProfile));
+    V().querySelectorAll("[data-editaddr]").forEach((b) => b.addEventListener("click", () => openAddressModal(b.getAttribute("data-editaddr"), viewProfile)));
+    V().querySelectorAll("[data-deladdr]").forEach((b) => b.addEventListener("click", () => {
+      const list = (Auth.current().addresses || []).filter((a) => a.id !== b.getAttribute("data-deladdr"));
+      Auth.updateProfile({ addresses: list }); viewProfile();
+    }));
+
+    // Préférences.
+    document.getElementById("savePrefs").addEventListener("click", () => {
+      Auth.updateProfile({ notifPrefs: { newProduct: document.getElementById("prefNew").checked, orderStatus: document.getElementById("prefOrd").checked, messages: document.getElementById("prefMsg").checked } });
+      UI.toast("Préférences enregistrées ✓", "success");
+    });
+    document.getElementById("pFont").addEventListener("change", (e) => {
+      Auth.updateProfile({ fontScale: e.target.value }); applyFontScale(e.target.value); UI.toast("Taille du texte mise à jour.", "success");
+    });
+
     document.getElementById("logoutBtn").addEventListener("click", () => {
       Auth.logout(); renderHeaderUser(); UI.refreshBadges(); UI.toast("Déconnecté.", "info"); Router.go("#/");
     });
+  }
+
+  function addressRow(a) {
+    return `<div class="flex-between wrap" style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <div><strong>${UI.esc(a.label || a.name)}</strong><div class="text-muted" style="font-size:13px">${UI.esc(a.name)} · ${UI.esc(a.phone)} — ${UI.esc(a.commune)}, ${UI.esc(a.address)}</div></div>
+      <div class="flex gap-8"><button class="btn btn-ghost btn-sm" data-editaddr="${a.id}">Modifier</button><button class="icon-action danger" data-deladdr="${a.id}" title="Supprimer">${SICON.trash}</button></div>
+    </div>`;
+  }
+
+  function openAddressModal(addrId, after) {
+    const user = Auth.current();
+    const a = addrId ? (user.addresses || []).find((x) => x.id === addrId) : null;
+    const communeOpts = UI.COMMUNES.map((c) => `<option value="${c}" ${a && a.commune === c ? "selected" : ""}>${c}</option>`).join("");
+    UI.modal({
+      title: addrId ? "Modifier l'adresse" : "Nouvelle adresse",
+      body: `<div class="form-grid">
+        <div class="field"><label>Libellé</label><input id="aLabel" value="${UI.esc(a ? a.label : "")}" placeholder="Ex : Maison, Bureau" /></div>
+        <div class="form-grid form-2col">
+          <div class="field"><label>Nom du destinataire</label><input id="aName" value="${UI.esc(a ? a.name : user.name)}" /></div>
+          <div class="field"><label>Téléphone</label><input id="aPhone" value="${UI.esc(a ? a.phone : user.phone)}" /></div>
+        </div>
+        <div class="field"><label>Commune</label><select id="aCommune">${communeOpts}</select></div>
+        <div class="field"><label>Adresse / point de repère</label><textarea id="aAddress">${UI.esc(a ? a.address : "")}</textarea></div>
+      </div>`,
+      footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-primary" id="aGo">Enregistrer</button>`,
+      onMount(m, close) {
+        m.querySelector("#aGo").addEventListener("click", () => {
+          const rec = { id: addrId || DB.uid("adr"), label: m.querySelector("#aLabel").value.trim(), name: m.querySelector("#aName").value.trim(), phone: m.querySelector("#aPhone").value.trim(), commune: m.querySelector("#aCommune").value, address: m.querySelector("#aAddress").value.trim() };
+          if (!rec.name || !Auth.validPhone(rec.phone) || !rec.address) { UI.toast("Renseignez nom, téléphone et adresse valides.", "error"); return; }
+          let list = (Auth.current().addresses || []).slice();
+          const i = list.findIndex((x) => x.id === rec.id);
+          if (i >= 0) list[i] = rec; else list.push(rec);
+          Auth.updateProfile({ addresses: list });
+          UI.toast("Adresse enregistrée ✓", "success"); close(); if (after) after();
+        });
+      },
+    });
+  }
+
+  /** Applique la taille d'affichage choisie (accessibilité) via un zoom global. */
+  function applyFontScale(scale) {
+    const map = { normal: "100%", large: "112%", xlarge: "125%" };
+    document.documentElement.style.zoom = map[scale] || "100%";
   }
 
   /* ============================================================
@@ -1758,6 +2231,7 @@
     SB().innerHTML = "";
     clearPageTimers();
     renderSellerBottomNav(opts.active);
+    renderCompareBar();
   }
 
   function statusLabel(s) {
@@ -3045,7 +3519,10 @@
   function renderHeaderUser() {
     const user = Auth.current();
     const initials = user ? user.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase() : "?";
-    document.getElementById("avatarInitials").textContent = user ? initials : "👤";
+    const av = document.getElementById("avatarInitials");
+    const btn = document.getElementById("avatarBtn");
+    if (user && user.avatar) { btn.style.backgroundImage = `url("${UI.safeImg(user.avatar, user.name)}")`; btn.style.backgroundSize = "cover"; av.textContent = ""; }
+    else { btn.style.backgroundImage = ""; av.textContent = user ? initials : "👤"; }
 
     const dd = document.getElementById("userDropdown");
     if (!user) {
@@ -3083,11 +3560,55 @@
   }
 
   function wireHeader() {
-    // Recherche.
+    // Recherche + autocomplétion + vocal.
+    const input = document.getElementById("headerSearchInput");
+    const suggest = document.getElementById("searchSuggest");
     document.getElementById("headerSearchForm").addEventListener("submit", (e) => {
       e.preventDefault();
-      const v = document.getElementById("headerSearchInput").value.trim();
+      const v = input.value.trim();
+      SearchHist.add(v);
+      suggest.hidden = true;
       Router.go("#/search?q=" + encodeURIComponent(v));
+    });
+
+    function renderSuggest() {
+      const q = input.value.trim().toLowerCase();
+      let html = "";
+      if (!q) {
+        const hist = SearchHist.list();
+        const popular = ["pagne", "smartphone", "attiéké", "sac", "écouteurs"];
+        if (hist.length) html += `<div class="sg-head">Récentes <button type="button" id="sgClear">effacer</button></div>` + hist.slice(0, 6).map((t) => `<button type="button" class="sg-item" data-term="${UI.esc(t)}">🕘 ${UI.esc(t)}</button>`).join("");
+        html += `<div class="sg-head">Populaires</div>` + popular.map((t) => `<button type="button" class="sg-item" data-term="${t}">🔥 ${t}</button>`).join("");
+      } else {
+        const res = Products.search({ q }).slice(0, 6);
+        const stores = Store.all().filter((s) => s.name.toLowerCase().includes(q)).slice(0, 3);
+        html += res.map((p) => `<button type="button" class="sg-item" data-go="#/product/${p.id}"><img src="${UI.safeImg(p.images && p.images[0], p.title)}" alt=""/>${UI.esc(p.title)} <span class="sg-price">${UI.fcfa(Products.effectivePrice(p))}</span></button>`).join("");
+        html += stores.map((s) => `<button type="button" class="sg-item" data-go="#/store/${s.id}">🏪 ${UI.esc(s.name)}</button>`).join("");
+        if (!res.length && !stores.length) html = `<div class="sg-head">Aucune suggestion — appuyez sur Entrée</div>`;
+      }
+      suggest.innerHTML = html;
+      suggest.hidden = false;
+      suggest.querySelectorAll("[data-term]").forEach((b) => b.addEventListener("click", () => { input.value = b.getAttribute("data-term"); SearchHist.add(input.value); suggest.hidden = true; Router.go("#/search?q=" + encodeURIComponent(input.value)); }));
+      suggest.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => { suggest.hidden = true; input.value = ""; Router.go(b.getAttribute("data-go")); }));
+      const clr = document.getElementById("sgClear");
+      if (clr) clr.addEventListener("click", (e) => { e.stopPropagation(); SearchHist.clear(); renderSuggest(); });
+    }
+    input.addEventListener("focus", renderSuggest);
+    input.addEventListener("input", renderSuggest);
+    document.addEventListener("click", (e) => { if (!document.getElementById("headerSearchForm").contains(e.target)) suggest.hidden = true; });
+
+    // Recherche vocale (Web Speech API — 100 % navigateur).
+    const micBtn = document.getElementById("micBtn");
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { micBtn.style.display = "none"; }
+    else micBtn.addEventListener("click", () => {
+      const rec = new SR();
+      rec.lang = "fr-FR"; rec.interimResults = false; rec.maxAlternatives = 1;
+      micBtn.classList.add("listening");
+      rec.onresult = (ev) => { const t = ev.results[0][0].transcript; input.value = t; SearchHist.add(t); Router.go("#/search?q=" + encodeURIComponent(t)); };
+      rec.onerror = () => UI.toast("Recherche vocale indisponible.", "info");
+      rec.onend = () => micBtn.classList.remove("listening");
+      try { rec.start(); } catch (e) { micBtn.classList.remove("listening"); }
     });
     // Thème.
     document.getElementById("themeToggle").addEventListener("click", () => {
@@ -3132,6 +3653,9 @@
   function registerRoutes() {
     Router.on("#/", viewHome);
     Router.on("#/search", viewSearch);
+    Router.on("#/deals", viewDeals);
+    Router.on("#/compare", viewCompare);
+    Router.on("#/help", viewHelp);
     Router.on("#/product/:id", viewProduct);
     Router.on("#/store/:id", viewStore);
     Router.on("#/cart", viewCart);
@@ -3171,6 +3695,9 @@
     // Thème persistant (ou préférence système).
     const savedTheme = DB.get(DB.KEYS.theme, null) || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
     applyTheme(savedTheme);
+    // Accessibilité : taille d'affichage mémorisée.
+    const cu = Auth.current();
+    if (cu && cu.fontScale) applyFontScale(cu.fontScale);
     // En-tête + délégation + badges.
     wireHeader();
     wireGlobalDelegation();

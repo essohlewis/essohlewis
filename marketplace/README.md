@@ -50,6 +50,20 @@ Données de démo : **4 boutiques**, **16 articles**, quelques avis, abonnements
 - **Abonnement aux vendeurs** → notification à chaque nouvel article publié.
 - Système d'**avis / notes en étoiles** sur les articles et les boutiques.
 
+#### 💡 Innovations de l'espace client
+- **Recherche intelligente** : autocomplétion, suggestions, historique, recherches populaires, et **recherche vocale** (Web Speech API).
+- **Filtres avancés & tri** : promo, livraison offerte, en stock, état, note minimale ; tri par nouveauté/popularité/**note**/**meilleures promos**/prix.
+- **Page « Bons plans »** : promotions + **ventes flash** avec comptes à rebours.
+- **« Vus récemment » + recommandations personnalisées**, **onglet « Suivis »**, **onboarding** (catégories préférées → fil sur mesure).
+- **Comparateur d'articles** (jusqu'à 4, barre flottante).
+- **Alerte prix** et **alerte réassort** (notifications automatiques).
+- **Partage d'article** (WhatsApp + affiche), **estimation des frais de livraison** sur la fiche selon la commune.
+- **Réachat rapide** et **notation de la livraison** après réception.
+- **Avis enrichis** : badge **« achat vérifié »**, **photo**, vote « utile », tri par pertinence.
+- **Carnet d'adresses** + **avatar de profil**, sélection rapide au checkout.
+- **Programme de fidélité** (points, paliers Bronze/Argent/Or) + **parrainage**.
+- **Centre d'aide / FAQ**, **signalement** d'article, **préférences de notifications**, **taille du texte** (accessibilité).
+
 ### Vendeur — espace dédié (back-office)
 L'espace vendeur est un **véritable back-office distinct de l'espace client** : barre latérale sombre de navigation, en-tête « Espace Vendeur » (le chrome d'achat — recherche, panier, favoris, nav basse mobile — est masqué), et zone de travail professionnelle.
 

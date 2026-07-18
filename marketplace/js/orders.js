@@ -215,6 +215,14 @@ window.MP = window.MP || {};
     return { ok: true };
   }
 
+  /** L'acheteur note son expérience de livraison (1–5 étoiles). */
+  function rateDelivery(orderId, stars, comment) {
+    const order = get(orderId);
+    if (!order) return { ok: false };
+    DB.update(K, orderId, { deliveryRating: { stars: Math.max(1, Math.min(5, Math.round(stars))), comment: String(comment || "").trim(), at: Date.now() } });
+    return { ok: true };
+  }
+
   /**
    * Le vendeur ajuste les frais de livraison d'une commande.
    * Recalcule le total et notifie l'acheteur.
@@ -235,6 +243,6 @@ window.MP = window.MP || {};
   }
 
   window.MP.Orders = {
-    STATUS, STATUS_FLOW, checkout, get, byBuyer, byStore, setStatus, setPaid, setDeliveryFee, cancel, validateDelivery,
+    STATUS, STATUS_FLOW, checkout, get, byBuyer, byStore, setStatus, setPaid, setDeliveryFee, cancel, rateDelivery, validateDelivery,
   };
 })();

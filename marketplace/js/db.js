@@ -26,6 +26,9 @@ window.MP = window.MP || {};
     coupons: "coupons",          // [ {id, storeId, code, type, value, ...} ]
     messages: "messages",        // [ {id, storeId, buyerId, from, text, ...} ]
     expenses: "expenses",        // [ {id, storeId, label, amount, category, createdAt} ]
+    alerts: "alerts",            // [ {id, userId, productId, type:"price"|"restock", targetPrice} ]
+    recent: "recent",            // { userId: [productId] } — articles vus récemment
+    searchHist: "searchhist",    // { userId: [terme] } — historique de recherche
     session: "session",          // { userId }
     theme: "theme",              // "light" | "dark"
     seeded: "seeded",            // bool

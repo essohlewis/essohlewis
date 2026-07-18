@@ -31,8 +31,17 @@ window.MP = window.MP || {};
    * @param {string} userId destinataire
    * @param {object} data { type, message, link, icon }
    */
+  // Correspondance type de notification -> clé de préférence utilisateur.
+  const PREF_KEY = { new_product: "newProduct", order_status: "orderStatus", review_reply: "orderStatus", message: "messages" };
+
   function push(userId, data) {
     if (!userId) return;
+    // Respecte les préférences de notification du destinataire (si définies).
+    const recipient = DB.find(DB.KEYS.users, userId);
+    if (recipient && recipient.notifPrefs) {
+      const key = PREF_KEY[data.type];
+      if (key && recipient.notifPrefs[key] === false) return;
+    }
     const notif = {
       id: DB.uid("ntf"),
       userId,

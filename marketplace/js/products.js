@@ -78,9 +78,11 @@ window.MP = window.MP || {};
 
     if (!DB.update(K, id, product)) return { ok: false, error: "Espace de stockage plein : réduisez le nombre ou la taille des images." };
 
-    // Alerte baisse de prix aux clients ayant mis l'article en favori
-    // (lorsque la promo devient active).
+    // Alerte baisse de prix aux clients ayant mis l'article en favori.
+    const priceDropped = effectivePrice(product) < effectivePrice(existing);
     if (!wasPromo && promoActive(product)) _notifyFavoritersPromo(product);
+    // Alertes prix/réassort personnalisées des clients.
+    if (window.MP.Alerts) window.MP.Alerts.trigger(get(id), { restocked: existing.stock <= 0 && product.stock > 0, priceDropped });
 
     // Notifie les abonnés si l'article passe de non-publié à publié.
     if (!wasPublished && product.status === "published") {
@@ -152,7 +154,13 @@ window.MP = window.MP || {};
 
   /** Mise à jour rapide d'un seul champ (stock, featured…) sans re-notifier. */
   function quickSet(id, patch) {
-    return DB.update(K, id, patch);
+    const before = get(id);
+    const res = DB.update(K, id, patch);
+    // Réassort : notifie les alertes si le stock repasse au-dessus de 0.
+    if (res && window.MP.Alerts && before && before.stock <= 0 && res.stock > 0) {
+      window.MP.Alerts.trigger(res, { restocked: true });
+    }
+    return res;
   }
 
   /** Notifie les clients ayant mis l'article en favori d'une baisse de prix. */
@@ -191,10 +199,15 @@ window.MP = window.MP || {};
    * Ajoute un avis (produit ou boutique).
    * @param {object} { targetType, targetId, rating, comment }
    */
-  function addReview({ targetType, targetId, rating, comment }) {
+  function addReview({ targetType, targetId, rating, comment, photo }) {
     const user = window.MP.Auth.current();
     if (!user) return { ok: false, error: "Connexion requise." };
     if (!(rating >= 1 && rating <= 5)) return { ok: false, error: "Note requise." };
+    // Achat vérifié : l'utilisateur a commandé cet article (ou dans cette boutique).
+    const orders = window.MP.Orders.byBuyer(user.id);
+    const verified = targetType === "product"
+      ? orders.some((o) => o.items.some((it) => it.productId === targetId))
+      : orders.some((o) => o.storeId === targetId);
     const review = {
       id: DB.uid("rev"),
       targetType,
@@ -203,11 +216,27 @@ window.MP = window.MP || {};
       userName: user.name,
       rating: Math.round(rating),
       comment: String(comment || "").trim(),
+      photo: photo || "",
+      verified,
+      helpfulBy: [],
       reply: null,
       createdAt: Date.now(),
     };
     DB.insert(DB.KEYS.reviews, review);
     return { ok: true, review };
+  }
+
+  /** Vote « utile » sur un avis (bascule). */
+  function voteHelpful(reviewId) {
+    const user = window.MP.Auth.current();
+    if (!user) return { ok: false, error: "Connexion requise." };
+    const rev = DB.find(DB.KEYS.reviews, reviewId);
+    if (!rev) return { ok: false };
+    const by = rev.helpfulBy || [];
+    const i = by.indexOf(user.id);
+    if (i === -1) by.push(user.id); else by.splice(i, 1);
+    DB.update(DB.KEYS.reviews, reviewId, { helpfulBy: by });
+    return { ok: true, count: by.length };
   }
 
   /** Réponse du vendeur à un avis -> notifie l'auteur de l'avis. */
@@ -253,11 +282,19 @@ window.MP = window.MP || {};
     if (f.commune) list = list.filter((p) => { const s = storeMap[p.storeId]; return s && s.commune === f.commune; });
     if (f.minPrice != null && f.minPrice !== "") list = list.filter((p) => effectivePrice(p) >= Number(f.minPrice));
     if (f.maxPrice != null && f.maxPrice !== "") list = list.filter((p) => effectivePrice(p) <= Number(f.maxPrice));
+    // Filtres avancés.
+    if (f.promoOnly) list = list.filter((p) => promoActive(p));
+    if (f.inStock) list = list.filter((p) => p.stock > 0);
+    if (f.condition) list = list.filter((p) => p.condition === f.condition);
+    if (f.freeShip) list = list.filter((p) => { const s = storeMap[p.storeId]; return s && ((s.defaultFee || 0) === 0 || (s.freeShipThreshold && effectivePrice(p) >= s.freeShipThreshold)); });
+    if (f.minRating) list = list.filter((p) => rating(p.id).avg >= Number(f.minRating));
 
     switch (f.sort) {
       case "price_asc": list.sort((a, b) => effectivePrice(a) - effectivePrice(b)); break;
       case "price_desc": list.sort((a, b) => effectivePrice(b) - effectivePrice(a)); break;
       case "popular": list.sort((a, b) => (b.views || 0) - (a.views || 0)); break;
+      case "rating": list.sort((a, b) => rating(b.id).avg - rating(a.id).avg); break;
+      case "discount": list.sort((a, b) => (promoActive(b) ? 1 - effectivePrice(b) / b.price : 0) - (promoActive(a) ? 1 - effectivePrice(a) / a.price : 0)); break;
       default: list.sort((a, b) => b.createdAt - a.createdAt); // récents
     }
     return list;
@@ -266,6 +303,6 @@ window.MP = window.MP || {};
   window.MP.Products = {
     all, get, byStore, published, create, update, remove,
     addView, decrementStock, addCartCount, effectivePrice, promoActive, quickSet, margin,
-    reviews, rating, addReview, replyReview, search,
+    reviews, rating, addReview, voteHelpful, replyReview, search,
   };
 })();
