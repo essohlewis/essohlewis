@@ -40,7 +40,7 @@ window.MP = window.MP || {};
         gallery: [UI.placeholder("Atelier"), UI.placeholder("Wax"), UI.placeholder("Défilé"), UI.placeholder("Boutique"), UI.placeholder("Couture")],
         description: "Boutique de mode féminine et pagnes africains de qualité. Confection sur mesure disponible.",
         category: "mode", commune: "Cocody", hours: "Lun–Sam : 09h–20h",
-        whatsapp: "0702030405", socials: { instagram: "elegance_ci", facebook: "EleganceAbidjan" },
+        whatsapp: "0702030405", socials: { instagram: "elegance_ci", facebook: "EleganceAbidjan", tiktok: "elegance.abidjan" },
         revenueSim: 0, createdAt: now - 30 * day,
       },
       {

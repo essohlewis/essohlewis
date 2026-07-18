@@ -334,6 +334,14 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
 .store-hero-meta { display: flex; gap: 14px; flex-wrap: wrap; color: var(--text-3); font-size: 13px; margin-top: 6px; }
 .store-hero-meta span { display: inline-flex; align-items: center; gap: 5px; }
 
+/* ---- Réseaux sociaux cliquables (vitrine) ---- */
+.social-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 4px; }
+.social-btn { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 15px; border-radius: var(--r-full); border: 1.5px solid var(--border); font-weight: 700; font-size: 13.5px; color: var(--text); background: var(--surface); transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast), transform var(--t-fast); }
+.social-btn svg { width: 18px; height: 18px; color: var(--sc); transition: color var(--t-fast); }
+.social-btn:hover { background: var(--sc); color: #fff; border-color: var(--sc); }
+.social-btn:hover svg { color: #fff; }
+.social-btn:active { transform: scale(.96); }
+
 /* ---- Personnalisation vitrine : slogan, couleur, galerie, lightbox ---- */
 .store-page { --store-accent: var(--brand); }
 .store-slogan { font-style: italic; color: var(--store-accent); font-weight: 600; margin: 4px 0 2px; font-size: 14.5px; }

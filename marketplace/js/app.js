@@ -131,6 +131,39 @@
     return `<div class="grid">${s}</div>`;
   }
 
+  /** Construit une URL de profil réseau social sûre (https). */
+  function socialUrl(type, val) {
+    val = String(val || "").trim();
+    if (!val) return "";
+    if (/^https?:\/\//i.test(val)) return val; // lien complet déjà fourni
+    const handle = val.replace(/^@/, "").replace(/\s+/g, "");
+    const h = encodeURIComponent(handle);
+    if (type === "instagram") return "https://instagram.com/" + h;
+    if (type === "facebook") return "https://facebook.com/" + h;
+    if (type === "tiktok") return "https://tiktok.com/@" + h;
+    return "";
+  }
+
+  // Icônes des réseaux sociaux (monochromes, colorées via --sc).
+  const SOCIAL_SVG = {
+    instagram: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M12 2.2c3.2 0 3.6 0 4.9.1 1.2.1 1.8.3 2.2.4.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.2.4.4 1 .4 2.2.1 1.3.1 1.7.1 4.9s0 3.6-.1 4.9c-.1 1.2-.3 1.8-.4 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.2-1 .4-2.2.4-1.3.1-1.7.1-4.9.1s-3.6 0-4.9-.1c-1.2-.1-1.8-.3-2.2-.4-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.9-1.4-.2-.4-.4-1-.4-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.9c.1-1.2.3-1.8.4-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.2 1-.4 2.2-.4C8.4 2.2 8.8 2.2 12 2.2zm0 3.2A6.6 6.6 0 1 0 18.6 12 6.6 6.6 0 0 0 12 5.4zm0 10.9A4.3 4.3 0 1 1 16.3 12 4.3 4.3 0 0 1 12 16.3zM18.8 5a1.5 1.5 0 1 0 1.5 1.5A1.5 1.5 0 0 0 18.8 5z'/></svg>",
+    facebook: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M22 12a10 10 0 1 0-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.2c-1.2 0-1.6.8-1.6 1.5V12h2.7l-.4 2.9h-2.3v7A10 10 0 0 0 22 12z'/></svg>",
+    tiktok: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M16.6 5.8a4.3 4.3 0 0 1-2.6-3.8h-3v13.2a2.4 2.4 0 1 1-2.4-2.4c.2 0 .5 0 .7.1v-3a5.4 5.4 0 1 0 4.7 5.4V9.3a7.2 7.2 0 0 0 4.2 1.3v-3a4.3 4.3 0 0 1-1.6-1.8z'/></svg>",
+  };
+  const SOCIAL_COLOR = { instagram: "#E1306C", facebook: "#1877F2", tiktok: "#ee1d52" };
+
+  /** Rangée de boutons réseaux sociaux cliquables (ouvrent l'app/plateforme). */
+  function socialLinksHTML(store) {
+    const s = store.socials || {};
+    const links = ["instagram", "facebook", "tiktok"].map((k) => {
+      const url = socialUrl(k, s[k]);
+      if (!url) return "";
+      const label = k.charAt(0).toUpperCase() + k.slice(1);
+      return `<a class="social-btn" href="${UI.esc(url)}" target="_blank" rel="noopener noreferrer" style="--sc:${SOCIAL_COLOR[k]}" title="Ouvrir ${label}">${SOCIAL_SVG[k]}<span>${label}</span></a>`;
+    }).filter(Boolean).join("");
+    return links ? `<div class="social-row">${links}</div>` : "";
+  }
+
   /** Visionneuse d'images plein écran (galerie) avec navigation. */
   function openLightbox(images, start) {
     if (!images || !images.length) return;
@@ -548,10 +581,6 @@
     const subscribed = user && Store.isSubscribed(user.id, store.id);
     const isOwner = user && user.id === store.ownerId;
 
-    const socials = [];
-    if (store.socials.instagram) socials.push(`Instagram : @${UI.esc(store.socials.instagram)}`);
-    if (store.socials.facebook) socials.push(`Facebook : ${UI.esc(store.socials.facebook)}`);
-
     // Couleur d'accent personnalisée de la boutique (sécurisée : #hex uniquement).
     const accent = /^#[0-9a-fA-F]{3,8}$/.test(store.themeColor || "") ? store.themeColor : "";
     const accentStyle = accent ? ` style="--store-accent:${accent}"` : "";
@@ -586,7 +615,7 @@
       ${store.closed ? `<div class="store-ribbon closed">🔒 Boutique momentanément fermée${store.closedMsg ? " — " + UI.esc(store.closedMsg) : ""}. Les commandes sont suspendues.</div>` : ""}
       ${store.promoBanner ? `<div class="store-ribbon promo">📣 ${UI.esc(store.promoBanner)}</div>` : ""}
       <p class="text-muted" style="max-width:720px">${UI.esc(store.description)}</p>
-      ${socials.length ? `<p class="text-muted" style="font-size:13px">${socials.join(" · ")}</p>` : ""}
+      ${socialLinksHTML(store)}
       ${gallery.length ? `<div class="section-title">Galerie</div>
         <div class="gallery-grid">${gallery.map((img, i) => `<button class="gal-item" data-gal="${i}"><img src="${UI.safeImg(img, store.name)}" alt="Photo ${i + 1} de ${UI.esc(store.name)}" loading="lazy" /></button>`).join("")}</div>` : ""}
       <div class="section-title">Articles (${products.length})</div>
@@ -1101,9 +1130,10 @@
             <div class="field"><label>WhatsApp</label><input id="sWa" value="${UI.esc(s.whatsapp || "")}" placeholder="07 00 00 00 00" /></div>
           </div>
           <div class="form-grid form-2col">
-            <div class="field"><label>Instagram</label><input id="sIg" value="${UI.esc((s.socials && s.socials.instagram) || "")}" placeholder="pseudo" /></div>
-            <div class="field"><label>Facebook</label><input id="sFb" value="${UI.esc((s.socials && s.socials.facebook) || "")}" placeholder="page" /></div>
+            <div class="field"><label>Instagram</label><input id="sIg" value="${UI.esc((s.socials && s.socials.instagram) || "")}" placeholder="pseudo (sans @) ou lien" /></div>
+            <div class="field"><label>Facebook</label><input id="sFb" value="${UI.esc((s.socials && s.socials.facebook) || "")}" placeholder="nom de page ou lien" /></div>
           </div>
+          <div class="field"><label>TikTok</label><input id="sTt" value="${UI.esc((s.socials && s.socials.tiktok) || "")}" placeholder="pseudo (sans @) ou lien" /></div>
           <div class="field"><label>Objectif de vente mensuel (FCFA) <span class="hint">— suivi de progression sur votre tableau de bord</span></label>
             <input type="number" id="sGoal" min="0" value="${s.salesGoal || ""}" placeholder="Ex : 500000" /></div>
 
@@ -1169,7 +1199,11 @@
         closedMsg: document.getElementById("sClosedMsg").value.trim(),
         promoBanner: document.getElementById("sPromoBanner").value.trim(),
         defaultFee: Number(document.getElementById("sDefaultFee").value) || 0,
-        socials: { instagram: document.getElementById("sIg").value.trim(), facebook: document.getElementById("sFb").value.trim() },
+        socials: {
+          instagram: document.getElementById("sIg").value.trim(),
+          facebook: document.getElementById("sFb").value.trim(),
+          tiktok: document.getElementById("sTt").value.trim(),
+        },
       };
       if (editing) {
         const res = Store.update(s.id, data);

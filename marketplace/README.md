@@ -91,6 +91,7 @@ L'espace vendeur est un **véritable back-office distinct de l'espace client** :
 - **Galerie photos** de la boutique (ambiance, coulisses…) avec **visionneuse plein écran** (lightbox, navigation clavier/flèches).
 - **Slogan / accroche** affiché sous le nom.
 - **Couleur personnalisée** de la boutique (accent appliqué à la vitrine).
+- **Réseaux sociaux cliquables** (Instagram, Facebook, TikTok) : le vendeur saisit un pseudo ou un lien, et des boutons ouvrent directement l'app/la plateforme (nouvel onglet ; ouverture native sur mobile).
 
 **Boutique & marketing**
 - **Mode ouvert / fermé (vacances)** : suspend les commandes + bandeau sur la vitrine.
