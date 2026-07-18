@@ -40,6 +40,9 @@ window.MP = window.MP || {};
       hours: data.hours || "Lun–Sam : 08h–19h",
       whatsapp: data.whatsapp || "",
       socials: data.socials || {},
+      slogan: data.slogan || "",          // accroche courte affichée en vitrine
+      themeColor: data.themeColor || "",  // couleur d'accent de la vitrine
+      gallery: data.gallery || [],        // galerie photos (base64)
       revenueSim: 0,
       salesGoal: Number(data.salesGoal) || 0, // objectif de vente mensuel (FCFA)
       closed: false,                          // mode fermé / vacances

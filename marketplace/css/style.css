@@ -334,6 +334,30 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
 .store-hero-meta { display: flex; gap: 14px; flex-wrap: wrap; color: var(--text-3); font-size: 13px; margin-top: 6px; }
 .store-hero-meta span { display: inline-flex; align-items: center; gap: 5px; }
 
+/* ---- Personnalisation vitrine : slogan, couleur, galerie, lightbox ---- */
+.store-page { --store-accent: var(--brand); }
+.store-slogan { font-style: italic; color: var(--store-accent); font-weight: 600; margin: 4px 0 2px; font-size: 14.5px; }
+.store-accent-btn { background: var(--store-accent); color: #fff; }
+.store-accent-btn:hover { background: var(--store-accent); filter: brightness(1.07); }
+/* Filet coloré au-dessus de la bannière, aux couleurs de la boutique */
+.store-page .store-hero { border-top: 4px solid var(--store-accent); }
+
+.gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-bottom: 8px; }
+.gal-item { padding: 0; border: none; border-radius: var(--r); overflow: hidden; cursor: pointer; aspect-ratio: 1/1; background: var(--surface-3); box-shadow: var(--shadow-sm); position: relative; }
+.gal-item img { width: 100%; height: 100%; object-fit: cover; transition: transform var(--t); }
+.gal-item::after { content: "🔍"; position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.35); color: #fff; opacity: 0; transition: opacity var(--t-fast); font-size: 22px; }
+.gal-item:hover img { transform: scale(1.08); }
+.gal-item:hover::after { opacity: 1; }
+
+.lightbox { position: fixed; inset: 0; z-index: 300; background: rgba(8,10,14,.92); display: grid; place-items: center; animation: fadeIn .2s ease; }
+.lb-img { max-width: 92vw; max-height: 86vh; border-radius: var(--r); box-shadow: var(--shadow-lg); animation: modalIn .25s ease; }
+.lb-close { position: absolute; top: 18px; right: 20px; width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,.14); color: #fff; font-size: 20px; }
+.lb-close:hover { background: rgba(255,255,255,.28); }
+.lb-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 52px; height: 52px; border-radius: 50%; background: rgba(255,255,255,.14); color: #fff; font-size: 30px; line-height: 1; display: grid; place-items: center; }
+.lb-nav:hover { background: rgba(255,255,255,.28); }
+.lb-prev { left: 16px; } .lb-next { right: 16px; }
+.lb-count { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 13px; font-weight: 600; background: rgba(255,255,255,.14); padding: 5px 14px; border-radius: var(--r-full); }
+
 /* ================= FORMULAIRES ================= */
 .form-grid { display: grid; gap: 16px; }
 .form-2col { grid-template-columns: 1fr 1fr; }

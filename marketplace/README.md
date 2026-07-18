@@ -86,6 +86,12 @@ L'espace vendeur est un **véritable back-office distinct de l'espace client** :
 - **Bon de livraison imprimable** (+ impression groupée des commandes confirmées).
 - **Filtres commandes** par statut, période et recherche (n°/client) ; **export CSV** (Excel).
 
+**Vitrine personnalisée**
+- **Photo de profil (logo)** et **bannière de couverture** uploadables.
+- **Galerie photos** de la boutique (ambiance, coulisses…) avec **visionneuse plein écran** (lightbox, navigation clavier/flèches).
+- **Slogan / accroche** affiché sous le nom.
+- **Couleur personnalisée** de la boutique (accent appliqué à la vitrine).
+
 **Boutique & marketing**
 - **Mode ouvert / fermé (vacances)** : suspend les commandes + bandeau sur la vitrine.
 - **Bandeau promotionnel** de la vitrine.

@@ -131,6 +131,34 @@
     return `<div class="grid">${s}</div>`;
   }
 
+  /** Visionneuse d'images plein écran (galerie) avec navigation. */
+  function openLightbox(images, start) {
+    if (!images || !images.length) return;
+    let idx = Math.max(0, Math.min(start || 0, images.length - 1));
+    const root = document.createElement("div");
+    root.className = "lightbox";
+    root.innerHTML =
+      `<button class="lb-close" aria-label="Fermer">✕</button>` +
+      (images.length > 1 ? `<button class="lb-nav lb-prev" aria-label="Précédent">‹</button><button class="lb-nav lb-next" aria-label="Suivant">›</button>` : "") +
+      `<img class="lb-img" alt="" /><div class="lb-count"></div>`;
+    document.body.appendChild(root);
+    document.body.style.overflow = "hidden";
+    const img = root.querySelector(".lb-img");
+    const count = root.querySelector(".lb-count");
+    function render() { img.src = images[idx]; if (count) count.textContent = idx + 1 + " / " + images.length; }
+    function close() { root.remove(); document.body.style.overflow = ""; document.removeEventListener("keydown", onKey); }
+    function prev() { idx = (idx - 1 + images.length) % images.length; render(); }
+    function next() { idx = (idx + 1) % images.length; render(); }
+    function onKey(e) { if (e.key === "Escape") close(); else if (e.key === "ArrowLeft") prev(); else if (e.key === "ArrowRight") next(); }
+    root.querySelector(".lb-close").addEventListener("click", close);
+    root.addEventListener("click", (e) => { if (e.target === root) close(); });
+    const p = root.querySelector(".lb-prev"), nx = root.querySelector(".lb-next");
+    if (p) p.addEventListener("click", prev);
+    if (nx) nx.addEventListener("click", next);
+    document.addEventListener("keydown", onKey);
+    render();
+  }
+
   /* ============================================================
      VUE : Accueil (fil de toutes les boutiques)
      ============================================================ */
@@ -524,13 +552,20 @@
     if (store.socials.instagram) socials.push(`Instagram : @${UI.esc(store.socials.instagram)}`);
     if (store.socials.facebook) socials.push(`Facebook : ${UI.esc(store.socials.facebook)}`);
 
+    // Couleur d'accent personnalisée de la boutique (sécurisée : #hex uniquement).
+    const accent = /^#[0-9a-fA-F]{3,8}$/.test(store.themeColor || "") ? store.themeColor : "";
+    const accentStyle = accent ? ` style="--store-accent:${accent}"` : "";
+    const gallery = (store.gallery || []).filter(Boolean);
+
     layout(`
+      <div class="store-page"${accentStyle}>
       <div class="store-hero">
         <div class="store-banner"><img src="${UI.safeImg(store.banner, store.name)}" alt="" /></div>
         <div class="store-hero-body">
           <img class="store-logo" src="${UI.safeImg(store.logo, store.name)}" alt="${UI.esc(store.name)}" />
           <div class="store-hero-info">
             <h1>${UI.esc(store.name)}</h1>
+            ${store.slogan ? `<div class="store-slogan">“${UI.esc(store.slogan)}”</div>` : ""}
             <div class="store-hero-meta">
               <span>📍 ${UI.esc(store.commune)}</span>
               <span>🏷️ ${UI.esc(UI.categoryLabel(store.category))}</span>
@@ -542,7 +577,7 @@
           <div class="flex gap-8 wrap">
             ${isOwner
               ? `<a href="#/seller/dashboard" class="btn btn-ghost">Gérer ma boutique</a>`
-              : `<button class="btn ${subscribed ? "btn-ghost" : "btn-primary"}" id="subBtn">${subscribed ? "✓ Abonné" : "S'abonner"}</button>`}
+              : `<button class="btn ${subscribed ? "btn-ghost" : "store-accent-btn"}" id="subBtn">${subscribed ? "✓ Abonné" : "S'abonner"}</button>`}
             ${store.whatsapp ? `<a class="btn wa-btn" href="https://wa.me/225${UI.esc(store.whatsapp.replace(/\D/g, ""))}" target="_blank" rel="noopener">
               <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.9.9-2.7-.2-.3A8 8 0 1 1 12 20zm4.4-6c-.2-.1-1.4-.7-1.6-.8s-.4-.1-.5.1-.6.8-.8 1-.3.2-.5.1a6.5 6.5 0 0 1-3.2-2.8c-.2-.4.2-.4.6-1.2.1-.2 0-.3 0-.5s-.5-1.3-.7-1.7-.4-.4-.5-.4h-.5a1 1 0 0 0-.7.3A3 3 0 0 0 6 8.9c0 1.8 1.3 3.5 1.5 3.7s2.6 4 6.3 5.4c2.2.8 2.6.6 3.1.6s1.4-.6 1.6-1.1.2-1 .1-1.1-.3-.2-.5-.3z"/></svg>WhatsApp</a>` : ""}
           </div>
@@ -552,11 +587,21 @@
       ${store.promoBanner ? `<div class="store-ribbon promo">📣 ${UI.esc(store.promoBanner)}</div>` : ""}
       <p class="text-muted" style="max-width:720px">${UI.esc(store.description)}</p>
       ${socials.length ? `<p class="text-muted" style="font-size:13px">${socials.join(" · ")}</p>` : ""}
+      ${gallery.length ? `<div class="section-title">Galerie</div>
+        <div class="gallery-grid">${gallery.map((img, i) => `<button class="gal-item" data-gal="${i}"><img src="${UI.safeImg(img, store.name)}" alt="Photo ${i + 1} de ${UI.esc(store.name)}" loading="lazy" /></button>`).join("")}</div>` : ""}
       <div class="section-title">Articles (${products.length})</div>
       ${gridHTML(products, "Cette boutique n'a pas encore publié d'article.")}
       <div class="section-title">Avis de la boutique</div>
       <div class="card card-pad" id="reviewsBox">${reviewsHTML(store.id, "store")}</div>
+      </div>
     `);
+
+    // Galerie -> visionneuse plein écran.
+    if (gallery.length) {
+      V().querySelectorAll("[data-gal]").forEach((b) =>
+        b.addEventListener("click", () => openLightbox(gallery.map((g) => UI.safeImg(g, store.name)), Number(b.getAttribute("data-gal"))))
+      );
+    }
 
     const subBtn = document.getElementById("subBtn");
     if (subBtn) subBtn.addEventListener("click", () => {
@@ -1035,11 +1080,18 @@
       <div class="card card-pad" style="max-width:840px">
         <form id="storeForm" class="form-grid">
           <div class="form-grid form-2col">
-            <div class="field"><label>Logo</label>${uploaderHTML("logoUp", s.logo ? [s.logo] : [], false)}</div>
-            <div class="field"><label>Bannière</label>${uploaderHTML("bannerUp", s.banner ? [s.banner] : [], false)}</div>
+            <div class="field"><label>Logo (photo de profil)</label>${uploaderHTML("logoUp", s.logo ? [s.logo] : [], false)}</div>
+            <div class="field"><label>Bannière (photo de couverture)</label>${uploaderHTML("bannerUp", s.banner ? [s.banner] : [], false)}</div>
           </div>
           <div class="field"><label>Nom de la boutique *</label><input id="sName" value="${UI.esc(s.name || "")}" required /></div>
+          <div class="form-grid form-2col">
+            <div class="field"><label>Slogan / accroche <span class="hint">(affiché sous le nom)</span></label><input id="sSlogan" value="${UI.esc(s.slogan || "")}" placeholder="Ex : La mode africaine à petit prix" maxlength="80" /></div>
+            <div class="field"><label>Couleur de la boutique</label>
+              <div class="flex gap-8" style="align-items:center"><input type="color" id="sColor" value="${UI.esc(s.themeColor || "#f97316")}" style="width:52px;height:42px;padding:2px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2)" />
+              <span class="hint">Personnalise la vitrine.</span></div></div>
+          </div>
           <div class="field"><label>Description</label><textarea id="sDesc" placeholder="Présentez votre boutique…">${UI.esc(s.description || "")}</textarea></div>
+          <div class="field"><label>Galerie photos <span class="hint">— ambiance, boutique, coulisses (plusieurs photos)</span></label>${uploaderHTML("galUp", s.gallery || [], true)}</div>
           <div class="form-grid form-2col">
             <div class="field"><label>Catégorie</label><select id="sCat">${catOpts}</select></div>
             <div class="field"><label>Commune</label><select id="sCommune">${communeOpts}</select></div>
@@ -1096,11 +1148,15 @@
 
     const logoUp = wireUploader("logoUp", s.logo ? [s.logo] : [], false);
     const bannerUp = wireUploader("bannerUp", s.banner ? [s.banner] : [], false);
+    const galUp = wireUploader("galUp", s.gallery || [], true);
 
     document.getElementById("storeForm").addEventListener("submit", (e) => {
       e.preventDefault();
       const data = {
         name: document.getElementById("sName").value,
+        slogan: document.getElementById("sSlogan").value.trim(),
+        themeColor: document.getElementById("sColor").value,
+        gallery: galUp.get(),
         description: document.getElementById("sDesc").value,
         category: document.getElementById("sCat").value,
         commune: document.getElementById("sCommune").value,
@@ -1155,12 +1211,13 @@
 
     // --- Score de complétude + checklist d'onboarding ---
     const checklist = [
-      ["Logo de la boutique", !!store.logo, "#/seller/store"],
-      ["Bannière", !!store.banner, "#/seller/store"],
+      ["Logo (photo de profil)", !!store.logo, "#/seller/store"],
+      ["Bannière (couverture)", !!store.banner, "#/seller/store"],
+      ["Slogan de la boutique", !!store.slogan, "#/seller/store"],
+      ["Galerie photos", (store.gallery || []).length > 0, "#/seller/store"],
       ["Description", (store.description || "").length > 10, "#/seller/store"],
       ["Contact WhatsApp", !!store.whatsapp, "#/seller/store"],
       ["Au moins 1 article publié", publishedCount > 0, "#/seller/product/new"],
-      ["Frais de livraison configurés", (store.defaultFee || 0) > 0 || Object.keys(store.deliveryFees || {}).length > 0, "#/seller/store"],
       ["Objectif de vente défini", (store.salesGoal || 0) > 0, "#/seller/store"],
     ];
     const doneCount = checklist.filter((c) => c[1]).length;

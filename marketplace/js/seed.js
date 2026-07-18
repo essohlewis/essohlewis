@@ -35,6 +35,9 @@ window.MP = window.MP || {};
       {
         id: "sto_1", ownerId: "usr_v1", name: "Élégance Abidjan",
         logo: UI.placeholder("Élégance"), banner: UI.placeholder("Mode"),
+        slogan: "La mode africaine qui vous ressemble",
+        themeColor: "#d6336c",
+        gallery: [UI.placeholder("Atelier"), UI.placeholder("Wax"), UI.placeholder("Défilé"), UI.placeholder("Boutique"), UI.placeholder("Couture")],
         description: "Boutique de mode féminine et pagnes africains de qualité. Confection sur mesure disponible.",
         category: "mode", commune: "Cocody", hours: "Lun–Sam : 09h–20h",
         whatsapp: "0702030405", socials: { instagram: "elegance_ci", facebook: "EleganceAbidjan" },
@@ -43,6 +46,9 @@ window.MP = window.MP || {};
       {
         id: "sto_2", ownerId: "usr_v2", name: "HighTech CI",
         logo: UI.placeholder("HighTech"), banner: UI.placeholder("Tech"),
+        slogan: "La technologie à portée de main",
+        themeColor: "#2563eb",
+        gallery: [UI.placeholder("Store"), UI.placeholder("Phones"), UI.placeholder("Gadgets")],
         description: "Smartphones, accessoires et gadgets électroniques. Garantie et service après-vente.",
         category: "electronique", commune: "Marcory", hours: "Lun–Sam : 08h30–19h",
         whatsapp: "0703040506", socials: { instagram: "hightech_ci" },
