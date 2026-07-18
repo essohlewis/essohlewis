@@ -49,6 +49,7 @@ window.MP = window.MP || {};
       closedMsg: "",                          // message affiché quand fermé
       promoBanner: "",                        // bandeau promotionnel de la vitrine
       defaultFee: Number(data.defaultFee) || 0, // frais de livraison par défaut
+      freeShipThreshold: Number(data.freeShipThreshold) || 0, // livraison offerte dès X FCFA (0 = jamais)
       deliveryFees: data.deliveryFees || {},  // { commune: frais }
       zones: data.zones || [],                // communes desservies (vide = toutes)
       createdAt: Date.now(),

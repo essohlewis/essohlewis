@@ -6,7 +6,7 @@
 (function () {
   "use strict";
 
-  const { DB, UI, Auth, Store, Products, Cart, Orders, Notifications, Router, Seed } = window.MP;
+  const { DB, UI, Auth, Store, Products, Cart, Orders, Notifications, Router, Seed, Coupons, Messages } = window.MP;
 
   const V = () => document.getElementById("view");
   const SB = () => document.getElementById("sidebar");
@@ -162,6 +162,82 @@
       return `<a class="social-btn" href="${UI.esc(url)}" target="_blank" rel="noopener noreferrer" style="--sc:${SOCIAL_COLOR[k]}" title="Ouvrir ${label}">${SOCIAL_SVG[k]}<span>${label}</span></a>`;
     }).filter(Boolean).join("");
     return links ? `<div class="social-row">${links}</div>` : "";
+  }
+
+  /** Génère une affiche promotionnelle (canvas) téléchargeable + partage. */
+  function generateProductPoster(p) {
+    const store = Store.get(p.storeId);
+    const accent = /^#[0-9a-fA-F]{3,8}$/.test(store.themeColor || "") ? store.themeColor : "#f97316";
+    const price = Products.effectivePrice(p);
+    const promo = Products.promoActive(p);
+    const W = 1080, H = 1350;
+    const canvas = document.createElement("canvas");
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext("2d");
+
+    function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+
+    function draw(img) {
+      // Fond
+      ctx.fillStyle = "#0e1117"; ctx.fillRect(0, 0, W, H);
+      // Bandeau haut (couleur boutique)
+      ctx.fillStyle = accent; ctx.fillRect(0, 0, W, 150);
+      ctx.fillStyle = "#fff"; ctx.font = "bold 52px Segoe UI, Arial"; ctx.textBaseline = "middle";
+      ctx.fillText(store.name.slice(0, 22), 60, 75);
+      ctx.font = "500 30px Segoe UI, Arial"; ctx.globalAlpha = .9;
+      ctx.fillText("📍 " + store.commune, 60, 118); ctx.globalAlpha = 1;
+      // Image produit
+      const iy = 190, ih = 720;
+      ctx.save(); roundRect(60, iy, W - 120, ih, 36); ctx.clip();
+      if (img) {
+        const ratio = Math.max((W - 120) / img.width, ih / img.height);
+        const dw = img.width * ratio, dh = img.height * ratio;
+        ctx.drawImage(img, 60 + (W - 120 - dw) / 2, iy + (ih - dh) / 2, dw, dh);
+      } else { ctx.fillStyle = accent; ctx.fillRect(60, iy, W - 120, ih); }
+      ctx.restore();
+      // Badge promo
+      if (promo) { ctx.fillStyle = "#e11d48"; roundRect(80, iy + 24, 190, 66, 33); ctx.fill(); ctx.fillStyle = "#fff"; ctx.font = "bold 40px Segoe UI, Arial"; ctx.textAlign = "center"; ctx.fillText("-" + Math.round((1 - price / p.price) * 100) + "%", 175, iy + 58); ctx.textAlign = "left"; }
+      // Titre (2 lignes max)
+      ctx.fillStyle = "#fff"; ctx.font = "bold 54px Segoe UI, Arial";
+      const words = p.title.split(" "); let line = "", y = 990; const lines = [];
+      words.forEach((w) => { if (ctx.measureText(line + w).width > W - 140) { lines.push(line.trim()); line = w + " "; } else line += w + " "; });
+      lines.push(line.trim());
+      lines.slice(0, 2).forEach((ln, i) => ctx.fillText(ln, 60, y + i * 62));
+      // Prix
+      y += lines.slice(0, 2).length * 62 + 20;
+      ctx.fillStyle = accent; ctx.font = "bold 88px Segoe UI, Arial";
+      ctx.fillText(UI.fcfa(price), 60, y);
+      if (promo) { const pw = ctx.measureText(UI.fcfa(price)).width; ctx.fillStyle = "#8a909c"; ctx.font = "40px Segoe UI, Arial"; ctx.fillText(UI.fcfa(p.price), 80 + pw, y + 4); ctx.beginPath(); ctx.strokeStyle = "#8a909c"; ctx.lineWidth = 3; ctx.moveTo(80 + pw, y + 2); ctx.lineTo(80 + pw + ctx.measureText(UI.fcfa(p.price)).width, y + 2); ctx.stroke(); }
+      // Pied
+      ctx.fillStyle = "#161b22"; roundRect(0, H - 150, W, 150, 0); ctx.fill();
+      ctx.fillStyle = "#e8ebf0"; ctx.font = "500 34px Segoe UI, Arial";
+      ctx.fillText("💵 Paiement à la livraison" + (store.whatsapp ? "  ·  📞 " + store.whatsapp : ""), 60, H - 95);
+      ctx.fillStyle = accent; ctx.font = "bold 30px Segoe UI, Arial";
+      ctx.fillText("🛒 Marché CI", 60, H - 48);
+
+      const dataUrl = canvas.toDataURL("image/png");
+      showPosterModal(dataUrl, p, store);
+    }
+
+    const src = (p.images && p.images[0]) || "";
+    if (/^data:image\/|^https?:\/\//.test(src)) {
+      const img = new Image();
+      img.onload = () => draw(img);
+      img.onerror = () => draw(null);
+      img.src = src;
+    } else draw(null);
+  }
+
+  function showPosterModal(dataUrl, p, store) {
+    const waText = `🛍️ ${p.title}\n💰 ${UI.fcfa(Products.effectivePrice(p))}\n🏪 ${store.name} — 📍 ${store.commune}\n💵 Paiement à la livraison sur Marché CI.`;
+    UI.modal({
+      title: "Affiche promotionnelle",
+      body: `<div style="text-align:center"><img src="${dataUrl}" alt="Affiche" style="max-width:100%;border-radius:var(--r);box-shadow:var(--shadow)" />
+        <p class="text-muted" style="font-size:12.5px;margin:12px 0 0">Téléchargez l'image puis publiez-la sur WhatsApp/statut, Facebook ou Instagram.</p></div>`,
+      footer: `<a class="btn btn-primary" id="dlPoster" download="affiche-${slugify(p.title) || "article"}.png" href="${dataUrl}">${SICON.download} Télécharger</a>
+        <button class="btn wa-btn" id="waPoster">${SICON.wa} Texte WhatsApp</button>`,
+      onMount(m) { m.querySelector("#waPoster").addEventListener("click", () => waShare(waText)); },
+    });
   }
 
   /** Visionneuse d'images plein écran (galerie) avec navigation. */
@@ -356,6 +432,7 @@
     const closed = !!store.closed;
     const out = p.stock <= 0 || closed;
     const favActive = Fav.has(p.id) ? "active" : "";
+    const isOwner = Auth.isLogged() && Auth.current().id === store.ownerId;
 
     const sizeSel = p.variants.sizes && p.variants.sizes.length
       ? `<div class="variant-row"><label>Taille</label><div class="variant-opts" id="sizeOpts">
@@ -384,7 +461,7 @@
             ${hasPromo ? `<span class="pd-price-old">${UI.fcfa(p.price)}</span>` : ""}
             ${hasPromo && p.promoUntil ? `<span class="tag promo" style="position:static">Jusqu'au ${UI.dateFR(p.promoUntil)}</span>` : ""}
           </div>
-          <div class="text-muted" style="font-size:14px">${closed ? "🔒 Boutique fermée — commandes suspendues" : (p.stock <= 0 ? "❌ Rupture de stock" : "✅ En stock : " + p.stock + " disponible(s)")}</div>
+          <div class="text-muted" style="font-size:14px">${closed ? "🔒 Boutique fermée — commandes suspendues" : (p.stock <= 0 ? "❌ Rupture de stock" + (p.restockDate && p.restockDate > Date.now() ? ` — réappro prévu le ${UI.dateFR(p.restockDate)}` : "") : "✅ En stock : " + p.stock + " disponible(s)")}</div>
           <p class="pd-desc">${UI.esc(p.description)}</p>
           ${sizeSel}${colorSel}
           <div class="variant-row"><label>Quantité</label>
@@ -402,6 +479,9 @@
             <div style="flex:1"><div class="sm-name">${UI.esc(store.name)}</div>
               <div class="sm-meta">📍 ${UI.esc(store.commune)} · Voir la boutique →</div></div>
           </a>
+          ${!isOwner
+            ? `<button class="btn btn-ghost btn-block mt-8" id="askSeller">${SICON.chat} Poser une question au vendeur</button>`
+            : `<button class="btn btn-ghost btn-block mt-8" id="posterBtn">🖼️ Générer une affiche promotionnelle</button>`}
         </div>
       </div>
       <div class="section-title">Avis & notes</div>
@@ -456,6 +536,22 @@
       const star = document.querySelector("#pdFav .pc-fav");
       star.classList.toggle("active", added);
       UI.toast(added ? "Ajouté aux favoris ❤️" : "Retiré des favoris", added ? "success" : "info");
+    });
+
+    // --- Affiche promotionnelle (vendeur propriétaire) ---
+    const posterBtn = document.getElementById("posterBtn");
+    if (posterBtn) posterBtn.addEventListener("click", () => generateProductPoster(p));
+
+    // --- Poser une question au vendeur ---
+    const ask = document.getElementById("askSeller");
+    if (ask) ask.addEventListener("click", () => {
+      if (!Auth.isLogged()) { UI.toast("Connectez-vous pour contacter le vendeur.", "info"); Router.go("#/login"); return; }
+      const u = Auth.current();
+      // Pré-remplit un premier message référant l'article s'il n'y a pas encore d'échange.
+      if (!Messages.conversation(store.id, u.id).length) {
+        Messages.send({ storeId: store.id, buyerId: u.id, buyerName: u.name, from: "buyer", text: `Bonjour, je suis intéressé(e) par « ${p.title} ».`, productId: p.id });
+      }
+      Router.go("#/messages?s=" + encodeURIComponent(store.id));
     });
 
     wireReviews(p.id, "product", store.ownerId);
@@ -752,6 +848,15 @@
               </div>
               <div class="field"><label>Commune *</label><select id="dCommune">${communeOpts}</select><span class="err">Commune requise.</span></div>
               <div class="field"><label>Adresse / point de repère *</label><textarea id="dAddress" placeholder="Ex : Riviera Palmeraie, près de la station…" required>${UI.esc(user.address)}</textarea><span class="err">Adresse requise.</span></div>
+              <div class="field"><label>Créneau de livraison souhaité</label>
+                <select id="dSlot">
+                  <option value="Dès que possible">Dès que possible</option>
+                  <option value="Aujourd'hui (matin)">Aujourd'hui — matin</option>
+                  <option value="Aujourd'hui (après-midi)">Aujourd'hui — après-midi</option>
+                  <option value="Aujourd'hui (soir)">Aujourd'hui — soir</option>
+                  <option value="Demain">Demain</option>
+                  <option value="Ce week-end">Ce week-end</option>
+                </select></div>
               <div class="field"><label>Note pour le livreur (optionnel)</label><input id="dNote" placeholder="Ex : appeler avant d'arriver" /></div>
             </form>
           </div>
@@ -769,6 +874,12 @@
             <div class="summary-row"><span>${Cart.count()} article(s)</span><span>${UI.fcfa(itemsTotal)}</span></div>
             <div id="feeRows"></div>
             <div class="text-muted" style="font-size:11.5px;margin:2px 0 4px">Frais de livraison fixés par le vendeur ; ils peuvent être ajustés selon votre zone.</div>
+            <div class="divider" style="margin:10px 0"></div>
+            <div class="field" style="gap:6px"><label style="font-size:13px">Code promo</label>
+              <div class="flex gap-8"><input id="couponInput" placeholder="Ex : BIENVENUE10" style="flex:1;padding:9px 12px;border-radius:var(--r-sm);border:1.5px solid var(--border);background:var(--surface-2);color:var(--text);text-transform:uppercase" />
+              <button class="btn btn-ghost btn-sm" id="applyCoupon" type="button">Appliquer</button></div>
+              <div id="couponMsg" style="font-size:12px"></div>
+            </div>
             <div class="summary-row total"><span>À régler à la livraison</span><span id="grandTotal">${UI.fcfa(itemsTotal)}</span></div>
             <div class="cod-note"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 1 3 5v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V5z"/></svg>
               <span>Paiement <strong>en espèces</strong> uniquement, à la réception.</span></div>
@@ -777,26 +888,48 @@
         </div>
       </div>`);
 
-    // Recalcule les frais de livraison selon la commune choisie.
-    function refreshFees() {
+    let couponCode = "";
+
+    // Recalcule frais de livraison + remises selon commune et code promo.
+    function refreshSummary() {
       const commune = document.getElementById("dCommune").value;
-      let fees = 0; let rows = "";
-      let blocked = null;
+      let fees = 0, discountTotal = 0, rows = "", blocked = null;
       groups.forEach((g) => {
         const st = Store.get(g.store.id);
-        if (!Store.servesCommune(st, commune)) { blocked = st.name; }
-        const fee = Store.deliveryFee(st, commune);
-        fees += fee;
-        rows += `<div class="summary-row"><span>Livraison ${UI.esc(g.store.name)}</span><span>${fee > 0 ? UI.fcfa(fee) : "Gratuite"}</span></div>`;
+        if (!Store.servesCommune(st, commune)) blocked = st.name;
+        let fee = Store.deliveryFee(st, commune);
+        let freeByThreshold = st.freeShipThreshold && g.subtotal >= st.freeShipThreshold;
+        let discount = 0;
+        if (couponCode) {
+          const v = Coupons.validate(g.store.id, couponCode, g.subtotal);
+          if (v.ok) { discount = v.discount || 0; if (v.freeShip) fee = 0; }
+        }
+        if (freeByThreshold) fee = 0;
+        fees += fee; discountTotal += discount;
+        rows += `<div class="summary-row"><span>Livraison ${UI.esc(g.store.name)}</span><span>${fee > 0 ? UI.fcfa(fee) : "Gratuite" + (freeByThreshold ? " 🎉" : "")}</span></div>`;
       });
+      if (discountTotal > 0) rows += `<div class="summary-row" style="color:var(--accent);font-weight:700"><span>Remise (${UI.esc(couponCode)})</span><span>− ${UI.fcfa(discountTotal)}</span></div>`;
       document.getElementById("feeRows").innerHTML = rows;
-      document.getElementById("grandTotal").textContent = UI.fcfa(itemsTotal + fees);
+      document.getElementById("grandTotal").textContent = UI.fcfa(Math.max(0, itemsTotal - discountTotal) + fees);
       const btn = document.getElementById("placeOrder");
       if (blocked) { btn.disabled = true; btn.textContent = `Non livré à ${commune}`; }
       else { btn.disabled = false; btn.textContent = "Valider la commande"; }
     }
-    document.getElementById("dCommune").addEventListener("change", refreshFees);
-    refreshFees();
+    document.getElementById("dCommune").addEventListener("change", refreshSummary);
+
+    // Application d'un code promo.
+    document.getElementById("applyCoupon").addEventListener("click", () => {
+      const code = document.getElementById("couponInput").value.trim().toUpperCase();
+      const msg = document.getElementById("couponMsg");
+      if (!code) { couponCode = ""; msg.textContent = ""; refreshSummary(); return; }
+      // Valide contre au moins une boutique du panier.
+      let okStore = null;
+      for (const g of groups) { const v = Coupons.validate(g.store.id, code, g.subtotal); if (v.ok) { okStore = g.store; break; } }
+      if (okStore) { couponCode = code; msg.style.color = "var(--accent)"; msg.textContent = `✓ Code appliqué pour ${okStore.name}.`; }
+      else { couponCode = ""; msg.style.color = "var(--danger)"; msg.textContent = "Code invalide pour votre panier."; }
+      refreshSummary();
+    });
+    refreshSummary();
 
     document.getElementById("placeOrder").addEventListener("click", () => {
       const delivery = {
@@ -806,12 +939,10 @@
         address: document.getElementById("dAddress").value,
         note: document.getElementById("dNote").value,
       };
-      // Validation visuelle simple.
       const err = Orders.validateDelivery(delivery);
       if (err) { UI.toast(err, "error"); return; }
-      // Mémorise les coordonnées sur le profil pour la prochaine fois.
       Auth.updateProfile({ phone: delivery.phone, commune: delivery.commune, address: delivery.address });
-      const res = Orders.checkout(delivery);
+      const res = Orders.checkout(delivery, { code: couponCode, slot: document.getElementById("dSlot").value });
       if (res.ok) {
         Router.go("#/order/" + res.orders[0].id + "?multi=" + res.orders.length);
       } else UI.toast(res.error, "error");
@@ -837,7 +968,9 @@
           <div style="text-align:left">
             <div class="summary-row"><span>Boutique</span><strong>${UI.esc(order.storeName)}</strong></div>
             <div class="summary-row"><span>Articles (${order.items.reduce((s, i) => s + i.qty, 0)})</span><span>${UI.fcfa(order.itemsTotal != null ? order.itemsTotal : order.total)}</span></div>
+            ${order.discount ? `<div class="summary-row" style="color:var(--accent)"><span>Remise ${order.couponCode ? "(" + UI.esc(order.couponCode) + ")" : ""}</span><span>− ${UI.fcfa(order.discount)}</span></div>` : ""}
             <div class="summary-row"><span>Livraison — ${UI.esc(order.delivery.commune)}</span><span>${order.deliveryFee ? UI.fcfa(order.deliveryFee) : "Gratuite"}</span></div>
+            ${order.slot ? `<div class="summary-row"><span>Créneau souhaité</span><span>${UI.esc(order.slot)}</span></div>` : ""}
             <div class="summary-row"><span>Mode de paiement</span><span>💵 Espèces à la livraison</span></div>
             <div class="summary-row total"><span>Montant à régler</span><span>${UI.fcfa(order.total)}</span></div>
           </div>
@@ -866,6 +999,30 @@
       <div class="page-head"><div><div class="page-title">Mes commandes</div>
         <div class="page-sub">${orders.length} commande(s)</div></div></div>
       ${orders.map((o) => orderCardBuyer(o)).join("")}`);
+
+    V().querySelectorAll("[data-cancel]").forEach((b) => b.addEventListener("click", () => openCancelModal(b.getAttribute("data-cancel"), "buyer", viewOrders)));
+  }
+
+  /** Modale d'annulation de commande avec motif. */
+  function openCancelModal(orderId, by, after) {
+    const reasons = by === "buyer"
+      ? ["J'ai changé d'avis", "Délai trop long", "Erreur de commande", "Trouvé ailleurs", "Autre"]
+      : ["Rupture de stock", "Client injoignable", "Hors zone de livraison", "Adresse incorrecte", "Autre"];
+    UI.modal({
+      title: "Annuler la commande",
+      body: `<div class="field"><label>Motif de l'annulation</label>
+        <select id="cxReason">${reasons.map((r) => `<option value="${UI.esc(r)}">${UI.esc(r)}</option>`).join("")}</select></div>
+        <div class="field mt-8"><label>Précision (optionnel)</label><input id="cxNote" placeholder="Ajouter un détail…" /></div>`,
+      footer: `<button class="btn btn-ghost" data-close>Retour</button><button class="btn btn-danger" id="cxGo">Confirmer l'annulation</button>`,
+      onMount(m, close) {
+        m.querySelector("#cxGo").addEventListener("click", () => {
+          const reason = m.querySelector("#cxReason").value + (m.querySelector("#cxNote").value.trim() ? " — " + m.querySelector("#cxNote").value.trim() : "");
+          const res = Orders.cancel(orderId, reason, by);
+          if (res.ok) { UI.toast("Commande annulée.", "info"); close(); if (after) after(); }
+          else UI.toast(res.error || "Annulation impossible.", "error");
+        });
+      },
+    });
   }
 
   function orderCardBuyer(o) {
@@ -880,8 +1037,12 @@
         <img src="${UI.safeImg(it.image, it.title)}" alt="" style="width:54px;height:54px" />
         <div class="cart-item-info"><h4><a href="#/product/${it.productId}">${UI.esc(it.title)}</a></h4>
         <div class="ci-variant">Qté : ${it.qty} × ${UI.fcfa(it.unit)}</div></div></div>`).join("")}
+      ${o.discount ? `<div class="flex-between mt-8" style="font-size:13px;color:var(--accent)"><span>Remise ${o.couponCode ? "(" + UI.esc(o.couponCode) + ")" : ""}</span><span>− ${UI.fcfa(o.discount)}</span></div>` : ""}
       ${o.deliveryFee ? `<div class="flex-between mt-8" style="font-size:13px"><span class="text-muted">Dont livraison</span><span>${UI.fcfa(o.deliveryFee)}</span></div>` : ""}
+      ${o.slot ? `<div class="flex-between" style="font-size:13px"><span class="text-muted">Créneau souhaité</span><span>${UI.esc(o.slot)}</span></div>` : ""}
+      ${o.cancelReason ? `<div class="text-muted" style="font-size:12.5px;margin-top:6px"><em>Annulée : ${UI.esc(o.cancelReason)}</em></div>` : ""}
       <div class="flex-between mt-8"><span class="text-muted">💵 À payer à la livraison (${UI.esc(o.delivery.commune)})</span><strong style="font-size:17px;color:var(--brand)">${UI.fcfa(o.total)}</strong></div>
+      ${(o.status === "en_attente" || o.status === "confirmee") ? `<div class="mt-8"><button class="btn btn-danger btn-sm" data-cancel="${o.id}">Annuler la commande</button></div>` : ""}
     </div>`;
   }
 
@@ -1145,9 +1306,14 @@
 
           <div class="divider" style="margin:6px 0"></div>
           <h3 style="margin:0;font-size:16px">Livraison</h3>
-          <div class="field"><label>Frais de livraison (FCFA)</label>
-            <input type="number" id="sDefaultFee" min="0" value="${s.defaultFee || ""}" placeholder="Ex : 1000 (0 = livraison gratuite)" />
-            <span class="hint">C'est vous qui fixez ce montant. Vous pourrez l'ajuster commande par commande (selon la distance, par exemple).</span></div>
+          <div class="form-grid form-2col">
+            <div class="field"><label>Frais de livraison (FCFA)</label>
+              <input type="number" id="sDefaultFee" min="0" value="${s.defaultFee || ""}" placeholder="Ex : 1000 (0 = gratuite)" />
+              <span class="hint">Ajustable commande par commande (selon la distance).</span></div>
+            <div class="field"><label>Livraison offerte dès (FCFA)</label>
+              <input type="number" id="sFreeShip" min="0" value="${s.freeShipThreshold || ""}" placeholder="Ex : 25000 (0 = désactivé)" />
+              <span class="hint">Au-delà de ce montant d'achat, la livraison est gratuite.</span></div>
+          </div>
 
           <div class="flex gap-12">
             <button class="btn btn-primary btn-lg" type="submit">${editing ? "Enregistrer les modifications" : "Créer ma boutique"}</button>
@@ -1199,6 +1365,7 @@
         closedMsg: document.getElementById("sClosedMsg").value.trim(),
         promoBanner: document.getElementById("sPromoBanner").value.trim(),
         defaultFee: Number(document.getElementById("sDefaultFee").value) || 0,
+        freeShipThreshold: Number(document.getElementById("sFreeShip").value) || 0,
         socials: {
           instagram: document.getElementById("sIg").value.trim(),
           facebook: document.getElementById("sFb").value.trim(),
@@ -1256,6 +1423,16 @@
     ];
     const doneCount = checklist.filter((c) => c[1]).length;
     const completeness = Math.round((doneCount / checklist.length) * 100);
+
+    // --- Conseils vendeur (coaching contextuel) ---
+    const tips = [];
+    const stalePending = orders.filter((o) => o.status === "en_attente" && Date.now() - o.createdAt > 24 * 3600000).length;
+    if (stalePending) tips.push(["⏰", `${stalePending} commande(s) en attente depuis plus de 24 h — traitez-les vite.`, "#/seller/orders?status=en_attente"]);
+    if (Coupons.byStore(store.id).filter((c) => c.active).length === 0) tips.push(["🏷️", "Créez un code promo pour attirer de nouveaux clients.", "#/seller/promos"]);
+    if (!store.freeShipThreshold) tips.push(["🚚", "Proposez la livraison offerte dès un montant pour augmenter le panier.", "#/seller/store"]);
+    if ((store.gallery || []).length < 3) tips.push(["📸", "Ajoutez des photos de galerie pour une vitrine plus attractive.", "#/seller/store"]);
+    if (!products.some((p) => Products.promoActive(p))) tips.push(["💸", "Mettez un article en promotion pour dynamiser vos ventes.", "#/seller/products"]);
+    if (products.some((p) => (p.images || []).length < 2)) tips.push(["🖼️", "Certains articles n'ont qu'une photo — ajoutez-en pour rassurer l'acheteur.", "#/seller/products"]);
 
     // --- Avis à traiter (sans réponse) ---
     const storeReviews = Store.reviews(store.id);
@@ -1329,6 +1506,11 @@
             <a href="#/seller/product/${p.id}/edit" style="font-weight:600">${UI.esc(p.title)}</a><span class="status unpublished">Stock faible : ${p.stock}</span></div>`).join("")}
         </div>` : ""}
 
+        ${tips.length ? `<div class="card card-pad mt-16">
+          <div class="panel-head"><h3>💡 Conseils pour booster votre boutique</h3></div>
+          ${tips.slice(0, 4).map(([emo, txt, link]) => `<a href="${link}" class="tip-row"><span class="tip-emo">${emo}</span><span>${UI.esc(txt)}</span><span class="tip-arrow">→</span></a>`).join("")}
+        </div>` : ""}
+
         <div class="seller-cols mt-16">
           <div class="card card-pad">
             <div class="panel-head"><h3>Articles les plus vus</h3><a href="#/seller/products">Gérer →</a></div>
@@ -1381,6 +1563,8 @@
     download: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M12 3v10l3.5-3.5L17 11l-5 5-5-5 1.5-1.5L12 13V3zM5 19h14v2H5z'/></svg>",
     chart: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M4 20V10h4v10zm6 0V4h4v16zm6 0v-7h4v7z'/></svg>",
     users: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm-8 0a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-2.7 0-8 1.3-8 4v3h8v-3c0-1 .4-1.9 1-2.6A11 11 0 0 0 8 13zm8 0c-.5 0-1.1 0-1.7.1A5 5 0 0 1 18 17v3h6v-3c0-2.7-5.3-4-8-4z'/></svg>",
+    tag: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M21.4 11.6 12.4 2.6A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 .6 1.4l9 9a2 2 0 0 0 2.8 0l7-7a2 2 0 0 0 0-2.8zM6.5 8A1.5 1.5 0 1 1 8 6.5 1.5 1.5 0 0 1 6.5 8z'/></svg>",
+    chat: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM7 9h10v2H7zm0 4h7v2H7z'/></svg>",
   };
 
   /**
@@ -1413,6 +1597,8 @@
       ["#/store/" + store.id, "👁️", "Voir ma vitrine"],
       ["#/seller/product/new", "➕", "Ajouter un article"],
       ["#/seller/orders", "🧾", "Mes commandes"],
+      ["#/seller/promos", "🏷️", "Codes promo"],
+      ["#/seller/messages", "💬", "Messages"],
       ["#/seller/stats", "📊", "Statistiques"],
       ["#/seller/clients", "👥", "Mes clients"],
       ["#/", "🛒", "Accueil de la marketplace"],
@@ -1444,10 +1630,14 @@
   function sellerLayout(opts) {
     const store = Store.byOwner(Auth.current().id);
     const pending = store ? Orders.byStore(store.id).filter((o) => o.status === "en_attente").length : 0;
+    const msgUnread = store ? Messages.unreadForSeller(store.id) : 0;
+    const badges = { orders: pending, messages: msgUnread };
     const nav = [
       ["dashboard", "Tableau de bord", "#/seller/dashboard", SICON.dash],
       ["products", "Mes articles", "#/seller/products", SICON.box],
       ["orders", "Commandes", "#/seller/orders", SICON.receipt],
+      ["promos", "Promotions", "#/seller/promos", SICON.tag],
+      ["messages", "Messages", "#/seller/messages", SICON.chat],
       ["stats", "Statistiques", "#/seller/stats", SICON.chart],
       ["clients", "Clients", "#/seller/clients", SICON.users],
       ["store", "Ma boutique", "#/seller/store", SICON.store],
@@ -1455,7 +1645,7 @@
     const navHTML = nav.map(([k, l, h, ic]) => `
       <a href="${h}" class="ss-item ${opts.active === k ? "active" : ""}">
         <span class="ss-ico">${ic}</span><span>${l}</span>
-        ${k === "orders" && pending ? `<span class="ss-badge">${pending}</span>` : ""}
+        ${badges[k] ? `<span class="ss-badge">${badges[k]}</span>` : ""}
       </a>`).join("");
 
     V().innerHTML = `
@@ -1604,6 +1794,38 @@
     if (!w) { UI.toast("Autorisez les fenêtres pop-up pour imprimer.", "error"); return; }
     w.document.open(); w.document.write(html); w.document.close();
     setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 350);
+  }
+
+  /** Rapport de statistiques imprimable (PDF via impression navigateur). */
+  function printStatsReport(store, s) {
+    const periodLabel = { "7d": "7 derniers jours", "30d": "30 derniers jours", month: "Ce mois" }[s.period] || "";
+    const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Rapport — ${UI.esc(store.name)}</title>
+      <style>body{font-family:Segoe UI,Arial,sans-serif;color:#111;padding:30px;max-width:760px;margin:auto}
+        h1{font-size:22px;margin:0} .muted{color:#666} .head{border-bottom:3px solid #f97316;padding-bottom:12px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:flex-end}
+        .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:16px 0}
+        .kpi{border:1px solid #ddd;border-radius:10px;padding:12px 14px} .kpi b{font-size:22px} .kpi span{color:#666;font-size:13px;display:block}
+        table{width:100%;border-collapse:collapse;margin:8px 0 18px} th,td{border-bottom:1px solid #eee;padding:7px;text-align:left;font-size:14px}
+        h3{margin:16px 0 6px} @media print{button{display:none}}</style></head><body>
+      <div class="head"><div><h1>🛒 ${UI.esc(store.name)}</h1><div class="muted">Rapport de performance — ${periodLabel}</div></div>
+        <div class="muted">${UI.dateFR(Date.now())}</div></div>
+      <div class="kpis">
+        <div class="kpi"><b>${UI.fcfa(s.caCur)}</b><span>Ventes</span></div>
+        <div class="kpi"><b>${s.count}</b><span>Commandes</span></div>
+        <div class="kpi"><b>${UI.fcfa(s.avg)}</b><span>Panier moyen</span></div>
+        <div class="kpi"><b>${s.delivRate}%</b><span>Taux de livraison</span></div>
+        <div class="kpi"><b>${UI.fcfa(s.collected)}</b><span>Déjà encaissé</span></div>
+        <div class="kpi"><b>${UI.fcfa(s.toCollect)}</b><span>Reste à encaisser</span></div>
+      </div>
+      <h3>Top articles vendus</h3>
+      <table><tbody>${s.topProducts.length ? s.topProducts.map(([t, n]) => `<tr><td>${UI.esc(t)}</td><td style="text-align:right">${n}</td></tr>`).join("") : "<tr><td>—</td></tr>"}</tbody></table>
+      <h3>Top communes</h3>
+      <table><tbody>${s.topCommunes.length ? s.topCommunes.map(([c, n]) => `<tr><td>${UI.esc(c)}</td><td style="text-align:right">${n} commande(s)</td></tr>`).join("") : "<tr><td>—</td></tr>"}</tbody></table>
+      <p class="muted" style="margin-top:20px">Généré par Marché CI · Taux d'annulation : ${s.cancelRate}%</p>
+      <button onclick="window.print()" style="padding:10px 18px;border:none;background:#f97316;color:#fff;border-radius:8px;font-weight:700;cursor:pointer">Imprimer / PDF</button>
+      </body></html>`;
+    const wnd = window.open("", "_blank");
+    if (!wnd) { UI.toast("Autorisez les pop-up pour imprimer.", "error"); return; }
+    wnd.document.write(html); wnd.document.close(); setTimeout(() => wnd.print(), 350);
   }
 
   /** Export CSV des commandes d'une boutique. */
@@ -1929,6 +2151,8 @@
             <div class="field"><label>Stock</label><input type="number" id="pStock" value="${d.stock != null ? d.stock : 1}" min="0" /></div>
             <div class="field"><label>Catégorie</label><select id="pCat">${catOpts}</select></div>
           </div>
+          <div class="field"><label>Réapprovisionnement prévu <span class="hint">(optionnel — affiché aux clients en cas de rupture)</span></label>
+            <input type="date" id="pRestock" value="${d.restockDate ? new Date(d.restockDate).toISOString().slice(0, 10) : ""}" /></div>
           <div class="form-grid form-2col">
             <div class="field"><label>État</label><select id="pCond">
               <option value="neuf" ${d.condition !== "occasion" ? "selected" : ""}>Neuf</option>
@@ -1968,6 +2192,7 @@
         status: document.getElementById("pStatus").value,
         featured: document.getElementById("pFeatured").checked,
         promoUntil: document.getElementById("pPromoUntil").value ? new Date(document.getElementById("pPromoUntil").value).getTime() : 0,
+        restockDate: document.getElementById("pRestock").value ? new Date(document.getElementById("pRestock").value).getTime() : 0,
         images: up.get(),
         variants: { sizes: parseList(document.getElementById("pSizes").value), colors: parseList(document.getElementById("pColors").value) },
       };
@@ -2072,6 +2297,9 @@
         viewSellerOrders(params);
       })
     );
+    V().querySelectorAll("[data-cancel]").forEach((b) =>
+      b.addEventListener("click", () => openCancelModal(b.getAttribute("data-cancel"), "seller", () => viewSellerOrders(params)))
+    );
   }
 
   function sellerOrderCard(o) {
@@ -2091,6 +2319,8 @@
         <div class="cart-item-info"><h4>${UI.esc(it.title)}</h4><div class="ci-variant">Qté : ${it.qty} × ${UI.fcfa(it.unit)}</div></div>
         <strong>${UI.fcfa(it.unit * it.qty)}</strong></div>`).join("")}
       <div class="flex-between mt-8" style="font-size:13px"><span class="text-muted">Articles</span><span>${UI.fcfa(itemsTotal)}</span></div>
+      ${o.discount ? `<div class="flex-between" style="font-size:13px;color:var(--accent)"><span>Remise ${o.couponCode ? "(" + UI.esc(o.couponCode) + ")" : ""}</span><span>− ${UI.fcfa(o.discount)}</span></div>` : ""}
+      ${o.slot ? `<div class="flex-between" style="font-size:13px"><span class="text-muted">Créneau souhaité</span><span>${UI.esc(o.slot)}</span></div>` : ""}
       <div class="flex-between wrap" style="font-size:13px;gap:8px;align-items:center">
         <span class="text-muted">Frais de livraison (${UI.esc(o.delivery.commune)})</span>
         <span class="flex gap-8" style="align-items:center">
@@ -2110,7 +2340,9 @@
         <button class="btn ${o.paid ? "btn-ghost" : "btn-accent"} btn-sm" data-paid="${o.id}">${o.paid ? "↩︎ Non encaissée" : "✓ Marquer encaissée"}</button>
         <button class="btn btn-ghost btn-sm" data-print="${o.id}">${SICON.printer} Bon de livraison</button>
         <a class="btn wa-btn btn-sm" href="https://wa.me/225${UI.esc(o.delivery.phone.replace(/\D/g, ""))}" target="_blank" rel="noopener">${SICON.wa} Contacter</a>
+        ${o.status !== "livree" && o.status !== "annulee" ? `<button class="btn btn-danger btn-sm" data-cancel="${o.id}">Annuler</button>` : ""}
       </div>
+      ${o.cancelReason ? `<div class="text-muted" style="font-size:12.5px;margin-top:6px"><em>Annulée : ${UI.esc(o.cancelReason)}</em></div>` : ""}
     </div>`;
   }
 
@@ -2175,6 +2407,19 @@
     const totCarts = products.reduce((s, p) => s + (p.cartAdds || 0), 0);
     const totSold = orders.reduce((s, o) => s + o.items.reduce((a, i) => a + i.qty, 0), 0);
 
+    // Comparaison à la moyenne de la marketplace.
+    const allOrders = DB.all(DB.KEYS.orders);
+    const mpRate = allOrders.length ? Math.round((allOrders.filter((o) => o.status === "livree").length / allOrders.length) * 100) : 0;
+    const myRateAll = orders.length ? Math.round((orders.filter((o) => o.status === "livree").length / orders.length) * 100) : 0;
+    const storesCount = Store.all().length || 1;
+    const mpAvgOrders = Math.round(allOrders.length / storesCount);
+
+    // Insights favoris : nb d'acheteurs ayant mis chaque article en favori.
+    const favMap = DB.get(DB.KEYS.favorites, {});
+    const favCount = {};
+    Object.values(favMap).forEach((ids) => (ids || []).forEach((id) => { favCount[id] = (favCount[id] || 0) + 1; }));
+    const topFav = products.map((p) => ({ p, n: favCount[p.id] || 0 })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n).slice(0, 6);
+
     const pchip = (k, l) => `<a href="#/seller/stats?p=${k}" class="chip ${period === k ? "active" : ""}">${l}</a>`;
     const trendBadge = (t) => `<span style="font-size:12px;font-weight:800;color:${t.dir === "up" ? "var(--accent)" : t.dir === "down" ? "var(--danger)" : "var(--text-3)"}">${t.dir === "up" ? "▲" : t.dir === "down" ? "▼" : ""} ${t.txt}</span>`;
 
@@ -2214,9 +2459,29 @@
           </div>
         </div>
 
+        <div class="seller-cols mt-16">
+          <div class="card card-pad">
+            <div class="panel-head"><h3>Comparaison à la marketplace</h3></div>
+            <div style="margin:6px 0"><div class="flex-between" style="font-size:13px"><span>Mon taux de livraison</span><strong style="color:${myRateAll >= mpRate ? "var(--accent)" : "var(--warning)"}">${myRateAll}%</strong></div>
+              <div class="goal-bar" style="height:12px;margin-top:4px"><div class="goal-fill" style="width:${Math.max(3, myRateAll)}%"></div></div>
+              <div class="text-muted" style="font-size:12px;margin-top:3px">Moyenne marketplace : ${mpRate}%</div></div>
+            <div style="margin:14px 0 0"><div class="flex-between" style="font-size:13px"><span>Mes commandes reçues</span><strong>${orders.length}</strong></div>
+              <div class="text-muted" style="font-size:12px;margin-top:3px">Moyenne par boutique : ${mpAvgOrders}</div></div>
+            <div class="mt-16">${myRateAll >= mpRate ? `<span class="tag" style="position:static;background:var(--accent-soft);color:var(--accent)">✓ Au-dessus de la moyenne</span>` : `<span class="tag" style="position:static">À améliorer</span>`}</div>
+          </div>
+          <div class="card card-pad">
+            <div class="panel-head"><h3>❤️ Articles les plus aimés</h3></div>
+            <p class="text-muted" style="font-size:12.5px;margin:0 0 8px">Demande latente : articles ajoutés en favoris par vos clients.</p>
+            ${topFav.length ? topFav.map((x) => `<div class="flex-between" style="padding:7px 0;border-bottom:1px solid var(--border)">
+                <a href="#/product/${x.p.id}">${UI.esc(x.p.title)}</a><strong>${x.n} ❤️</strong></div>`).join("")
+              : `<p class="text-muted" style="text-align:center;padding:12px 0">Aucun favori pour l'instant.</p>`}
+          </div>
+        </div>
+
         <div class="card card-pad mt-16">
           <div class="panel-head"><h3>Outils & données</h3></div>
           <div class="flex gap-8 wrap">
+            <button class="btn btn-ghost btn-sm" id="stPrint">${SICON.printer} Imprimer le rapport</button>
             <button class="btn btn-ghost btn-sm" id="stQr">${SICON.store} QR code boutique</button>
             <button class="btn btn-ghost btn-sm" id="stExpCat">${SICON.download} Exporter le catalogue (JSON)</button>
             <button class="btn btn-ghost btn-sm" id="stImpCat">${SICON.copy} Importer un catalogue</button>
@@ -2228,6 +2493,7 @@
 
     const w = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener("click", fn); };
     w("expCsv2", () => exportOrdersCSV(store, orders));
+    w("stPrint", () => printStatsReport(store, { period, caCur, count: cur.length, avg, delivRate, cancelRate, collected, toCollect, topProducts, topCommunes }));
     w("stQr", () => showStoreQR(store));
     w("stExpCat", () => exportCatalog(store));
     w("stImpCat", openImportCatalog);
@@ -2280,6 +2546,182 @@
         </tr>`).join("")}</tbody></table></div>`
         : emptyState("👥", "Aucun client", "Vos clients apparaîtront ici après leur première commande."),
     });
+  }
+
+  /* ============================================================
+     VENDEUR : Codes promo (coupons)
+     ============================================================ */
+  function viewSellerCoupons() {
+    if (!requireVendor()) return;
+    const store = Store.byOwner(Auth.current().id);
+    const list = Coupons.byStore(store.id);
+
+    sellerLayout({
+      active: "promos",
+      title: "Codes promo",
+      subtitle: `${list.length} code(s) · livraison offerte dès ${store.freeShipThreshold ? UI.fcfa(store.freeShipThreshold) : "— (désactivé)"}`,
+      actions: `<button class="btn btn-primary" id="newCoupon">+ Nouveau code</button>`,
+      body: list.length ? `<div class="table-wrap"><table class="data-table">
+        <thead><tr><th>Code</th><th>Avantage</th><th>Min. achat</th><th>Utilisations</th><th>Expire</th><th>État</th><th></th></tr></thead>
+        <tbody>${list.map((c) => `<tr>
+          <td><strong style="letter-spacing:.5px">${UI.esc(c.code)}</strong></td>
+          <td><span class="tag promo" style="position:static">${Coupons.label(c)}</span></td>
+          <td>${c.minTotal ? UI.fcfa(c.minTotal) : "—"}</td>
+          <td>${c.uses}${c.maxUses ? " / " + c.maxUses : ""}</td>
+          <td>${c.until ? UI.dateFR(c.until) : "—"}</td>
+          <td><span class="status ${c.active ? "published" : "draft"}">${c.active ? "Actif" : "Inactif"}</span></td>
+          <td><div class="row-actions">
+            <button class="btn btn-ghost btn-sm" data-toggle-c="${c.id}">${c.active ? "Désactiver" : "Activer"}</button>
+            <button class="icon-action danger" data-del-c="${c.id}" title="Supprimer">${SICON.trash}</button>
+          </div></td>
+        </tr>`).join("")}</tbody></table></div>`
+        : emptyState("🏷️", "Aucun code promo", "Créez un code (remise en %, en FCFA, ou livraison offerte) que vos clients saisiront au paiement.", `<button class="btn btn-primary" id="newCoupon2">+ Nouveau code</button>`),
+    });
+
+    const openForm = () => openCouponModal(() => viewSellerCoupons());
+    ["newCoupon", "newCoupon2"].forEach((id) => { const b = document.getElementById(id); if (b) b.addEventListener("click", openForm); });
+    V().querySelectorAll("[data-toggle-c]").forEach((b) => b.addEventListener("click", () => {
+      const c = Coupons.all().find((x) => x.id === b.getAttribute("data-toggle-c"));
+      Coupons.update(c.id, { active: !c.active }); viewSellerCoupons();
+    }));
+    V().querySelectorAll("[data-del-c]").forEach((b) => b.addEventListener("click", async () => {
+      if (await UI.confirm("Supprimer ce code promo ?", { danger: true, confirmLabel: "Supprimer" })) { Coupons.remove(b.getAttribute("data-del-c")); UI.toast("Code supprimé.", "info"); viewSellerCoupons(); }
+    }));
+  }
+
+  function openCouponModal(after) {
+    UI.modal({
+      title: "Nouveau code promo",
+      body: `<div class="form-grid">
+        <div class="field"><label>Code *</label><input id="cCode" placeholder="Ex : BIENVENUE10" style="text-transform:uppercase" /></div>
+        <div class="field"><label>Type d'avantage</label><select id="cType">
+          <option value="percent">Remise en %</option>
+          <option value="amount">Remise en FCFA</option>
+          <option value="freeship">Livraison offerte</option>
+        </select></div>
+        <div class="field" id="cValueWrap"><label>Valeur</label><input type="number" id="cValue" min="1" placeholder="Ex : 10" /></div>
+        <div class="form-grid form-2col">
+          <div class="field"><label>Achat minimum (FCFA)</label><input type="number" id="cMin" min="0" placeholder="0" /></div>
+          <div class="field"><label>Limite d'utilisations</label><input type="number" id="cMax" min="0" placeholder="0 = illimité" /></div>
+        </div>
+        <div class="field"><label>Date d'expiration (optionnel)</label><input type="date" id="cUntil" /></div>
+      </div>`,
+      footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-primary" id="cGo">Créer le code</button>`,
+      onMount(m, close) {
+        const typeSel = m.querySelector("#cType");
+        const valWrap = m.querySelector("#cValueWrap");
+        typeSel.addEventListener("change", () => { valWrap.style.display = typeSel.value === "freeship" ? "none" : "flex"; });
+        m.querySelector("#cGo").addEventListener("click", () => {
+          const res = Coupons.create({
+            code: m.querySelector("#cCode").value,
+            type: typeSel.value,
+            value: m.querySelector("#cValue").value,
+            minTotal: m.querySelector("#cMin").value,
+            maxUses: m.querySelector("#cMax").value,
+            until: m.querySelector("#cUntil").value ? new Date(m.querySelector("#cUntil").value).getTime() : 0,
+          });
+          if (res.ok) { UI.toast("Code promo créé ✓", "success"); close(); if (after) after(); }
+          else UI.toast(res.error, "error");
+        });
+      },
+    });
+  }
+
+  /* ============================================================
+     MESSAGERIE : conversation réutilisable (vendeur / acheteur)
+     ============================================================ */
+  function conversationHTML(msgs) {
+    if (!msgs.length) return `<p class="text-muted" style="text-align:center;padding:24px 0">Aucun message. Démarrez la conversation ci-dessous.</p>`;
+    return msgs.map((m) => `<div class="msg-bubble ${m.from}">
+      <div class="msg-text">${UI.esc(m.text)}</div>
+      <div class="msg-time">${UI.timeAgo(m.createdAt)}</div>
+    </div>`).join("");
+  }
+
+  /** Vendeur : boîte de réception + conversations. */
+  function viewSellerMessages(params) {
+    if (!requireVendor()) return;
+    const store = Store.byOwner(Auth.current().id);
+    const threads = Messages.threadsForStore(store.id);
+    const activeBuyer = params && params.query && params.query.b;
+
+    if (activeBuyer) {
+      Messages.markRead(store.id, activeBuyer, "seller");
+      const msgs = Messages.conversation(store.id, activeBuyer);
+      const buyerName = (msgs[0] && msgs[0].buyerName) || "Client";
+      sellerLayout({
+        active: "messages",
+        title: "Conversation",
+        subtitle: buyerName,
+        actions: `<a href="#/seller/messages" class="btn btn-ghost">← Toutes les conversations</a>`,
+        body: `<div class="card card-pad"><div class="msg-thread">${conversationHTML(msgs)}</div>
+          <form id="msgForm" class="flex gap-8 mt-16"><input id="msgText" placeholder="Écrire une réponse…" style="flex:1;padding:11px 14px;border-radius:var(--r-full);border:1.5px solid var(--border);background:var(--surface-2);color:var(--text)" />
+          <button class="btn btn-primary" type="submit">Envoyer</button></form></div>`,
+      });
+      const form = document.getElementById("msgForm");
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const t = document.getElementById("msgText").value;
+        if (!t.trim()) return;
+        Messages.send({ storeId: store.id, buyerId: activeBuyer, buyerName, from: "seller", text: t });
+        viewSellerMessages(params);
+      });
+      const thread = V().querySelector(".msg-thread"); if (thread) thread.scrollTop = thread.scrollHeight;
+      return;
+    }
+
+    sellerLayout({
+      active: "messages",
+      title: "Messages",
+      subtitle: `${threads.length} conversation(s)`,
+      actions: "",
+      body: threads.length ? `<div class="card" style="overflow:hidden">${threads.map((t) => `
+        <a href="#/seller/messages?b=${encodeURIComponent(t.buyerId)}" class="thread-row">
+          <div class="review-avatar">${UI.esc((t.buyerName || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase())}</div>
+          <div style="flex:1"><strong>${UI.esc(t.buyerName || "Client")}</strong><div class="text-muted" style="font-size:12px">${t.count} message(s) · ${UI.timeAgo(t.last)}</div></div>
+          ${t.unread ? `<span class="ss-badge" style="position:static">${t.unread}</span>` : ""}
+        </a>`).join("")}</div>`
+        : emptyState("💬", "Aucun message", "Les questions de vos clients apparaîtront ici."),
+    });
+  }
+
+  /** Acheteur : ses conversations avec les boutiques. */
+  function viewBuyerMessages(params) {
+    if (!requireAuth()) return;
+    const user = Auth.current();
+    const activeStore = params && params.query && params.query.s;
+
+    if (activeStore) {
+      const store = Store.get(activeStore);
+      if (!store) { Router.go("#/messages"); return; }
+      Messages.markRead(store.id, user.id, "buyer");
+      const msgs = Messages.conversation(store.id, user.id);
+      layout(`<nav class="breadcrumb"><a href="#/messages">Messages</a> › <span>${UI.esc(store.name)}</span></nav>
+        <div class="page-head"><div><div class="page-title">${UI.esc(store.name)}</div><div class="page-sub"><a href="#/store/${store.id}">Voir la boutique</a></div></div></div>
+        <div class="card card-pad"><div class="msg-thread">${conversationHTML(msgs)}</div>
+        <form id="bmsgForm" class="flex gap-8 mt-16"><input id="bmsgText" placeholder="Écrire un message…" style="flex:1;padding:11px 14px;border-radius:var(--r-full);border:1.5px solid var(--border);background:var(--surface-2);color:var(--text)" />
+        <button class="btn btn-primary" type="submit">Envoyer</button></form></div>`);
+      const form = document.getElementById("bmsgForm");
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const t = document.getElementById("bmsgText").value;
+        if (!t.trim()) return;
+        Messages.send({ storeId: store.id, buyerId: user.id, buyerName: user.name, from: "buyer", text: t });
+        viewBuyerMessages(params);
+      });
+      const thread = V().querySelector(".msg-thread"); if (thread) thread.scrollTop = thread.scrollHeight;
+      return;
+    }
+
+    const threads = Messages.threadsForBuyer(user.id);
+    layout(`<div class="page-head"><div><div class="page-title">Mes messages</div><div class="page-sub">${threads.length} conversation(s)</div></div></div>
+      ${threads.length ? `<div class="card" style="overflow:hidden">${threads.map((t) => { const st = Store.get(t.storeId); if (!st) return ""; return `
+        <a href="#/messages?s=${encodeURIComponent(t.storeId)}" class="thread-row">
+          <img src="${UI.safeImg(st.logo, st.name)}" alt="" style="width:40px;height:40px;border-radius:10px;object-fit:cover" />
+          <div style="flex:1"><strong>${UI.esc(st.name)}</strong><div class="text-muted" style="font-size:12px">${t.count} message(s) · ${UI.timeAgo(t.last)}</div></div>
+          ${t.unread ? `<span class="ss-badge" style="position:static">${t.unread}</span>` : ""}
+        </a>`; }).join("")}</div>`
+        : emptyState("💬", "Aucun message", "Posez une question à une boutique depuis une fiche article.", `<a href="#/" class="btn btn-primary">Explorer</a>`)}`);
   }
 
   /* ============================================================
@@ -2409,6 +2851,7 @@
         <a href="#/profile" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-4 0-8 2-8 5v1h16v-1c0-3-4-5-8-5z"/></svg>Mon profil</a>
         <a href="#/orders" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M7 4V2h10v2h4v2h-2v14H5V6H3V4z"/></svg>Mes commandes</a>
         <a href="#/favorites" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 21s-6.7-4.35-9.33-8.36C.9 9.7 2.1 6 5.4 6a4.3 4.3 0 0 1 3.6 2 4.3 4.3 0 0 1 3.6-2c3.3 0 4.5 3.7 2.73 6.64C18.7 16.65 12 21 12 21z"/></svg>Mes favoris</a>
+        <a href="#/messages" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg>Mes messages${Messages.unreadForBuyer(user.id) ? ` <span class="ss-badge" style="position:static;margin-left:auto">${Messages.unreadForBuyer(user.id)}</span>` : ""}</a>
         ${store
           ? `<a href="#/seller/dashboard" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 3h8v8H3zm10 0h8v5h-8zM3 13h8v8H3zm10 3h8v5h-8z"/></svg>Espace vendeur</a>`
           : `<a href="#/seller/store" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 4h16l1 5-2 1v10H5V10L3 9zm3 8v6h4v-4h2v4h4v-6z"/></svg>Ouvrir ma boutique</a>`}
@@ -2494,8 +2937,11 @@
     Router.on("#/seller/product/new", viewProductForm);
     Router.on("#/seller/product/:id/edit", viewProductForm);
     Router.on("#/seller/orders", viewSellerOrders);
+    Router.on("#/seller/promos", viewSellerCoupons);
+    Router.on("#/seller/messages", viewSellerMessages);
     Router.on("#/seller/stats", viewSellerStats);
     Router.on("#/seller/clients", viewSellerClients);
+    Router.on("#/messages", viewBuyerMessages);
     Router.on("#/admin", viewAdmin);
     Router.setNotFound(() => layout(emptyState("🧭", "Page introuvable", "Le lien demandé n'existe pas.", `<a href="#/" class="btn btn-primary">Retour à l'accueil</a>`)));
     // Bascule le corps en « mode vendeur » sur les routes /seller (chrome dédié).
@@ -2522,6 +2968,10 @@
     // Routeur.
     registerRoutes();
     Router.start();
+    // PWA : enregistre le service worker (uniquement en contexte sécurisé http/https).
+    if (/^https?:$/.test(location.protocol) && "serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    }
   }
 
   document.addEventListener("DOMContentLoaded", init);

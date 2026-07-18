@@ -334,6 +334,22 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
 .store-hero-meta { display: flex; gap: 14px; flex-wrap: wrap; color: var(--text-3); font-size: 13px; margin-top: 6px; }
 .store-hero-meta span { display: inline-flex; align-items: center; gap: 5px; }
 
+/* ---- Conseils vendeur (coaching) ---- */
+.tip-row { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: var(--r-sm); font-size: 14px; transition: background var(--t-fast); }
+.tip-row:hover { background: var(--surface-2); }
+.tip-emo { font-size: 20px; flex-shrink: 0; }
+.tip-arrow { margin-left: auto; color: var(--brand); font-weight: 800; }
+
+/* ---- Messagerie acheteur ↔ vendeur ---- */
+.msg-thread { display: flex; flex-direction: column; gap: 8px; max-height: 460px; overflow-y: auto; padding: 6px 2px; }
+.msg-bubble { max-width: 78%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.45; position: relative; }
+.msg-bubble.buyer { align-self: flex-start; background: var(--surface-3); border-bottom-left-radius: 5px; }
+.msg-bubble.seller { align-self: flex-end; background: linear-gradient(135deg, var(--brand), var(--brand-dark)); color: var(--text-on-brand); border-bottom-right-radius: 5px; }
+.msg-time { font-size: 10.5px; opacity: .65; margin-top: 4px; }
+.thread-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); transition: background var(--t-fast); }
+.thread-row:last-child { border-bottom: none; }
+.thread-row:hover { background: var(--surface-2); }
+
 /* ---- Réseaux sociaux cliquables (vitrine) ---- */
 .social-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 4px; }
 .social-btn { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 15px; border-radius: var(--r-full); border: 1.5px solid var(--border); font-weight: 700; font-size: 13.5px; color: var(--text); background: var(--surface); transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast), transform var(--t-fast); }

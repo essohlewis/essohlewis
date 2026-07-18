@@ -86,6 +86,26 @@ L'espace vendeur est un **véritable back-office distinct de l'espace client** :
 - **Bon de livraison imprimable** (+ impression groupée des commandes confirmées).
 - **Filtres commandes** par statut, période et recherche (n°/client) ; **export CSV** (Excel).
 
+**Promotions & fidélisation**
+- **Codes promo / coupons** créés par le vendeur (remise en %, en FCFA, ou livraison offerte ; achat minimum, limite d'usage, date d'expiration) et saisis par l'acheteur au paiement.
+- **Livraison offerte dès un montant** paramétrable par le vendeur.
+- **Générateur d'affiche produit** (image via canvas) à télécharger et partager sur WhatsApp/statut, Facebook, Instagram.
+
+**Messagerie & commandes**
+- **Messagerie in-app acheteur ↔ vendeur** (« Poser une question au vendeur » depuis une fiche article) avec badges de non-lus.
+- **Créneau de livraison** souhaité choisi au paiement.
+- **Annulation avec motif** (par l'acheteur ou le vendeur) + restauration automatique du stock.
+- **Pré-commande / date de réapprovisionnement** affichée en cas de rupture.
+
+**Pilotage avancé**
+- **Conseils vendeur (coaching)** contextuels + rappel des commandes en attente depuis +24 h.
+- **Comparaison à la moyenne de la marketplace** (taux de livraison, volume).
+- **Insights favoris** (articles les plus ajoutés en favoris = demande latente).
+- **Rapport de statistiques imprimable** (PDF via impression).
+
+**Application installable (PWA)**
+- **Manifest + service worker** : l'app est **installable** (« Ajouter à l'écran d'accueil ») et fonctionne **hors ligne** lorsqu'elle est servie en http/https (dégradation propre en ouverture `file://`).
+
 **Vitrine personnalisée**
 - **Photo de profil (logo)** et **bannière de couverture** uploadables.
 - **Galerie photos** de la boutique (ambiance, coulisses…) avec **visionneuse plein écran** (lightbox, navigation clavier/flèches).

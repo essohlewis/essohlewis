@@ -41,6 +41,7 @@ window.MP = window.MP || {};
         description: "Boutique de mode féminine et pagnes africains de qualité. Confection sur mesure disponible.",
         category: "mode", commune: "Cocody", hours: "Lun–Sam : 09h–20h",
         whatsapp: "0702030405", socials: { instagram: "elegance_ci", facebook: "EleganceAbidjan", tiktok: "elegance.abidjan" },
+        defaultFee: 1000, freeShipThreshold: 40000,
         revenueSim: 0, createdAt: now - 30 * day,
       },
       {
@@ -118,6 +119,18 @@ window.MP = window.MP || {};
       { id: "rev_4", targetType: "product", targetId: "prd_10", userId: "usr_admin", userName: "Admin Marché", rating: 5, comment: "Attiéké vraiment frais, un régal.", reply: null, createdAt: now - 1 * day },
     ];
     DB.set(DB.KEYS.reviews, reviews);
+
+    // ---- Codes promo de démo ----
+    DB.set(DB.KEYS.coupons, [
+      { id: "cpn_1", storeId: "sto_1", code: "BIENVENUE10", type: "percent", value: 10, minTotal: 0, maxUses: 0, uses: 0, until: 0, active: true, createdAt: now - 6 * day },
+      { id: "cpn_2", storeId: "sto_1", code: "LIVRAISON", type: "freeship", value: 0, minTotal: 15000, maxUses: 50, uses: 3, until: 0, active: true, createdAt: now - 4 * day },
+      { id: "cpn_3", storeId: "sto_2", code: "TECH5000", type: "amount", value: 5000, minTotal: 100000, maxUses: 0, uses: 0, until: 0, active: true, createdAt: now - 3 * day },
+    ]);
+
+    // ---- Message de démo (client -> boutique 1) ----
+    DB.set(DB.KEYS.messages, [
+      { id: "msg_1", storeId: "sto_1", buyerId: "usr_client", buyerName: "Awa Koné", from: "buyer", text: "Bonjour, la robe pagne est-elle disponible en taille M ?", productId: "prd_1", read: false, createdAt: now - 5 * 3600000 },
+    ]);
 
     // ---- Notification de bienvenue pour la cliente ----
     DB.set(DB.KEYS.notifications, [

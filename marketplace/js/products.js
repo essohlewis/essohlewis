@@ -97,6 +97,7 @@ window.MP = window.MP || {};
       status: ["published", "draft", "unpublished"].includes(data.status) ? data.status : "draft",
       featured: !!data.featured,                       // article « à la une »
       promoUntil: data.promoUntil ? Number(data.promoUntil) : 0, // fin de promo (timestamp, 0 = illimitée)
+      restockDate: data.restockDate ? Number(data.restockDate) : 0, // date de réappro prévue (rupture)
       cartAdds: base.cartAdds || 0,                    // compteur d'ajouts au panier (conversion)
     });
   }

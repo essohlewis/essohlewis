@@ -23,6 +23,8 @@ window.MP = window.MP || {};
     subscriptions: "subs",       // { userId: [storeId] }
     notifications: "notifs",     // [ {id, userId, ...} ]
     reviews: "reviews",          // [ {id, targetType, targetId, ...} ]
+    coupons: "coupons",          // [ {id, storeId, code, type, value, ...} ]
+    messages: "messages",        // [ {id, storeId, buyerId, from, text, ...} ]
     session: "session",          // { userId }
     theme: "theme",              // "light" | "dark"
     seeded: "seeded",            // bool

@@ -1,0 +1,15 @@
+{
+  "name": "Marché CI — Marketplace",
+  "short_name": "Marché CI",
+  "description": "Marketplace multi-vendeurs en Côte d'Ivoire. Paiement à la livraison.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0e1117",
+  "theme_color": "#f97316",
+  "lang": "fr",
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
