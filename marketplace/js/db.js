@@ -25,6 +25,7 @@ window.MP = window.MP || {};
     reviews: "reviews",          // [ {id, targetType, targetId, ...} ]
     coupons: "coupons",          // [ {id, storeId, code, type, value, ...} ]
     messages: "messages",        // [ {id, storeId, buyerId, from, text, ...} ]
+    expenses: "expenses",        // [ {id, storeId, label, amount, category, createdAt} ]
     session: "session",          // { userId }
     theme: "theme",              // "light" | "dark"
     seeded: "seeded",            // bool

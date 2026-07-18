@@ -334,6 +334,21 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
 .store-hero-meta { display: flex; gap: 14px; flex-wrap: wrap; color: var(--text-3); font-size: 13px; margin-top: 6px; }
 .store-hero-meta span { display: inline-flex; align-items: center; gap: 5px; }
 
+/* ---- Ventes flash, FAQ, segments ---- */
+.tag.flash { background: #dc2626; color: #fff; }
+.flash-banner { display: flex; align-items: center; gap: 8px; background: linear-gradient(120deg, #dc2626, #f97316); color: #fff; padding: 10px 14px; border-radius: var(--r); font-size: 14px; font-weight: 600; margin: 4px 0 10px; }
+.flash-banner #flashCountdown { font-variant-numeric: tabular-nums; font-weight: 800; }
+.faq-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.faq-item:last-child { border-bottom: none; }
+.faq-q { font-weight: 700; }
+.faq-a { color: var(--text-2); margin-top: 4px; font-size: 14px; }
+.seg-badge { font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: var(--r-full); }
+.seg-nouveau { background: #dbeafe; color: #1e40af; }
+.seg-fidele { background: var(--accent-soft); color: var(--accent); }
+.seg-inactif { background: #fef3c7; color: #92610a; }
+.quick-replies { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.quick-replies .chip { cursor: pointer; }
+
 /* ---- Conseils vendeur (coaching) ---- */
 .tip-row { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: var(--r-sm); font-size: 14px; transition: background var(--t-fast); }
 .tip-row:hover { background: var(--surface-2); }

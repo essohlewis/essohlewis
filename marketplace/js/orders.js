@@ -97,6 +97,7 @@ window.MP = window.MP || {};
           title: l.product.title,
           image: (l.product.images && l.product.images[0]) || "",
           unit: l.unit,
+          cost: l.product.cost || 0, // coût d'achat au moment de la commande (marge)
           qty: l.qty,
           variant: l.variant || {},
         })),

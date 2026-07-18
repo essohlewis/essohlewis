@@ -43,6 +43,8 @@ window.MP = window.MP || {};
       slogan: data.slogan || "",          // accroche courte affichée en vitrine
       themeColor: data.themeColor || "",  // couleur d'accent de la vitrine
       gallery: data.gallery || [],        // galerie photos (base64)
+      faq: data.faq || "",                // questions fréquentes (affichées en vitrine)
+      returnPolicy: data.returnPolicy || "", // politique de retour
       revenueSim: 0,
       salesGoal: Number(data.salesGoal) || 0, // objectif de vente mensuel (FCFA)
       closed: false,                          // mode fermé / vacances

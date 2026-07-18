@@ -6,7 +6,7 @@
 (function () {
   "use strict";
 
-  const { DB, UI, Auth, Store, Products, Cart, Orders, Notifications, Router, Seed, Coupons, Messages } = window.MP;
+  const { DB, UI, Auth, Store, Products, Cart, Orders, Notifications, Router, Seed, Coupons, Messages, Expenses } = window.MP;
 
   const V = () => document.getElementById("view");
   const SB = () => document.getElementById("sidebar");
@@ -40,7 +40,13 @@
      Helpers de rendu
      ============================================================ */
 
+  // Minuteries de page (ventes flash…), nettoyées à chaque changement de vue.
+  let pageTimers = [];
+  function clearPageTimers() { pageTimers.forEach((t) => clearInterval(t)); pageTimers = []; }
+  function addPageTimer(fn, ms) { const t = setInterval(fn, ms); pageTimers.push(t); return t; }
+
   function layout(mainHTML, sidebarHTML) {
+    clearPageTimers();
     V().innerHTML = mainHTML;
     SB().innerHTML = sidebarHTML || "";
     // Vide la nav basse vendeur hors des vues back-office (onboarding, client…).
@@ -81,6 +87,7 @@
           <img src="${img}" alt="${UI.esc(p.title)}" loading="lazy" />
           <div class="pc-tag">
             ${p.featured ? `<span class="tag featured">★ À la une</span>` : ""}
+            ${hasPromo && p.promoUntil && p.promoUntil - Date.now() < 3 * 86400000 && p.promoUntil > Date.now() ? `<span class="tag flash">⚡ Flash</span>` : ""}
             ${hasPromo ? `<span class="tag promo">-${Math.round((1 - price / p.price) * 100)}%</span>` : ""}
             ${p.condition === "occasion" ? `<span class="tag occasion">Occasion</span>` : ""}
             ${out ? `<span class="tag out">Rupture</span>` : ""}
@@ -105,6 +112,44 @@
           </div>
         </div>
       </article>`;
+  }
+
+  /** Rend une FAQ (une Q/R par ligne) en accordéon simple. */
+  function faqHTML(faq) {
+    return String(faq).split("\n").map((line) => line.trim()).filter(Boolean).map((line) => {
+      const idx = line.indexOf("?");
+      const q = idx >= 0 ? line.slice(0, idx + 1) : line;
+      const a = idx >= 0 ? line.slice(idx + 1).trim() : "";
+      return `<div class="faq-item"><div class="faq-q">❓ ${UI.esc(q)}</div>${a ? `<div class="faq-a">${UI.esc(a)}</div>` : ""}</div>`;
+    }).join("");
+  }
+
+  /** Indicateurs de fiabilité d'une boutique (livraison, délai de traitement). */
+  function sellerReliability(storeId) {
+    const orders = Orders.byStore(storeId);
+    if (!orders.length) return { orders: 0, delivRate: 0, avgHours: 0 };
+    const delivered = orders.filter((o) => o.status === "livree").length;
+    // Délai de traitement : temps entre la réception et la confirmation/expédition.
+    let sum = 0, n = 0;
+    orders.forEach((o) => {
+      const h = o.history || [];
+      const start = h[0] ? h[0].at : o.createdAt;
+      const conf = h.find((x) => x.status === "confirmee" || x.status === "expediee" || x.status === "livree");
+      if (conf) { sum += conf.at - start; n++; }
+    });
+    return {
+      orders: orders.length,
+      delivRate: Math.round((delivered / orders.length) * 100),
+      avgHours: n ? Math.round(sum / n / 3600000) : 0,
+    };
+  }
+
+  /** Articles similaires (même boutique/catégorie), hors l'article courant. */
+  function similarProducts(product, limit) {
+    const pool = Products.published().filter((p) => p.id !== product.id);
+    const sameStore = pool.filter((p) => p.storeId === product.storeId);
+    const sameCat = pool.filter((p) => p.storeId !== product.storeId && p.category === product.category);
+    return sameStore.concat(sameCat).slice(0, limit || 6);
   }
 
   function gridHTML(list, emptyMsg) {
@@ -433,6 +478,8 @@
     const out = p.stock <= 0 || closed;
     const favActive = Fav.has(p.id) ? "active" : "";
     const isOwner = Auth.isLogged() && Auth.current().id === store.ownerId;
+    // Vente flash : promo active se terminant dans moins de 3 jours.
+    const isFlash = hasPromo && p.promoUntil && p.promoUntil - Date.now() < 3 * 86400000 && p.promoUntil > Date.now();
 
     const sizeSel = p.variants.sizes && p.variants.sizes.length
       ? `<div class="variant-row"><label>Taille</label><div class="variant-opts" id="sizeOpts">
@@ -459,8 +506,9 @@
           <div class="pd-price-row">
             <span class="pd-price">${UI.fcfa(price)}</span>
             ${hasPromo ? `<span class="pd-price-old">${UI.fcfa(p.price)}</span>` : ""}
-            ${hasPromo && p.promoUntil ? `<span class="tag promo" style="position:static">Jusqu'au ${UI.dateFR(p.promoUntil)}</span>` : ""}
+            ${hasPromo && p.promoUntil && !isFlash ? `<span class="tag promo" style="position:static">Jusqu'au ${UI.dateFR(p.promoUntil)}</span>` : ""}
           </div>
+          ${isFlash ? `<div class="flash-banner">⚡ <strong>Vente flash</strong> — se termine dans <span id="flashCountdown">…</span></div>` : ""}
           <div class="text-muted" style="font-size:14px">${closed ? "🔒 Boutique fermée — commandes suspendues" : (p.stock <= 0 ? "❌ Rupture de stock" + (p.restockDate && p.restockDate > Date.now() ? ` — réappro prévu le ${UI.dateFR(p.restockDate)}` : "") : "✅ En stock : " + p.stock + " disponible(s)")}</div>
           <p class="pd-desc">${UI.esc(p.description)}</p>
           ${sizeSel}${colorSel}
@@ -486,7 +534,21 @@
       </div>
       <div class="section-title">Avis & notes</div>
       <div class="card card-pad" id="reviewsBox">${reviewsHTML(p.id, "product")}</div>
+      ${(() => { const sim = similarProducts(p, 6); return sim.length ? `<div class="section-title">Vous aimerez aussi</div>${gridHTML(sim)}` : ""; })()}
     `);
+
+    // --- Compte à rebours vente flash ---
+    if (isFlash) {
+      const el = () => document.getElementById("flashCountdown");
+      const tick = () => {
+        const node = el(); if (!node) return;
+        let ms = p.promoUntil - Date.now();
+        if (ms <= 0) { node.textContent = "terminée"; return; }
+        const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000), s = Math.floor((ms % 60000) / 1000);
+        node.textContent = `${h}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
+      };
+      tick(); addPageTimer(tick, 1000);
+    }
 
     // --- Wiring galerie ---
     V().querySelectorAll(".pd-thumb").forEach((t) =>
@@ -677,6 +739,7 @@
     const subscribed = user && Store.isSubscribed(user.id, store.id);
     const isOwner = user && user.id === store.ownerId;
 
+    const rel = sellerReliability(store.id);
     // Couleur d'accent personnalisée de la boutique (sécurisée : #hex uniquement).
     const accent = /^#[0-9a-fA-F]{3,8}$/.test(store.themeColor || "") ? store.themeColor : "";
     const accentStyle = accent ? ` style="--store-accent:${accent}"` : "";
@@ -697,6 +760,7 @@
               <span>🕒 ${UI.esc(store.hours)}</span>
               <span>👥 ${subCount} abonné(s)</span>
               ${rt.count ? `<span>${UI.starsHTML(rt.avg)} (${rt.count})</span>` : ""}
+              ${rel.orders >= 3 ? `<span title="Fiabilité">✅ ${rel.delivRate}% livrées${rel.avgHours ? ` · traitées en ~${rel.avgHours}h` : ""}</span>` : ""}
             </div>
           </div>
           <div class="flex gap-8 wrap">
@@ -716,6 +780,9 @@
         <div class="gallery-grid">${gallery.map((img, i) => `<button class="gal-item" data-gal="${i}"><img src="${UI.safeImg(img, store.name)}" alt="Photo ${i + 1} de ${UI.esc(store.name)}" loading="lazy" /></button>`).join("")}</div>` : ""}
       <div class="section-title">Articles (${products.length})</div>
       ${gridHTML(products, "Cette boutique n'a pas encore publié d'article.")}
+      ${store.faq ? `<div class="section-title">Questions fréquentes</div>
+        <div class="card card-pad">${faqHTML(store.faq)}</div>` : ""}
+      ${store.returnPolicy ? `<div class="card card-pad mt-16"><strong>↩︎ Politique de retour :</strong> ${UI.esc(store.returnPolicy)}</div>` : ""}
       <div class="section-title">Avis de la boutique</div>
       <div class="card card-pad" id="reviewsBox">${reviewsHTML(store.id, "store")}</div>
       </div>
@@ -1001,6 +1068,7 @@
       ${orders.map((o) => orderCardBuyer(o)).join("")}`);
 
     V().querySelectorAll("[data-cancel]").forEach((b) => b.addEventListener("click", () => openCancelModal(b.getAttribute("data-cancel"), "buyer", viewOrders)));
+    V().querySelectorAll("[data-invoice]").forEach((b) => b.addEventListener("click", () => printInvoice(Orders.get(b.getAttribute("data-invoice")))));
   }
 
   /** Modale d'annulation de commande avec motif. */
@@ -1042,7 +1110,10 @@
       ${o.slot ? `<div class="flex-between" style="font-size:13px"><span class="text-muted">Créneau souhaité</span><span>${UI.esc(o.slot)}</span></div>` : ""}
       ${o.cancelReason ? `<div class="text-muted" style="font-size:12.5px;margin-top:6px"><em>Annulée : ${UI.esc(o.cancelReason)}</em></div>` : ""}
       <div class="flex-between mt-8"><span class="text-muted">💵 À payer à la livraison (${UI.esc(o.delivery.commune)})</span><strong style="font-size:17px;color:var(--brand)">${UI.fcfa(o.total)}</strong></div>
-      ${(o.status === "en_attente" || o.status === "confirmee") ? `<div class="mt-8"><button class="btn btn-danger btn-sm" data-cancel="${o.id}">Annuler la commande</button></div>` : ""}
+      <div class="flex gap-8 wrap mt-8">
+        <button class="btn btn-ghost btn-sm" data-invoice="${o.id}">🧾 Reçu / facture</button>
+        ${(o.status === "en_attente" || o.status === "confirmee") ? `<button class="btn btn-danger btn-sm" data-cancel="${o.id}">Annuler la commande</button>` : ""}
+      </div>
     </div>`;
   }
 
@@ -1303,6 +1374,9 @@
           <label class="switch"><input type="checkbox" id="sClosed" ${s.closed ? "checked" : ""} /><span class="track"></span><span>Boutique fermée (mode vacances) — bloque les commandes</span></label>
           <div class="field"><label>Message d'indisponibilité</label><input id="sClosedMsg" value="${UI.esc(s.closedMsg || "")}" placeholder="Ex : De retour le 15 mars" /></div>
           <div class="field"><label>Bandeau promotionnel de la vitrine <span class="hint">(optionnel)</span></label><input id="sPromoBanner" value="${UI.esc(s.promoBanner || "")}" placeholder="Ex : -20% sur tout le pagne ce week-end !" /></div>
+          <div class="field"><label>Questions fréquentes (FAQ) <span class="hint">— une question/réponse par ligne, affichée en vitrine</span></label>
+            <textarea id="sFaq" placeholder="Livrez-vous à Bouaké ? Oui, sous 48h.&#10;Peut-on payer par Wave ? Non, paiement à la livraison uniquement.">${UI.esc(s.faq || "")}</textarea></div>
+          <div class="field"><label>Politique de retour <span class="hint">(optionnel)</span></label><input id="sReturn" value="${UI.esc(s.returnPolicy || "")}" placeholder="Ex : Retour possible sous 3 jours si article défectueux." /></div>
 
           <div class="divider" style="margin:6px 0"></div>
           <h3 style="margin:0;font-size:16px">Livraison</h3>
@@ -1364,6 +1438,8 @@
         closed: document.getElementById("sClosed").checked,
         closedMsg: document.getElementById("sClosedMsg").value.trim(),
         promoBanner: document.getElementById("sPromoBanner").value.trim(),
+        faq: document.getElementById("sFaq").value.trim(),
+        returnPolicy: document.getElementById("sReturn").value.trim(),
         defaultFee: Number(document.getElementById("sDefaultFee").value) || 0,
         freeShipThreshold: Number(document.getElementById("sFreeShip").value) || 0,
         socials: {
@@ -1567,6 +1643,16 @@
     chat: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM7 9h10v2H7zm0 4h7v2H7z'/></svg>",
   };
 
+  // Réponses rapides (modèles) pour la messagerie vendeur.
+  const QUICK_REPLIES = [
+    "Bonjour, oui c'est disponible ✅",
+    "Merci pour votre message 🙏",
+    "Le prix est négociable, faites une offre.",
+    "Livraison possible dès demain.",
+    "Paiement à la livraison uniquement.",
+    "Désolé, article en rupture pour le moment.",
+  ];
+
   /**
    * Rend la barre de menu basse propre au vendeur (mobile). Distincte de la
    * nav client : fond sombre, bouton central « + » et un menu « Plus ».
@@ -1670,6 +1756,7 @@
         </div>
       </div>`;
     SB().innerHTML = "";
+    clearPageTimers();
     renderSellerBottomNav(opts.active);
   }
 
@@ -1815,6 +1902,8 @@
         <div class="kpi"><b>${s.delivRate}%</b><span>Taux de livraison</span></div>
         <div class="kpi"><b>${UI.fcfa(s.collected)}</b><span>Déjà encaissé</span></div>
         <div class="kpi"><b>${UI.fcfa(s.toCollect)}</b><span>Reste à encaisser</span></div>
+        <div class="kpi"><b>${UI.fcfa(s.grossMargin || 0)}</b><span>Marge brute</span></div>
+        <div class="kpi"><b>${UI.fcfa(s.netProfit || 0)}</b><span>Bénéfice net (− ${UI.fcfa(s.expensesPeriod || 0)} de charges)</span></div>
       </div>
       <h3>Top articles vendus</h3>
       <table><tbody>${s.topProducts.length ? s.topProducts.map(([t, n]) => `<tr><td>${UI.esc(t)}</td><td style="text-align:right">${n}</td></tr>`).join("") : "<tr><td>—</td></tr>"}</tbody></table>
@@ -1826,6 +1915,40 @@
     const wnd = window.open("", "_blank");
     if (!wnd) { UI.toast("Autorisez les pop-up pour imprimer.", "error"); return; }
     wnd.document.write(html); wnd.document.close(); setTimeout(() => wnd.print(), 350);
+  }
+
+  /** Facture / reçu imprimable (PDF via impression) d'une commande. */
+  function printInvoice(order) {
+    const store = Store.get(order.storeId);
+    const itemsTotal = order.itemsTotal != null ? order.itemsTotal : order.total;
+    const rows = order.items.map((it) => {
+      const v = [it.variant && it.variant.size, it.variant && it.variant.color].filter(Boolean).join(" / ");
+      return `<tr><td>${UI.esc(it.title)}${v ? ` <small>(${UI.esc(v)})</small>` : ""}</td><td style="text-align:center">${it.qty}</td><td style="text-align:right">${UI.fcfa(it.unit)}</td><td style="text-align:right">${UI.fcfa(it.unit * it.qty)}</td></tr>`;
+    }).join("");
+    const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Reçu ${UI.esc(order.number)}</title>
+      <style>body{font-family:Segoe UI,Arial,sans-serif;color:#111;padding:30px;max-width:720px;margin:auto}
+        h1{font-size:20px;margin:0} .muted{color:#666;font-size:13px}
+        .head{display:flex;justify-content:space-between;border-bottom:2px solid #f97316;padding-bottom:12px;margin-bottom:16px}
+        .badge{background:#0f9d58;color:#fff;padding:4px 10px;border-radius:20px;font-weight:700;font-size:13px}
+        table{width:100%;border-collapse:collapse;margin:14px 0} th,td{border-bottom:1px solid #eee;padding:8px;font-size:14px} th{text-align:left;background:#faf6f2}
+        .tot{display:flex;justify-content:flex-end} .tot table{width:auto;min-width:280px}
+        .grand td{font-size:18px;font-weight:800;border-top:2px solid #333} @media print{button{display:none}}</style></head><body>
+      <div class="head"><div><h1>🛒 ${UI.esc(store.name)}</h1><div class="muted">Reçu / facture · Marché CI</div></div>
+        <div style="text-align:right"><div class="badge">${UI.esc(order.number)}</div><div class="muted" style="margin-top:6px">${UI.dateFR(order.createdAt)}</div></div></div>
+      <div class="muted"><strong>Client :</strong> ${UI.esc(order.delivery.name)} — ${UI.esc(order.delivery.phone)}<br>${UI.esc(order.delivery.commune)} — ${UI.esc(order.delivery.address)}</div>
+      <table><thead><tr><th>Article</th><th style="text-align:center">Qté</th><th style="text-align:right">P.U.</th><th style="text-align:right">Total</th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="tot"><table>
+        <tr><td>Sous-total</td><td style="text-align:right">${UI.fcfa(itemsTotal)}</td></tr>
+        ${order.discount ? `<tr><td>Remise ${order.couponCode ? "(" + UI.esc(order.couponCode) + ")" : ""}</td><td style="text-align:right">− ${UI.fcfa(order.discount)}</td></tr>` : ""}
+        <tr><td>Livraison</td><td style="text-align:right">${order.deliveryFee ? UI.fcfa(order.deliveryFee) : "Gratuite"}</td></tr>
+        <tr class="grand"><td>Total ${order.paid ? "(payé)" : "à payer"}</td><td style="text-align:right">${UI.fcfa(order.total)}</td></tr>
+      </table></div>
+      <p class="muted">Paiement à la livraison (espèces). Merci de votre confiance — ${UI.esc(store.name)}.${store.returnPolicy ? "<br>Retour : " + UI.esc(store.returnPolicy) : ""}</p>
+      <button onclick="window.print()" style="padding:10px 18px;border:none;background:#f97316;color:#fff;border-radius:8px;font-weight:700;cursor:pointer">Imprimer / PDF</button>
+      </body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) { UI.toast("Autorisez les pop-up pour imprimer.", "error"); return; }
+    w.document.write(html); w.document.close(); setTimeout(() => w.print(), 350);
   }
 
   /** Export CSV des commandes d'une boutique. */
@@ -2008,7 +2131,7 @@
         <td><div class="flex gap-8" style="align-items:center"><img class="mini-thumb" src="${UI.safeImg(p.images && p.images[0], p.title)}" alt=""/>
           <div><a href="#/product/${p.id}" style="font-weight:600">${p.featured ? `<span class="featured-star" title="À la une">★</span> ` : ""}${UI.esc(p.title)}</a>
           <div class="text-muted" style="font-size:12px">${UI.esc(UI.categoryLabel(p.category))} · ${p.condition === "occasion" ? "Occasion" : "Neuf"}${Products.promoActive(p) ? " · <span style='color:var(--danger);font-weight:700'>Promo</span>" : ""}</div></div></div></td>
-        <td>${UI.fcfa(Products.effectivePrice(p))}${Products.promoActive(p) ? ` <span class="text-muted" style="text-decoration:line-through;font-size:12px">${UI.fcfa(p.price)}</span>` : ""}</td>
+        <td>${UI.fcfa(Products.effectivePrice(p))}${Products.promoActive(p) ? ` <span class="text-muted" style="text-decoration:line-through;font-size:12px">${UI.fcfa(p.price)}</span>` : ""}${p.cost ? `<div class="text-muted" style="font-size:11.5px">marge ${UI.fcfa(Products.margin(p))}</div>` : ""}</td>
         <td><input type="number" min="0" class="stock-edit ${p.stock <= 0 ? "" : ""}" data-stock="${p.id}" value="${p.stock}" title="Modifier le stock" /></td>
         <td>👁️ ${p.views || 0}</td>
         <td><span class="status ${p.status}">${statusLabel(p.status)}</span></td>
@@ -2141,6 +2264,8 @@
             <div class="field"><label>Prix (FCFA) *</label><input type="number" id="pPrice" value="${d.price || ""}" min="0" required /></div>
             <div class="field"><label>Prix promo (optionnel)</label><input type="number" id="pPromo" value="${d.promoPrice || ""}" min="0" /></div>
           </div>
+          <div class="field"><label>Coût d'achat (FCFA) <span class="hint">— privé, sert au calcul de votre marge/bénéfice</span></label>
+            <input type="number" id="pCost" value="${d.cost || ""}" min="0" placeholder="Ex : 12000" /></div>
           <div class="form-grid form-2col">
             <div class="field"><label>Fin de promo (optionnel) <span class="hint">— au-delà, le prix normal revient</span></label>
               <input type="date" id="pPromoUntil" value="${d.promoUntil ? new Date(d.promoUntil).toISOString().slice(0, 10) : ""}" /></div>
@@ -2173,7 +2298,13 @@
             <a href="#/seller/products" class="btn btn-ghost btn-lg">Annuler</a>
           </div>
         </form>
-      </div>`,
+      </div>
+      ${editing && (d.history || []).length ? `<div class="card card-pad mt-16" style="max-width:820px">
+        <div class="panel-head"><h3>Historique des modifications</h3></div>
+        ${d.history.slice().reverse().map((h) => `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+          <div class="text-muted" style="font-size:12px">${UI.dateFR(h.at)} ${new Date(h.at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</div>
+          ${h.changes.map((c) => `<div style="font-size:13.5px">• ${UI.esc(c)}</div>`).join("")}</div>`).join("")}
+      </div>` : ""}`,
     });
 
     const up = wireUploader("prodImgs", d.images || [], true);
@@ -2185,6 +2316,7 @@
         title: document.getElementById("pTitle").value,
         description: document.getElementById("pDesc").value,
         price: document.getElementById("pPrice").value,
+        cost: document.getElementById("pCost").value,
         promoPrice: document.getElementById("pPromo").value,
         stock: document.getElementById("pStock").value,
         category: document.getElementById("pCat").value,
@@ -2279,6 +2411,9 @@
     V().querySelectorAll("[data-print]").forEach((b) =>
       b.addEventListener("click", () => printDeliverySlip(Orders.get(b.getAttribute("data-print"))))
     );
+    V().querySelectorAll("[data-invoice]").forEach((b) =>
+      b.addEventListener("click", () => printInvoice(Orders.get(b.getAttribute("data-invoice"))))
+    );
     V().querySelectorAll("[data-paid]").forEach((b) =>
       b.addEventListener("click", () => {
         const o = Orders.get(b.getAttribute("data-paid"));
@@ -2339,6 +2474,7 @@
       <div class="flex gap-8 wrap mt-8">
         <button class="btn ${o.paid ? "btn-ghost" : "btn-accent"} btn-sm" data-paid="${o.id}">${o.paid ? "↩︎ Non encaissée" : "✓ Marquer encaissée"}</button>
         <button class="btn btn-ghost btn-sm" data-print="${o.id}">${SICON.printer} Bon de livraison</button>
+        <button class="btn btn-ghost btn-sm" data-invoice="${o.id}">🧾 Reçu</button>
         <a class="btn wa-btn btn-sm" href="https://wa.me/225${UI.esc(o.delivery.phone.replace(/\D/g, ""))}" target="_blank" rel="noopener">${SICON.wa} Contacter</a>
         ${o.status !== "livree" && o.status !== "annulee" ? `<button class="btn btn-danger btn-sm" data-cancel="${o.id}">Annuler</button>` : ""}
       </div>
@@ -2375,6 +2511,12 @@
 
     const sum = (arr) => arr.reduce((s, o) => s + (o.itemsTotal != null ? o.itemsTotal : o.total), 0);
     const caCur = sum(cur), caPrev = sum(prev);
+
+    // Marge brute (ventes − coût d'achat) sur les commandes non annulées.
+    const valid = cur.filter((o) => o.status !== "annulee");
+    const grossMargin = valid.reduce((s, o) => s + o.items.reduce((a, it) => a + (it.unit - (it.cost || 0)) * it.qty, 0) - (o.discount || 0), 0);
+    const expensesPeriod = Expenses.total(store.id, min);
+    const netProfit = grossMargin - expensesPeriod;
     const avg = cur.length ? Math.round(caCur / cur.length) : 0;
     const delivered = cur.filter((o) => o.status === "livree").length;
     const cancelled = cur.filter((o) => o.status === "annulee").length;
@@ -2478,6 +2620,23 @@
           </div>
         </div>
 
+        <div class="seller-cols mt-16">
+          <div class="card card-pad">
+            <div class="panel-head"><h3>💰 Bénéfice de la période</h3></div>
+            <div class="summary-row"><span>Marge brute (ventes − coût d'achat)</span><strong>${UI.fcfa(grossMargin)}</strong></div>
+            <div class="summary-row"><span>− Dépenses / charges</span><strong style="color:var(--danger)">${UI.fcfa(expensesPeriod)}</strong></div>
+            <div class="summary-row total"><span>Bénéfice net</span><strong style="color:${netProfit >= 0 ? "var(--accent)" : "var(--danger)"}">${UI.fcfa(netProfit)}</strong></div>
+            <p class="text-muted" style="font-size:12px;margin:8px 0 0">Renseignez le « coût d'achat » de vos articles pour affiner la marge.</p>
+          </div>
+          <div class="card card-pad">
+            <div class="panel-head"><h3>🧾 Journal de caisse</h3><button class="btn btn-primary btn-sm" id="addExpense">+ Dépense</button></div>
+            ${(() => { const list = Expenses.byStore(store.id).slice(0, 6); return list.length ? list.map((e) => `<div class="flex-between" style="padding:7px 0;border-bottom:1px solid var(--border)">
+                <div><strong style="font-size:13.5px">${UI.esc(e.label)}</strong><div class="text-muted" style="font-size:12px">${UI.esc(e.category)} · ${UI.timeAgo(e.createdAt)}</div></div>
+                <div class="flex gap-8" style="align-items:center"><strong style="color:var(--danger)">− ${UI.fcfa(e.amount)}</strong><button class="icon-action danger" data-del-exp="${e.id}" title="Supprimer">${SICON.trash}</button></div></div>`).join("")
+              : `<p class="text-muted" style="text-align:center;padding:14px 0">Aucune dépense enregistrée.</p>`; })()}
+          </div>
+        </div>
+
         <div class="card card-pad mt-16">
           <div class="panel-head"><h3>Outils & données</h3></div>
           <div class="flex gap-8 wrap">
@@ -2493,7 +2652,9 @@
 
     const w = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener("click", fn); };
     w("expCsv2", () => exportOrdersCSV(store, orders));
-    w("stPrint", () => printStatsReport(store, { period, caCur, count: cur.length, avg, delivRate, cancelRate, collected, toCollect, topProducts, topCommunes }));
+    w("stPrint", () => printStatsReport(store, { period, caCur, count: cur.length, avg, delivRate, cancelRate, collected, toCollect, topProducts, topCommunes, grossMargin, expensesPeriod, netProfit }));
+    w("addExpense", () => openExpenseModal(() => viewSellerStats(params)));
+    V().querySelectorAll("[data-del-exp]").forEach((b) => b.addEventListener("click", () => { Expenses.remove(b.getAttribute("data-del-exp")); viewSellerStats(params); }));
     w("stQr", () => showStoreQR(store));
     w("stExpCat", () => exportCatalog(store));
     w("stImpCat", openImportCatalog);
@@ -2525,24 +2686,39 @@
       map[key].last = Math.max(map[key].last, o.createdAt);
       map[key].phone = o.delivery.phone;
     });
-    const clients = Object.values(map).sort((a, b) => b.total - a.total);
+    const INACTIVE_MS = 30 * 86400000;
+    const segOf = (c) => c.last < Date.now() - INACTIVE_MS ? "inactif" : (c.count >= 3 ? "fidele" : "nouveau");
+    const clients = Object.values(map).map((c) => Object.assign(c, { seg: segOf(c) })).sort((a, b) => b.total - a.total);
     const totalRevenue = clients.reduce((s, c) => s + c.total, 0);
+    const counts = { nouveau: 0, fidele: 0, inactif: 0 };
+    clients.forEach((c) => counts[c.seg]++);
+    const segLabel = { nouveau: "Nouveau", fidele: "Fidèle", inactif: "Inactif" };
+    const winbackText = (c) => encodeURIComponent(`Bonjour ${c.name || ""}, cela fait un moment ! Découvrez nos nouveautés chez ${store.name}. À bientôt 🙂`);
 
     sellerLayout({
       active: "clients",
       title: "Mes clients",
       subtitle: `${clients.length} client(s) · ${UI.fcfa(totalRevenue)} de commandes`,
       actions: "",
-      body: clients.length ? `<div class="table-wrap"><table class="data-table">
-        <thead><tr><th>Client</th><th>Commune</th><th>Commandes</th><th>Total</th><th>Dernière</th><th></th></tr></thead>
+      body: clients.length ? `
+        <div class="filter-bar" style="margin-bottom:16px">
+          <span class="chip">👥 ${clients.length} total</span>
+          <span class="chip">🆕 ${counts.nouveau} nouveaux</span>
+          <span class="chip">⭐ ${counts.fidele} fidèles</span>
+          <span class="chip">😴 ${counts.inactif} inactifs</span>
+        </div>
+        ${counts.inactif ? `<div class="cod-note" style="margin-bottom:14px"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg><span><strong>${counts.inactif} client(s) inactif(s)</strong> (+30 j) — relancez-les via WhatsApp pour les faire revenir.</span></div>` : ""}
+        <div class="table-wrap"><table class="data-table">
+        <thead><tr><th>Client</th><th>Segment</th><th>Commune</th><th>Commandes</th><th>Total</th><th>Dernière</th><th></th></tr></thead>
         <tbody>${clients.map((c) => `<tr>
           <td><div class="flex gap-8" style="align-items:center"><div class="review-avatar">${UI.esc((c.name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase())}</div>
-            <div><strong>${UI.esc(c.name)}</strong>${c.count >= 3 ? ` <span class="tag featured" style="position:static">Fidèle</span>` : ""}<div class="text-muted" style="font-size:12px">${UI.esc(c.phone)}</div></div></div></td>
+            <div><strong>${UI.esc(c.name)}</strong><div class="text-muted" style="font-size:12px">${UI.esc(c.phone)}</div></div></div></td>
+          <td><span class="seg-badge seg-${c.seg}">${segLabel[c.seg]}</span></td>
           <td>${UI.esc(c.commune)}</td>
           <td>${c.count}</td>
           <td style="font-weight:700;color:var(--brand)">${UI.fcfa(c.total)}</td>
           <td>${UI.timeAgo(c.last)}</td>
-          <td><a class="btn wa-btn btn-sm" href="https://wa.me/225${UI.esc(String(c.phone).replace(/\D/g, ""))}" target="_blank" rel="noopener">${SICON.wa} Contacter</a></td>
+          <td><a class="btn wa-btn btn-sm" href="https://wa.me/225${UI.esc(String(c.phone).replace(/\D/g, ""))}${c.seg === "inactif" ? "?text=" + winbackText(c) : ""}" target="_blank" rel="noopener">${SICON.wa} ${c.seg === "inactif" ? "Relancer" : "Contacter"}</a></td>
         </tr>`).join("")}</tbody></table></div>`
         : emptyState("👥", "Aucun client", "Vos clients apparaîtront ici après leur première commande."),
     });
@@ -2627,6 +2803,27 @@
     });
   }
 
+  function openExpenseModal(after) {
+    UI.modal({
+      title: "Nouvelle dépense",
+      body: `<div class="form-grid">
+        <div class="field"><label>Libellé *</label><input id="eLabel" placeholder="Ex : Achat de tissu" /></div>
+        <div class="form-grid form-2col">
+          <div class="field"><label>Montant (FCFA) *</label><input type="number" id="eAmount" min="1" placeholder="Ex : 25000" /></div>
+          <div class="field"><label>Catégorie</label><select id="eCat">${Expenses.CATEGORIES.map((c) => `<option value="${c}">${c}</option>`).join("")}</select></div>
+        </div>
+      </div>`,
+      footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-primary" id="eGo">Enregistrer</button>`,
+      onMount(m, close) {
+        m.querySelector("#eGo").addEventListener("click", () => {
+          const res = Expenses.add({ label: m.querySelector("#eLabel").value, amount: m.querySelector("#eAmount").value, category: m.querySelector("#eCat").value });
+          if (res.ok) { UI.toast("Dépense enregistrée ✓", "success"); close(); if (after) after(); }
+          else UI.toast(res.error, "error");
+        });
+      },
+    });
+  }
+
   /* ============================================================
      MESSAGERIE : conversation réutilisable (vendeur / acheteur)
      ============================================================ */
@@ -2655,9 +2852,13 @@
         subtitle: buyerName,
         actions: `<a href="#/seller/messages" class="btn btn-ghost">← Toutes les conversations</a>`,
         body: `<div class="card card-pad"><div class="msg-thread">${conversationHTML(msgs)}</div>
-          <form id="msgForm" class="flex gap-8 mt-16"><input id="msgText" placeholder="Écrire une réponse…" style="flex:1;padding:11px 14px;border-radius:var(--r-full);border:1.5px solid var(--border);background:var(--surface-2);color:var(--text)" />
+          <div class="quick-replies mt-16">${QUICK_REPLIES.map((q) => `<button type="button" class="chip" data-qr="${UI.esc(q)}">${UI.esc(q)}</button>`).join("")}</div>
+          <form id="msgForm" class="flex gap-8"><input id="msgText" placeholder="Écrire une réponse…" style="flex:1;padding:11px 14px;border-radius:var(--r-full);border:1.5px solid var(--border);background:var(--surface-2);color:var(--text)" />
           <button class="btn btn-primary" type="submit">Envoyer</button></form></div>`,
       });
+      V().querySelectorAll("[data-qr]").forEach((b) => b.addEventListener("click", () => {
+        const inp = document.getElementById("msgText"); inp.value = b.getAttribute("data-qr"); inp.focus();
+      }));
       const form = document.getElementById("msgForm");
       form.addEventListener("submit", (e) => {
         e.preventDefault();

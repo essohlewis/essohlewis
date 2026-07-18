@@ -58,14 +58,29 @@ window.MP = window.MP || {};
     const existing = get(id);
     if (!existing) return { ok: false, error: "Article introuvable." };
     const wasPublished = existing.status === "published";
+    const wasPromo = promoActive(existing);
     const product = _normalize(data, {
       id: existing.id,
       storeId: existing.storeId,
       views: existing.views,
       createdAt: existing.createdAt,
       cartAdds: existing.cartAdds || 0, // préserve le compteur de conversion
+      history: existing.history || [],
     });
+
+    // Historique des modifications (prix, stock, statut, promo).
+    const changes = [];
+    if (existing.price !== product.price) changes.push(`Prix : ${existing.price} → ${product.price} FCFA`);
+    if (existing.stock !== product.stock) changes.push(`Stock : ${existing.stock} → ${product.stock}`);
+    if (existing.status !== product.status) changes.push(`Statut : ${existing.status} → ${product.status}`);
+    if ((existing.promoPrice || 0) !== (product.promoPrice || 0)) changes.push(`Promo : ${existing.promoPrice || 0} → ${product.promoPrice || 0} FCFA`);
+    if (changes.length) product.history = (product.history || []).concat([{ at: Date.now(), changes }]).slice(-30);
+
     if (!DB.update(K, id, product)) return { ok: false, error: "Espace de stockage plein : réduisez le nombre ou la taille des images." };
+
+    // Alerte baisse de prix aux clients ayant mis l'article en favori
+    // (lorsque la promo devient active).
+    if (!wasPromo && promoActive(product)) _notifyFavoritersPromo(product);
 
     // Notifie les abonnés si l'article passe de non-publié à publié.
     if (!wasPublished && product.status === "published") {
@@ -85,6 +100,7 @@ window.MP = window.MP || {};
       title: String(data.title || "").trim(),
       description: String(data.description || "").trim(),
       price: Math.round(Number(data.price) || 0),
+      cost: Math.max(0, Math.round(Number(data.cost) || 0)), // coût d'achat (pour la marge)
       promoPrice: data.promoPrice ? Math.round(Number(data.promoPrice)) : 0,
       stock: Math.max(0, Math.round(Number(data.stock) || 0)),
       category: data.category || "mode",
@@ -138,6 +154,24 @@ window.MP = window.MP || {};
   function quickSet(id, patch) {
     return DB.update(K, id, patch);
   }
+
+  /** Notifie les clients ayant mis l'article en favori d'une baisse de prix. */
+  function _notifyFavoritersPromo(p) {
+    const favs = DB.get(DB.KEYS.favorites, {});
+    const store = window.MP.Store.get(p.storeId);
+    Object.keys(favs).forEach((userId) => {
+      if ((favs[userId] || []).includes(p.id)) {
+        window.MP.Notifications.push(userId, {
+          type: "new_product",
+          message: `💸 Baisse de prix sur « ${p.title} »${store ? " (" + store.name + ")" : ""} : ${window.MP.UI.fcfa(effectivePrice(p))} !`,
+          link: "#/product/" + p.id,
+        });
+      }
+    });
+  }
+
+  /** Marge unitaire d'un article (prix effectif − coût d'achat). */
+  function margin(p) { return Math.max(0, effectivePrice(p) - (p.cost || 0)); }
 
   /* ---------- Avis produit ---------- */
 
@@ -231,7 +265,7 @@ window.MP = window.MP || {};
 
   window.MP.Products = {
     all, get, byStore, published, create, update, remove,
-    addView, decrementStock, addCartCount, effectivePrice, promoActive, quickSet,
+    addView, decrementStock, addCartCount, effectivePrice, promoActive, quickSet, margin,
     reviews, rating, addReview, replyReview, search,
   };
 })();

@@ -86,6 +86,24 @@ L'espace vendeur est un **véritable back-office distinct de l'espace client** :
 - **Bon de livraison imprimable** (+ impression groupée des commandes confirmées).
 - **Filtres commandes** par statut, période et recherche (n°/client) ; **export CSV** (Excel).
 
+**Rentabilité & trésorerie**
+- **Coût d'achat par article** → **marge** unitaire et **bénéfice net** (marge − dépenses) sur les statistiques.
+- **Journal de caisse** : saisie des dépenses/charges par catégorie → mini compte de résultat.
+- **Rapport de statistiques imprimable** enrichi (marge brute, bénéfice net).
+
+**Ventes & confiance**
+- **Ventes flash** : promo à durée limitée avec **compte à rebours en direct** (badge ⚡ + minuteur).
+- **Alertes baisse de prix** : les clients ayant mis l'article en **favori** sont notifiés au lancement d'une promo.
+- **Articles similaires (cross-sell)** en bas de fiche produit.
+- **Facture / reçu imprimable** (PDF) par commande (acheteur & vendeur).
+- **Badge de fiabilité vendeur** sur la vitrine (taux de livraison, délai de traitement moyen).
+- **FAQ de boutique** et **politique de retour** affichées sur la vitrine.
+- **Historique des modifications** d'un article (prix, stock, statut, promo).
+
+**Relation client**
+- **Segments clients** (nouveau / fidèle / inactif) + **relance « win-back »** WhatsApp pré-remplie des clients inactifs.
+- **Réponses rapides (modèles)** dans la messagerie vendeur.
+
 **Promotions & fidélisation**
 - **Codes promo / coupons** créés par le vendeur (remise en %, en FCFA, ou livraison offerte ; achat minimum, limite d'usage, date d'expiration) et saisis par l'acheteur au paiement.
 - **Livraison offerte dès un montant** paramétrable par le vendeur.

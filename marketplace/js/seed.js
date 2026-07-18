@@ -38,6 +38,8 @@ window.MP = window.MP || {};
         slogan: "La mode africaine qui vous ressemble",
         themeColor: "#d6336c",
         gallery: [UI.placeholder("Atelier"), UI.placeholder("Wax"), UI.placeholder("Défilé"), UI.placeholder("Boutique"), UI.placeholder("Couture")],
+        faq: "Livrez-vous en dehors d'Abidjan ? Oui, sous 48–72h selon la ville.\nFaites-vous du sur-mesure ? Oui, contactez-nous via WhatsApp.\nPeut-on payer par Wave ? Non, paiement en espèces à la livraison uniquement.",
+        returnPolicy: "Échange possible sous 3 jours si l'article présente un défaut (non porté, étiquette intacte).",
         description: "Boutique de mode féminine et pagnes africains de qualité. Confection sur mesure disponible.",
         category: "mode", commune: "Cocody", hours: "Lun–Sam : 09h–20h",
         whatsapp: "0702030405", socials: { instagram: "elegance_ci", facebook: "EleganceAbidjan", tiktok: "elegance.abidjan" },
@@ -83,7 +85,7 @@ window.MP = window.MP || {};
 
     const products = [
       // Élégance Abidjan
-      P({ id: "prd_1", storeId: "sto_1", title: "Robe pagne wax élégante", description: "Robe cintrée en tissu wax authentique. Coupe moderne, idéale pour cérémonies et sorties.", price: 25000, promoPrice: 18500, stock: 12, category: "mode", imgSeeds: ["Robe", "Wax", "Mode"], variants: { sizes: ["S", "M", "L", "XL"], colors: ["Bleu", "Rouge", "Jaune"] } }),
+      P({ id: "prd_1", storeId: "sto_1", title: "Robe pagne wax élégante", description: "Robe cintrée en tissu wax authentique. Coupe moderne, idéale pour cérémonies et sorties.", price: 25000, promoPrice: 18500, promoUntil: now + 2 * day, cost: 12000, stock: 12, category: "mode", imgSeeds: ["Robe", "Wax", "Mode"], variants: { sizes: ["S", "M", "L", "XL"], colors: ["Bleu", "Rouge", "Jaune"] } }),
       P({ id: "prd_2", storeId: "sto_1", title: "Ensemble bogolan homme", description: "Ensemble traditionnel en bogolan, chemise + pantalon. Tissu respirant.", price: 32000, stock: 8, category: "mode", imgSeeds: ["Bogolan", "Homme"], variants: { sizes: ["M", "L", "XL"], colors: ["Marron", "Noir"] } }),
       P({ id: "prd_3", storeId: "sto_1", title: "Sac à main cuir artisanal", description: "Sac à main en cuir véritable fait main par des artisans locaux.", price: 15000, stock: 20, category: "accessoires", imgSeeds: ["Sac", "Cuir"], variants: { colors: ["Marron", "Noir", "Beige"] } }),
       P({ id: "prd_4", storeId: "sto_1", title: "Foulard en soie imprimé", description: "Foulard léger aux motifs africains, parfait accessoire toute saison.", price: 6500, promoPrice: 4900, stock: 30, category: "accessoires", imgSeeds: ["Foulard"] }),
@@ -125,6 +127,12 @@ window.MP = window.MP || {};
       { id: "cpn_1", storeId: "sto_1", code: "BIENVENUE10", type: "percent", value: 10, minTotal: 0, maxUses: 0, uses: 0, until: 0, active: true, createdAt: now - 6 * day },
       { id: "cpn_2", storeId: "sto_1", code: "LIVRAISON", type: "freeship", value: 0, minTotal: 15000, maxUses: 50, uses: 3, until: 0, active: true, createdAt: now - 4 * day },
       { id: "cpn_3", storeId: "sto_2", code: "TECH5000", type: "amount", value: 5000, minTotal: 100000, maxUses: 0, uses: 0, until: 0, active: true, createdAt: now - 3 * day },
+    ]);
+
+    // ---- Dépenses de démo (journal de caisse boutique 1) ----
+    DB.set(DB.KEYS.expenses, [
+      { id: "exp_1", storeId: "sto_1", label: "Achat de tissu wax", amount: 45000, category: "Approvisionnement", createdAt: now - 6 * day },
+      { id: "exp_2", storeId: "sto_1", label: "Transport marché", amount: 5000, category: "Transport", createdAt: now - 2 * day },
     ]);
 
     // ---- Message de démo (client -> boutique 1) ----
