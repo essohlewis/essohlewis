@@ -54,8 +54,19 @@ window.MP = window.MP || {};
     const groups = window.MP.Cart.grouped();
     if (!groups.length) return { ok: false, error: "Votre panier est vide." };
 
+    // Vérifie la disponibilité de chaque boutique (mode fermé / zone desservie).
+    for (const g of groups) {
+      const store = window.MP.Store.get(g.store.id);
+      if (store && store.closed) return { ok: false, error: `La boutique « ${store.name} » est actuellement fermée.` };
+      if (store && !window.MP.Store.servesCommune(store, delivery.commune)) {
+        return { ok: false, error: `« ${store.name} » ne livre pas encore à ${delivery.commune}.` };
+      }
+    }
+
     const created = [];
     groups.forEach((g) => {
+      const store = window.MP.Store.get(g.store.id);
+      const fee = window.MP.Store.deliveryFee(store, delivery.commune);
       const order = {
         id: DB.uid("ord"),
         number: _number(),
@@ -71,9 +82,12 @@ window.MP = window.MP || {};
           qty: l.qty,
           variant: l.variant || {},
         })),
-        total: g.subtotal,
+        itemsTotal: g.subtotal,        // montant des articles
+        deliveryFee: fee,              // frais de livraison
+        total: g.subtotal + fee,       // montant à encaisser à la livraison
         status: "en_attente",
-        payment: "livraison", // paiement à la livraison
+        paid: false,                   // encaissement (COD)
+        payment: "livraison",          // paiement à la livraison
         delivery: {
           name: delivery.name.trim(),
           phone: delivery.phone.trim(),
@@ -87,17 +101,21 @@ window.MP = window.MP || {};
       DB.insert(K, order);
       created.push(order);
 
-      // Décrémente le stock.
-      g.lines.forEach((l) => window.MP.Products.decrementStock(l.product.id, l.qty));
+      // Décrémente le stock + notifie le vendeur en cas de stock faible/rupture.
+      g.lines.forEach((l) => {
+        window.MP.Products.decrementStock(l.product.id, l.qty);
+        const p = window.MP.Products.get(l.product.id);
+        if (p && p.stock <= 0) {
+          window.MP.Notifications.push(store.ownerId, { type: "info", message: `Rupture de stock : « ${p.title} ».`, link: "#/seller/products?status=published" });
+        } else if (p && p.stock <= 3) {
+          window.MP.Notifications.push(store.ownerId, { type: "info", message: `Stock faible (${p.stock}) : « ${p.title} ».`, link: "#/seller/products" });
+        }
+      });
 
-      // Simule le chiffre d'affaires de la boutique. On écrit directement via
-      // DB : c'est une opération système au checkout (l'acheteur n'est pas le
-      // propriétaire de la boutique, la garde d'autorisation de Store.update
-      // bloquerait la mise à jour).
-      const store = window.MP.Store.get(g.store.id);
+      // Simule le chiffre d'affaires (articles uniquement) — écriture système.
       DB.update(DB.KEYS.stores, g.store.id, { revenueSim: (store.revenueSim || 0) + g.subtotal });
 
-      // Notifie le vendeur.
+      // Notifie le vendeur de la nouvelle commande.
       window.MP.Notifications.push(g.store.ownerId, {
         type: "new_order",
         message: `Nouvelle commande ${order.number} (${window.MP.UI.fcfa(order.total)}) à livrer.`,
@@ -128,7 +146,10 @@ window.MP = window.MP || {};
     const order = get(orderId);
     if (!order) return { ok: false };
     const history = (order.history || []).concat([{ status, at: Date.now() }]);
-    DB.update(K, orderId, { status, history });
+    const patch = { status, history };
+    // Une commande livrée est considérée encaissée (paiement à la livraison).
+    if (status === "livree") patch.paid = true;
+    DB.update(K, orderId, patch);
     window.MP.Notifications.push(order.buyerId, {
       type: "order_status",
       message: `Votre commande ${order.number} est désormais « ${STATUS[status]} ».`,
@@ -137,7 +158,15 @@ window.MP = window.MP || {};
     return { ok: true };
   }
 
+  /** Marque une commande comme encaissée / non encaissée (COD). */
+  function setPaid(orderId, paid) {
+    const order = get(orderId);
+    if (!order) return { ok: false };
+    DB.update(K, orderId, { paid: !!paid });
+    return { ok: true };
+  }
+
   window.MP.Orders = {
-    STATUS, STATUS_FLOW, checkout, get, byBuyer, byStore, setStatus, validateDelivery,
+    STATUS, STATUS_FLOW, checkout, get, byBuyer, byStore, setStatus, setPaid, validateDelivery,
   };
 })();

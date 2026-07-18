@@ -64,13 +64,35 @@ L'espace vendeur est un **véritable back-office distinct de l'espace client** :
 - **Menu vendeur en bas d'écran (mobile)** propre à l'espace vendeur, distinct de la nav client : Tableau, Articles, bouton central « + », Commandes, et une feuille « Menu » (vitrine, profil, accueil, notifications…).
 
 #### 💡 Innovations de l'espace vendeur
-- **Statistiques visuelles** (SVG/CSS pur, sans librairie) : graphe des **ventes des 7 derniers jours** et **répartition des commandes par statut** (donut).
-- **Objectif de vente mensuel** avec barre de progression et montant restant.
-- **Alertes de stock** : détection automatique des articles en **rupture** ou à **stock faible**.
-- **Partage WhatsApp** d'un article ou de toute la boutique (texte pré-rempli) — canal clé en Côte d'Ivoire.
-- **Bon de livraison imprimable** par commande (destinataire, articles, **montant à encaisser à la livraison**) + bouton « Contacter le client » (WhatsApp).
-- **Export CSV** des commandes (compatible Excel).
-- **Duplication rapide** d'un article (créé en brouillon).
+
+**Pilotage & statistiques**
+- **Tableau de bord analytique** (SVG/CSS pur, sans librairie) : ventes des 7 derniers jours, répartition des commandes par statut (donut).
+- **Page Statistiques dédiée** : CA / commandes / panier moyen / taux de livraison par période (7j, 30j, mois) avec **comparaison à la période précédente**, **top articles**, **top communes clientes**, **encaissement COD** (déjà encaissé / reste à encaisser) et **entonnoir de conversion** (vues → panier → ventes).
+- **Objectif de vente mensuel** avec barre de progression.
+- **Score de complétude** de la boutique + **checklist d'onboarding**.
+- **Alertes de stock** : rupture et stock faible détectés automatiquement (+ notification à chaque commande).
+
+**Catalogue**
+- **Actions groupées** (publier / dépublier / supprimer plusieurs articles).
+- **Édition rapide du stock** en ligne (sans ouvrir le formulaire).
+- **Article « à la une »** (mis en avant en tête de vitrine).
+- **Promotions datées** (prix promo avec date de fin, expiration automatique).
+- **Duplication rapide** d'un article ; **import/export du catalogue** (JSON).
+
+**Commandes & livraison (COD)**
+- **Frais de livraison par commune** (grille éditable) + **zones desservies**, intégrés au checkout et aux commandes.
+- **Suivi de livraison visuel** (barre d'étapes) côté acheteur et vendeur.
+- **Suivi d'encaissement** (payé / à encaisser) ; livrée = encaissée.
+- **Bon de livraison imprimable** (+ impression groupée des commandes confirmées).
+- **Filtres commandes** par statut, période et recherche (n°/client) ; **export CSV** (Excel).
+
+**Boutique & marketing**
+- **Mode ouvert / fermé (vacances)** : suspend les commandes + bandeau sur la vitrine.
+- **Bandeau promotionnel** de la vitrine.
+- **Partage WhatsApp** d'un article ou de la boutique (texte pré-rempli).
+- **QR code de la boutique** (généré 100 % hors-ligne) imprimable.
+- **Mini-CRM clients** : historique, total dépensé, badge « fidèle », contact WhatsApp.
+- **Sauvegarde / restauration** complète des données (JSON).
 
 ### Admin
 - Console de modération : statistiques globales, suppression de boutiques/articles, réinitialisation des données de démo.

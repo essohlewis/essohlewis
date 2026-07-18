@@ -63,6 +63,7 @@ window.MP = window.MP || {};
       storeId: existing.storeId,
       views: existing.views,
       createdAt: existing.createdAt,
+      cartAdds: existing.cartAdds || 0, // préserve le compteur de conversion
     });
     DB.update(K, id, product);
 
@@ -94,6 +95,9 @@ window.MP = window.MP || {};
         colors: (data.variants && data.variants.colors) || [],
       },
       status: ["published", "draft", "unpublished"].includes(data.status) ? data.status : "draft",
+      featured: !!data.featured,                       // article « à la une »
+      promoUntil: data.promoUntil ? Number(data.promoUntil) : 0, // fin de promo (timestamp, 0 = illimitée)
+      cartAdds: base.cartAdds || 0,                    // compteur d'ajouts au panier (conversion)
     });
   }
 
@@ -111,9 +115,27 @@ window.MP = window.MP || {};
     if (p) DB.update(K, id, { stock: Math.max(0, (p.stock || 0) - qty) });
   }
 
-  /** Prix effectif (promo si présente). */
+  /** Incrémente le compteur d'ajouts au panier (taux de conversion). */
+  function addCartCount(id) {
+    const p = get(id);
+    if (p) DB.update(K, id, { cartAdds: (p.cartAdds || 0) + 1 });
+  }
+
+  /** Indique si une promo est active (prix promo valide + non expirée). */
+  function promoActive(p) {
+    if (!(p.promoPrice && p.promoPrice > 0 && p.promoPrice < p.price)) return false;
+    if (p.promoUntil && p.promoUntil > 0 && p.promoUntil < Date.now()) return false;
+    return true;
+  }
+
+  /** Prix effectif (promo active si présente et non expirée). */
   function effectivePrice(p) {
-    return p.promoPrice && p.promoPrice > 0 && p.promoPrice < p.price ? p.promoPrice : p.price;
+    return promoActive(p) ? p.promoPrice : p.price;
+  }
+
+  /** Mise à jour rapide d'un seul champ (stock, featured…) sans re-notifier. */
+  function quickSet(id, patch) {
+    return DB.update(K, id, patch);
   }
 
   /* ---------- Avis produit ---------- */
@@ -208,7 +230,7 @@ window.MP = window.MP || {};
 
   window.MP.Products = {
     all, get, byStore, published, create, update, remove,
-    addView, decrementStock, effectivePrice,
+    addView, decrementStock, addCartCount, effectivePrice, promoActive, quickSet,
     reviews, rating, addReview, replyReview, search,
   };
 })();

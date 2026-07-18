@@ -630,6 +630,62 @@ body.seller-mode .bottom-nav { display: none !important; }
 .goal-bar { height: 26px; background: var(--surface-3); border-radius: var(--r-full); overflow: hidden; }
 .goal-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #0bbf6a); color: #fff; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: flex-end; padding-right: 11px; border-radius: var(--r-full); min-width: 26px; transition: width .6s cubic-bezier(.2,.8,.3,1); }
 
+/* Suivi de livraison (barre d'étapes) */
+.stepper { display: flex; align-items: flex-start; margin: 14px 0 2px; }
+.step { display: flex; flex-direction: column; align-items: center; gap: 5px; flex-shrink: 0; }
+.step-dot { width: 28px; height: 28px; border-radius: 50%; background: var(--surface-3); color: var(--text-3); display: grid; place-items: center; font-size: 12px; font-weight: 800; border: 2px solid var(--border); }
+.step.done .step-dot { background: var(--accent); color: #fff; border-color: var(--accent); }
+.step.current .step-dot { background: var(--brand); color: #fff; border-color: var(--brand); box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 22%, transparent); }
+.step-lbl { font-size: 11px; color: var(--text-3); font-weight: 600; }
+.step.done .step-lbl, .step.current .step-lbl { color: var(--text); }
+.step-line { flex: 1; height: 3px; background: var(--border); margin: 13px 4px 0; border-radius: 2px; min-width: 14px; }
+.step-line.done { background: var(--accent); }
+
+/* Éditeur de frais de livraison par commune */
+.fee-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.fee-item { display: flex; align-items: center; gap: 8px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 8px 10px; }
+.fee-item label { flex: 1; font-size: 13px; font-weight: 600; }
+.fee-item input { width: 92px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
+.zone-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.zone-chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: var(--r-full); border: 1.5px solid var(--border); font-size: 13px; font-weight: 600; cursor: pointer; user-select: none; }
+.zone-chip.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+/* Interrupteur (toggle) */
+.switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch input:focus-visible + .track { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 30%, transparent); }
+.switch .track { width: 46px; height: 26px; border-radius: 999px; background: var(--surface-3); position: relative; transition: background var(--t-fast); border: 1px solid var(--border); flex-shrink: 0; }
+.switch .track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: var(--shadow-sm); transition: transform var(--t-fast); }
+.switch input:checked + .track { background: var(--accent); border-color: var(--accent); }
+.switch input:checked + .track::after { transform: translateX(20px); }
+
+/* Checklist d'onboarding */
+.check-list { display: flex; flex-direction: column; gap: 8px; }
+.check-row { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-sm); font-size: 14px; }
+.check-row.done { background: var(--accent-soft); border-color: transparent; }
+.check-ico { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 800; flex-shrink: 0; background: var(--surface-3); color: var(--text-3); }
+.check-row.done .check-ico { background: var(--accent); color: #fff; }
+.check-row a { margin-left: auto; color: var(--brand); font-weight: 700; font-size: 13px; }
+
+/* QR code (grille de modules) */
+.qr-box { display: inline-block; padding: 14px; background: #fff; border-radius: var(--r); box-shadow: var(--shadow-sm); }
+.qr-grid { display: grid; }
+.qr-grid i { width: 5px; height: 5px; }
+
+/* Badge « à la une » */
+.tag.featured { background: #7c3aed; color: #fff; }
+.featured-star { color: #f59e0b; }
+
+/* Barre d'actions groupées */
+.bulk-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--brand-soft); border: 1px solid color-mix(in srgb, var(--brand) 30%, transparent); border-radius: var(--r); padding: 10px 14px; margin-bottom: 14px; }
+.bulk-bar strong { color: var(--brand-dark); }
+.stock-edit { width: 66px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface-2); color: var(--text); text-align: center; font-weight: 700; }
+
+/* Bandeau vitrine (fermé / promo) */
+.store-ribbon { padding: 12px 18px; border-radius: var(--r); margin-bottom: 16px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+.store-ribbon.closed { background: var(--danger-soft); color: var(--danger); }
+.store-ribbon.promo { background: linear-gradient(120deg, var(--brand-dark), var(--brand)); color: #fff; }
+
 /* Navigation basse dédiée au vendeur (mobile) — fond sombre, distincte du client */
 .seller-bottom-nav { display: none; }
 .sbn-item {

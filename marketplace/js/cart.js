@@ -53,6 +53,8 @@ window.MP = window.MP || {};
       map[key].push({ productId, qty: Math.min(product.stock, qty), variant: variant || {} });
     }
     _save(map);
+    // Compteur d'ajouts au panier (statistiques de conversion).
+    if (window.MP.Products.addCartCount) window.MP.Products.addCartCount(productId);
     return { ok: true };
   }
 

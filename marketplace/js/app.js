@@ -70,7 +70,7 @@
   function productCard(p) {
     const store = Store.get(p.storeId);
     const price = Products.effectivePrice(p);
-    const hasPromo = p.promoPrice && p.promoPrice > 0 && p.promoPrice < p.price;
+    const hasPromo = Products.promoActive(p);
     const rt = Products.rating(p.id);
     const out = p.stock <= 0;
     const img = UI.safeImg(p.images && p.images[0], p.title);
@@ -80,6 +80,7 @@
         <div class="pc-media">
           <img src="${img}" alt="${UI.esc(p.title)}" loading="lazy" />
           <div class="pc-tag">
+            ${p.featured ? `<span class="tag featured">★ À la une</span>` : ""}
             ${hasPromo ? `<span class="tag promo">-${Math.round((1 - price / p.price) * 100)}%</span>` : ""}
             ${p.condition === "occasion" ? `<span class="tag occasion">Occasion</span>` : ""}
             ${out ? `<span class="tag out">Rupture</span>` : ""}
@@ -288,10 +289,11 @@
     Products.addView(p.id);
     const store = Store.get(p.storeId);
     const price = Products.effectivePrice(p);
-    const hasPromo = p.promoPrice && p.promoPrice > 0 && p.promoPrice < p.price;
+    const hasPromo = Products.promoActive(p);
     const rt = Products.rating(p.id);
     const images = (p.images && p.images.length ? p.images : [UI.placeholder(p.title)]).map((s) => UI.safeImg(s, p.title));
-    const out = p.stock <= 0;
+    const closed = !!store.closed;
+    const out = p.stock <= 0 || closed;
     const favActive = Fav.has(p.id) ? "active" : "";
 
     const sizeSel = p.variants.sizes && p.variants.sizes.length
@@ -319,8 +321,9 @@
           <div class="pd-price-row">
             <span class="pd-price">${UI.fcfa(price)}</span>
             ${hasPromo ? `<span class="pd-price-old">${UI.fcfa(p.price)}</span>` : ""}
+            ${hasPromo && p.promoUntil ? `<span class="tag promo" style="position:static">Jusqu'au ${UI.dateFR(p.promoUntil)}</span>` : ""}
           </div>
-          <div class="text-muted" style="font-size:14px">${out ? "❌ Rupture de stock" : "✅ En stock : " + p.stock + " disponible(s)"}</div>
+          <div class="text-muted" style="font-size:14px">${closed ? "🔒 Boutique fermée — commandes suspendues" : (p.stock <= 0 ? "❌ Rupture de stock" : "✅ En stock : " + p.stock + " disponible(s)")}</div>
           <p class="pd-desc">${UI.esc(p.description)}</p>
           ${sizeSel}${colorSel}
           <div class="variant-row"><label>Quantité</label>
@@ -509,7 +512,8 @@
   function viewStore(params) {
     const store = Store.get(params.id);
     if (!store) { layout(emptyState("🏪", "Boutique introuvable", "Cette boutique n'existe plus.")); return; }
-    const products = Products.byStore(store.id);
+    // Articles « à la une » d'abord, puis les plus récents.
+    const products = Products.byStore(store.id).sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0) || b.createdAt - a.createdAt);
     const subCount = Store.subscriberCount(store.id);
     const rt = Store.rating(store.id);
     const user = Auth.current();
@@ -544,6 +548,8 @@
           </div>
         </div>
       </div>
+      ${store.closed ? `<div class="store-ribbon closed">🔒 Boutique momentanément fermée${store.closedMsg ? " — " + UI.esc(store.closedMsg) : ""}. Les commandes sont suspendues.</div>` : ""}
+      ${store.promoBanner ? `<div class="store-ribbon promo">📣 ${UI.esc(store.promoBanner)}</div>` : ""}
       <p class="text-muted" style="max-width:720px">${UI.esc(store.description)}</p>
       ${socials.length ? `<p class="text-muted" style="font-size:13px">${socials.join(" · ")}</p>` : ""}
       <div class="section-title">Articles (${products.length})</div>
@@ -655,7 +661,7 @@
     const groups = Cart.grouped();
     if (!groups.length) { Router.go("#/cart"); return; }
     const user = Auth.current();
-    const total = Cart.total();
+    const itemsTotal = Cart.total();
     const communeOpts = UI.COMMUNES.map((c) => `<option value="${c}" ${user.commune === c ? "selected" : ""}>${c}</option>`).join("");
 
     layout(`
@@ -686,15 +692,36 @@
         <div class="summary">
           <div class="card card-pad">
             <h3 style="margin:0 0 12px">Total à payer</h3>
-            <div class="summary-row"><span>${Cart.count()} article(s)</span><span>${UI.fcfa(total)}</span></div>
-            <div class="summary-row"><span>Boutiques</span><span>${groups.length}</span></div>
-            <div class="summary-row total"><span>À régler à la livraison</span><span>${UI.fcfa(total)}</span></div>
+            <div class="summary-row"><span>${Cart.count()} article(s)</span><span>${UI.fcfa(itemsTotal)}</span></div>
+            <div id="feeRows"></div>
+            <div class="summary-row total"><span>À régler à la livraison</span><span id="grandTotal">${UI.fcfa(itemsTotal)}</span></div>
             <div class="cod-note"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 1 3 5v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V5z"/></svg>
               <span>Paiement <strong>en espèces</strong> uniquement, à la réception.</span></div>
             <button class="btn btn-primary btn-block btn-lg mt-16" id="placeOrder">Valider la commande</button>
           </div>
         </div>
       </div>`);
+
+    // Recalcule les frais de livraison selon la commune choisie.
+    function refreshFees() {
+      const commune = document.getElementById("dCommune").value;
+      let fees = 0; let rows = "";
+      let blocked = null;
+      groups.forEach((g) => {
+        const st = Store.get(g.store.id);
+        if (!Store.servesCommune(st, commune)) { blocked = st.name; }
+        const fee = Store.deliveryFee(st, commune);
+        fees += fee;
+        rows += `<div class="summary-row"><span>Livraison ${UI.esc(g.store.name)}</span><span>${fee > 0 ? UI.fcfa(fee) : "Gratuite"}</span></div>`;
+      });
+      document.getElementById("feeRows").innerHTML = rows;
+      document.getElementById("grandTotal").textContent = UI.fcfa(itemsTotal + fees);
+      const btn = document.getElementById("placeOrder");
+      if (blocked) { btn.disabled = true; btn.textContent = `Non livré à ${commune}`; }
+      else { btn.disabled = false; btn.textContent = "Valider la commande"; }
+    }
+    document.getElementById("dCommune").addEventListener("change", refreshFees);
+    refreshFees();
 
     document.getElementById("placeOrder").addEventListener("click", () => {
       const delivery = {
@@ -734,10 +761,10 @@
           <div class="divider"></div>
           <div style="text-align:left">
             <div class="summary-row"><span>Boutique</span><strong>${UI.esc(order.storeName)}</strong></div>
-            <div class="summary-row"><span>Articles</span><span>${order.items.reduce((s, i) => s + i.qty, 0)}</span></div>
-            <div class="summary-row"><span>Livraison</span><span>${UI.esc(order.delivery.commune)}</span></div>
+            <div class="summary-row"><span>Articles (${order.items.reduce((s, i) => s + i.qty, 0)})</span><span>${UI.fcfa(order.itemsTotal != null ? order.itemsTotal : order.total)}</span></div>
+            <div class="summary-row"><span>Livraison — ${UI.esc(order.delivery.commune)}</span><span>${order.deliveryFee ? UI.fcfa(order.deliveryFee) : "Gratuite"}</span></div>
             <div class="summary-row"><span>Mode de paiement</span><span>💵 Espèces à la livraison</span></div>
-            <div class="summary-row total"><span>Montant</span><span>${UI.fcfa(order.total)}</span></div>
+            <div class="summary-row total"><span>Montant à régler</span><span>${UI.fcfa(order.total)}</span></div>
           </div>
           <div class="cod-note" style="text-align:left"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm-1 15-4-4 1.4-1.4L11 14.2l5.6-5.6L18 10z"/></svg>
             <span>Le vendeur vous contactera au <strong>${UI.esc(order.delivery.phone)}</strong> pour organiser la livraison.</span></div>
@@ -772,13 +799,25 @@
         <div><strong>N° ${UI.esc(o.number)}</strong><div class="text-muted" style="font-size:13px">${UI.dateFR(o.createdAt)} · ${UI.esc(o.storeName)}</div></div>
         <span class="status ${o.status}">${Orders.STATUS[o.status]}</span>
       </div>
+      ${o.status !== "annulee" ? deliveryStepper(o.status) : ""}
       <div class="divider" style="margin:14px 0"></div>
       ${o.items.map((it) => `<div class="cart-item" style="padding:8px 0;border:none">
         <img src="${UI.safeImg(it.image, it.title)}" alt="" style="width:54px;height:54px" />
         <div class="cart-item-info"><h4><a href="#/product/${it.productId}">${UI.esc(it.title)}</a></h4>
         <div class="ci-variant">Qté : ${it.qty} × ${UI.fcfa(it.unit)}</div></div></div>`).join("")}
+      ${o.deliveryFee ? `<div class="flex-between mt-8" style="font-size:13px"><span class="text-muted">Dont livraison</span><span>${UI.fcfa(o.deliveryFee)}</span></div>` : ""}
       <div class="flex-between mt-8"><span class="text-muted">💵 À payer à la livraison (${UI.esc(o.delivery.commune)})</span><strong style="font-size:17px;color:var(--brand)">${UI.fcfa(o.total)}</strong></div>
     </div>`;
+  }
+
+  /** Suivi de livraison visuel (barre d'étapes). */
+  function deliveryStepper(status) {
+    const steps = [["en_attente", "Reçue"], ["confirmee", "Confirmée"], ["expediee", "Expédiée"], ["livree", "Livrée"]];
+    const idx = steps.findIndex((s) => s[0] === status);
+    return `<div class="stepper">${steps.map(([k, l], i) => `
+      <div class="step ${i <= idx ? "done" : ""} ${i === idx ? "current" : ""}">
+        <div class="step-dot">${i < idx ? "✓" : i + 1}</div><div class="step-lbl">${l}</div>
+      </div>${i < steps.length - 1 ? `<div class="step-line ${i < idx ? "done" : ""}"></div>` : ""}`).join("")}</div>`;
   }
 
   /* ============================================================
@@ -1014,6 +1053,21 @@
           </div>
           <div class="field"><label>Objectif de vente mensuel (FCFA) <span class="hint">— suivi de progression sur votre tableau de bord</span></label>
             <input type="number" id="sGoal" min="0" value="${s.salesGoal || ""}" placeholder="Ex : 500000" /></div>
+
+          <div class="divider" style="margin:6px 0"></div>
+          <h3 style="margin:0;font-size:16px">Disponibilité & vitrine</h3>
+          <label class="switch"><input type="checkbox" id="sClosed" ${s.closed ? "checked" : ""} /><span class="track"></span><span>Boutique fermée (mode vacances) — bloque les commandes</span></label>
+          <div class="field"><label>Message d'indisponibilité</label><input id="sClosedMsg" value="${UI.esc(s.closedMsg || "")}" placeholder="Ex : De retour le 15 mars" /></div>
+          <div class="field"><label>Bandeau promotionnel de la vitrine <span class="hint">(optionnel)</span></label><input id="sPromoBanner" value="${UI.esc(s.promoBanner || "")}" placeholder="Ex : -20% sur tout le pagne ce week-end !" /></div>
+
+          <div class="divider" style="margin:6px 0"></div>
+          <h3 style="margin:0;font-size:16px">Livraison</h3>
+          <div class="field"><label>Frais de livraison par défaut (FCFA)</label><input type="number" id="sDefaultFee" min="0" value="${s.defaultFee || ""}" placeholder="Ex : 1000" /></div>
+          <div class="field"><label>Communes desservies <span class="hint">(aucune cochée = toutes)</span></label>
+            <div class="zone-chips" id="zoneChips">${UI.COMMUNES.map((c) => `<span class="zone-chip ${(s.zones || []).includes(c) ? "on" : ""}" data-zone="${UI.esc(c)}">${UI.esc(c)}</span>`).join("")}</div></div>
+          <div class="field"><label>Frais spécifiques par commune <span class="hint">(vide = frais par défaut)</span></label>
+            <div class="fee-grid">${UI.COMMUNES.map((c) => `<div class="fee-item"><label>${UI.esc(c)}</label><input type="number" min="0" data-fee="${UI.esc(c)}" value="${(s.deliveryFees && s.deliveryFees[c]) || ""}" placeholder="déf." /></div>`).join("")}</div></div>
+
           <div class="flex gap-12">
             <button class="btn btn-primary btn-lg" type="submit">${editing ? "Enregistrer les modifications" : "Créer ma boutique"}</button>
             ${editing ? `<a href="#/store/${s.id}" class="btn btn-ghost btn-lg">Voir la vitrine</a>` : ""}
@@ -1044,8 +1098,19 @@
     const logoUp = wireUploader("logoUp", s.logo ? [s.logo] : [], false);
     const bannerUp = wireUploader("bannerUp", s.banner ? [s.banner] : [], false);
 
+    // Sélection des communes desservies (zones).
+    V().querySelectorAll("#zoneChips .zone-chip").forEach((c) =>
+      c.addEventListener("click", () => c.classList.toggle("on"))
+    );
+
     document.getElementById("storeForm").addEventListener("submit", (e) => {
       e.preventDefault();
+      // Frais par commune (uniquement les champs renseignés).
+      const deliveryFees = {};
+      V().querySelectorAll("[data-fee]").forEach((inp) => {
+        if (inp.value !== "" && Number(inp.value) >= 0) deliveryFees[inp.getAttribute("data-fee")] = Number(inp.value);
+      });
+      const zones = Array.from(V().querySelectorAll("#zoneChips .zone-chip.on")).map((c) => c.getAttribute("data-zone"));
       const data = {
         name: document.getElementById("sName").value,
         description: document.getElementById("sDesc").value,
@@ -1056,6 +1121,12 @@
         logo: logoUp.get()[0] || "",
         banner: bannerUp.get()[0] || "",
         salesGoal: Number(document.getElementById("sGoal").value) || 0,
+        closed: document.getElementById("sClosed").checked,
+        closedMsg: document.getElementById("sClosedMsg").value.trim(),
+        promoBanner: document.getElementById("sPromoBanner").value.trim(),
+        defaultFee: Number(document.getElementById("sDefaultFee").value) || 0,
+        zones,
+        deliveryFees,
         socials: { instagram: document.getElementById("sIg").value.trim(), facebook: document.getElementById("sFb").value.trim() },
       };
       if (editing) {
@@ -1096,12 +1167,33 @@
     const outStock = products.filter((p) => p.stock <= 0);
     const lowStock = products.filter((p) => p.stock > 0 && p.stock <= LOW_STOCK);
 
+    // --- Score de complétude + checklist d'onboarding ---
+    const checklist = [
+      ["Logo de la boutique", !!store.logo, "#/seller/store"],
+      ["Bannière", !!store.banner, "#/seller/store"],
+      ["Description", (store.description || "").length > 10, "#/seller/store"],
+      ["Contact WhatsApp", !!store.whatsapp, "#/seller/store"],
+      ["Au moins 1 article publié", publishedCount > 0, "#/seller/product/new"],
+      ["Frais de livraison configurés", (store.defaultFee || 0) > 0 || Object.keys(store.deliveryFees || {}).length > 0, "#/seller/store"],
+      ["Objectif de vente défini", (store.salesGoal || 0) > 0, "#/seller/store"],
+    ];
+    const doneCount = checklist.filter((c) => c[1]).length;
+    const completeness = Math.round((doneCount / checklist.length) * 100);
+
+    // --- Avis à traiter (sans réponse) ---
+    const storeReviews = Store.reviews(store.id);
+    const productReviews = products.reduce((acc, p) => acc.concat(Products.reviews(p.id).map((r) => Object.assign({ _pid: p.id, _ptitle: p.title }, r))), []);
+    const pendingReviews = storeReviews.filter((r) => !r.reply).map((r) => Object.assign({ _store: true }, r))
+      .concat(productReviews.filter((r) => !r.reply))
+      .sort((a, b) => b.createdAt - a.createdAt);
+
     sellerLayout({
       active: "dashboard",
       title: "Tableau de bord",
       subtitle: `Bonjour ${firstName} — voici l'activité de votre boutique.`,
-      actions: `<button class="btn wa-btn" id="shareStoreBtn"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.9.9-2.7-.2-.3A8 8 0 1 1 12 20z"/></svg>Partager ma boutique</button>
-                <a href="#/seller/product/new" class="btn btn-primary">+ Nouvel article</a>`,
+      actions: `<button class="btn btn-ghost" id="qrBtn">${SICON.store} QR code</button>
+                <button class="btn wa-btn" id="shareStoreBtn"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.9.9-2.7-.2-.3A8 8 0 1 1 12 20z"/></svg>Partager</button>
+                <a href="#/seller/product/new" class="btn btn-primary">+ Article</a>`,
       body: `
         <div class="stat-grid">
           ${statCard("ic-green", "💰", UI.fcfa(store.revenueSim || 0), "Chiffre d'affaires")}
@@ -1129,6 +1221,27 @@
           ${goal > 0 ? `<div class="goal-bar"><div class="goal-fill" style="width:${goalPct}%">${goalPct >= 12 ? goalPct + "%" : ""}</div></div>
             <div class="text-muted" style="font-size:13px;margin-top:8px">${goalPct >= 100 ? "🎉 Objectif atteint, bravo !" : `Encore ${UI.fcfa(Math.max(0, goal - mSales))} pour atteindre votre objectif.`}</div>`
             : `<p class="text-muted" style="margin:0">Fixez un objectif mensuel pour suivre votre progression.</p>`}
+        </div>
+
+        <div class="seller-cols mt-16">
+          <div class="card card-pad">
+            <div class="panel-head"><h3>Complétude de la boutique</h3><strong style="color:${completeness >= 100 ? "var(--accent)" : "var(--brand)"}">${completeness}%</strong></div>
+            <div class="goal-bar" style="margin-bottom:14px"><div class="goal-fill" style="width:${completeness}%;background:${completeness >= 100 ? "linear-gradient(90deg,var(--accent),#0bbf6a)" : "linear-gradient(90deg,var(--brand),var(--brand-dark))"}">${completeness >= 12 ? completeness + "%" : ""}</div></div>
+            <div class="check-list">
+              ${checklist.map(([label, ok, link]) => `<div class="check-row ${ok ? "done" : ""}">
+                <span class="check-ico">${ok ? "✓" : ""}</span><span>${UI.esc(label)}</span>${ok ? "" : `<a href="${link}">Compléter</a>`}</div>`).join("")}
+            </div>
+          </div>
+          <div class="card card-pad">
+            <div class="panel-head"><h3>Avis à traiter ${pendingReviews.length ? `<span class="ss-badge" style="position:static;margin:0 0 0 6px">${pendingReviews.length}</span>` : ""}</h3></div>
+            ${pendingReviews.length ? pendingReviews.slice(0, 5).map((r) => `<div style="padding:9px 0;border-bottom:1px solid var(--border)">
+                <div class="flex-between"><strong style="font-size:13.5px">${UI.esc(r.userName)}</strong>${UI.starsHTML(r.rating)}</div>
+                <div class="text-muted" style="font-size:12.5px">${r._store ? "Boutique" : "Article : " + UI.esc(r._ptitle)} · ${UI.timeAgo(r.createdAt)}</div>
+                ${r.comment ? `<div style="font-size:13px;margin-top:3px">${UI.esc(r.comment)}</div>` : ""}
+                <a href="${r._store ? "#/store/" + store.id : "#/product/" + r._pid}" style="font-size:12.5px;color:var(--brand);font-weight:700">Répondre →</a>
+              </div>`).join("")
+              : `<p class="text-muted" style="text-align:center;padding:16px 0">✅ Vous avez répondu à tous les avis.</p>`}
+          </div>
         </div>
 
         ${(outStock.length || lowStock.length) ? `<div class="card card-pad mt-16" style="border-color:var(--warning)">
@@ -1164,6 +1277,8 @@
 
     const shareBtn = document.getElementById("shareStoreBtn");
     if (shareBtn) shareBtn.addEventListener("click", () => shareStore(store));
+    const qrBtn = document.getElementById("qrBtn");
+    if (qrBtn) qrBtn.addEventListener("click", () => showStoreQR(store));
   }
 
   function statCard(ic, emoji, val, lbl) {
@@ -1187,6 +1302,8 @@
     copy: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M16 1H4a2 2 0 0 0-2 2v14h2V3h12zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11z'/></svg>",
     printer: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M19 8H5a3 3 0 0 0-3 3v6h4v4h12v-4h4v-6a3 3 0 0 0-3-3zm-3 11H8v-5h8zm3-7a1 1 0 1 1 0-2 1 1 0 0 1 0 2zM18 3H6v4h12z'/></svg>",
     download: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M12 3v10l3.5-3.5L17 11l-5 5-5-5 1.5-1.5L12 13V3zM5 19h14v2H5z'/></svg>",
+    chart: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M4 20V10h4v10zm6 0V4h4v16zm6 0v-7h4v7z'/></svg>",
+    users: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm-8 0a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-2.7 0-8 1.3-8 4v3h8v-3c0-1 .4-1.9 1-2.6A11 11 0 0 0 8 13zm8 0c-.5 0-1.1 0-1.7.1A5 5 0 0 1 18 17v3h6v-3c0-2.7-5.3-4-8-4z'/></svg>",
   };
 
   /**
@@ -1219,6 +1336,8 @@
       ["#/store/" + store.id, "👁️", "Voir ma vitrine"],
       ["#/seller/product/new", "➕", "Ajouter un article"],
       ["#/seller/orders", "🧾", "Mes commandes"],
+      ["#/seller/stats", "📊", "Statistiques"],
+      ["#/seller/clients", "👥", "Mes clients"],
       ["#/", "🛒", "Accueil de la marketplace"],
       ["#/profile", "👤", "Mon profil"],
       ["#/notifications", "🔔", "Notifications"],
@@ -1252,6 +1371,8 @@
       ["dashboard", "Tableau de bord", "#/seller/dashboard", SICON.dash],
       ["products", "Mes articles", "#/seller/products", SICON.box],
       ["orders", "Commandes", "#/seller/orders", SICON.receipt],
+      ["stats", "Statistiques", "#/seller/stats", SICON.chart],
+      ["clients", "Clients", "#/seller/clients", SICON.users],
       ["store", "Ma boutique", "#/seller/store", SICON.store],
     ];
     const navHTML = nav.map(([k, l, h, ic]) => `
@@ -1373,10 +1494,13 @@
   /** Bon de livraison imprimable (paiement à la livraison). */
   function printDeliverySlip(order) {
     const store = Store.get(order.storeId);
+    const itemsTotal = order.itemsTotal != null ? order.itemsTotal : order.total;
     const rows = order.items.map((it) => {
       const v = [it.variant && it.variant.size, it.variant && it.variant.color].filter(Boolean).join(" / ");
       return `<tr><td>${UI.esc(it.title)}${v ? ` <small>(${UI.esc(v)})</small>` : ""}</td><td style="text-align:center">${it.qty}</td><td style="text-align:right">${UI.fcfa(it.unit * it.qty)}</td></tr>`;
-    }).join("");
+    }).join("") +
+      `<tr><td colspan="2" style="text-align:right">Sous-total articles</td><td style="text-align:right">${UI.fcfa(itemsTotal)}</td></tr>` +
+      `<tr><td colspan="2" style="text-align:right">Livraison (${UI.esc(order.delivery.commune)})</td><td style="text-align:right">${order.deliveryFee ? UI.fcfa(order.deliveryFee) : "Gratuite"}</td></tr>`;
     const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Bon de livraison ${UI.esc(order.number)}</title>
       <style>
         body{font-family:Segoe UI,Arial,sans-serif;color:#111;padding:28px;max-width:720px;margin:auto}
@@ -1427,6 +1551,121 @@
     UI.toast("Export CSV téléchargé ✓", "success");
   }
 
+  function slugify(s) {
+    return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase();
+  }
+
+  /** Télécharge un objet en fichier JSON. */
+  function downloadJSON(filename, obj) {
+    const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  /** Exporte le catalogue (articles) de la boutique en JSON. */
+  function exportCatalog(store) {
+    const products = Products.byStore(store.id, true).map((p) => ({
+      title: p.title, description: p.description, price: p.price, promoPrice: p.promoPrice,
+      stock: p.stock, category: p.category, condition: p.condition, status: p.status,
+      featured: p.featured, images: p.images, variants: p.variants,
+    }));
+    downloadJSON("catalogue-" + (slugify(store.name) || "boutique") + ".json", { store: store.name, exportedAt: Date.now(), products });
+    UI.toast(`Catalogue exporté (${products.length} articles) ✓`, "success");
+  }
+
+  /** Modale d'import de catalogue (JSON) : fichier ou collage. */
+  function openImportCatalog() {
+    UI.modal({
+      title: "Importer un catalogue",
+      body: `<p class="text-muted" style="margin:0 0 12px;font-size:13.5px">Importez des articles depuis un fichier <strong>.json</strong> (exporté depuis Marché CI) ou collez le contenu. Les articles sont ajoutés en <strong>brouillon</strong>.</p>
+        <div class="field"><label>Fichier JSON</label><input type="file" id="impFile" accept="application/json,.json" /></div>
+        <div class="field mt-8"><label>ou coller le JSON</label><textarea id="impText" placeholder='{"products":[…]}' style="min-height:120px;font-family:monospace;font-size:12px"></textarea></div>`,
+      footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-primary" id="impGo">Importer</button>`,
+      onMount(m, close) {
+        m.querySelector("#impFile").addEventListener("change", (e) => {
+          const f = e.target.files[0]; if (!f) return;
+          const r = new FileReader(); r.onload = () => { m.querySelector("#impText").value = r.result; }; r.readAsText(f);
+        });
+        m.querySelector("#impGo").addEventListener("click", () => {
+          let data;
+          try { data = JSON.parse(m.querySelector("#impText").value); } catch (e) { UI.toast("JSON invalide.", "error"); return; }
+          const arr = Array.isArray(data) ? data : (data.products || []);
+          if (!arr.length) { UI.toast("Aucun article trouvé.", "error"); return; }
+          let n = 0;
+          arr.forEach((it) => {
+            if (!it || !it.title) return;
+            const res = Products.create(Object.assign({ status: "draft" }, it));
+            if (res.ok) n++;
+          });
+          close();
+          UI.toast(`${n} article(s) importé(s) (brouillon) ✓`, "success");
+          if (location.hash.indexOf("#/seller/products") === 0) Router.resolve();
+        });
+      },
+    });
+  }
+
+  /** Sauvegarde complète de toutes les données locales (JSON). */
+  function exportBackup() {
+    const data = {};
+    Object.values(DB.KEYS).forEach((k) => (data[k] = DB.get(k, null)));
+    downloadJSON("marchesci-sauvegarde-" + new Date().toISOString().slice(0, 10) + ".json", { app: "MarcheCI", version: 1, at: Date.now(), data });
+    UI.toast("Sauvegarde complète téléchargée ✓", "success");
+  }
+
+  /** Restauration d'une sauvegarde complète. */
+  function openRestoreBackup() {
+    UI.modal({
+      title: "Restaurer une sauvegarde",
+      body: `<p class="text-muted" style="margin:0 0 12px;font-size:13.5px">⚠️ La restauration <strong>remplace toutes les données actuelles</strong> (boutiques, articles, commandes…). Choisissez un fichier de sauvegarde Marché CI.</p>
+        <div class="field"><label>Fichier de sauvegarde (.json)</label><input type="file" id="rsFile" accept="application/json,.json" /></div>`,
+      footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-danger" id="rsGo">Restaurer</button>`,
+      onMount(m, close) {
+        let payload = null;
+        m.querySelector("#rsFile").addEventListener("change", (e) => {
+          const f = e.target.files[0]; if (!f) return;
+          const r = new FileReader(); r.onload = () => { try { payload = JSON.parse(r.result); } catch (x) { payload = null; UI.toast("Fichier invalide.", "error"); } }; r.readAsText(f);
+        });
+        m.querySelector("#rsGo").addEventListener("click", async () => {
+          if (!payload || !payload.data) { UI.toast("Sélectionnez un fichier valide.", "error"); return; }
+          Object.keys(payload.data).forEach((k) => { if (payload.data[k] != null) DB.set(k, payload.data[k]); });
+          close();
+          UI.toast("Sauvegarde restaurée ✓", "success");
+          renderHeaderUser(); UI.refreshBadges(); Router.go("#/seller/dashboard");
+        });
+      },
+    });
+  }
+
+  /* ---------- QR code (générateur autonome, pur JS) ---------- */
+
+  /** Affiche le QR code de la boutique dans une modale. */
+  function showStoreQR(store) {
+    const text = "Marché CI — Boutique : " + store.name + " | " + store.commune + " | WhatsApp : " + (store.whatsapp || "-");
+    let qrHTML;
+    try { qrHTML = MPQR.svg(text, 4); }
+    catch (e) { qrHTML = `<p class="text-muted">QR indisponible.</p>`; }
+    UI.modal({
+      title: "QR code de ma boutique",
+      body: `<div style="text-align:center">
+        <div class="qr-box" style="margin:0 auto">${qrHTML}</div>
+        <p class="text-muted" style="font-size:13px;margin:14px 0 0">Imprimez-le et affichez-le dans votre point de vente : vos clients accèdent à vos infos en un scan.</p>
+      </div>`,
+      footer: `<button class="btn btn-ghost" data-close>Fermer</button><button class="btn btn-primary" id="qrPrint">Imprimer</button>`,
+      onMount(m, close) {
+        m.querySelector("#qrPrint").addEventListener("click", () => {
+          const w = window.open("", "_blank");
+          if (!w) { UI.toast("Autorisez les pop-up.", "error"); return; }
+          w.document.write(`<title>QR ${UI.esc(store.name)}</title><div style="text-align:center;font-family:Arial;padding:30px"><h2>${UI.esc(store.name)}</h2>${qrHTML}<p>Marché CI</p></div>`);
+          w.document.close(); setTimeout(() => w.print(), 300);
+        });
+      },
+    });
+  }
+
   /* ============================================================
      VENDEUR : Gestion des articles
      ============================================================ */
@@ -1455,22 +1694,32 @@
       <input type="search" id="prodSearch" class="ss-search" placeholder="Rechercher un article…" value="${UI.esc(q.q || "")}" />
     </div>`;
 
-    const table = list.length ? `<div class="table-wrap"><table class="data-table">
-      <thead><tr><th>Article</th><th>Prix</th><th>Stock</th><th>Vues</th><th>Statut</th><th style="text-align:right">Actions</th></tr></thead>
+    const bulkBar = `<div class="bulk-bar" id="bulkBar" hidden>
+      <strong id="bulkCount">0</strong> sélectionné(s)
+      <button class="btn btn-sm btn-accent" data-bulk="published">Publier</button>
+      <button class="btn btn-sm btn-ghost" data-bulk="unpublished">Dépublier</button>
+      <button class="btn btn-sm btn-danger" data-bulk="delete">Supprimer</button>
+      <button class="btn btn-sm btn-ghost" id="bulkClear" style="margin-left:auto">Désélectionner</button>
+    </div>`;
+
+    const table = list.length ? bulkBar + `<div class="table-wrap"><table class="data-table">
+      <thead><tr><th style="width:34px"><input type="checkbox" id="checkAll" /></th><th>Article</th><th>Prix</th><th>Stock</th><th>Vues</th><th>Statut</th><th style="text-align:right">Actions</th></tr></thead>
       <tbody>${list.map((p) => `<tr>
+        <td><input type="checkbox" class="row-check" data-check="${p.id}" /></td>
         <td><div class="flex gap-8" style="align-items:center"><img class="mini-thumb" src="${UI.safeImg(p.images && p.images[0], p.title)}" alt=""/>
-          <div><a href="#/product/${p.id}" style="font-weight:600">${UI.esc(p.title)}</a>
-          <div class="text-muted" style="font-size:12px">${UI.esc(UI.categoryLabel(p.category))} · ${p.condition === "occasion" ? "Occasion" : "Neuf"}</div></div></div></td>
-        <td>${UI.fcfa(Products.effectivePrice(p))}${p.promoPrice ? ` <span class="text-muted" style="text-decoration:line-through;font-size:12px">${UI.fcfa(p.price)}</span>` : ""}</td>
-        <td>${p.stock <= 0 ? `<span class="status annulee">Rupture</span>` : p.stock}</td>
+          <div><a href="#/product/${p.id}" style="font-weight:600">${p.featured ? `<span class="featured-star" title="À la une">★</span> ` : ""}${UI.esc(p.title)}</a>
+          <div class="text-muted" style="font-size:12px">${UI.esc(UI.categoryLabel(p.category))} · ${p.condition === "occasion" ? "Occasion" : "Neuf"}${Products.promoActive(p) ? " · <span style='color:var(--danger);font-weight:700'>Promo</span>" : ""}</div></div></div></td>
+        <td>${UI.fcfa(Products.effectivePrice(p))}${Products.promoActive(p) ? ` <span class="text-muted" style="text-decoration:line-through;font-size:12px">${UI.fcfa(p.price)}</span>` : ""}</td>
+        <td><input type="number" min="0" class="stock-edit ${p.stock <= 0 ? "" : ""}" data-stock="${p.id}" value="${p.stock}" title="Modifier le stock" /></td>
         <td>👁️ ${p.views || 0}</td>
         <td><span class="status ${p.status}">${statusLabel(p.status)}</span></td>
         <td><div class="row-actions">
           <a class="icon-action" href="#/product/${p.id}" title="Voir la page publique">${SICON.eye}</a>
           <button class="icon-action" data-edit="${p.id}" title="Modifier">${SICON.pencil}</button>
+          <button class="icon-action ${p.featured ? "" : ""}" data-feat="${p.id}" title="${p.featured ? "Retirer de la une" : "Mettre à la une"}" style="${p.featured ? "color:#f59e0b;border-color:#f59e0b" : ""}">★</button>
           <button class="icon-action" data-share="${p.id}" title="Partager sur WhatsApp">${SICON.wa}</button>
           <button class="icon-action" data-dup="${p.id}" title="Dupliquer">${SICON.copy}</button>
-          <button class="btn btn-ghost btn-sm" data-toggle="${p.id}" title="${p.status === "published" ? "Dépublier" : "Publier"}">${p.status === "published" ? "Dépublier" : "Publier"}</button>
+          <button class="btn btn-ghost btn-sm" data-toggle="${p.id}">${p.status === "published" ? "Dépublier" : "Publier"}</button>
           <button class="icon-action danger" data-del="${p.id}" title="Supprimer">${SICON.trash}</button>
         </div></td>
       </tr>`).join("")}</tbody></table></div>`
@@ -1482,9 +1731,12 @@
       active: "products",
       title: "Mes articles",
       subtitle: `${counts.all} article(s) · ${counts.published} en ligne`,
-      actions: `<a href="#/seller/product/new" class="btn btn-primary">+ Nouvel article</a>`,
+      actions: `<button class="btn btn-ghost" id="importBtn">${SICON.download} Importer</button>
+                <a href="#/seller/product/new" class="btn btn-primary">+ Nouvel article</a>`,
       body: filterbar + table,
     });
+
+    wireProductBulk(params);
 
     // Recherche (Entrée pour valider).
     const si = document.getElementById("prodSearch");
@@ -1509,6 +1761,56 @@
     }));
     V().querySelectorAll("[data-share]").forEach((b) => b.addEventListener("click", () => shareProduct(Products.get(b.getAttribute("data-share")))));
     V().querySelectorAll("[data-dup]").forEach((b) => b.addEventListener("click", () => duplicateProduct(b.getAttribute("data-dup"), () => viewSellerProducts(params))));
+
+    // Édition rapide du stock (inline).
+    V().querySelectorAll("[data-stock]").forEach((inp) => inp.addEventListener("change", () => {
+      Products.quickSet(inp.getAttribute("data-stock"), { stock: Math.max(0, Math.round(Number(inp.value) || 0)) });
+      UI.toast("Stock mis à jour ✓", "success");
+    }));
+    // Bascule « à la une ».
+    V().querySelectorAll("[data-feat]").forEach((b) => b.addEventListener("click", () => {
+      const p = Products.get(b.getAttribute("data-feat"));
+      Products.quickSet(p.id, { featured: !p.featured });
+      UI.toast(!p.featured ? "Article mis à la une ★" : "Retiré de la une.", "success");
+      viewSellerProducts(params);
+    }));
+    // Import de catalogue.
+    const imp = document.getElementById("importBtn");
+    if (imp) imp.addEventListener("click", openImportCatalog);
+  }
+
+  /** Sélection multiple + actions groupées sur les articles. */
+  function wireProductBulk(params) {
+    const bar = document.getElementById("bulkBar");
+    if (!bar) return;
+    const checks = () => Array.from(V().querySelectorAll(".row-check"));
+    const selected = () => checks().filter((c) => c.checked).map((c) => c.getAttribute("data-check"));
+    function refresh() {
+      const n = selected().length;
+      bar.hidden = n === 0;
+      const cnt = document.getElementById("bulkCount");
+      if (cnt) cnt.textContent = n;
+    }
+    checks().forEach((c) => c.addEventListener("change", refresh));
+    const all = document.getElementById("checkAll");
+    if (all) all.addEventListener("change", () => { checks().forEach((c) => (c.checked = all.checked)); refresh(); });
+    const clear = document.getElementById("bulkClear");
+    if (clear) clear.addEventListener("click", () => { checks().forEach((c) => (c.checked = false)); if (all) all.checked = false; refresh(); });
+
+    bar.querySelectorAll("[data-bulk]").forEach((b) => b.addEventListener("click", async () => {
+      const ids = selected();
+      if (!ids.length) return;
+      const action = b.getAttribute("data-bulk");
+      if (action === "delete") {
+        if (!(await UI.confirm(`Supprimer ${ids.length} article(s) ?`, { danger: true, confirmLabel: "Supprimer" }))) return;
+        ids.forEach((id) => Products.remove(id));
+        UI.toast(`${ids.length} article(s) supprimé(s).`, "info");
+      } else {
+        ids.forEach((id) => { const p = Products.get(id); if (p) Products.update(id, Object.assign({}, p, { status: action })); });
+        UI.toast(`${ids.length} article(s) ${action === "published" ? "publié(s)" : "dépublié(s)"} ✓`, "success");
+      }
+      viewSellerProducts(params);
+    }));
   }
 
   /* ============================================================
@@ -1539,6 +1841,12 @@
           <div class="form-grid form-2col">
             <div class="field"><label>Prix (FCFA) *</label><input type="number" id="pPrice" value="${d.price || ""}" min="0" required /></div>
             <div class="field"><label>Prix promo (optionnel)</label><input type="number" id="pPromo" value="${d.promoPrice || ""}" min="0" /></div>
+          </div>
+          <div class="form-grid form-2col">
+            <div class="field"><label>Fin de promo (optionnel) <span class="hint">— au-delà, le prix normal revient</span></label>
+              <input type="date" id="pPromoUntil" value="${d.promoUntil ? new Date(d.promoUntil).toISOString().slice(0, 10) : ""}" /></div>
+            <div class="field"><label>Mise en avant</label>
+              <label class="switch" style="margin-top:8px"><input type="checkbox" id="pFeatured" ${d.featured ? "checked" : ""} /><span class="track"></span><span>Article « à la une » (affiché en premier)</span></label></div>
           </div>
           <div class="form-grid form-2col">
             <div class="field"><label>Stock</label><input type="number" id="pStock" value="${d.stock != null ? d.stock : 1}" min="0" /></div>
@@ -1581,6 +1889,8 @@
         category: document.getElementById("pCat").value,
         condition: document.getElementById("pCond").value,
         status: document.getElementById("pStatus").value,
+        featured: document.getElementById("pFeatured").checked,
+        promoUntil: document.getElementById("pPromoUntil").value ? new Date(document.getElementById("pPromoUntil").value).getTime() : 0,
         images: up.get(),
         variants: { sizes: parseList(document.getElementById("pSizes").value), colors: parseList(document.getElementById("pColors").value) },
       };
@@ -1598,31 +1908,64 @@
     const store = Store.byOwner(Auth.current().id);
     const q = (params && params.query) || {};
     const filter = Orders.STATUS[q.status] ? q.status : "all";
+    const period = ["today", "7d", "30d"].includes(q.period) ? q.period : "all";
+    const search = (q.q || "").toLowerCase().trim();
     const orders = Orders.byStore(store.id);
 
     const counts = { all: orders.length };
     Object.keys(Orders.STATUS).forEach((k) => (counts[k] = orders.filter((o) => o.status === k).length));
-    const list = filter === "all" ? orders : orders.filter((o) => o.status === filter);
+
+    const now = Date.now();
+    const periodMin = { today: now - 86400000, "7d": now - 7 * 86400000, "30d": now - 30 * 86400000, all: 0 }[period];
+    let list = filter === "all" ? orders.slice() : orders.filter((o) => o.status === filter);
+    if (period !== "all") list = list.filter((o) => o.createdAt >= periodMin);
+    if (search) list = list.filter((o) => o.number.toLowerCase().includes(search) || (o.buyerName || "").toLowerCase().includes(search));
 
     const tabs = [["all", "Toutes"]].concat(Object.keys(Orders.STATUS).map((k) => [k, Orders.STATUS[k]]));
+    // Construit une URL en conservant les filtres actifs (valeurs vides ignorées).
+    const keep = (extra) => {
+      const st = Object.assign({ status: filter, period, q: search }, extra);
+      const p = new URLSearchParams();
+      if (st.status && st.status !== "all") p.set("status", st.status);
+      if (st.period && st.period !== "all") p.set("period", st.period);
+      if (st.q) p.set("q", st.q);
+      const qs = p.toString();
+      return "#/seller/orders" + (qs ? "?" + qs : "");
+    };
     const filterbar = `<div class="seller-filterbar"><div class="tabs">
-      ${tabs.map(([k, l]) => `<a href="#/seller/orders${k === "all" ? "" : "?status=" + k}" class="tab ${filter === k ? "active" : ""}">${l}<span class="tab-count">${counts[k] || 0}</span></a>`).join("")}
-    </div></div>`;
+        ${tabs.map(([k, l]) => `<a href="${keep({ status: k })}" class="tab ${filter === k ? "active" : ""}">${l}<span class="tab-count">${counts[k] || 0}</span></a>`).join("")}
+      </div>
+      <div class="flex gap-8 wrap">
+        <select class="ss-search" id="ordPeriod" style="min-width:150px">
+          <option value="all" ${period === "all" ? "selected" : ""}>Toute période</option>
+          <option value="today" ${period === "today" ? "selected" : ""}>Aujourd'hui</option>
+          <option value="7d" ${period === "7d" ? "selected" : ""}>7 derniers jours</option>
+          <option value="30d" ${period === "30d" ? "selected" : ""}>30 derniers jours</option>
+        </select>
+        <input type="search" id="ordSearch" class="ss-search" placeholder="N° ou nom du client…" value="${UI.esc(q.q || "")}" />
+      </div></div>`;
 
+    const printable = orders.filter((o) => o.status === "confirmee").length;
     sellerLayout({
       active: "orders",
       title: "Commandes reçues",
       subtitle: `${counts.all} commande(s) · ${counts.en_attente || 0} en attente`,
-      actions: `<button class="btn btn-ghost" id="exportCsv" ${orders.length ? "" : "disabled"}>${SICON.download} Exporter (CSV)</button>
-                <a href="#/store/${store.id}" class="btn btn-ghost">Voir ma vitrine</a>`,
-      body: filterbar + (list.length ? list.map((o) => sellerOrderCard(o)).join("")
+      actions: `${printable ? `<button class="btn btn-ghost" id="bulkPrint">${SICON.printer} Imprimer les confirmées (${printable})</button>` : ""}
+                <button class="btn btn-ghost" id="exportCsv" ${orders.length ? "" : "disabled"}>${SICON.download} Exporter (CSV)</button>`,
+      body: filterbar + `<div class="text-muted" style="font-size:13px;margin:-6px 0 14px">${list.length} résultat(s)</div>` + (list.length ? list.map((o) => sellerOrderCard(o)).join("")
         : (orders.length
-          ? `<div class="card card-pad"><p class="text-muted" style="text-align:center;margin:0;padding:20px 0">Aucune commande avec ce statut.</p></div>`
+          ? `<div class="card card-pad"><p class="text-muted" style="text-align:center;margin:0;padding:20px 0">Aucune commande ne correspond à ces filtres.</p></div>`
           : emptyState("🧾", "Aucune commande", "Les commandes de vos clients apparaîtront ici dès le premier achat."))),
     });
 
     const exp = document.getElementById("exportCsv");
-    if (exp) exp.addEventListener("click", () => exportOrdersCSV(store, orders));
+    if (exp) exp.addEventListener("click", () => exportOrdersCSV(store, list.length ? list : orders));
+    const bulk = document.getElementById("bulkPrint");
+    if (bulk) bulk.addEventListener("click", () => printMultipleSlips(orders.filter((o) => o.status === "confirmee")));
+    const per = document.getElementById("ordPeriod");
+    if (per) per.addEventListener("change", () => Router.go(keep({ period: per.value })));
+    const os = document.getElementById("ordSearch");
+    if (os) os.addEventListener("keydown", (e) => { if (e.key === "Enter") Router.go(keep({ q: os.value.trim() })); });
 
     V().querySelectorAll("[data-status]").forEach((sel) =>
       sel.addEventListener("change", () => {
@@ -1634,33 +1977,215 @@
     V().querySelectorAll("[data-print]").forEach((b) =>
       b.addEventListener("click", () => printDeliverySlip(Orders.get(b.getAttribute("data-print"))))
     );
+    V().querySelectorAll("[data-paid]").forEach((b) =>
+      b.addEventListener("click", () => {
+        const o = Orders.get(b.getAttribute("data-paid"));
+        Orders.setPaid(o.id, !o.paid);
+        UI.toast(!o.paid ? "Marqué encaissé ✓" : "Marqué non encaissé.", "success");
+        viewSellerOrders(params);
+      })
+    );
   }
 
   function sellerOrderCard(o) {
     const opts = Object.keys(Orders.STATUS).map((k) => `<option value="${k}" ${o.status === k ? "selected" : ""}>${Orders.STATUS[k]}</option>`).join("");
+    const itemsTotal = o.itemsTotal != null ? o.itemsTotal : o.total;
     return `<div class="card card-pad mt-16">
       <div class="flex-between wrap">
         <div><strong>N° ${UI.esc(o.number)}</strong> <span class="status ${o.status}">${Orders.STATUS[o.status]}</span>
+          ${o.paid ? `<span class="status livree">Encaissée</span>` : ""}
           <div class="text-muted" style="font-size:13px">${UI.dateFR(o.createdAt)} · ${UI.esc(o.buyerName)}</div></div>
         <select class="field" style="width:auto;padding:8px 12px;border-radius:var(--r-sm);border:1.5px solid var(--border);background:var(--surface-2)" data-status data-order="${o.id}">${opts}</select>
       </div>
+      ${o.status !== "annulee" ? deliveryStepper(o.status) : ""}
       <div class="divider" style="margin:12px 0"></div>
       ${o.items.map((it) => `<div class="cart-item" style="padding:8px 0;border:none">
         <img src="${UI.safeImg(it.image, it.title)}" style="width:50px;height:50px" alt=""/>
         <div class="cart-item-info"><h4>${UI.esc(it.title)}</h4><div class="ci-variant">Qté : ${it.qty} × ${UI.fcfa(it.unit)}</div></div>
         <strong>${UI.fcfa(it.unit * it.qty)}</strong></div>`).join("")}
+      <div class="flex-between mt-8" style="font-size:13px"><span class="text-muted">Articles</span><span>${UI.fcfa(itemsTotal)}</span></div>
+      <div class="flex-between" style="font-size:13px"><span class="text-muted">Livraison (${UI.esc(o.delivery.commune)})</span><span>${o.deliveryFee ? UI.fcfa(o.deliveryFee) : "Gratuite"}</span></div>
       <div class="divider" style="margin:12px 0"></div>
       <div class="flex-between wrap" style="align-items:flex-start">
         <div style="font-size:13.5px"><strong>📍 Livraison :</strong> ${UI.esc(o.delivery.name)} · ${UI.esc(o.delivery.phone)}<br>
           ${UI.esc(o.delivery.commune)} — ${UI.esc(o.delivery.address)}${o.delivery.note ? `<br><em class="text-muted">Note : ${UI.esc(o.delivery.note)}</em>` : ""}</div>
-        <div style="text-align:right"><div class="text-muted" style="font-size:12px">💵 Espèces à la livraison</div>
+        <div style="text-align:right"><div class="text-muted" style="font-size:12px">💵 À encaisser</div>
           <strong style="font-size:18px;color:var(--brand)">${UI.fcfa(o.total)}</strong></div>
       </div>
       <div class="flex gap-8 wrap mt-8">
-        <button class="btn btn-ghost btn-sm" data-print="${o.id}">${SICON.printer} Imprimer le bon de livraison</button>
-        <a class="btn wa-btn btn-sm" href="https://wa.me/225${UI.esc(o.delivery.phone.replace(/\D/g, ""))}" target="_blank" rel="noopener">${SICON.wa} Contacter le client</a>
+        <button class="btn ${o.paid ? "btn-ghost" : "btn-accent"} btn-sm" data-paid="${o.id}">${o.paid ? "↩︎ Non encaissée" : "✓ Marquer encaissée"}</button>
+        <button class="btn btn-ghost btn-sm" data-print="${o.id}">${SICON.printer} Bon de livraison</button>
+        <a class="btn wa-btn btn-sm" href="https://wa.me/225${UI.esc(o.delivery.phone.replace(/\D/g, ""))}" target="_blank" rel="noopener">${SICON.wa} Contacter</a>
       </div>
     </div>`;
+  }
+
+  /** Impression groupée de plusieurs bons de livraison. */
+  function printMultipleSlips(orders) {
+    if (!orders.length) { UI.toast("Aucune commande confirmée à imprimer.", "info"); return; }
+    orders.forEach((o, i) => setTimeout(() => printDeliverySlip(o), i * 400));
+    UI.toast(`${orders.length} bon(s) de livraison ouverts.`, "success");
+  }
+
+  /* ============================================================
+     VENDEUR : Statistiques dédiées
+     ============================================================ */
+  function viewSellerStats(params) {
+    if (!requireVendor()) return;
+    const store = Store.byOwner(Auth.current().id);
+    const q = (params && params.query) || {};
+    const period = ["7d", "30d", "month"].includes(q.p) ? q.p : "30d";
+    const products = Products.byStore(store.id, true);
+    const orders = Orders.byStore(store.id);
+
+    const now = Date.now();
+    const spans = { "7d": 7 * 86400000, "30d": 30 * 86400000, month: now - new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime() };
+    const span = spans[period];
+    const min = now - span;
+    const prevMin = min - span;
+    const inRange = (o, a, b) => o.createdAt >= a && o.createdAt < b;
+    const cur = orders.filter((o) => o.createdAt >= min);
+    const prev = orders.filter((o) => inRange(o, prevMin, min));
+
+    const sum = (arr) => arr.reduce((s, o) => s + (o.itemsTotal != null ? o.itemsTotal : o.total), 0);
+    const caCur = sum(cur), caPrev = sum(prev);
+    const avg = cur.length ? Math.round(caCur / cur.length) : 0;
+    const delivered = cur.filter((o) => o.status === "livree").length;
+    const cancelled = cur.filter((o) => o.status === "annulee").length;
+    const collected = cur.filter((o) => o.paid).reduce((s, o) => s + o.total, 0);
+    const toCollect = cur.filter((o) => !o.paid && o.status !== "annulee").reduce((s, o) => s + o.total, 0);
+    const delivRate = cur.length ? Math.round((delivered / cur.length) * 100) : 0;
+    const cancelRate = cur.length ? Math.round((cancelled / cur.length) * 100) : 0;
+
+    // Évolution vs période précédente.
+    const trend = (a, b) => {
+      if (!b) return a ? { dir: "up", txt: "Nouveau" } : { dir: "flat", txt: "—" };
+      const pct = Math.round(((a - b) / b) * 100);
+      return { dir: pct > 0 ? "up" : pct < 0 ? "down" : "flat", txt: (pct > 0 ? "+" : "") + pct + "%" };
+    };
+    const caTrend = trend(caCur, caPrev);
+    const ordTrend = trend(cur.length, prev.length);
+
+    // Top produits (par ventes sur la période).
+    const soldByProduct = {};
+    const communeCount = {};
+    cur.forEach((o) => {
+      o.items.forEach((it) => { soldByProduct[it.title] = (soldByProduct[it.title] || 0) + it.qty; });
+      communeCount[o.delivery.commune] = (communeCount[o.delivery.commune] || 0) + 1;
+    });
+    const topProducts = Object.entries(soldByProduct).sort((a, b) => b[1] - a[1]).slice(0, 6);
+    const topCommunes = Object.entries(communeCount).sort((a, b) => b[1] - a[1]).slice(0, 6);
+
+    // Conversion vues -> panier -> commandes (sur tout le catalogue).
+    const totViews = products.reduce((s, p) => s + (p.views || 0), 0);
+    const totCarts = products.reduce((s, p) => s + (p.cartAdds || 0), 0);
+    const totSold = orders.reduce((s, o) => s + o.items.reduce((a, i) => a + i.qty, 0), 0);
+
+    const pchip = (k, l) => `<a href="#/seller/stats?p=${k}" class="chip ${period === k ? "active" : ""}">${l}</a>`;
+    const trendBadge = (t) => `<span style="font-size:12px;font-weight:800;color:${t.dir === "up" ? "var(--accent)" : t.dir === "down" ? "var(--danger)" : "var(--text-3)"}">${t.dir === "up" ? "▲" : t.dir === "down" ? "▼" : ""} ${t.txt}</span>`;
+
+    sellerLayout({
+      active: "stats",
+      title: "Statistiques",
+      subtitle: "Analysez la performance de votre boutique.",
+      actions: `<button class="btn btn-ghost" id="expCsv2">${SICON.download} Exporter commandes</button>`,
+      body: `
+        <div class="filter-bar" style="margin-bottom:18px">${pchip("7d", "7 jours")}${pchip("30d", "30 jours")}${pchip("month", "Ce mois")}</div>
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-ico ic-green" style="font-size:20px">💰</div><div class="stat-val">${UI.fcfa(caCur)}</div><div class="stat-lbl">Ventes ${trendBadge(caTrend)}</div></div>
+          <div class="stat-card"><div class="stat-ico ic-blue" style="font-size:20px">🧾</div><div class="stat-val">${cur.length}</div><div class="stat-lbl">Commandes ${trendBadge(ordTrend)}</div></div>
+          <div class="stat-card"><div class="stat-ico ic-orange" style="font-size:20px">🛒</div><div class="stat-val">${UI.fcfa(avg)}</div><div class="stat-lbl">Panier moyen</div></div>
+          <div class="stat-card"><div class="stat-ico ic-purple" style="font-size:20px">✅</div><div class="stat-val">${delivRate}%</div><div class="stat-lbl">Taux de livraison</div></div>
+        </div>
+
+        <div class="seller-cols mt-16">
+          <div class="card card-pad">
+            <div class="panel-head"><h3>Encaissement (COD)</h3></div>
+            <div class="summary-row"><span>💵 Déjà encaissé</span><strong style="color:var(--accent)">${UI.fcfa(collected)}</strong></div>
+            <div class="summary-row"><span>⏳ Reste à encaisser</span><strong style="color:var(--warning)">${UI.fcfa(toCollect)}</strong></div>
+            <div class="summary-row"><span>❌ Taux d'annulation</span><span>${cancelRate}%</span></div>
+            <div class="divider" style="margin:12px 0"></div>
+            <div class="panel-head" style="margin:0 0 10px"><h3 style="font-size:15px">Entonnoir de conversion</h3></div>
+            ${funnelRow("👁️ Vues", totViews, totViews)}
+            ${funnelRow("🛒 Ajouts au panier", totCarts, totViews)}
+            ${funnelRow("✅ Articles vendus", totSold, totViews)}
+          </div>
+          <div class="card card-pad">
+            <div class="panel-head"><h3>Top articles vendus</h3></div>
+            ${topProducts.length ? topProducts.map(([t, n]) => `<div class="flex-between" style="padding:7px 0;border-bottom:1px solid var(--border)"><span>${UI.esc(t)}</span><strong>${n}</strong></div>`).join("")
+              : `<p class="text-muted" style="text-align:center;padding:12px 0">Aucune vente sur la période.</p>`}
+            <div class="panel-head" style="margin:16px 0 10px"><h3 style="font-size:15px">Top communes clientes</h3></div>
+            ${topCommunes.length ? topCommunes.map(([c, n]) => `<div class="flex-between" style="padding:7px 0;border-bottom:1px solid var(--border)"><span>📍 ${UI.esc(c)}</span><strong>${n} cmd</strong></div>`).join("")
+              : `<p class="text-muted" style="text-align:center;padding:12px 0">—</p>`}
+          </div>
+        </div>
+
+        <div class="card card-pad mt-16">
+          <div class="panel-head"><h3>Outils & données</h3></div>
+          <div class="flex gap-8 wrap">
+            <button class="btn btn-ghost btn-sm" id="stQr">${SICON.store} QR code boutique</button>
+            <button class="btn btn-ghost btn-sm" id="stExpCat">${SICON.download} Exporter le catalogue (JSON)</button>
+            <button class="btn btn-ghost btn-sm" id="stImpCat">${SICON.copy} Importer un catalogue</button>
+            <button class="btn btn-ghost btn-sm" id="stBackup">${SICON.download} Sauvegarde complète</button>
+            <button class="btn btn-ghost btn-sm" id="stRestore">↺ Restaurer une sauvegarde</button>
+          </div>
+        </div>`,
+    });
+
+    const w = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener("click", fn); };
+    w("expCsv2", () => exportOrdersCSV(store, orders));
+    w("stQr", () => showStoreQR(store));
+    w("stExpCat", () => exportCatalog(store));
+    w("stImpCat", openImportCatalog);
+    w("stBackup", exportBackup);
+    w("stRestore", openRestoreBackup);
+  }
+
+  function funnelRow(label, value, base) {
+    const pct = base ? Math.round((value / base) * 100) : 0;
+    return `<div style="margin:8px 0"><div class="flex-between" style="font-size:13px"><span>${label}</span><strong>${value}${base && value !== base ? ` · ${pct}%` : ""}</strong></div>
+      <div class="goal-bar" style="height:12px;margin-top:4px"><div class="goal-fill" style="width:${Math.max(3, pct)}%;background:linear-gradient(90deg,var(--brand),var(--brand-dark))"></div></div></div>`;
+  }
+
+  /* ============================================================
+     VENDEUR : Mes clients (mini-CRM)
+     ============================================================ */
+  function viewSellerClients() {
+    if (!requireVendor()) return;
+    const store = Store.byOwner(Auth.current().id);
+    const orders = Orders.byStore(store.id);
+
+    // Agrège les clients à partir des commandes.
+    const map = {};
+    orders.forEach((o) => {
+      const key = o.buyerId || o.delivery.phone;
+      if (!map[key]) map[key] = { name: o.buyerName, phone: o.delivery.phone, commune: o.delivery.commune, count: 0, total: 0, last: 0 };
+      map[key].count++;
+      map[key].total += o.total;
+      map[key].last = Math.max(map[key].last, o.createdAt);
+      map[key].phone = o.delivery.phone;
+    });
+    const clients = Object.values(map).sort((a, b) => b.total - a.total);
+    const totalRevenue = clients.reduce((s, c) => s + c.total, 0);
+
+    sellerLayout({
+      active: "clients",
+      title: "Mes clients",
+      subtitle: `${clients.length} client(s) · ${UI.fcfa(totalRevenue)} de commandes`,
+      actions: "",
+      body: clients.length ? `<div class="table-wrap"><table class="data-table">
+        <thead><tr><th>Client</th><th>Commune</th><th>Commandes</th><th>Total</th><th>Dernière</th><th></th></tr></thead>
+        <tbody>${clients.map((c) => `<tr>
+          <td><div class="flex gap-8" style="align-items:center"><div class="review-avatar">${UI.esc((c.name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase())}</div>
+            <div><strong>${UI.esc(c.name)}</strong>${c.count >= 3 ? ` <span class="tag featured" style="position:static">Fidèle</span>` : ""}<div class="text-muted" style="font-size:12px">${UI.esc(c.phone)}</div></div></div></td>
+          <td>${UI.esc(c.commune)}</td>
+          <td>${c.count}</td>
+          <td style="font-weight:700;color:var(--brand)">${UI.fcfa(c.total)}</td>
+          <td>${UI.timeAgo(c.last)}</td>
+          <td><a class="btn wa-btn btn-sm" href="https://wa.me/225${UI.esc(String(c.phone).replace(/\D/g, ""))}" target="_blank" rel="noopener">${SICON.wa} Contacter</a></td>
+        </tr>`).join("")}</tbody></table></div>`
+        : emptyState("👥", "Aucun client", "Vos clients apparaîtront ici après leur première commande."),
+    });
   }
 
   /* ============================================================
@@ -1875,6 +2400,8 @@
     Router.on("#/seller/product/new", viewProductForm);
     Router.on("#/seller/product/:id/edit", viewProductForm);
     Router.on("#/seller/orders", viewSellerOrders);
+    Router.on("#/seller/stats", viewSellerStats);
+    Router.on("#/seller/clients", viewSellerClients);
     Router.on("#/admin", viewAdmin);
     Router.setNotFound(() => layout(emptyState("🧭", "Page introuvable", "Le lien demandé n'existe pas.", `<a href="#/" class="btn btn-primary">Retour à l'accueil</a>`)));
     // Bascule le corps en « mode vendeur » sur les routes /seller (chrome dédié).

@@ -42,6 +42,12 @@ window.MP = window.MP || {};
       socials: data.socials || {},
       revenueSim: 0,
       salesGoal: Number(data.salesGoal) || 0, // objectif de vente mensuel (FCFA)
+      closed: false,                          // mode fermé / vacances
+      closedMsg: "",                          // message affiché quand fermé
+      promoBanner: "",                        // bandeau promotionnel de la vitrine
+      defaultFee: Number(data.defaultFee) || 0, // frais de livraison par défaut
+      deliveryFees: data.deliveryFees || {},  // { commune: frais }
+      zones: data.zones || [],                // communes desservies (vide = toutes)
       createdAt: Date.now(),
     };
     DB.insert(K, store);
@@ -57,6 +63,20 @@ window.MP = window.MP || {};
       return { ok: false, error: "Non autorisé." };
     }
     return { ok: true, store: DB.update(K, id, patch) };
+  }
+
+  /** Frais de livraison d'une boutique pour une commune donnée. */
+  function deliveryFee(store, commune) {
+    if (!store) return 0;
+    const fees = store.deliveryFees || {};
+    if (commune && fees[commune] != null && fees[commune] !== "") return Number(fees[commune]) || 0;
+    return Number(store.defaultFee) || 0;
+  }
+
+  /** Indique si une boutique dessert une commune (zones vides = toutes). */
+  function servesCommune(store, commune) {
+    if (!store || !store.zones || !store.zones.length) return true;
+    return store.zones.includes(commune);
   }
 
   function remove(id) {
@@ -113,6 +133,6 @@ window.MP = window.MP || {};
   window.MP.Store = {
     all, get, byOwner, create, update, remove,
     subscribers, subscriberCount, isSubscribed, toggleSubscribe,
-    reviews, rating,
+    reviews, rating, deliveryFee, servesCommune,
   };
 })();
