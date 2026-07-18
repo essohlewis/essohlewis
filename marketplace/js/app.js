@@ -988,10 +988,8 @@
     const catOpts = UI.CATEGORIES.map((c) => `<option value="${c.id}" ${s.category === c.id ? "selected" : ""}>${c.icon} ${c.label}</option>`).join("");
     const communeOpts = UI.COMMUNES.map((c) => `<option value="${c}" ${s.commune === c ? "selected" : ""}>${c}</option>`).join("");
 
-    layout(`
-      <div class="page-head"><div><div class="page-title">${editing ? "Ma boutique" : "Ouvrir ma boutique"}</div>
-        <div class="page-sub">${editing ? "Modifiez les informations de votre vitrine." : "Renseignez les informations de votre commerce."}</div></div></div>
-      <div class="card card-pad">
+    const formCard = `
+      <div class="card card-pad" style="max-width:840px">
         <form id="storeForm" class="form-grid">
           <div class="form-grid form-2col">
             <div class="field"><label>Logo</label>${uploaderHTML("logoUp", s.logo ? [s.logo] : [], false)}</div>
@@ -1012,11 +1010,31 @@
             <div class="field"><label>Facebook</label><input id="sFb" value="${UI.esc((s.socials && s.socials.facebook) || "")}" placeholder="page" /></div>
           </div>
           <div class="flex gap-12">
-            <button class="btn btn-primary btn-lg" type="submit">${editing ? "Enregistrer" : "Créer ma boutique"}</button>
+            <button class="btn btn-primary btn-lg" type="submit">${editing ? "Enregistrer les modifications" : "Créer ma boutique"}</button>
             ${editing ? `<a href="#/store/${s.id}" class="btn btn-ghost btn-lg">Voir la vitrine</a>` : ""}
           </div>
         </form>
+      </div>`;
+
+    if (editing) {
+      sellerLayout({
+        active: "store",
+        title: "Ma boutique",
+        subtitle: "Informations de votre vitrine publique.",
+        actions: `<a href="#/store/${s.id}" class="btn btn-ghost">Voir ma vitrine</a>`,
+        body: formCard,
+      });
+    } else {
+      layout(`<div class="seller-onboard">
+        <div class="onboard-hero">
+          <div class="oh-ico">🏪</div>
+          <h1 class="page-title" style="margin:0">Ouvrez votre boutique</h1>
+          <p class="text-muted" style="max-width:460px;margin:8px auto 0">Vendez vos articles sur Marché CI en quelques minutes — c'est gratuit et sans commission.</p>
+          <div class="onboard-steps"><span>1 · Créez votre boutique</span><span>2 · Publiez vos articles</span><span>3 · Recevez vos commandes</span></div>
+        </div>
+        ${formCard}
       </div>`);
+    }
 
     const logoUp = wireUploader("logoUp", s.logo ? [s.logo] : [], false);
     const bannerUp = wireUploader("bannerUp", s.banner ? [s.banner] : [], false);
@@ -1053,36 +1071,51 @@
     if (!requireVendor()) return;
     const store = Store.byOwner(Auth.current().id);
     const products = Products.byStore(store.id, true);
+    const publishedCount = products.filter((p) => p.status === "published").length;
     const orders = Orders.byStore(store.id);
     const pending = orders.filter((o) => o.status === "en_attente").length;
     const topViewed = products.slice().sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
+    const recentOrders = orders.slice(0, 5);
+    const firstName = UI.esc(Auth.current().name.split(" ")[0]);
 
-    layout(`
-      ${sellerHeader(store, "dashboard")}
-      <div class="stat-grid mt-16">
-        ${statCard("ic-green", "💰", UI.fcfa(store.revenueSim || 0), "Chiffre d'affaires")}
-        ${statCard("ic-orange", "📦", products.length, "Articles")}
-        ${statCard("ic-blue", "🧾", orders.length, "Commandes reçues")}
-        ${statCard("ic-purple", "👥", Store.subscriberCount(store.id), "Abonnés")}
-      </div>
-      ${pending ? `<div class="cod-note mt-16"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg>
-        <span><strong>${pending} commande(s) en attente</strong> — <a href="#/seller/orders" style="color:var(--brand);font-weight:700">à traiter</a>.</span></div>` : ""}
+    sellerLayout({
+      active: "dashboard",
+      title: "Tableau de bord",
+      subtitle: `Bonjour ${firstName} — voici l'activité de votre boutique.`,
+      actions: `<a href="#/seller/product/new" class="btn btn-primary">+ Nouvel article</a>
+                <a href="#/store/${store.id}" class="btn btn-ghost">Voir ma vitrine</a>`,
+      body: `
+        <div class="stat-grid">
+          ${statCard("ic-green", "💰", UI.fcfa(store.revenueSim || 0), "Chiffre d'affaires")}
+          ${statCard("ic-orange", "📦", publishedCount + " / " + products.length, "Articles publiés")}
+          ${statCard("ic-blue", "🧾", orders.length, "Commandes reçues")}
+          ${statCard("ic-purple", "👥", Store.subscriberCount(store.id), "Abonnés")}
+        </div>
+        ${pending ? `<div class="cod-note mt-16"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg>
+          <span><strong>${pending} commande(s) en attente</strong> — <a href="#/seller/orders" style="color:var(--brand);font-weight:700">à traiter maintenant</a>.</span></div>` : ""}
 
-      <div class="section-title">Articles les plus vus</div>
-      <div class="table-wrap">
-        <table class="data-table">
-          <thead><tr><th>Article</th><th>Prix</th><th>Vues</th><th>Stock</th><th>Statut</th></tr></thead>
-          <tbody>
-            ${topViewed.length ? topViewed.map((p) => `<tr>
-              <td><a href="#/product/${p.id}" style="font-weight:600">${UI.esc(p.title)}</a></td>
-              <td>${UI.fcfa(Products.effectivePrice(p))}</td>
-              <td>👁️ ${p.views || 0}</td>
-              <td>${p.stock}</td>
-              <td><span class="status ${p.status}">${statusLabel(p.status)}</span></td>
-            </tr>`).join("") : `<tr><td colspan="5" class="text-muted" style="text-align:center">Aucun article publié.</td></tr>`}
-          </tbody>
-        </table>
-      </div>`);
+        <div class="seller-cols">
+          <div class="card card-pad">
+            <div class="panel-head"><h3>Articles les plus vus</h3><a href="#/seller/products">Gérer →</a></div>
+            ${topViewed.length ? `<table class="data-table">
+              <thead><tr><th>Article</th><th>Vues</th><th>Stock</th><th>Statut</th></tr></thead>
+              <tbody>${topViewed.map((p) => `<tr>
+                <td><a href="#/product/${p.id}" style="font-weight:600">${UI.esc(p.title)}</a></td>
+                <td>👁️ ${p.views || 0}</td><td>${p.stock}</td>
+                <td><span class="status ${p.status}">${statusLabel(p.status)}</span></td>
+              </tr>`).join("")}</tbody></table>`
+              : `<p class="text-muted" style="text-align:center;padding:16px 0">Aucun article. <a href="#/seller/product/new" style="color:var(--brand);font-weight:700">Ajoutez-en un</a>.</p>`}
+          </div>
+          <div class="card card-pad">
+            <div class="panel-head"><h3>Dernières commandes</h3><a href="#/seller/orders">Tout voir →</a></div>
+            ${recentOrders.length ? recentOrders.map((o) => `<div class="flex-between" style="padding:10px 0;border-bottom:1px solid var(--border)">
+                <div><strong style="font-size:13.5px">${UI.esc(o.number)}</strong><div class="text-muted" style="font-size:12px">${UI.esc(o.buyerName)} · ${UI.timeAgo(o.createdAt)}</div></div>
+                <div style="text-align:right"><span class="status ${o.status}">${Orders.STATUS[o.status]}</span><div style="font-weight:800;color:var(--brand);font-size:13.5px;margin-top:3px">${UI.fcfa(o.total)}</div></div>
+              </div>`).join("")
+              : `<p class="text-muted" style="text-align:center;padding:16px 0">Aucune commande pour le moment.</p>`}
+          </div>
+        </div>`,
+    });
   }
 
   function statCard(ic, emoji, val, lbl) {
@@ -1090,18 +1123,61 @@
       <div class="stat-val">${val}</div><div class="stat-lbl">${UI.esc(lbl)}</div></div>`;
   }
 
-  function sellerHeader(store, active) {
-    const tabs = [
-      ["dashboard", "Tableau de bord", "#/seller/dashboard"],
-      ["products", "Articles", "#/seller/products"],
-      ["orders", "Commandes", "#/seller/orders"],
-      ["store", "Ma boutique", "#/seller/store"],
+  // Jeu d'icônes SVG pour le back-office vendeur.
+  const SICON = {
+    dash: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M3 3h8v8H3zm10 0h8v5h-8zM3 13h8v8H3zm10 3h8v5h-8z'/></svg>",
+    box: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M12 2 3 6.5v11L12 22l9-4.5v-11zm0 2.2 6.1 3L12 12.3 5.9 7.2zM5 8.9l6 3v7.2l-6-3zm14 0v7.2l-6 3v-7.2z'/></svg>",
+    receipt: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M6 2h12a1 1 0 0 1 1 1v19l-3-2-2 2-2-2-2 2-2-2-3 2V3a1 1 0 0 1 1-1zm2 5v2h8V7zm0 4v2h8v-2z'/></svg>",
+    store: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M4 4h16l1 5-2 1v10H5V10L3 9zm3 8v6h4v-4h2v4h4v-6z'/></svg>",
+    eye: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M12 5C6 5 2 12 2 12s4 7 10 7 10-7 10-7-4-7-10-7zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm0-2a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'/></svg>",
+    plus: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z'/></svg>",
+    back: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z'/></svg>",
+    pencil: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M3 17.25V21h3.75L17.8 9.94l-3.75-3.75zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z'/></svg>",
+    trash: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M6 7h12l-1 14H7zM9 4h6l1 2H8z'/></svg>",
+  };
+
+  /**
+   * Coquille dédiée à l'espace vendeur (back-office) : sidebar sombre + zone
+   * de travail. Rend l'espace vendeur clairement distinct de l'espace client.
+   * @param {object} opts { active, title, subtitle, actions(HTML), body(HTML) }
+   */
+  function sellerLayout(opts) {
+    const store = Store.byOwner(Auth.current().id);
+    const pending = store ? Orders.byStore(store.id).filter((o) => o.status === "en_attente").length : 0;
+    const nav = [
+      ["dashboard", "Tableau de bord", "#/seller/dashboard", SICON.dash],
+      ["products", "Mes articles", "#/seller/products", SICON.box],
+      ["orders", "Commandes", "#/seller/orders", SICON.receipt],
+      ["store", "Ma boutique", "#/seller/store", SICON.store],
     ];
-    return `<div class="page-head"><div>
-        <div class="page-title">${UI.esc(store.name)}</div>
-        <div class="page-sub">Espace vendeur · 📍 ${UI.esc(store.commune)}</div></div>
-        <a href="#/seller/product/new" class="btn btn-primary">+ Nouvel article</a></div>
-      <div class="tabs">${tabs.map(([k, l, h]) => `<a href="${h}" class="tab ${active === k ? "active" : ""}">${l}</a>`).join("")}</div>`;
+    const navHTML = nav.map(([k, l, h, ic]) => `
+      <a href="${h}" class="ss-item ${opts.active === k ? "active" : ""}">
+        <span class="ss-ico">${ic}</span><span>${l}</span>
+        ${k === "orders" && pending ? `<span class="ss-badge">${pending}</span>` : ""}
+      </a>`).join("");
+
+    V().innerHTML = `
+      <div class="seller-shell">
+        <aside class="seller-sidebar">
+          <div class="ss-brand">
+            <img src="${UI.safeImg(store.logo, store.name)}" alt="" />
+            <div><div class="ss-name">${UI.esc(store.name)}</div><div class="ss-role">Espace vendeur</div></div>
+          </div>
+          <nav class="ss-nav">${navHTML}</nav>
+          <div class="ss-foot">
+            <a href="#/store/${store.id}" class="ss-link ss-link-accent">${SICON.eye}<span>Voir ma vitrine</span></a>
+            <a href="#/" class="ss-link">${SICON.back}<span>Retour à la marketplace</span></a>
+          </div>
+        </aside>
+        <div class="seller-main">
+          <header class="seller-topbar">
+            <div><h1 class="st-title">${UI.esc(opts.title)}</h1>${opts.subtitle ? `<div class="st-sub">${opts.subtitle}</div>` : ""}</div>
+            <div class="st-actions">${opts.actions || ""}</div>
+          </header>
+          <div class="seller-content">${opts.body}</div>
+        </div>
+      </div>`;
+    SB().innerHTML = "";
   }
 
   function statusLabel(s) {
@@ -1111,40 +1187,79 @@
   /* ============================================================
      VENDEUR : Gestion des articles
      ============================================================ */
-  function viewSellerProducts() {
+  function viewSellerProducts(params) {
     if (!requireVendor()) return;
     const store = Store.byOwner(Auth.current().id);
-    const products = Products.byStore(store.id, true).sort((a, b) => b.createdAt - a.createdAt);
+    const q = (params && params.query) || {};
+    const statusFilter = ["published", "draft", "unpublished"].includes(q.status) ? q.status : "all";
+    const search = (q.q || "").toLowerCase().trim();
 
-    layout(`
-      ${sellerHeader(store, "products")}
-      ${products.length ? `<div class="table-wrap"><table class="data-table">
-        <thead><tr><th>Article</th><th>Prix</th><th>Stock</th><th>Vues</th><th>Statut</th><th></th></tr></thead>
-        <tbody>${products.map((p) => `<tr>
-          <td><div class="flex gap-8" style="align-items:center"><img src="${UI.safeImg(p.images && p.images[0], p.title)}" style="width:42px;height:42px;border-radius:8px;object-fit:cover" alt=""/>
-            <a href="#/product/${p.id}" style="font-weight:600">${UI.esc(p.title)}</a></div></td>
-          <td>${UI.fcfa(Products.effectivePrice(p))}${p.promoPrice ? ` <span class="text-muted" style="text-decoration:line-through;font-size:12px">${UI.fcfa(p.price)}</span>` : ""}</td>
-          <td>${p.stock}</td>
-          <td>${p.views || 0}</td>
-          <td><span class="status ${p.status}">${statusLabel(p.status)}</span></td>
-          <td><div class="flex gap-8">
-            <button class="btn btn-ghost btn-sm" data-edit="${p.id}">Éditer</button>
-            <button class="btn btn-ghost btn-sm" data-toggle="${p.id}">${p.status === "published" ? "Dépublier" : "Publier"}</button>
-            <button class="btn btn-danger btn-sm" data-del="${p.id}">Suppr.</button>
-          </div></td>
-        </tr>`).join("")}</tbody></table></div>`
-        : emptyState("📦", "Aucun article", "Ajoutez votre premier article pour démarrer.", `<a href="#/seller/product/new" class="btn btn-primary">+ Nouvel article</a>`)}`);
+    const products = Products.byStore(store.id, true).sort((a, b) => b.createdAt - a.createdAt);
+    const counts = {
+      all: products.length,
+      published: products.filter((p) => p.status === "published").length,
+      draft: products.filter((p) => p.status === "draft").length,
+      unpublished: products.filter((p) => p.status === "unpublished").length,
+    };
+    let list = products;
+    if (statusFilter !== "all") list = list.filter((p) => p.status === statusFilter);
+    if (search) list = list.filter((p) => p.title.toLowerCase().includes(search));
+
+    const tabs = [["all", "Tous"], ["published", "Publiés"], ["draft", "Brouillons"], ["unpublished", "Dépubliés"]];
+    const qSuffix = search ? "&q=" + encodeURIComponent(search) : "";
+    const filterbar = `<div class="seller-filterbar">
+      <div class="tabs">${tabs.map(([k, l]) => `<a href="#/seller/products?status=${k}${qSuffix}" class="tab ${statusFilter === k ? "active" : ""}">${l}<span class="tab-count">${counts[k]}</span></a>`).join("")}</div>
+      <input type="search" id="prodSearch" class="ss-search" placeholder="Rechercher un article…" value="${UI.esc(q.q || "")}" />
+    </div>`;
+
+    const table = list.length ? `<div class="table-wrap"><table class="data-table">
+      <thead><tr><th>Article</th><th>Prix</th><th>Stock</th><th>Vues</th><th>Statut</th><th style="text-align:right">Actions</th></tr></thead>
+      <tbody>${list.map((p) => `<tr>
+        <td><div class="flex gap-8" style="align-items:center"><img class="mini-thumb" src="${UI.safeImg(p.images && p.images[0], p.title)}" alt=""/>
+          <div><a href="#/product/${p.id}" style="font-weight:600">${UI.esc(p.title)}</a>
+          <div class="text-muted" style="font-size:12px">${UI.esc(UI.categoryLabel(p.category))} · ${p.condition === "occasion" ? "Occasion" : "Neuf"}</div></div></div></td>
+        <td>${UI.fcfa(Products.effectivePrice(p))}${p.promoPrice ? ` <span class="text-muted" style="text-decoration:line-through;font-size:12px">${UI.fcfa(p.price)}</span>` : ""}</td>
+        <td>${p.stock <= 0 ? `<span class="status annulee">Rupture</span>` : p.stock}</td>
+        <td>👁️ ${p.views || 0}</td>
+        <td><span class="status ${p.status}">${statusLabel(p.status)}</span></td>
+        <td><div class="row-actions">
+          <a class="icon-action" href="#/product/${p.id}" title="Voir la page publique">${SICON.eye}</a>
+          <button class="icon-action" data-edit="${p.id}" title="Modifier">${SICON.pencil}</button>
+          <button class="btn btn-ghost btn-sm" data-toggle="${p.id}" title="${p.status === "published" ? "Dépublier" : "Publier"}">${p.status === "published" ? "Dépublier" : "Publier"}</button>
+          <button class="icon-action danger" data-del="${p.id}" title="Supprimer">${SICON.trash}</button>
+        </div></td>
+      </tr>`).join("")}</tbody></table></div>`
+      : (products.length
+        ? `<div class="card card-pad"><p class="text-muted" style="text-align:center;margin:0;padding:20px 0">Aucun article ne correspond à ce filtre.</p></div>`
+        : emptyState("📦", "Aucun article", "Publiez votre premier article pour lancer votre boutique.", `<a href="#/seller/product/new" class="btn btn-primary">+ Nouvel article</a>`));
+
+    sellerLayout({
+      active: "products",
+      title: "Mes articles",
+      subtitle: `${counts.all} article(s) · ${counts.published} en ligne`,
+      actions: `<a href="#/seller/product/new" class="btn btn-primary">+ Nouvel article</a>`,
+      body: filterbar + table,
+    });
+
+    // Recherche (Entrée pour valider).
+    const si = document.getElementById("prodSearch");
+    if (si) si.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        const val = si.value.trim();
+        Router.go("#/seller/products?status=" + statusFilter + (val ? "&q=" + encodeURIComponent(val) : ""));
+      }
+    });
 
     V().querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => Router.go("#/seller/product/" + b.getAttribute("data-edit") + "/edit")));
     V().querySelectorAll("[data-toggle]").forEach((b) => b.addEventListener("click", () => {
       const p = Products.get(b.getAttribute("data-toggle"));
       Products.update(p.id, Object.assign({}, p, { status: p.status === "published" ? "unpublished" : "published" }));
-      UI.toast(p.status === "published" ? "Article dépublié." : "Article publié ✓", "success");
-      viewSellerProducts();
+      UI.toast(p.status === "published" ? "Article dépublié." : "Article publié ✓ Vos abonnés sont notifiés.", "success");
+      viewSellerProducts(params);
     }));
     V().querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", async () => {
       if (await UI.confirm("Supprimer définitivement cet article ?", { danger: true, confirmLabel: "Supprimer" })) {
-        Products.remove(b.getAttribute("data-del")); UI.toast("Article supprimé.", "info"); viewSellerProducts();
+        Products.remove(b.getAttribute("data-del")); UI.toast("Article supprimé.", "info"); viewSellerProducts(params);
       }
     }));
   }
@@ -1163,10 +1278,13 @@
     const d = p || {};
     const catOpts = UI.CATEGORIES.map((c) => `<option value="${c.id}" ${d.category === c.id ? "selected" : ""}>${c.icon} ${c.label}</option>`).join("");
 
-    layout(`
-      <nav class="breadcrumb"><a href="#/seller/products">Articles</a> › <span>${editing ? "Éditer" : "Nouvel article"}</span></nav>
-      <div class="page-head"><div class="page-title">${editing ? "Modifier l'article" : "Nouvel article"}</div></div>
-      <div class="card card-pad">
+    sellerLayout({
+      active: "products",
+      title: editing ? "Modifier l'article" : "Nouvel article",
+      subtitle: editing ? UI.esc(p.title) : "Renseignez les informations de votre article.",
+      actions: `${editing ? `<a href="#/product/${p.id}" class="btn btn-ghost">Voir la page</a>` : ""}<a href="#/seller/products" class="btn btn-ghost">Retour aux articles</a>`,
+      body: `
+      <div class="card card-pad" style="max-width:820px">
         <form id="prodForm" class="form-grid">
           <div class="field"><label>Images (plusieurs possibles)</label>${uploaderHTML("prodImgs", d.images || [], true)}</div>
           <div class="field"><label>Titre *</label><input id="pTitle" value="${UI.esc(d.title || "")}" required /></div>
@@ -1199,7 +1317,8 @@
             <a href="#/seller/products" class="btn btn-ghost btn-lg">Annuler</a>
           </div>
         </form>
-      </div>`);
+      </div>`,
+    });
 
     const up = wireUploader("prodImgs", d.images || [], true);
 
@@ -1227,21 +1346,38 @@
   /* ============================================================
      VENDEUR : Commandes reçues
      ============================================================ */
-  function viewSellerOrders() {
+  function viewSellerOrders(params) {
     if (!requireVendor()) return;
     const store = Store.byOwner(Auth.current().id);
+    const q = (params && params.query) || {};
+    const filter = Orders.STATUS[q.status] ? q.status : "all";
     const orders = Orders.byStore(store.id);
 
-    layout(`
-      ${sellerHeader(store, "orders")}
-      ${orders.length ? orders.map((o) => sellerOrderCard(o)).join("")
-        : emptyState("🧾", "Aucune commande", "Les commandes de vos clients apparaîtront ici.")}`);
+    const counts = { all: orders.length };
+    Object.keys(Orders.STATUS).forEach((k) => (counts[k] = orders.filter((o) => o.status === k).length));
+    const list = filter === "all" ? orders : orders.filter((o) => o.status === filter);
+
+    const tabs = [["all", "Toutes"]].concat(Object.keys(Orders.STATUS).map((k) => [k, Orders.STATUS[k]]));
+    const filterbar = `<div class="seller-filterbar"><div class="tabs">
+      ${tabs.map(([k, l]) => `<a href="#/seller/orders${k === "all" ? "" : "?status=" + k}" class="tab ${filter === k ? "active" : ""}">${l}<span class="tab-count">${counts[k] || 0}</span></a>`).join("")}
+    </div></div>`;
+
+    sellerLayout({
+      active: "orders",
+      title: "Commandes reçues",
+      subtitle: `${counts.all} commande(s) · ${counts.en_attente || 0} en attente`,
+      actions: `<a href="#/store/${store.id}" class="btn btn-ghost">Voir ma vitrine</a>`,
+      body: filterbar + (list.length ? list.map((o) => sellerOrderCard(o)).join("")
+        : (orders.length
+          ? `<div class="card card-pad"><p class="text-muted" style="text-align:center;margin:0;padding:20px 0">Aucune commande avec ce statut.</p></div>`
+          : emptyState("🧾", "Aucune commande", "Les commandes de vos clients apparaîtront ici dès le premier achat."))),
+    });
 
     V().querySelectorAll("[data-status]").forEach((sel) =>
       sel.addEventListener("change", () => {
         Orders.setStatus(sel.getAttribute("data-order"), sel.value);
-        UI.toast("Statut mis à jour ✓", "success");
-        viewSellerOrders();
+        UI.toast("Statut mis à jour ✓ Le client est notifié.", "success");
+        viewSellerOrders(params);
       })
     );
   }
@@ -1483,6 +1619,11 @@
     Router.on("#/seller/orders", viewSellerOrders);
     Router.on("#/admin", viewAdmin);
     Router.setNotFound(() => layout(emptyState("🧭", "Page introuvable", "Le lien demandé n'existe pas.", `<a href="#/" class="btn btn-primary">Retour à l'accueil</a>`)));
+    // Bascule le corps en « mode vendeur » sur les routes /seller (chrome dédié).
+    Router.setBeforeEach((path) => {
+      document.body.classList.toggle("seller-mode", path.indexOf("#/seller") === 0);
+      return true;
+    });
   }
 
   /* ============================================================

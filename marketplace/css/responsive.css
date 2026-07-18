@@ -8,6 +8,35 @@
   .cart-layout { grid-template-columns: 1fr; }
   .summary { position: static; }
   .sidebar { width: 220px; }
+  .seller-cols { grid-template-columns: 1fr; }
+  .seller-sidebar { width: 210px; }
+}
+
+/* ---------- Espace vendeur en mobile : nav horizontale ---------- */
+@media (max-width: 760px) {
+  .seller-shell { flex-direction: column; gap: 14px; }
+  .seller-sidebar {
+    width: 100%;
+    position: static;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 8px;
+    scrollbar-width: none;
+  }
+  .seller-sidebar::-webkit-scrollbar { display: none; }
+  .ss-brand { display: none; }
+  .ss-nav { flex-direction: row; gap: 6px; }
+  .ss-item { white-space: nowrap; padding: 9px 13px; }
+  .ss-item span:not(.ss-badge) { font-size: 13.5px; }
+  .ss-foot { margin: 0; padding: 0 0 0 6px; border: none; border-left: 1px solid rgba(255,255,255,.12); flex-direction: row; }
+  .ss-link { white-space: nowrap; padding: 9px 11px; }
+  .ss-link span { display: none; } /* n'afficher que l'icône des liens de pied en mobile */
+  .seller-topbar { margin-bottom: 14px; padding-bottom: 14px; }
+  .st-title { font-size: 21px; }
+  .seller-filterbar { gap: 10px; }
+  .ss-search { min-width: 0; width: 100%; }
 }
 
 /* ---------- Mobile : bascule en application native ---------- */

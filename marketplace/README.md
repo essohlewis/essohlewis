@@ -50,14 +50,16 @@ Données de démo : **4 boutiques**, **16 articles**, quelques avis, abonnements
 - **Abonnement aux vendeurs** → notification à chaque nouvel article publié.
 - Système d'**avis / notes en étoiles** sur les articles et les boutiques.
 
-### Vendeur
-- Inscription vendeur / activation « Ouvrir ma boutique » depuis un compte client.
+### Vendeur — espace dédié (back-office)
+L'espace vendeur est un **véritable back-office distinct de l'espace client** : barre latérale sombre de navigation, en-tête « Espace Vendeur » (le chrome d'achat — recherche, panier, favoris, nav basse mobile — est masqué), et zone de travail professionnelle.
+
+- Inscription vendeur / activation « Ouvrir ma boutique » depuis un compte client, avec **écran d'accueil (onboarding)**.
 - **Création de boutique** : nom, logo, bannière, description, catégorie, commune, horaires, WhatsApp, réseaux sociaux.
-- **Tableau de bord** : chiffre d'affaires simulé, nombre d'articles, commandes reçues, abonnés, articles les plus vus.
-- **CRUD articles** : titre, description, prix FCFA, prix promo, stock, catégorie, **plusieurs images**, état (neuf/occasion), variantes.
-- Publication / dépublication / brouillon.
-- **Gestion des commandes reçues** : changement de statut (en attente → confirmée → expédiée → livrée / annulée) → notifie l'acheteur.
-- Page publique de la boutique (vitrine) avec bouton **S'abonner**.
+- **Tableau de bord** : chiffre d'affaires simulé, articles publiés, commandes reçues, abonnés, articles les plus vus + dernières commandes.
+- **Gestion des articles** : liste filtrable par statut (Tous / Publiés / Brouillons / Dépubliés) + recherche, avec pour chaque article : **voir la page publique**, éditer, **publier / dépublier**, supprimer.
+- **CRUD articles** : titre, description, prix FCFA, prix promo, stock, catégorie, **plusieurs images**, état (neuf/occasion), variantes (taille/couleur), statut (publié/brouillon/dépublié).
+- **Gestion des commandes reçues** (filtrables par statut) : changement de statut (en attente → confirmée → expédiée → livrée / annulée) → notifie l'acheteur.
+- Accès direct à la **page publique de la boutique (vitrine)** et aux **pages articles** depuis le back-office.
 - Réponse aux avis clients → notifie l'auteur.
 
 ### Admin
