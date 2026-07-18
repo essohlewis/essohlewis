@@ -169,28 +169,62 @@ window.MP = window.MP || {};
 
   /* ---------- Upload d'images -> base64 (redimensionné) ---------- */
 
+  /** Estime la taille en octets d'une dataURL (base64 → ~3/4 de la longueur). */
+  function dataUrlBytes(dataUrl) {
+    const i = dataUrl.indexOf(",");
+    return i < 0 ? dataUrl.length : Math.ceil((dataUrl.length - i - 1) * 0.75);
+  }
+
   /**
-   * Lit un fichier image, le redimensionne (max 900px) et renvoie une dataURL JPEG.
-   * Réduit fortement l'empreinte localStorage.
+   * Lit un fichier image, le redimensionne et le compresse SOUS UN BUDGET de
+   * taille (octets) pour préserver le quota localStorage. On baisse d'abord la
+   * qualité JPEG, puis les dimensions, jusqu'à passer sous `maxBytes`.
+   * @param {File} file
+   * @param {object|number} opts { maxSize, maxBytes, quality } (nombre = maxSize rétro-compat)
    */
-  function fileToDataURL(file, maxSize) {
-    maxSize = maxSize || 900;
+  function fileToDataURL(file, opts) {
+    if (typeof opts === "number") opts = { maxSize: opts };
+    opts = opts || {};
+    const maxSize = opts.maxSize || 1000;      // plus grande dimension max
+    const maxBytes = opts.maxBytes || 110 * 1024; // budget par image (~110 Ko)
+    let quality = opts.quality || 0.8;
+
     return new Promise((resolve, reject) => {
       if (!file || !/^image\//.test(file.type)) return reject(new Error("Fichier non image"));
       const reader = new FileReader();
       reader.onload = () => {
         const img = new Image();
         img.onload = () => {
-          let { width, height } = img;
-          if (width > maxSize || height > maxSize) {
-            const ratio = Math.min(maxSize / width, maxSize / height);
-            width = Math.round(width * ratio);
-            height = Math.round(height * ratio);
-          }
+          let width = img.width, height = img.height;
+          // Redimensionnement initial pour tenir dans maxSize.
+          const ratio = Math.min(1, maxSize / Math.max(width, height));
+          width = Math.max(1, Math.round(width * ratio));
+          height = Math.max(1, Math.round(height * ratio));
+
           const canvas = document.createElement("canvas");
-          canvas.width = width; canvas.height = height;
-          canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL("image/jpeg", 0.82));
+          const ctx = canvas.getContext("2d");
+          function render(w, h, q) {
+            canvas.width = w; canvas.height = h;
+            // Fond blanc : évite le noir sur les zones transparentes (PNG → JPEG).
+            ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+            return canvas.toDataURL("image/jpeg", q);
+          }
+
+          let url = render(width, height, quality);
+          let guard = 0;
+          // Réduit qualité puis dimensions jusqu'à passer sous le budget.
+          while (dataUrlBytes(url) > maxBytes && guard++ < 14) {
+            if (quality > 0.42) {
+              quality = Math.max(0.4, quality - 0.12);
+            } else {
+              width = Math.max(1, Math.round(width * 0.82));
+              height = Math.max(1, Math.round(height * 0.82));
+              quality = 0.6;
+            }
+            url = render(width, height, quality);
+          }
+          resolve(url);
         };
         img.onerror = reject;
         img.src = reader.result;

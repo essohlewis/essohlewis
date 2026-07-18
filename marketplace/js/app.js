@@ -2801,8 +2801,17 @@
       <div class="upl-previews" id="${id}_prev"></div>`;
   }
 
+  // Budgets de compression par type d'image (préserve le quota localStorage).
+  const IMG_BUDGETS = {
+    logoUp: { maxSize: 400, maxBytes: 45 * 1024 },
+    bannerUp: { maxSize: 1280, maxBytes: 150 * 1024 },
+    galUp: { maxSize: 1000, maxBytes: 85 * 1024 },
+    prodImgs: { maxSize: 1100, maxBytes: 120 * 1024 },
+  };
+
   function wireUploader(id, initial, multiple) {
     let images = (initial || []).slice();
+    const budget = IMG_BUDGETS[id] || { maxSize: 1000, maxBytes: 100 * 1024 };
     const zone = document.getElementById(id + "_zone");
     const input = document.getElementById(id + "_input");
     const prev = document.getElementById(id + "_prev");
@@ -2815,9 +2824,10 @@
     zone.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); } });
     input.addEventListener("change", async () => {
       const files = Array.from(input.files || []);
+      if (files.length) UI.toast("Optimisation de l'image…", "info");
       for (const f of files) {
         try {
-          const url = await UI.fileToDataURL(f);
+          const url = await UI.fileToDataURL(f, budget);
           if (multiple) images.push(url); else images = [url];
         } catch (e) { UI.toast("Image invalide ignorée.", "error"); }
       }

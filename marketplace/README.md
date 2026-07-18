@@ -180,6 +180,6 @@ Architecture : chaque module s'attache au **namespace global `window.MP`** (scri
 ## ⚠️ Limites (assumées — projet démo front-only)
 - **Données locales au navigateur** : rien n'est synchronisé entre appareils ; vider le cache/`localStorage` efface tout.
 - **Mots de passe stockés en clair** dans `localStorage` (démo uniquement — jamais en production).
-- Le `localStorage` a une capacité limitée (~5 Mo) : les images sont redimensionnées, mais un usage intensif peut saturer le quota.
+- Le `localStorage` a une capacité limitée (~5 Mo) : chaque image est fortement **compressée sous un budget** (logo ~45 Ko, galerie ~85 Ko, article ~120 Ko, bannière ~150 Ko) — une galerie de 8 photos ≈ 700 Ko. En cas de quota réellement dépassé, l'enregistrement échoue explicitement (message clair) au lieu de faire croire à une sauvegarde.
 - Chiffre d'affaires et statistiques sont **simulés** localement.
 - Aucun paiement en ligne : **paiement à la livraison** exclusivement, conforme au contexte.

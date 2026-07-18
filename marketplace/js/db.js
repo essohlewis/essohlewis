@@ -100,8 +100,8 @@ window.MP = window.MP || {};
   function insert(key, obj) {
     const list = all(key);
     list.push(obj);
-    set(key, list);
-    return obj;
+    // Renvoie null si l'écriture échoue (ex : quota localStorage dépassé).
+    return set(key, list) ? obj : null;
   }
 
   function update(key, id, patch) {
@@ -109,8 +109,8 @@ window.MP = window.MP || {};
     const idx = list.findIndex((x) => x.id === id);
     if (idx === -1) return null;
     list[idx] = Object.assign({}, list[idx], patch);
-    set(key, list);
-    return list[idx];
+    // Renvoie null si l'écriture échoue (ex : quota localStorage dépassé).
+    return set(key, list) ? list[idx] : null;
   }
 
   function removeItem(key, id) {

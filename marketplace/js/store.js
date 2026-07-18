@@ -54,7 +54,7 @@ window.MP = window.MP || {};
       zones: data.zones || [],                // communes desservies (vide = toutes)
       createdAt: Date.now(),
     };
-    DB.insert(K, store);
+    if (!DB.insert(K, store)) return { ok: false, error: "Espace de stockage plein : réduisez la taille des images." };
     // L'utilisateur devient vendeur.
     window.MP.Auth.becomeVendor();
     return { ok: true, store };
@@ -66,7 +66,9 @@ window.MP = window.MP || {};
     if (!store || !user || (store.ownerId !== user.id && user.role !== "admin")) {
       return { ok: false, error: "Non autorisé." };
     }
-    return { ok: true, store: DB.update(K, id, patch) };
+    const updated = DB.update(K, id, patch);
+    if (!updated) return { ok: false, error: "Espace de stockage plein : réduisez le nombre ou la taille des images." };
+    return { ok: true, store: updated };
   }
 
   /** Frais de livraison d'une boutique pour une commune donnée. */

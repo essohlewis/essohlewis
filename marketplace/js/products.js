@@ -42,7 +42,7 @@ window.MP = window.MP || {};
       views: 0,
       createdAt: Date.now(),
     });
-    DB.insert(K, product);
+    if (!DB.insert(K, product)) return { ok: false, error: "Espace de stockage plein : réduisez le nombre ou la taille des images." };
 
     if (product.status === "published") {
       window.MP.Notifications.notifySubscribers(store.id, {
@@ -65,7 +65,7 @@ window.MP = window.MP || {};
       createdAt: existing.createdAt,
       cartAdds: existing.cartAdds || 0, // préserve le compteur de conversion
     });
-    DB.update(K, id, product);
+    if (!DB.update(K, id, product)) return { ok: false, error: "Espace de stockage plein : réduisez le nombre ou la taille des images." };
 
     // Notifie les abonnés si l'article passe de non-publié à publié.
     if (!wasPublished && product.status === "published") {
