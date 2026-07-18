@@ -611,6 +611,25 @@ body.seller-mode .bottom-nav { display: none !important; }
 .icon-action svg { width: 17px; height: 17px; }
 .mini-thumb { width: 44px; height: 44px; border-radius: 9px; object-fit: cover; background: var(--surface-3); flex-shrink: 0; }
 
+/* Graphiques du tableau de bord (SVG/CSS pur, thème-aware) */
+.chart-bars { display: flex; align-items: flex-end; gap: 8px; height: 152px; padding-top: 8px; }
+.cb-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px; height: 100%; }
+.cb-track { flex: 1; width: 100%; display: flex; align-items: flex-end; }
+.cb-bar { width: 100%; background: linear-gradient(180deg, var(--brand), var(--brand-dark)); border-radius: 7px 7px 3px 3px; min-height: 3px; transition: height .5s cubic-bezier(.2,.8,.3,1); }
+.cb-lbl { font-size: 11px; color: var(--text-3); font-weight: 700; text-transform: capitalize; }
+
+.donut-wrap { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.donut { width: 132px; height: 132px; border-radius: 50%; position: relative; flex-shrink: 0; }
+.donut-hole { position: absolute; inset: 19px; background: var(--surface); border-radius: 50%; display: grid; place-items: center; text-align: center; }
+.donut-val { font-size: 25px; font-weight: 800; letter-spacing: -.5px; }
+.donut-sub { font-size: 11px; color: var(--text-3); }
+.donut-legend { display: flex; flex-direction: column; gap: 7px; font-size: 13px; }
+.donut-leg { display: flex; align-items: center; gap: 8px; color: var(--text-2); }
+.donut-leg .dot { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
+
+.goal-bar { height: 26px; background: var(--surface-3); border-radius: var(--r-full); overflow: hidden; }
+.goal-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #0bbf6a); color: #fff; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: flex-end; padding-right: 11px; border-radius: var(--r-full); min-width: 26px; transition: width .6s cubic-bezier(.2,.8,.3,1); }
+
 /* Navigation basse dédiée au vendeur (mobile) — fond sombre, distincte du client */
 .seller-bottom-nav { display: none; }
 .sbn-item {

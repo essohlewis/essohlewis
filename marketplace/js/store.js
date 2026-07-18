@@ -41,6 +41,7 @@ window.MP = window.MP || {};
       whatsapp: data.whatsapp || "",
       socials: data.socials || {},
       revenueSim: 0,
+      salesGoal: Number(data.salesGoal) || 0, // objectif de vente mensuel (FCFA)
       createdAt: Date.now(),
     };
     DB.insert(K, store);

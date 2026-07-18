@@ -61,6 +61,16 @@ L'espace vendeur est un **véritable back-office distinct de l'espace client** :
 - **Gestion des commandes reçues** (filtrables par statut) : changement de statut (en attente → confirmée → expédiée → livrée / annulée) → notifie l'acheteur.
 - Accès direct à la **page publique de la boutique (vitrine)** et aux **pages articles** depuis le back-office.
 - Réponse aux avis clients → notifie l'auteur.
+- **Menu vendeur en bas d'écran (mobile)** propre à l'espace vendeur, distinct de la nav client : Tableau, Articles, bouton central « + », Commandes, et une feuille « Menu » (vitrine, profil, accueil, notifications…).
+
+#### 💡 Innovations de l'espace vendeur
+- **Statistiques visuelles** (SVG/CSS pur, sans librairie) : graphe des **ventes des 7 derniers jours** et **répartition des commandes par statut** (donut).
+- **Objectif de vente mensuel** avec barre de progression et montant restant.
+- **Alertes de stock** : détection automatique des articles en **rupture** ou à **stock faible**.
+- **Partage WhatsApp** d'un article ou de toute la boutique (texte pré-rempli) — canal clé en Côte d'Ivoire.
+- **Bon de livraison imprimable** par commande (destinataire, articles, **montant à encaisser à la livraison**) + bouton « Contacter le client » (WhatsApp).
+- **Export CSV** des commandes (compatible Excel).
+- **Duplication rapide** d'un article (créé en brouillon).
 
 ### Admin
 - Console de modération : statistiques globales, suppression de boutiques/articles, réinitialisation des données de démo.

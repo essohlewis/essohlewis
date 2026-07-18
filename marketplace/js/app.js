@@ -1012,6 +1012,8 @@
             <div class="field"><label>Instagram</label><input id="sIg" value="${UI.esc((s.socials && s.socials.instagram) || "")}" placeholder="pseudo" /></div>
             <div class="field"><label>Facebook</label><input id="sFb" value="${UI.esc((s.socials && s.socials.facebook) || "")}" placeholder="page" /></div>
           </div>
+          <div class="field"><label>Objectif de vente mensuel (FCFA) <span class="hint">— suivi de progression sur votre tableau de bord</span></label>
+            <input type="number" id="sGoal" min="0" value="${s.salesGoal || ""}" placeholder="Ex : 500000" /></div>
           <div class="flex gap-12">
             <button class="btn btn-primary btn-lg" type="submit">${editing ? "Enregistrer les modifications" : "Créer ma boutique"}</button>
             ${editing ? `<a href="#/store/${s.id}" class="btn btn-ghost btn-lg">Voir la vitrine</a>` : ""}
@@ -1053,6 +1055,7 @@
         whatsapp: document.getElementById("sWa").value,
         logo: logoUp.get()[0] || "",
         banner: bannerUp.get()[0] || "",
+        salesGoal: Number(document.getElementById("sGoal").value) || 0,
         socials: { instagram: document.getElementById("sIg").value.trim(), facebook: document.getElementById("sFb").value.trim() },
       };
       if (editing) {
@@ -1081,12 +1084,24 @@
     const recentOrders = orders.slice(0, 5);
     const firstName = UI.esc(Auth.current().name.split(" ")[0]);
 
+    // --- Analytics ---
+    const sales7 = last7DaysSales(orders);
+    const goal = store.salesGoal || 0;
+    const mSales = monthSales(orders);
+    const goalPct = goal > 0 ? Math.min(100, Math.round((mSales / goal) * 100)) : 0;
+    const statusColors = { en_attente: "#f59e0b", confirmee: "#2563eb", expediee: "#7c3aed", livree: "#0f9d58", annulee: "#e11d48" };
+    const donutSegs = Object.keys(Orders.STATUS).map((k) => ({ label: Orders.STATUS[k], value: orders.filter((o) => o.status === k).length, color: statusColors[k] }));
+
+    // --- Alertes de stock ---
+    const outStock = products.filter((p) => p.stock <= 0);
+    const lowStock = products.filter((p) => p.stock > 0 && p.stock <= LOW_STOCK);
+
     sellerLayout({
       active: "dashboard",
       title: "Tableau de bord",
       subtitle: `Bonjour ${firstName} — voici l'activité de votre boutique.`,
-      actions: `<a href="#/seller/product/new" class="btn btn-primary">+ Nouvel article</a>
-                <a href="#/store/${store.id}" class="btn btn-ghost">Voir ma vitrine</a>`,
+      actions: `<button class="btn wa-btn" id="shareStoreBtn"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.9.9-2.7-.2-.3A8 8 0 1 1 12 20z"/></svg>Partager ma boutique</button>
+                <a href="#/seller/product/new" class="btn btn-primary">+ Nouvel article</a>`,
       body: `
         <div class="stat-grid">
           ${statCard("ic-green", "💰", UI.fcfa(store.revenueSim || 0), "Chiffre d'affaires")}
@@ -1097,7 +1112,34 @@
         ${pending ? `<div class="cod-note mt-16"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg>
           <span><strong>${pending} commande(s) en attente</strong> — <a href="#/seller/orders" style="color:var(--brand);font-weight:700">à traiter maintenant</a>.</span></div>` : ""}
 
-        <div class="seller-cols">
+        <div class="seller-cols mt-16">
+          <div class="card card-pad">
+            <div class="panel-head"><h3>Ventes des 7 derniers jours</h3><span class="text-muted" style="font-size:13px">${UI.fcfa(sales7.reduce((s, d) => s + d.value, 0))}</span></div>
+            ${barChartHTML(sales7)}
+          </div>
+          <div class="card card-pad">
+            <div class="panel-head"><h3>Commandes par statut</h3></div>
+            ${donutHTML(donutSegs, orders.length, "commandes")}
+          </div>
+        </div>
+
+        <div class="card card-pad mt-16">
+          <div class="panel-head"><h3>Objectif de vente du mois</h3>
+            ${goal > 0 ? `<span class="text-muted" style="font-size:13px">${UI.fcfa(mSales)} / ${UI.fcfa(goal)}</span>` : `<a href="#/seller/store" style="font-size:13px;color:var(--brand);font-weight:700">Définir un objectif →</a>`}</div>
+          ${goal > 0 ? `<div class="goal-bar"><div class="goal-fill" style="width:${goalPct}%">${goalPct >= 12 ? goalPct + "%" : ""}</div></div>
+            <div class="text-muted" style="font-size:13px;margin-top:8px">${goalPct >= 100 ? "🎉 Objectif atteint, bravo !" : `Encore ${UI.fcfa(Math.max(0, goal - mSales))} pour atteindre votre objectif.`}</div>`
+            : `<p class="text-muted" style="margin:0">Fixez un objectif mensuel pour suivre votre progression.</p>`}
+        </div>
+
+        ${(outStock.length || lowStock.length) ? `<div class="card card-pad mt-16" style="border-color:var(--warning)">
+          <div class="panel-head"><h3>⚠️ Alertes de stock</h3><a href="#/seller/products">Gérer →</a></div>
+          ${outStock.map((p) => `<div class="flex-between" style="padding:8px 0;border-bottom:1px solid var(--border)">
+            <a href="#/seller/product/${p.id}/edit" style="font-weight:600">${UI.esc(p.title)}</a><span class="status annulee">Rupture</span></div>`).join("")}
+          ${lowStock.map((p) => `<div class="flex-between" style="padding:8px 0;border-bottom:1px solid var(--border)">
+            <a href="#/seller/product/${p.id}/edit" style="font-weight:600">${UI.esc(p.title)}</a><span class="status unpublished">Stock faible : ${p.stock}</span></div>`).join("")}
+        </div>` : ""}
+
+        <div class="seller-cols mt-16">
           <div class="card card-pad">
             <div class="panel-head"><h3>Articles les plus vus</h3><a href="#/seller/products">Gérer →</a></div>
             ${topViewed.length ? `<table class="data-table">
@@ -1119,6 +1161,9 @@
           </div>
         </div>`,
     });
+
+    const shareBtn = document.getElementById("shareStoreBtn");
+    if (shareBtn) shareBtn.addEventListener("click", () => shareStore(store));
   }
 
   function statCard(ic, emoji, val, lbl) {
@@ -1138,6 +1183,10 @@
     pencil: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M3 17.25V21h3.75L17.8 9.94l-3.75-3.75zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z'/></svg>",
     trash: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M6 7h12l-1 14H7zM9 4h6l1 2H8z'/></svg>",
     menu: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M4 4h6v6H4zm10 0h6v6h-6zM4 14h6v6H4zm10 0h6v6h-6z'/></svg>",
+    wa: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.9.9-2.7-.2-.3A8 8 0 1 1 12 20zm4.4-6c-.2-.1-1.4-.7-1.6-.8s-.4-.1-.5.1-.6.8-.8 1-.3.2-.5.1a6.5 6.5 0 0 1-3.2-2.8c-.2-.4.2-.4.6-1.2.1-.2 0-.3 0-.5s-.5-1.3-.7-1.7-.4-.4-.5-.4h-.5a1 1 0 0 0-.7.3A3 3 0 0 0 6 8.9c0 1.8 1.3 3.5 1.5 3.7s2.6 4 6.3 5.4c2.2.8 2.6.6 3.1.6s1.4-.6 1.6-1.1.2-1 .1-1.1-.3-.2-.5-.3z'/></svg>",
+    copy: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M16 1H4a2 2 0 0 0-2 2v14h2V3h12zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11z'/></svg>",
+    printer: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M19 8H5a3 3 0 0 0-3 3v6h4v4h12v-4h4v-6a3 3 0 0 0-3-3zm-3 11H8v-5h8zm3-7a1 1 0 1 1 0-2 1 1 0 0 1 0 2zM18 3H6v4h12z'/></svg>",
+    download: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M12 3v10l3.5-3.5L17 11l-5 5-5-5 1.5-1.5L12 13V3zM5 19h14v2H5z'/></svg>",
   };
 
   /**
@@ -1241,6 +1290,144 @@
   }
 
   /* ============================================================
+     VENDEUR : innovations (analytics, partage, impression, export…)
+     ============================================================ */
+  const LOW_STOCK = 3; // seuil d'alerte de stock faible
+
+  /** Histogramme simple (barres CSS) : data = [{label, value}]. */
+  function barChartHTML(data) {
+    const max = Math.max(1, ...data.map((d) => d.value));
+    return `<div class="chart-bars">${data.map((d) => {
+      const h = Math.round((d.value / max) * 100);
+      return `<div class="cb-col" title="${UI.esc(d.label)} : ${UI.fcfa(d.value)}">
+        <div class="cb-track"><div class="cb-bar" style="height:${d.value > 0 ? Math.max(4, h) : 0}%"></div></div>
+        <div class="cb-lbl">${UI.esc(d.label)}</div></div>`;
+    }).join("")}</div>`;
+  }
+
+  /** Donut (conic-gradient) : segments = [{label, value, color}]. */
+  function donutHTML(segments, centerVal, centerSub) {
+    const total = segments.reduce((s, x) => s + x.value, 0);
+    let acc = 0;
+    const stops = total > 0 ? segments.filter((s) => s.value > 0).map((s) => {
+      const a = (acc / total) * 360; acc += s.value; const b = (acc / total) * 360;
+      return `${s.color} ${a}deg ${b}deg`;
+    }).join(", ") : "var(--surface-3) 0deg 360deg";
+    const legend = segments.map((s) => `<div class="donut-leg"><span class="dot" style="background:${s.color}"></span>${UI.esc(s.label)} <strong>${s.value}</strong></div>`).join("");
+    return `<div class="donut-wrap">
+      <div class="donut" style="background:conic-gradient(${stops})"><div class="donut-hole">
+        <div class="donut-val">${centerVal}</div><div class="donut-sub">${UI.esc(centerSub)}</div></div></div>
+      <div class="donut-legend">${legend}</div></div>`;
+  }
+
+  /** Ventes des 7 derniers jours à partir des commandes. */
+  function last7DaysSales(orders) {
+    const days = [];
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      const start = d.getTime();
+      const end = start + 86400000;
+      const value = orders.filter((o) => o.createdAt >= start && o.createdAt < end).reduce((s, o) => s + o.total, 0);
+      days.push({ label: d.toLocaleDateString("fr-FR", { weekday: "short" }).replace(".", ""), value });
+    }
+    return days;
+  }
+
+  /** Total des ventes du mois courant. */
+  function monthSales(orders) {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    return orders.filter((o) => o.createdAt >= start).reduce((s, o) => s + o.total, 0);
+  }
+
+  /** Ouvre WhatsApp (sélecteur de contact) avec un texte pré-rempli. */
+  function waShare(text) {
+    window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank", "noopener");
+  }
+
+  function shareProduct(p) {
+    const store = Store.get(p.storeId);
+    const price = Products.effectivePrice(p);
+    const txt = `🛍️ ${p.title}\n💰 ${UI.fcfa(price)}\n🏪 ${store.name} — 📍 ${store.commune}\n💵 Paiement à la livraison sur Marché CI.`;
+    waShare(txt);
+  }
+
+  function shareStore(store) {
+    const n = Products.byStore(store.id).length;
+    const txt = `🏪 Découvrez ma boutique « ${store.name} » sur Marché CI !\n${n} article(s) disponibles.\n📍 ${store.commune} · 💵 Paiement à la livraison.`;
+    waShare(txt);
+  }
+
+  /** Duplique un article (en brouillon) pour créer une variante rapidement. */
+  function duplicateProduct(id, after) {
+    const p = Products.get(id);
+    if (!p) return;
+    const copy = Object.assign({}, p, { title: p.title + " (copie)", status: "draft" });
+    delete copy.id; delete copy.views; delete copy.createdAt;
+    const res = Products.create(copy);
+    if (res.ok) { UI.toast("Article dupliqué (brouillon) ✓", "success"); if (after) after(); }
+    else UI.toast(res.error, "error");
+  }
+
+  /** Bon de livraison imprimable (paiement à la livraison). */
+  function printDeliverySlip(order) {
+    const store = Store.get(order.storeId);
+    const rows = order.items.map((it) => {
+      const v = [it.variant && it.variant.size, it.variant && it.variant.color].filter(Boolean).join(" / ");
+      return `<tr><td>${UI.esc(it.title)}${v ? ` <small>(${UI.esc(v)})</small>` : ""}</td><td style="text-align:center">${it.qty}</td><td style="text-align:right">${UI.fcfa(it.unit * it.qty)}</td></tr>`;
+    }).join("");
+    const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Bon de livraison ${UI.esc(order.number)}</title>
+      <style>
+        body{font-family:Segoe UI,Arial,sans-serif;color:#111;padding:28px;max-width:720px;margin:auto}
+        h1{font-size:20px;margin:0} .muted{color:#666;font-size:13px}
+        .head{display:flex;justify-content:space-between;border-bottom:2px solid #f97316;padding-bottom:12px;margin-bottom:16px}
+        .badge{background:#f97316;color:#fff;padding:4px 10px;border-radius:20px;font-weight:700;font-size:13px}
+        table{width:100%;border-collapse:collapse;margin:14px 0}
+        th,td{border-bottom:1px solid #ddd;padding:9px 8px;font-size:14px} th{text-align:left;background:#faf6f2}
+        .box{border:1px solid #ddd;border-radius:10px;padding:14px;margin:12px 0}
+        .total{font-size:20px;font-weight:800;color:#ea580c}
+        .cod{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;font-size:14px}
+        @media print{button{display:none}}
+      </style></head><body>
+      <div class="head"><div><h1>🛒 ${UI.esc(store.name)}</h1><div class="muted">Bon de livraison · Marché CI</div></div>
+        <div style="text-align:right"><div class="badge">N° ${UI.esc(order.number)}</div><div class="muted" style="margin-top:6px">${UI.dateFR(order.createdAt)}</div></div></div>
+      <div class="box"><strong>Livrer à :</strong><br>${UI.esc(order.delivery.name)} — ${UI.esc(order.delivery.phone)}<br>
+        📍 ${UI.esc(order.delivery.commune)} — ${UI.esc(order.delivery.address)}${order.delivery.note ? `<br><em>Note : ${UI.esc(order.delivery.note)}</em>` : ""}</div>
+      <table><thead><tr><th>Article</th><th style="text-align:center">Qté</th><th style="text-align:right">Montant</th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="cod">💵 <strong>Montant à encaisser à la livraison :</strong> <span class="total">${UI.fcfa(order.total)}</span><br>Mode de paiement : espèces (cash à la réception).</div>
+      <p class="muted" style="margin-top:18px">Merci de vérifier le contenu du colis à la réception. — ${UI.esc(store.name)}</p>
+      <button onclick="window.print()" style="margin-top:10px;padding:10px 18px;border:none;background:#f97316;color:#fff;border-radius:8px;font-weight:700;cursor:pointer">Imprimer</button>
+      </body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) { UI.toast("Autorisez les fenêtres pop-up pour imprimer.", "error"); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+    setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 350);
+  }
+
+  /** Export CSV des commandes d'une boutique. */
+  function exportOrdersCSV(store, orders) {
+    if (!orders.length) { UI.toast("Aucune commande à exporter.", "info"); return; }
+    const esc = (v) => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`;
+    const header = ["N°", "Date", "Client", "Téléphone", "Commune", "Adresse", "Articles", "Total (FCFA)", "Statut", "Paiement"];
+    const lines = orders.map((o) => [
+      o.number, new Date(o.createdAt).toLocaleString("fr-FR"), o.buyerName, o.delivery.phone,
+      o.delivery.commune, o.delivery.address,
+      o.items.map((i) => `${i.title} x${i.qty}`).join(" ; "),
+      o.total, Orders.STATUS[o.status], "Livraison (espèces)",
+    ].map(esc).join(","));
+    const csv = "﻿" + [header.map(esc).join(","), ...lines].join("\r\n"); // BOM pour Excel
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const slug = store.name.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase();
+    a.href = url; a.download = "commandes-" + (slug || "boutique") + ".csv";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    UI.toast("Export CSV téléchargé ✓", "success");
+  }
+
+  /* ============================================================
      VENDEUR : Gestion des articles
      ============================================================ */
   function viewSellerProducts(params) {
@@ -1281,6 +1468,8 @@
         <td><div class="row-actions">
           <a class="icon-action" href="#/product/${p.id}" title="Voir la page publique">${SICON.eye}</a>
           <button class="icon-action" data-edit="${p.id}" title="Modifier">${SICON.pencil}</button>
+          <button class="icon-action" data-share="${p.id}" title="Partager sur WhatsApp">${SICON.wa}</button>
+          <button class="icon-action" data-dup="${p.id}" title="Dupliquer">${SICON.copy}</button>
           <button class="btn btn-ghost btn-sm" data-toggle="${p.id}" title="${p.status === "published" ? "Dépublier" : "Publier"}">${p.status === "published" ? "Dépublier" : "Publier"}</button>
           <button class="icon-action danger" data-del="${p.id}" title="Supprimer">${SICON.trash}</button>
         </div></td>
@@ -1318,6 +1507,8 @@
         Products.remove(b.getAttribute("data-del")); UI.toast("Article supprimé.", "info"); viewSellerProducts(params);
       }
     }));
+    V().querySelectorAll("[data-share]").forEach((b) => b.addEventListener("click", () => shareProduct(Products.get(b.getAttribute("data-share")))));
+    V().querySelectorAll("[data-dup]").forEach((b) => b.addEventListener("click", () => duplicateProduct(b.getAttribute("data-dup"), () => viewSellerProducts(params))));
   }
 
   /* ============================================================
@@ -1422,12 +1613,16 @@
       active: "orders",
       title: "Commandes reçues",
       subtitle: `${counts.all} commande(s) · ${counts.en_attente || 0} en attente`,
-      actions: `<a href="#/store/${store.id}" class="btn btn-ghost">Voir ma vitrine</a>`,
+      actions: `<button class="btn btn-ghost" id="exportCsv" ${orders.length ? "" : "disabled"}>${SICON.download} Exporter (CSV)</button>
+                <a href="#/store/${store.id}" class="btn btn-ghost">Voir ma vitrine</a>`,
       body: filterbar + (list.length ? list.map((o) => sellerOrderCard(o)).join("")
         : (orders.length
           ? `<div class="card card-pad"><p class="text-muted" style="text-align:center;margin:0;padding:20px 0">Aucune commande avec ce statut.</p></div>`
           : emptyState("🧾", "Aucune commande", "Les commandes de vos clients apparaîtront ici dès le premier achat."))),
     });
+
+    const exp = document.getElementById("exportCsv");
+    if (exp) exp.addEventListener("click", () => exportOrdersCSV(store, orders));
 
     V().querySelectorAll("[data-status]").forEach((sel) =>
       sel.addEventListener("change", () => {
@@ -1435,6 +1630,9 @@
         UI.toast("Statut mis à jour ✓ Le client est notifié.", "success");
         viewSellerOrders(params);
       })
+    );
+    V().querySelectorAll("[data-print]").forEach((b) =>
+      b.addEventListener("click", () => printDeliverySlip(Orders.get(b.getAttribute("data-print"))))
     );
   }
 
@@ -1457,6 +1655,10 @@
           ${UI.esc(o.delivery.commune)} — ${UI.esc(o.delivery.address)}${o.delivery.note ? `<br><em class="text-muted">Note : ${UI.esc(o.delivery.note)}</em>` : ""}</div>
         <div style="text-align:right"><div class="text-muted" style="font-size:12px">💵 Espèces à la livraison</div>
           <strong style="font-size:18px;color:var(--brand)">${UI.fcfa(o.total)}</strong></div>
+      </div>
+      <div class="flex gap-8 wrap mt-8">
+        <button class="btn btn-ghost btn-sm" data-print="${o.id}">${SICON.printer} Imprimer le bon de livraison</button>
+        <a class="btn wa-btn btn-sm" href="https://wa.me/225${UI.esc(o.delivery.phone.replace(/\D/g, ""))}" target="_blank" rel="noopener">${SICON.wa} Contacter le client</a>
       </div>
     </div>`;
   }
