@@ -1,0 +1,181 @@
+/* ==========================================================================
+   variables.css — Design tokens de CoachLink CI
+   Thème clair par défaut + surcharge thème sombre via [data-theme="dark"].
+   Toutes les valeurs sont centralisées ici pour un design cohérent.
+   ========================================================================== */
+
+:root {
+  /* --- Palette de marque -------------------------------------------------- */
+  --bleu-confiance: #1b4dcc;      /* Couleur principale (confiance) */
+  --bleu-confiance-fonce: #123a9e;
+  --bleu-confiance-clair: #e7edfb;
+  --vert-validation: #12a150;     /* Succès / vérifié */
+  --vert-validation-clair: #e4f7ec;
+  --orange-cta: #ff7a1a;          /* Appels à l'action */
+  --orange-cta-fonce: #e5650a;
+  --rouge-alerte: #e5484d;
+  --rouge-alerte-clair: #fdeaea;
+  --jaune-etoile: #ffb400;
+
+  /* --- Couleurs neutres (thème clair) ------------------------------------ */
+  --fond: #f5f7fb;
+  --surface: #ffffff;
+  --surface-2: #f0f3f9;
+  --bordure: #e2e8f0;
+  --bordure-forte: #cbd5e1;
+  --texte: #0f172a;
+  --texte-doux: #475569;
+  --texte-faible: #94a3b8;
+  --texte-sur-primaire: #ffffff;
+  --overlay: rgba(15, 23, 42, 0.55);
+
+  /* --- Typographie ------------------------------------------------------- */
+  --police-base: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+  --police-titre: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  /* Échelle typographique FLUIDE (clamp) : s'adapte automatiquement du
+     mobile au grand écran pour une lisibilité optimale sans média-queries. */
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-md: 1rem;
+  --fs-lg: clamp(1.0625rem, 1.02rem + 0.2vw, 1.125rem);
+  --fs-xl: clamp(1.2rem, 1.1rem + 0.5vw, 1.375rem);
+  --fs-2xl: clamp(1.45rem, 1.2rem + 1.2vw, 1.75rem);
+  --fs-3xl: clamp(1.7rem, 1.35rem + 1.8vw, 2.25rem);
+  --fs-4xl: clamp(2rem, 1.4rem + 3.2vw, 3rem);
+  --lh: 1.6;
+
+  /* Gouttières horizontales fluides : petites sur mobile, plus larges sur
+     grand écran. Intègrent les encoches (safe-area) des mobiles. */
+  --gouttiere: clamp(16px, 3vw, 80px);
+  --gouttiere-safe-g: max(var(--gouttiere), env(safe-area-inset-left));
+  --gouttiere-safe-d: max(var(--gouttiere), env(safe-area-inset-right));
+
+  /* --- Rayons ------------------------------------------------------------ */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --r-xl: 24px;
+  --r-full: 999px;
+
+  /* --- Ombres douces ----------------------------------------------------- */
+  --ombre-sm: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.08);
+  --ombre-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --ombre-lg: 0 12px 30px rgba(15, 23, 42, 0.12);
+  --ombre-focus: 0 0 0 3px rgba(27, 77, 204, 0.25);
+
+  /* --- Espacements ------------------------------------------------------- */
+  --e-1: 4px;
+  --e-2: 8px;
+  --e-3: 12px;
+  --e-4: 16px;
+  --e-5: 24px;
+  --e-6: 32px;
+  --e-7: 48px;
+  --e-8: 64px;
+
+  /* --- Transitions ------------------------------------------------------- */
+  --t-rapide: 0.15s ease;
+  --t-normal: 0.25s ease;
+  --t-lente: 0.4s ease;
+
+  /* --- Divers ------------------------------------------------------------ */
+  /* Largeur maxi très grande : le contenu remplit tout l'écran de bureau
+     (marges seulement au-delà d'écrans géants). Les gouttières grandissent
+     avec la largeur pour un rendu aéré sans bande vide. */
+  --largeur-max: 2600px;
+  --hauteur-entete: 64px;
+  --largeur-sidebar: 248px;
+  --z-entete: 100;
+  --z-sidebar: 90;
+  --z-modale: 1000;
+  --z-toast: 1100;
+}
+
+/* --- Thème sombre --------------------------------------------------------- */
+:root[data-theme="dark"] {
+  --fond: #0b1120;
+  --surface: #151c2c;
+  --surface-2: #1e2740;
+  --bordure: #2a3450;
+  --bordure-forte: #3a4straw;
+  --bordure-forte: #3a4568;
+  --texte: #e6ecf5;
+  --texte-doux: #a5b2c8;
+  --texte-faible: #6b7a94;
+  --overlay: rgba(0, 0, 0, 0.65);
+  --bleu-confiance-clair: #1a2846;
+  --vert-validation-clair: #12321f;
+  --rouge-alerte-clair: #3a1c1e;
+
+  --ombre-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --ombre-md: 0 4px 14px rgba(0, 0, 0, 0.45);
+  --ombre-lg: 0 14px 34px rgba(0, 0, 0, 0.55);
+  --ombre-focus: 0 0 0 3px rgba(96, 140, 240, 0.4);
+}
+
+/* Respect de la préférence système au premier chargement (si non défini) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --fond: #0b1120;
+    --surface: #151c2c;
+    --surface-2: #1e2740;
+    --bordure: #2a3450;
+    --texte: #e6ecf5;
+    --texte-doux: #a5b2c8;
+    --texte-faible: #6b7a94;
+    --overlay: rgba(0, 0, 0, 0.65);
+    --bleu-confiance-clair: #1a2846;
+    --vert-validation-clair: #12321f;
+  }
+}
+
+/* ==========================================================================
+   Paliers grands écrans de bureau — la plateforme grandit proportionnellement
+   (largeurs, typographie et espacements) pour occuper 24"→27"→32"→4K→45"
+   sans marges vides ni éléments minuscules. On surcharge les tokens : tout le
+   design (bâti sur ces variables) s'adapte automatiquement.
+   ========================================================================== */
+
+/* Grand écran de bureau (~1600px+, 27") */
+@media (min-width: 1600px) {
+  :root {
+    --largeur-sidebar: 268px;
+  }
+}
+
+/* Très grand écran (~1920px+, 27-32" Full HD/QHD) */
+@media (min-width: 1920px) {
+  :root {
+    --largeur-sidebar: 288px;
+    --hauteur-entete: 72px;
+    --fs-md: 1.06rem; --fs-lg: 1.2rem; --fs-xl: 1.5rem;
+    --fs-2xl: 1.95rem; --fs-3xl: 2.5rem; --fs-4xl: 3.4rem;
+    --e-5: 28px; --e-6: 40px; --e-7: 56px; --e-8: 80px;
+  }
+}
+
+/* Écran QHD/4K large (~2560px+, 32") */
+@media (min-width: 2560px) {
+  :root {
+    --largeur-sidebar: 340px;
+    --hauteur-entete: 84px;
+    --fs-sm: 0.95rem; --fs-md: 1.18rem; --fs-lg: 1.38rem; --fs-xl: 1.75rem;
+    --fs-2xl: 2.25rem; --fs-3xl: 3rem; --fs-4xl: 4.3rem;
+    --e-3: 16px; --e-4: 20px; --e-5: 32px; --e-6: 48px; --e-7: 72px; --e-8: 100px;
+    --r-lg: 20px; --r-xl: 28px;
+  }
+}
+
+/* Écran géant 4K/45" (~3840px+) : gouttières plus généreuses, cap large */
+@media (min-width: 3840px) {
+  :root {
+    --largeur-max: 3400px;
+    --largeur-sidebar: 420px;
+    --hauteur-entete: 100px;
+    --gouttiere: clamp(80px, 4vw, 160px);
+    --fs-sm: 1.1rem; --fs-md: 1.4rem; --fs-lg: 1.65rem; --fs-xl: 2.1rem;
+    --fs-2xl: 2.7rem; --fs-3xl: 3.6rem; --fs-4xl: 5.2rem;
+    --e-3: 20px; --e-4: 26px; --e-5: 40px; --e-6: 60px; --e-7: 92px; --e-8: 130px;
+    --r-md: 14px; --r-lg: 24px; --r-xl: 34px;
+  }
+}

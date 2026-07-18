@@ -1,0 +1,1072 @@
+[
+  {
+    "id": "c1",
+    "prenom": "Koffi",
+    "nom": "Aka",
+    "genre": "h",
+    "titre": "Coach sportif & préparateur physique",
+    "specialites": [
+      "sport",
+      "prepaphysique"
+    ],
+    "categorie": "Sportif",
+    "langues": [
+      "Français",
+      "Baoulé",
+      "Anglais"
+    ],
+    "commune": "Cocody",
+    "ville": "Abidjan",
+    "bio": "Ancien athlète national, j'accompagne depuis 8 ans vers une meilleure forme physique : remise en forme, perte de poids, prise de masse et préparation aux compétitions. Programmes personnalisés et suivi rigoureux.",
+    "experienceAnnees": 8,
+    "clientsAccompagnes": 210,
+    "interventions": [
+      "À domicile",
+      "En salle",
+      "En visio"
+    ],
+    "tarifs": [
+      {
+        "id": "t1",
+        "nom": "Séance individuelle",
+        "type": "seance",
+        "prix": 15000,
+        "duree": 60,
+        "description": "Coaching one-to-one à domicile ou en salle."
+      },
+      {
+        "id": "t2",
+        "nom": "Pack 10 séances",
+        "type": "pack",
+        "prix": 130000,
+        "duree": 60,
+        "description": "10 séances sur 2 mois, plan d'entraînement inclus."
+      },
+      {
+        "id": "t3",
+        "nom": "Abonnement mensuel",
+        "type": "abonnement",
+        "prix": 60000,
+        "duree": 60,
+        "description": "8 séances / mois + suivi de progression."
+      }
+    ],
+    "diplomes": [
+      {
+        "id": "d1",
+        "titre": "BEES Éducateur sportif",
+        "ecole": "INJS Abidjan",
+        "annee": 2015,
+        "statut": "verifie"
+      },
+      {
+        "id": "d2",
+        "titre": "Certification Préparation physique",
+        "ecole": "IFBB",
+        "annee": 2019,
+        "statut": "verifie"
+      }
+    ],
+    "note": 4.8,
+    "nbAvis": 42,
+    "nbSeances": 320,
+    "ancienneteMois": 30,
+    "tauxReponse": 95,
+    "disponibilites": {
+      "Lun": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Mar": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Mer": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Jeu": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Ven": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Sam": [
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Dim": []
+    },
+    "reseaux": {
+      "facebook": "koffi.aka.coach",
+      "linkedin": "koffi-aka",
+      "instagram": "koffiaka_fit"
+    },
+    "email": "koffi.aka@coachlink.ci",
+    "telephone": "0701020304",
+    "couleur": "#1b4dcc"
+  },
+  {
+    "id": "c2",
+    "prenom": "Aya",
+    "nom": "Kouassi",
+    "genre": "f",
+    "titre": "Nutritionniste du sport & diététicienne",
+    "specialites": [
+      "nutrition"
+    ],
+    "categorie": "Nutrition",
+    "langues": [
+      "Français",
+      "Anglais"
+    ],
+    "commune": "Marcory",
+    "ville": "Abidjan",
+    "bio": "Diététicienne du sport, j'optimise votre alimentation pour la performance, la perte de poids ou la prise de masse, avec des recettes locales et accessibles adaptées à votre entraînement.",
+    "experienceAnnees": 6,
+    "clientsAccompagnes": 260,
+    "interventions": [
+      "En cabinet",
+      "À domicile",
+      "En visio"
+    ],
+    "tarifs": [
+      {
+        "id": "t1",
+        "nom": "Bilan nutritionnel",
+        "type": "seance",
+        "prix": 20000,
+        "duree": 90,
+        "description": "Analyse complète + plan alimentaire personnalisé."
+      },
+      {
+        "id": "t2",
+        "nom": "Suivi mensuel",
+        "type": "abonnement",
+        "prix": 45000,
+        "duree": 45,
+        "description": "4 consultations de suivi par mois."
+      }
+    ],
+    "diplomes": [
+      {
+        "id": "d1",
+        "titre": "Licence Diététique",
+        "ecole": "Université FHB",
+        "annee": 2017,
+        "statut": "verifie"
+      },
+      {
+        "id": "d2",
+        "titre": "Certification Nutrition sportive",
+        "ecole": "IFBB",
+        "annee": 2020,
+        "statut": "verifie"
+      }
+    ],
+    "note": 4.9,
+    "nbAvis": 58,
+    "nbSeances": 410,
+    "ancienneteMois": 42,
+    "tauxReponse": 98,
+    "disponibilites": {
+      "Lun": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Mar": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Mer": [],
+      "Jeu": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Ven": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Sam": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Dim": []
+    },
+    "reseaux": {
+      "facebook": "aya.nutrition",
+      "linkedin": "aya-kouassi",
+      "instagram": "aya_nutrisport"
+    },
+    "email": "aya.kouassi@coachlink.ci",
+    "telephone": "0505060708",
+    "couleur": "#12a150"
+  },
+  {
+    "id": "c4",
+    "prenom": "Fatou",
+    "nom": "Diallo",
+    "genre": "f",
+    "titre": "Professeure de yoga & pilates",
+    "specialites": [
+      "yoga",
+      "pilates"
+    ],
+    "categorie": "Bien-être physique",
+    "langues": [
+      "Français",
+      "Anglais"
+    ],
+    "commune": "Cocody",
+    "ville": "Abidjan",
+    "bio": "Je propose des séances de yoga et de pilates pour améliorer la souplesse, renforcer les muscles profonds, corriger la posture et réduire les douleurs, en groupe ou en individuel.",
+    "experienceAnnees": 7,
+    "clientsAccompagnes": 300,
+    "interventions": [
+      "En studio",
+      "À domicile",
+      "En visio"
+    ],
+    "tarifs": [
+      {
+        "id": "t1",
+        "nom": "Cours individuel",
+        "type": "seance",
+        "prix": 12000,
+        "duree": 60,
+        "description": "Yoga ou pilates adapté à votre niveau."
+      },
+      {
+        "id": "t2",
+        "nom": "Pack découverte 5 cours",
+        "type": "pack",
+        "prix": 50000,
+        "duree": 60,
+        "description": "Idéal pour débuter en douceur."
+      }
+    ],
+    "diplomes": [
+      {
+        "id": "d1",
+        "titre": "Yoga Alliance RYT-200",
+        "ecole": "Yoga Alliance",
+        "annee": 2018,
+        "statut": "verifie"
+      },
+      {
+        "id": "d2",
+        "titre": "Certification Pilates Mat",
+        "ecole": "Pilates Institute",
+        "annee": 2021,
+        "statut": "verifie"
+      }
+    ],
+    "note": 4.9,
+    "nbAvis": 67,
+    "nbSeances": 500,
+    "ancienneteMois": 48,
+    "tauxReponse": 97,
+    "disponibilites": {
+      "Lun": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Mar": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Mer": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Jeu": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Ven": [],
+      "Sam": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Dim": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ]
+    },
+    "reseaux": {
+      "facebook": "fatou.yoga.ci",
+      "linkedin": "",
+      "instagram": "fatou_yoga"
+    },
+    "email": "fatou.diallo@coachlink.ci",
+    "telephone": "0708091011",
+    "couleur": "#8b3ff0"
+  },
+  {
+    "id": "c10",
+    "prenom": "Prisca",
+    "nom": "Adjoua",
+    "genre": "f",
+    "titre": "Coach cardio-danse & fitness",
+    "specialites": [
+      "cardiodanse",
+      "sport"
+    ],
+    "categorie": "Sportif",
+    "langues": [
+      "Français",
+      "Anglais"
+    ],
+    "commune": "Cocody",
+    "ville": "Abidjan",
+    "bio": "Fitness dansé, Afrofit et Zumba : je transforme le sport en plaisir pour brûler des calories, tonifier le corps et retrouver le sourire. Ambiance garantie, tous niveaux !",
+    "experienceAnnees": 5,
+    "clientsAccompagnes": 140,
+    "interventions": [
+      "En salle",
+      "À domicile"
+    ],
+    "tarifs": [
+      {
+        "id": "t1",
+        "nom": "Cours collectif",
+        "type": "seance",
+        "prix": 7000,
+        "duree": 75,
+        "description": "En groupe, tous niveaux."
+      },
+      {
+        "id": "t2",
+        "nom": "Cours privé",
+        "type": "seance",
+        "prix": 16000,
+        "duree": 60,
+        "description": "Programme cardio-fitness personnalisé."
+      }
+    ],
+    "diplomes": [
+      {
+        "id": "d1",
+        "titre": "Certification Fitness de groupe",
+        "ecole": "Les Mills",
+        "annee": 2019,
+        "statut": "verifie"
+      }
+    ],
+    "note": 5,
+    "nbAvis": 12,
+    "nbSeances": 80,
+    "ancienneteMois": 5,
+    "tauxReponse": 99,
+    "disponibilites": {
+      "Lun": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Mar": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Mer": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Jeu": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Ven": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Sam": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Dim": []
+    },
+    "reseaux": {
+      "facebook": "prisca.fitness",
+      "linkedin": "",
+      "instagram": "prisca_afrofit"
+    },
+    "email": "prisca.adjoua@coachlink.ci",
+    "telephone": "0732333435",
+    "couleur": "#ff7a1a"
+  },
+  {
+    "id": "c13",
+    "prenom": "Yao",
+    "nom": "Brou",
+    "genre": "h",
+    "titre": "Coach CrossFit & HIIT",
+    "specialites": [
+      "crossfit",
+      "prepaphysique"
+    ],
+    "categorie": "Sportif",
+    "langues": [
+      "Français",
+      "Anglais"
+    ],
+    "commune": "Yopougon",
+    "ville": "Abidjan",
+    "bio": "Entraînements fonctionnels intenses (CrossFit, HIIT, circuit training) pour développer force, endurance et explosivité. Des WODs adaptés à tous les niveaux, du débutant au confirmé.",
+    "experienceAnnees": 6,
+    "clientsAccompagnes": 175,
+    "interventions": [
+      "En box",
+      "En salle"
+    ],
+    "tarifs": [
+      {
+        "id": "t1",
+        "nom": "WOD collectif",
+        "type": "seance",
+        "prix": 8000,
+        "duree": 60,
+        "description": "Entraînement en petit groupe."
+      },
+      {
+        "id": "t2",
+        "nom": "Coaching perso",
+        "type": "seance",
+        "prix": 18000,
+        "duree": 60,
+        "description": "Séance individuelle sur mesure."
+      },
+      {
+        "id": "t3",
+        "nom": "Abonnement mensuel",
+        "type": "abonnement",
+        "prix": 55000,
+        "duree": 60,
+        "description": "12 WODs / mois + suivi."
+      }
+    ],
+    "diplomes": [
+      {
+        "id": "d1",
+        "titre": "CrossFit Level 2 Trainer",
+        "ecole": "CrossFit Inc.",
+        "annee": 2020,
+        "statut": "verifie"
+      }
+    ],
+    "note": 4.7,
+    "nbAvis": 28,
+    "nbSeances": 260,
+    "ancienneteMois": 26,
+    "tauxReponse": 93,
+    "disponibilites": {
+      "Lun": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Mar": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Mer": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Jeu": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Ven": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Sam": [
+        "08:00",
+        "09:00",
+        "10:00"
+      ],
+      "Dim": []
+    },
+    "reseaux": {
+      "facebook": "yao.crossfit",
+      "linkedin": "",
+      "instagram": "yaobrou_wod"
+    },
+    "email": "yao.brou@coachlink.ci",
+    "telephone": "0740414243",
+    "couleur": "#123a9e"
+  },
+  {
+    "id": "c14",
+    "prenom": "Awa",
+    "nom": "Sanogo",
+    "genre": "f",
+    "titre": "Coach running & cardio",
+    "specialites": [
+      "course",
+      "sport"
+    ],
+    "categorie": "Sportif",
+    "langues": [
+      "Français"
+    ],
+    "commune": "Marcory",
+    "ville": "Abidjan",
+    "bio": "Passionnée de course à pied, je vous prépare pour vos premiers 5 km, 10 km ou semi-marathon avec des plans progressifs, du travail de foulée et un suivi cardio personnalisé.",
+    "experienceAnnees": 5,
+    "clientsAccompagnes": 130,
+    "interventions": [
+      "En extérieur",
+      "En visio"
+    ],
+    "tarifs": [
+      {
+        "id": "t1",
+        "nom": "Sortie running coachée",
+        "type": "seance",
+        "prix": 9000,
+        "duree": 60,
+        "description": "Technique de course + cardio."
+      },
+      {
+        "id": "t2",
+        "nom": "Plan 10 km",
+        "type": "pack",
+        "prix": 45000,
+        "duree": 60,
+        "description": "8 semaines de préparation."
+      }
+    ],
+    "diplomes": [
+      {
+        "id": "d1",
+        "titre": "Brevet d'entraîneur d'athlétisme",
+        "ecole": "Fédération Ivoirienne d'Athlétisme",
+        "annee": 2019,
+        "statut": "verifie"
+      }
+    ],
+    "note": 4.8,
+    "nbAvis": 21,
+    "nbSeances": 150,
+    "ancienneteMois": 20,
+    "tauxReponse": 96,
+    "disponibilites": {
+      "Lun": [
+        "06:00",
+        "07:00"
+      ],
+      "Mar": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Mer": [
+        "06:00",
+        "07:00"
+      ],
+      "Jeu": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Ven": [
+        "06:00",
+        "07:00"
+      ],
+      "Sam": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Dim": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ]
+    },
+    "reseaux": {
+      "facebook": "awa.run",
+      "linkedin": "",
+      "instagram": "awasanogo_run"
+    },
+    "email": "awa.sanogo@coachlink.ci",
+    "telephone": "0744454647",
+    "couleur": "#12a150"
+  },
+  {
+    "id": "c15",
+    "prenom": "Didier",
+    "nom": "Kouamé",
+    "genre": "h",
+    "titre": "Coach boxe & arts martiaux",
+    "specialites": [
+      "artsmartiaux",
+      "prepaphysique"
+    ],
+    "categorie": "Sportif",
+    "langues": [
+      "Français",
+      "Dioula"
+    ],
+    "commune": "Abobo",
+    "ville": "Abidjan",
+    "bio": "Ancien compétiteur, j'enseigne la boxe anglaise, le fitness-boxing et la self-défense. Idéal pour se défouler, se tonifier, gagner en confiance et apprendre à se protéger.",
+    "experienceAnnees": 12,
+    "clientsAccompagnes": 320,
+    "interventions": [
+      "En salle",
+      "À domicile"
+    ],
+    "tarifs": [
+      {
+        "id": "t1",
+        "nom": "Cours de boxe",
+        "type": "seance",
+        "prix": 10000,
+        "duree": 75,
+        "description": "Technique + cardio-boxing."
+      },
+      {
+        "id": "t2",
+        "nom": "Self-défense",
+        "type": "seance",
+        "prix": 12000,
+        "duree": 60,
+        "description": "Techniques de protection."
+      }
+    ],
+    "diplomes": [
+      {
+        "id": "d1",
+        "titre": "BPJEPS Sports de combat",
+        "ecole": "INJS Abidjan",
+        "annee": 2012,
+        "statut": "verifie"
+      }
+    ],
+    "note": 4.9,
+    "nbAvis": 47,
+    "nbSeances": 540,
+    "ancienneteMois": 54,
+    "tauxReponse": 91,
+    "disponibilites": {
+      "Lun": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Mar": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Mer": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Jeu": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Ven": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Sam": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Dim": []
+    },
+    "reseaux": {
+      "facebook": "didier.boxe",
+      "linkedin": "",
+      "instagram": "didier_boxing"
+    },
+    "email": "didier.kouame@coachlink.ci",
+    "telephone": "0748495051",
+    "couleur": "#e11d48"
+  },
+  {
+    "id": "c16",
+    "prenom": "Nadège",
+    "nom": "Ehui",
+    "genre": "f",
+    "titre": "Coach pilates & renforcement",
+    "specialites": [
+      "pilates",
+      "yoga"
+    ],
+    "categorie": "Bien-être physique",
+    "langues": [
+      "Français",
+      "Anglais"
+    ],
+    "commune": "Plateau",
+    "ville": "Abidjan",
+    "bio": "Spécialiste du gainage et de la posture, je propose des séances de pilates et de renforcement doux pour un corps tonique, un dos solide et une meilleure mobilité au quotidien.",
+    "experienceAnnees": 9,
+    "clientsAccompagnes": 240,
+    "interventions": [
+      "En studio",
+      "À domicile",
+      "En visio"
+    ],
+    "tarifs": [
+      {
+        "id": "t1",
+        "nom": "Cours de pilates",
+        "type": "seance",
+        "prix": 13000,
+        "duree": 55,
+        "description": "Renforcement profond et posture."
+      },
+      {
+        "id": "t2",
+        "nom": "Pack posture 6 séances",
+        "type": "pack",
+        "prix": 66000,
+        "duree": 55,
+        "description": "Programme dos & gainage."
+      }
+    ],
+    "diplomes": [
+      {
+        "id": "d1",
+        "titre": "Certification Pilates Mat & Reformer",
+        "ecole": "Balanced Body",
+        "annee": 2016,
+        "statut": "verifie"
+      }
+    ],
+    "note": 4.8,
+    "nbAvis": 34,
+    "nbSeances": 360,
+    "ancienneteMois": 40,
+    "tauxReponse": 94,
+    "disponibilites": {
+      "Lun": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Mar": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Mer": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Jeu": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Ven": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Sam": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Dim": []
+    },
+    "reseaux": {
+      "facebook": "nadege.pilates",
+      "linkedin": "nadege-ehui",
+      "instagram": "nadege_pilates"
+    },
+    "email": "nadege.ehui@coachlink.ci",
+    "telephone": "0752535455",
+    "couleur": "#0891b2"
+  },
+  {
+    "id": "c17",
+    "prenom": "Ibrahim",
+    "nom": "Touré",
+    "genre": "h",
+    "titre": "Maître-nageur & coach natation",
+    "specialites": [
+      "natation",
+      "sport"
+    ],
+    "categorie": "Sportif",
+    "langues": [
+      "Français",
+      "Anglais"
+    ],
+    "commune": "Cocody",
+    "ville": "Abidjan",
+    "bio": "Maître-nageur diplômé, j'apprends à nager aux débutants (adultes et enfants), corrige les techniques (crawl, brasse, dos) et prépare aux objectifs d'endurance en piscine.",
+    "experienceAnnees": 10,
+    "clientsAccompagnes": 400,
+    "interventions": [
+      "En piscine"
+    ],
+    "tarifs": [
+      {
+        "id": "t1",
+        "nom": "Cours de natation",
+        "type": "seance",
+        "prix": 14000,
+        "duree": 45,
+        "description": "Apprentissage ou perfectionnement."
+      },
+      {
+        "id": "t2",
+        "nom": "Pack 8 cours",
+        "type": "pack",
+        "prix": 100000,
+        "duree": 45,
+        "description": "Progression garantie."
+      }
+    ],
+    "diplomes": [
+      {
+        "id": "d1",
+        "titre": "BEESAN (Maître-nageur sauveteur)",
+        "ecole": "INJS Abidjan",
+        "annee": 2014,
+        "statut": "verifie"
+      }
+    ],
+    "note": 4.9,
+    "nbAvis": 52,
+    "nbSeances": 610,
+    "ancienneteMois": 58,
+    "tauxReponse": 96,
+    "disponibilites": {
+      "Lun": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Mar": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Mer": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Jeu": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Ven": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Sam": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Dim": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ]
+    },
+    "reseaux": {
+      "facebook": "ibrahim.natation",
+      "linkedin": "",
+      "instagram": "ibra_swim"
+    },
+    "email": "ibrahim.toure@coachlink.ci",
+    "telephone": "0756575859",
+    "couleur": "#2563eb"
+  },
+  {
+    "id": "c18",
+    "prenom": "Chantal",
+    "nom": "Koné",
+    "genre": "f",
+    "titre": "Coach sport santé & réathlétisation",
+    "specialites": [
+      "sportsante",
+      "reeducation"
+    ],
+    "categorie": "Santé",
+    "langues": [
+      "Français"
+    ],
+    "commune": "Treichville",
+    "ville": "Abidjan",
+    "bio": "Spécialiste de l'activité physique adaptée, j'accompagne la reprise du sport après blessure, le sport santé pour seniors et les personnes en surpoids, en toute sécurité et à leur rythme.",
+    "experienceAnnees": 15,
+    "clientsAccompagnes": 520,
+    "interventions": [
+      "À domicile",
+      "En cabinet"
+    ],
+    "tarifs": [
+      {
+        "id": "t1",
+        "nom": "Bilan forme & santé",
+        "type": "seance",
+        "prix": 18000,
+        "duree": 75,
+        "description": "Évaluation + programme adapté."
+      },
+      {
+        "id": "t2",
+        "nom": "Réathlétisation post-blessure",
+        "type": "abonnement",
+        "prix": 70000,
+        "duree": 60,
+        "description": "Reprise progressive encadrée, 8 séances / mois."
+      }
+    ],
+    "diplomes": [
+      {
+        "id": "d1",
+        "titre": "Licence APA-S (Activité Physique Adaptée)",
+        "ecole": "Université FHB",
+        "annee": 2009,
+        "statut": "verifie"
+      }
+    ],
+    "note": 5,
+    "nbAvis": 61,
+    "nbSeances": 720,
+    "ancienneteMois": 72,
+    "tauxReponse": 99,
+    "disponibilites": {
+      "Lun": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Mar": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Mer": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Jeu": [
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00"
+      ],
+      "Ven": [
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00"
+      ],
+      "Sam": [],
+      "Dim": []
+    },
+    "reseaux": {
+      "facebook": "chantal.sportsante",
+      "linkedin": "chantal-kone",
+      "instagram": "chantal_sportsante"
+    },
+    "email": "chantal.kone@coachlink.ci",
+    "telephone": "0760616263",
+    "couleur": "#16a34a"
+  }
+]

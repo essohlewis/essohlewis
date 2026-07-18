@@ -1,0 +1,171 @@
+/* ==========================================================================
+   pages/messages.js — Messagerie : liste des conversations + fenêtre de chat.
+   "Temps réel local" via l'événement cl:message. Réponse coach simulée.
+   ========================================================================== */
+(function () {
+  "use strict";
+  window.CL = window.CL || {};
+  CL.pages = CL.pages || {};
+  const { el, esc } = CL.dom;
+  const { auth, messageService, ui, format } = CL;
+
+  let ecouteurMessage = null; // référence à l'écouteur cl:message courant
+
+  CL.pages.messages = function (params) {
+    const u = auth.courant();
+    let convActiveId = params.conv || null;
+    let rafraichirChatCourant = null; // rafraîchit le fil ouvert (temps réel)
+
+    const listeConv = el("div", { class: "conversations" });
+    const zoneChat = el("div", { class: "chat" });
+    const conteneur = el("div", { class: "messagerie" }, [listeConv, zoneChat]);
+
+    function rafraichirListe() {
+      CL.dom.vider(listeConv);
+      listeConv.appendChild(el("div", { style: "padding:16px;border-bottom:1px solid var(--bordure)" }, [el("h3", { text: "Messages" })]));
+      const convs = messageService.parUtilisateur(u.id);
+      if (!convs.length) { listeConv.appendChild(ui.vide("message", "Aucune conversation", "Contactez un coach pour démarrer.")); return; }
+      if (!convActiveId) convActiveId = convs[0].id;
+      convs.forEach((conv) => {
+        const autre = conv.participants.find((p) => p !== u.id);
+        const dernier = messageService.dernierMessage(conv);
+        const nonLus = conv.messages.filter((m) => m.de !== u.id && !m.lu).length;
+        const item = el("div", { class: "conversation-item" + (conv.id === convActiveId ? " actif" : "") }, [
+          ui.avatarNom(conv.noms[autre] || "?", "avatar-md", "#1b4dcc"),
+          el("div", { class: "conversation-item__contenu" }, [
+            el("div", { class: "conversation-item__nom" }, [el("strong", { text: conv.noms[autre] || "Utilisateur" }), el("span", { class: "texte-xs texte-faible", text: dernier ? format.tempsRelatif(dernier.date) : "" })]),
+            el("div", { class: "conversation-item__apercu", text: dernier ? (dernier.de === u.id ? "Vous : " : "") + dernier.texte : "Nouvelle conversation" }),
+          ]),
+          nonLus ? el("span", { class: "cloche__pastille", style: "position:static", text: String(nonLus) }) : null,
+        ]);
+        item.addEventListener("click", () => { convActiveId = conv.id; conteneur.classList.add("voir-chat"); ouvrirChat(); rafraichirListe(); });
+        listeConv.appendChild(item);
+      });
+    }
+
+    function ouvrirChat() {
+      CL.dom.vider(zoneChat);
+      const conv = messageService.obtenir(convActiveId);
+      if (!conv) { zoneChat.appendChild(ui.vide("message", "Sélectionnez une conversation", "")); return; }
+      messageService.marquerLu(conv.id, u.id);
+      const autre = conv.participants.find((p) => p !== u.id);
+
+      const corps = el("div", { class: "chat__corps" });
+      const saisie = el("input", { class: "input", placeholder: "Écrivez votre message…" });
+
+      const entete = el("div", { class: "chat__entete" }, [
+        el("button", { class: "btn-icone btn-fantome", style: "display:none", html: CL.icon("fleche_gauche", 20), onclick: () => conteneur.classList.remove("voir-chat") }),
+        ui.avatarNom(conv.noms[autre] || "?", "avatar-sm", "#1b4dcc"),
+        el("div", {}, [el("strong", { text: conv.noms[autre] || "Utilisateur" }), el("div", { class: "texte-xs texte-faible", text: "En ligne" })]),
+      ]);
+      // Afficher le bouton retour sur mobile.
+      if (window.matchMedia("(max-width:900px)").matches) entete.firstChild.style.display = "inline-flex";
+
+      function rendreMessages() {
+        CL.dom.vider(corps);
+        conv.messages.forEach((m) => {
+          const moi = m.de === u.id;
+          const bulle = el("div", { class: "bulle " + (moi ? "bulle-moi" : "bulle-autre") });
+          (m.pieces || []).forEach((p) => {
+            const src = typeof p === "string" ? p : (p && (p.url || p.image || p.src));
+            if (src) bulle.appendChild(el("img", { src, loading: "lazy", style: "max-width:220px;width:100%;border-radius:10px;display:block;margin-bottom:4px" }));
+          });
+          if (m.texte) bulle.appendChild(el("div", { text: m.texte }));
+          // Accusé de lecture sur mes propres messages.
+          const suffixe = moi && m.lu ? " · Vu" : "";
+          bulle.appendChild(el("span", { class: "bulle__heure", text: format.heure(m.date) + suffixe }));
+          corps.appendChild(bulle);
+        });
+        corps.scrollTop = corps.scrollHeight;
+      }
+      rendreMessages();
+
+      function rafraichirConv() {
+        const frais = messageService.obtenir(conv.id);
+        if (frais) conv.messages = frais.messages;
+      }
+      // Exposé au niveau page pour le rafraîchissement « temps réel ».
+      rafraichirChatCourant = () => { messageService.marquerLu(conv.id, u.id); rafraichirConv(); rendreMessages(); };
+
+      async function envoyer() {
+        const txt = saisie.value.trim();
+        if (!txt) return;
+        saisie.value = "";
+        try {
+          await messageService.envoyer(conv.id, u.id, txt);
+        } catch (e) { CL.toast.erreur("Message", (e && e.message) || "Envoi impossible."); return; }
+        rafraichirConv();
+        rendreMessages();
+        rafraichirListe();
+        // Réponse simulée (démo hors-ligne uniquement ; en mode API, le vrai
+        // interlocuteur répond via le serveur).
+        if (!(CL.API && CL.API.actif) && (String(autre).startsWith("coach:") || u.role === "client")) {
+          setTimeout(() => {
+            const conv2 = messageService.obtenir(conv.id);
+            if (conv2) {
+              messageService.marquerLu(conv.id, autre); // l'interlocuteur « lit » → accusé de lecture
+              messageService.envoyer(conv.id, autre, reponseAuto(txt));
+              rafraichirConv();
+              if (convActiveId === conv.id) { rendreMessages(); }
+              rafraichirListe();
+            }
+          }, 1400);
+        }
+      }
+
+      // Partage de photo (programme, exercice, lieu…).
+      async function joindrePhoto() {
+        if (!CL.media || !CL.media.choisirImage) return;
+        try {
+          const dataUrl = await CL.media.choisirImage(1100, 0.7);
+          if (!dataUrl) return;
+          await messageService.envoyer(conv.id, u.id, "", [{ type: "image", url: dataUrl }]);
+          rafraichirConv(); rendreMessages(); rafraichirListe();
+        } catch (e) { CL.toast.erreur("Photo", "Envoi impossible."); }
+      }
+
+      saisie.addEventListener("keydown", (e) => { if (e.key === "Enter") envoyer(); });
+      zoneChat.appendChild(entete);
+      zoneChat.appendChild(corps);
+      zoneChat.appendChild(el("div", { class: "chat__saisie" }, [
+        el("button", { class: "btn-icone btn-fantome", title: "Envoyer une photo", "aria-label": "Envoyer une photo", html: CL.icon("image", 20), onclick: joindrePhoto }),
+        saisie,
+        el("button", { class: "btn-icone btn-primaire", "aria-label": "Envoyer", html: CL.icon("envoyer", 20), onclick: envoyer }),
+      ]));
+    }
+
+    // Écoute temps réel local. On retire l'écouteur précédent pour éviter
+    // l'accumulation à chaque visite de la page.
+    if (ecouteurMessage) window.removeEventListener("cl:message", ecouteurMessage);
+    ecouteurMessage = () => {
+      if (!document.body.contains(conteneur)) return;
+      rafraichirListe();
+      if (rafraichirChatCourant) rafraichirChatCourant(); // met à jour le fil ouvert
+    };
+    window.addEventListener("cl:message", ecouteurMessage);
+
+    rafraichirListe();
+    if (convActiveId) { conteneur.classList.add("voir-chat"); ouvrirChat(); } else ouvrirChat();
+
+    // Mode API : rafraîchit les conversations depuis le serveur en arrière-plan.
+    if (CL.API && CL.API.actif && CL.hydrate) {
+      CL.hydrate.conversations().then(() => {
+        if (document.body.contains(conteneur)) { rafraichirListe(); if (convActiveId) ouvrirChat(); }
+      });
+    }
+
+    return el("div", {}, [
+      el("div", { class: "page-entete" }, [el("div", {}, [el("h1", { text: "Messagerie" }), el("p", { text: "Échangez avec vos coachs et clients." })])]),
+      conteneur,
+    ]);
+  };
+
+  function reponseAuto(txt) {
+    const t = txt.toLowerCase();
+    if (t.includes("prix") || t.includes("tarif") || t.includes("combien")) return "Mes tarifs sont indiqués sur mon profil. Je propose aussi des packs avantageux 😊";
+    if (t.includes("disponible") || t.includes("créneau") || t.includes("quand")) return "Je suis disponible en semaine et le samedi matin. Choisissez un créneau libre sur mon calendrier !";
+    if (t.includes("bonjour") || t.includes("salut")) return "Bonjour ! Ravi de votre message. Comment puis-je vous aider dans votre objectif ?";
+    if (t.includes("merci")) return "Avec plaisir ! N'hésitez pas si vous avez d'autres questions.";
+    return "Merci pour votre message ! Je reviens vers vous très vite pour organiser une séance. 💪";
+  }
+})();

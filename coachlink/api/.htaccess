@@ -1,0 +1,21 @@
+# ==========================================================================
+# Réécriture : toutes les requêtes qui ne pointent pas vers un fichier
+# existant sont dirigées vers index.php (front controller).
+# ==========================================================================
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /api/
+
+    # Sert directement les fichiers/dossiers existants (ex: /api/uploads/...).
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Sinon → index.php
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# Sécurité : interdit l'accès direct aux fichiers sensibles.
+<FilesMatch "\.(sqlite|sql)$">
+    Require all denied
+</FilesMatch>

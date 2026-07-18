@@ -1,0 +1,74 @@
+[
+  {
+    "id": "sport",
+    "nom": "Musculation & Fitness",
+    "emoji": "🏋️",
+    "categorie": "Sportif"
+  },
+  {
+    "id": "prepaphysique",
+    "nom": "Préparation physique",
+    "emoji": "💪",
+    "categorie": "Sportif"
+  },
+  {
+    "id": "crossfit",
+    "nom": "CrossFit & HIIT",
+    "emoji": "🤸",
+    "categorie": "Sportif"
+  },
+  {
+    "id": "course",
+    "nom": "Course à pied & Cardio",
+    "emoji": "🏃",
+    "categorie": "Sportif"
+  },
+  {
+    "id": "natation",
+    "nom": "Natation",
+    "emoji": "🏊",
+    "categorie": "Sportif"
+  },
+  {
+    "id": "artsmartiaux",
+    "nom": "Boxe & Arts martiaux",
+    "emoji": "🥊",
+    "categorie": "Sportif"
+  },
+  {
+    "id": "cardiodanse",
+    "nom": "Cardio-danse & Fitness",
+    "emoji": "💃",
+    "categorie": "Sportif"
+  },
+  {
+    "id": "yoga",
+    "nom": "Yoga & Souplesse",
+    "emoji": "🧘",
+    "categorie": "Bien-être physique"
+  },
+  {
+    "id": "pilates",
+    "nom": "Pilates & Renforcement",
+    "emoji": "🧎",
+    "categorie": "Bien-être physique"
+  },
+  {
+    "id": "nutrition",
+    "nom": "Nutrition sportive",
+    "emoji": "🥗",
+    "categorie": "Nutrition"
+  },
+  {
+    "id": "reeducation",
+    "nom": "Réathlétisation & Récupération",
+    "emoji": "🩹",
+    "categorie": "Santé"
+  },
+  {
+    "id": "sportsante",
+    "nom": "Sport santé & Seniors",
+    "emoji": "🧓",
+    "categorie": "Santé"
+  }
+]

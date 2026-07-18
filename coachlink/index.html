@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>CoachLink CI — Le coach de confiance, à portée de clic</title>
+  <meta name="description" content="Trouvez un coach de confiance en Côte d'Ivoire : sport, bien-être, business, scolaire et artistique. Diplômes vérifiés, avis authentiques, paiement Mobile Money." />
+  <meta name="theme-color" content="#1b4dcc" />
+
+  <!-- Open Graph (partage social riche, mis à jour dynamiquement par page) -->
+  <meta property="og:title" content="CoachLink CI" />
+  <meta property="og:description" content="Le coach de confiance, à portée de clic." />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="CoachLink CI" />
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231b4dcc'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='18' font-weight='800' fill='white'%3EC%3C/text%3E%3C/svg%3E" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/pages.css" />
+</head>
+<body>
+  <!-- En-tête (rendu par components/layout.js) -->
+  <header class="entete" id="entete" role="banner"></header>
+
+  <!-- Conteneur principal de l'application SPA -->
+  <div id="app"></div>
+
+  <!-- ==================== Scripts (chargés en ordre de dépendance) ==================== -->
+  <!-- 1. Utilitaires -->
+  <script src="js/utils/dom.js"></script>
+  <script src="js/utils/format.js"></script>
+  <script src="js/utils/validation.js"></script>
+  <script src="js/utils/i18n.js"></script>
+  <script src="js/utils/icons.js"></script>
+  <script src="js/utils/media.js"></script>
+  <script src="js/utils/localisation.js"></script>
+  <script src="js/utils/qrcode.js"></script>
+  <script src="js/utils/otp.js"></script>
+  <!-- Décodeur QR (scan caméra) — jsQR, autonome, chargé localement (aucun CDN). -->
+  <script src="js/vendor/jsQR.js"></script>
+  <script src="js/utils/scanqr.js"></script>
+  <script src="js/utils/pdf.js"></script>
+
+  <!-- 2. Données amorçage -->
+  <script src="js/data/seed.js"></script>
+
+  <!-- Configuration de déploiement (production) : décommentez après avoir créé
+       js/config.js depuis js/config.example.js. Voir DEPLOIEMENT.md. -->
+  <!-- <script src="js/config.js"></script> -->
+
+  <!-- 3. Services (couche données, branchable API) -->
+  <script src="js/services/storageService.js"></script>
+  <script src="js/services/notificationService.js"></script>
+  <script src="js/services/coachService.js"></script>
+  <script src="js/services/authService.js"></script>
+  <script src="js/services/bookingService.js"></script>
+  <script src="js/services/messageService.js"></script>
+  <script src="js/services/litigeService.js"></script>
+  <script src="js/services/realtimeService.js"></script>
+  <script src="js/services/profilCategorie.js"></script>
+  <script src="js/services/abonnementService.js"></script>
+  <script src="js/services/portefeuilleService.js"></script>
+  <script src="js/services/defiService.js"></script>
+  <script src="js/services/evaluationClientService.js"></script>
+  <script src="js/services/mesureService.js"></script>
+  <script src="js/services/rappelService.js"></script>
+  <script src="js/utils/insights.js"></script>
+  <script src="js/utils/gamification.js"></script>
+  <script src="js/services/socialService.js"></script>
+  <script src="js/services/matchService.js"></script>
+  <script src="js/services/compareService.js"></script>
+  <script src="js/services/apiService.js"></script>
+
+  <!-- 4. Composants -->
+  <script src="js/components/toast.js"></script>
+  <script src="js/components/modal.js"></script>
+  <script src="js/components/ui.js"></script>
+  <script src="js/components/coachCard.js"></script>
+  <script src="js/components/compareBar.js"></script>
+  <script src="js/components/layout.js"></script>
+
+  <!-- 5. Pages -->
+  <script src="js/pages/home.js"></script>
+  <script src="js/pages/coachmatch.js"></script>
+  <script src="js/pages/auth.js"></script>
+  <script src="js/pages/search.js"></script>
+  <script src="js/pages/profile.js"></script>
+  <script src="js/pages/howItWorks.js"></script>
+  <script src="js/pages/client.js"></script>
+  <script src="js/pages/sante.js"></script>
+  <script src="js/pages/coach.js"></script>
+  <script src="js/pages/abonnement.js"></script>
+  <script src="js/pages/admin.js"></script>
+  <script src="js/pages/messages.js"></script>
+  <script src="js/pages/notifications.js"></script>
+  <script src="js/pages/settings.js"></script>
+
+  <!-- 6. Routeur & initialisation (en dernier) -->
+  <script src="js/app.js"></script>
+</body>
+</html>
