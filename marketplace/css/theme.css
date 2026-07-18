@@ -1,0 +1,89 @@
+/* =========================================================================
+   theme.css — Variables de design, palette, thème clair / sombre
+   ========================================================================= */
+
+:root {
+  /* Palette principale (orange chaleureux + vert marché) */
+  --brand: #f97316;
+  --brand-dark: #ea580c;
+  --brand-soft: #fff1e6;
+  --accent: #0f9d58;
+  --accent-soft: #e5f6ec;
+  --danger: #e11d48;
+  --danger-soft: #fdeaef;
+  --warning: #f59e0b;
+  --info: #2563eb;
+
+  /* Surfaces & texte (thème clair par défaut) */
+  --bg: #f4f5f7;
+  --bg-elev: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f8f9fb;
+  --surface-3: #eef0f4;
+  --border: #e4e7ec;
+  --border-strong: #d0d5dd;
+  --text: #1a1d23;
+  --text-2: #545a66;
+  --text-3: #8a909c;
+  --text-on-brand: #ffffff;
+
+  /* Ombres */
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow: 0 4px 14px rgba(16, 24, 40, 0.08);
+  --shadow-lg: 0 14px 40px rgba(16, 24, 40, 0.14);
+  --shadow-brand: 0 8px 22px rgba(249, 115, 22, 0.28);
+
+  /* Rayons */
+  --r-sm: 8px;
+  --r: 14px;
+  --r-lg: 20px;
+  --r-xl: 26px;
+  --r-full: 999px;
+
+  /* Typo */
+  --font: "Segoe UI", Roboto, "Helvetica Neue", system-ui, -apple-system, Arial, sans-serif;
+
+  /* Dimensions */
+  --header-h: 64px;
+  --bottomnav-h: 64px;
+  --sidebar-w: 264px;
+  --maxw: 1240px;
+
+  /* Transitions */
+  --t-fast: 140ms ease;
+  --t: 240ms cubic-bezier(.4, 0, .2, 1);
+}
+
+/* ---------- Thème sombre ---------- */
+:root[data-theme="dark"] {
+  --brand: #fb923c;
+  --brand-dark: #f97316;
+  --brand-soft: #3a2415;
+  --accent: #34d399;
+  --accent-soft: #16342a;
+  --danger: #fb7185;
+  --danger-soft: #3a1622;
+
+  --bg: #0e1117;
+  --bg-elev: #161b22;
+  --surface: #161b22;
+  --surface-2: #1c222c;
+  --surface-3: #232a35;
+  --border: #2a313d;
+  --border-strong: #3a4351;
+  --text: #e8ebf0;
+  --text-2: #a4acbb;
+  --text-3: #6b7482;
+  --text-on-brand: #1a1204;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.6);
+  --shadow-brand: 0 8px 22px rgba(251, 146, 60, 0.22);
+}
+
+/* Icône thème : afficher lune en clair, soleil en sombre */
+:root[data-theme="dark"] .ico-moon { display: none; }
+:root[data-theme="dark"] .ico-sun { display: block; }
+.ico-sun { display: none; }
+.ico-moon { display: block; }
