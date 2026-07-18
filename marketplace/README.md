@@ -80,7 +80,7 @@ L'espace vendeur est un **véritable back-office distinct de l'espace client** :
 - **Duplication rapide** d'un article ; **import/export du catalogue** (JSON).
 
 **Commandes & livraison (COD)**
-- **Frais de livraison par commune** (grille éditable) + **zones desservies**, intégrés au checkout et aux commandes.
+- **Frais de livraison fixés par le vendeur** : un montant par défaut saisi dans « Ma boutique », **ajustable commande par commande** (le total est recalculé et le client notifié).
 - **Suivi de livraison visuel** (barre d'étapes) côté acheteur et vendeur.
 - **Suivi d'encaissement** (payé / à encaisser) ; livrée = encaissée.
 - **Bon de livraison imprimable** (+ impression groupée des commandes confirmées).

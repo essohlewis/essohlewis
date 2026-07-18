@@ -694,6 +694,7 @@
             <h3 style="margin:0 0 12px">Total à payer</h3>
             <div class="summary-row"><span>${Cart.count()} article(s)</span><span>${UI.fcfa(itemsTotal)}</span></div>
             <div id="feeRows"></div>
+            <div class="text-muted" style="font-size:11.5px;margin:2px 0 4px">Frais de livraison fixés par le vendeur ; ils peuvent être ajustés selon votre zone.</div>
             <div class="summary-row total"><span>À régler à la livraison</span><span id="grandTotal">${UI.fcfa(itemsTotal)}</span></div>
             <div class="cod-note"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 1 3 5v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V5z"/></svg>
               <span>Paiement <strong>en espèces</strong> uniquement, à la réception.</span></div>
@@ -1062,11 +1063,9 @@
 
           <div class="divider" style="margin:6px 0"></div>
           <h3 style="margin:0;font-size:16px">Livraison</h3>
-          <div class="field"><label>Frais de livraison par défaut (FCFA)</label><input type="number" id="sDefaultFee" min="0" value="${s.defaultFee || ""}" placeholder="Ex : 1000" /></div>
-          <div class="field"><label>Communes desservies <span class="hint">(aucune cochée = toutes)</span></label>
-            <div class="zone-chips" id="zoneChips">${UI.COMMUNES.map((c) => `<span class="zone-chip ${(s.zones || []).includes(c) ? "on" : ""}" data-zone="${UI.esc(c)}">${UI.esc(c)}</span>`).join("")}</div></div>
-          <div class="field"><label>Frais spécifiques par commune <span class="hint">(vide = frais par défaut)</span></label>
-            <div class="fee-grid">${UI.COMMUNES.map((c) => `<div class="fee-item"><label>${UI.esc(c)}</label><input type="number" min="0" data-fee="${UI.esc(c)}" value="${(s.deliveryFees && s.deliveryFees[c]) || ""}" placeholder="déf." /></div>`).join("")}</div></div>
+          <div class="field"><label>Frais de livraison (FCFA)</label>
+            <input type="number" id="sDefaultFee" min="0" value="${s.defaultFee || ""}" placeholder="Ex : 1000 (0 = livraison gratuite)" />
+            <span class="hint">C'est vous qui fixez ce montant. Vous pourrez l'ajuster commande par commande (selon la distance, par exemple).</span></div>
 
           <div class="flex gap-12">
             <button class="btn btn-primary btn-lg" type="submit">${editing ? "Enregistrer les modifications" : "Créer ma boutique"}</button>
@@ -1098,19 +1097,8 @@
     const logoUp = wireUploader("logoUp", s.logo ? [s.logo] : [], false);
     const bannerUp = wireUploader("bannerUp", s.banner ? [s.banner] : [], false);
 
-    // Sélection des communes desservies (zones).
-    V().querySelectorAll("#zoneChips .zone-chip").forEach((c) =>
-      c.addEventListener("click", () => c.classList.toggle("on"))
-    );
-
     document.getElementById("storeForm").addEventListener("submit", (e) => {
       e.preventDefault();
-      // Frais par commune (uniquement les champs renseignés).
-      const deliveryFees = {};
-      V().querySelectorAll("[data-fee]").forEach((inp) => {
-        if (inp.value !== "" && Number(inp.value) >= 0) deliveryFees[inp.getAttribute("data-fee")] = Number(inp.value);
-      });
-      const zones = Array.from(V().querySelectorAll("#zoneChips .zone-chip.on")).map((c) => c.getAttribute("data-zone"));
       const data = {
         name: document.getElementById("sName").value,
         description: document.getElementById("sDesc").value,
@@ -1125,8 +1113,6 @@
         closedMsg: document.getElementById("sClosedMsg").value.trim(),
         promoBanner: document.getElementById("sPromoBanner").value.trim(),
         defaultFee: Number(document.getElementById("sDefaultFee").value) || 0,
-        zones,
-        deliveryFees,
         socials: { instagram: document.getElementById("sIg").value.trim(), facebook: document.getElementById("sFb").value.trim() },
       };
       if (editing) {
@@ -1985,6 +1971,16 @@
         viewSellerOrders(params);
       })
     );
+    // Ajustement des frais de livraison par commande (par le vendeur).
+    V().querySelectorAll("[data-fee-save]").forEach((b) =>
+      b.addEventListener("click", () => {
+        const id = b.getAttribute("data-fee-save");
+        const inp = V().querySelector(`[data-fee-input="${id}"]`);
+        Orders.setDeliveryFee(id, inp ? inp.value : 0);
+        UI.toast("Frais de livraison mis à jour ✓ Le client est notifié.", "success");
+        viewSellerOrders(params);
+      })
+    );
   }
 
   function sellerOrderCard(o) {
@@ -2004,7 +2000,14 @@
         <div class="cart-item-info"><h4>${UI.esc(it.title)}</h4><div class="ci-variant">Qté : ${it.qty} × ${UI.fcfa(it.unit)}</div></div>
         <strong>${UI.fcfa(it.unit * it.qty)}</strong></div>`).join("")}
       <div class="flex-between mt-8" style="font-size:13px"><span class="text-muted">Articles</span><span>${UI.fcfa(itemsTotal)}</span></div>
-      <div class="flex-between" style="font-size:13px"><span class="text-muted">Livraison (${UI.esc(o.delivery.commune)})</span><span>${o.deliveryFee ? UI.fcfa(o.deliveryFee) : "Gratuite"}</span></div>
+      <div class="flex-between wrap" style="font-size:13px;gap:8px;align-items:center">
+        <span class="text-muted">Frais de livraison (${UI.esc(o.delivery.commune)})</span>
+        <span class="flex gap-8" style="align-items:center">
+          <input type="number" min="0" class="stock-edit" data-fee-input="${o.id}" value="${o.deliveryFee || 0}" title="Frais de livraison" style="width:96px" />
+          <span class="text-muted">FCFA</span>
+          <button class="btn btn-ghost btn-sm" data-fee-save="${o.id}">Appliquer</button>
+        </span>
+      </div>
       <div class="divider" style="margin:12px 0"></div>
       <div class="flex-between wrap" style="align-items:flex-start">
         <div style="font-size:13.5px"><strong>📍 Livraison :</strong> ${UI.esc(o.delivery.name)} · ${UI.esc(o.delivery.phone)}<br>

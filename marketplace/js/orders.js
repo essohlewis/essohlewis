@@ -166,7 +166,26 @@ window.MP = window.MP || {};
     return { ok: true };
   }
 
+  /**
+   * Le vendeur ajuste les frais de livraison d'une commande.
+   * Recalcule le total et notifie l'acheteur.
+   */
+  function setDeliveryFee(orderId, fee) {
+    const order = get(orderId);
+    if (!order) return { ok: false };
+    fee = Math.max(0, Math.round(Number(fee) || 0));
+    const itemsTotal = order.itemsTotal != null ? order.itemsTotal : (order.total - (order.deliveryFee || 0));
+    const total = itemsTotal + fee;
+    DB.update(K, orderId, { itemsTotal, deliveryFee: fee, total });
+    window.MP.Notifications.push(order.buyerId, {
+      type: "order_status",
+      message: `Frais de livraison de la commande ${order.number} : ${window.MP.UI.fcfa(fee)}. Nouveau total à régler : ${window.MP.UI.fcfa(total)}.`,
+      link: "#/orders",
+    });
+    return { ok: true, total };
+  }
+
   window.MP.Orders = {
-    STATUS, STATUS_FLOW, checkout, get, byBuyer, byStore, setStatus, setPaid, validateDelivery,
+    STATUS, STATUS_FLOW, checkout, get, byBuyer, byStore, setStatus, setPaid, setDeliveryFee, validateDelivery,
   };
 })();
