@@ -43,6 +43,9 @@
   function layout(mainHTML, sidebarHTML) {
     V().innerHTML = mainHTML;
     SB().innerHTML = sidebarHTML || "";
+    // Vide la nav basse vendeur hors des vues back-office (onboarding, client…).
+    const sbn = document.getElementById("sellerBottomNav");
+    if (sbn) sbn.innerHTML = "";
   }
 
   function requireAuth() {
@@ -1134,7 +1137,59 @@
     back: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z'/></svg>",
     pencil: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M3 17.25V21h3.75L17.8 9.94l-3.75-3.75zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z'/></svg>",
     trash: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M6 7h12l-1 14H7zM9 4h6l1 2H8z'/></svg>",
+    menu: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M4 4h6v6H4zm10 0h6v6h-6zM4 14h6v6H4zm10 0h6v6h-6z'/></svg>",
   };
+
+  /**
+   * Rend la barre de menu basse propre au vendeur (mobile). Distincte de la
+   * nav client : fond sombre, bouton central « + » et un menu « Plus ».
+   * @param {string} active clé de la page active
+   */
+  function renderSellerBottomNav(active) {
+    const el = document.getElementById("sellerBottomNav");
+    if (!el) return;
+    const store = Store.byOwner(Auth.current().id);
+    if (!store) { el.innerHTML = ""; return; }
+    const pending = Orders.byStore(store.id).filter((o) => o.status === "en_attente").length;
+    el.innerHTML = `
+      <a class="sbn-item ${active === "dashboard" ? "active" : ""}" href="#/seller/dashboard">${SICON.dash}<span>Tableau</span></a>
+      <a class="sbn-item ${active === "products" ? "active" : ""}" href="#/seller/products">${SICON.box}<span>Articles</span></a>
+      <a class="sbn-fab" href="#/seller/product/new" aria-label="Nouvel article">${SICON.plus}</a>
+      <a class="sbn-item ${active === "orders" ? "active" : ""}" href="#/seller/orders">${SICON.receipt}<span>Commandes</span>${pending ? `<span class="badge">${pending > 99 ? "99+" : pending}</span>` : ""}</a>
+      <button class="sbn-item" id="sbnMore" type="button">${SICON.menu}<span>Menu</span></button>`;
+    const more = document.getElementById("sbnMore");
+    if (more) more.addEventListener("click", openSellerMenu);
+  }
+
+  /** Feuille « Menu » du vendeur : accès profil, vitrine, accueil, notifs… */
+  function openSellerMenu() {
+    const store = Store.byOwner(Auth.current().id);
+    const user = Auth.current();
+    const items = [
+      ["#/seller/store", "🏪", "Ma boutique (infos)"],
+      ["#/store/" + store.id, "👁️", "Voir ma vitrine"],
+      ["#/seller/product/new", "➕", "Ajouter un article"],
+      ["#/seller/orders", "🧾", "Mes commandes"],
+      ["#/", "🛒", "Accueil de la marketplace"],
+      ["#/profile", "👤", "Mon profil"],
+      ["#/notifications", "🔔", "Notifications"],
+    ];
+    UI.modal({
+      title: "Menu vendeur",
+      body: `<div class="menu-sheet">
+        ${items.map(([h, e, l]) => `<button class="dd-item" data-go="${h}"><span class="em">${e}</span> ${UI.esc(l)}</button>`).join("")}
+        <div class="divider" style="margin:6px 0"></div>
+        <button class="dd-item danger" id="smLogout"><span class="em">↪</span> Se déconnecter</button>
+      </div>`,
+      onMount(m, close) {
+        m.querySelectorAll("[data-go]").forEach((b) =>
+          b.addEventListener("click", () => { close(); Router.go(b.getAttribute("data-go")); })
+        );
+        const lo = m.querySelector("#smLogout");
+        if (lo) lo.addEventListener("click", () => { close(); Auth.logout(); renderHeaderUser(); UI.refreshBadges(); UI.toast("Déconnecté.", "info"); Router.go("#/"); });
+      },
+    });
+  }
 
   /**
    * Coquille dédiée à l'espace vendeur (back-office) : sidebar sombre + zone
@@ -1178,6 +1233,7 @@
         </div>
       </div>`;
     SB().innerHTML = "";
+    renderSellerBottomNav(opts.active);
   }
 
   function statusLabel(s) {

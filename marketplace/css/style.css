@@ -611,6 +611,31 @@ body.seller-mode .bottom-nav { display: none !important; }
 .icon-action svg { width: 17px; height: 17px; }
 .mini-thumb { width: 44px; height: 44px; border-radius: 9px; object-fit: cover; background: var(--surface-3); flex-shrink: 0; }
 
+/* Navigation basse dédiée au vendeur (mobile) — fond sombre, distincte du client */
+.seller-bottom-nav { display: none; }
+.sbn-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; color: #8b93b0; font-size: 10.5px; font-weight: 600; position: relative;
+  transition: color var(--t-fast), transform var(--t-fast); background: none;
+}
+.sbn-item svg { width: 23px; height: 23px; transition: transform var(--t-fast); }
+.sbn-item.active { color: var(--brand); }
+.sbn-item.active svg { transform: translateY(-2px) scale(1.08); }
+.sbn-item:active { transform: scale(.9); }
+.sbn-item .badge { position: absolute; top: 4px; right: 50%; margin-right: -22px; border-color: #12172a; }
+.sbn-fab {
+  flex: 0 0 auto; width: 56px; height: 56px; margin: -22px 4px 0;
+  border-radius: 50%; background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+  color: #fff; display: grid; place-items: center; align-self: center;
+  box-shadow: var(--shadow-brand); border: 3px solid #12172a;
+  transition: transform var(--t-fast);
+}
+.sbn-fab:active { transform: scale(.92); }
+.sbn-fab svg { width: 28px; height: 28px; }
+.menu-sheet { display: flex; flex-direction: column; gap: 2px; }
+.menu-sheet .dd-item { font-size: 15px; padding: 13px 12px; }
+.menu-sheet .dd-item .em { width: 22px; display: inline-block; text-align: center; }
+
 /* Carte d'accueil (onboarding) pour ouvrir sa boutique */
 .seller-onboard { max-width: 720px; margin: 0 auto; }
 .onboard-hero { text-align: center; padding: 26px 20px 10px; }
