@@ -1070,6 +1070,24 @@ body.seller-mode #chatbotRoot { display: none; }
 .foot-copy { color: var(--text-3); font-size: 12.5px; }
 .page-content p { margin: 0 0 12px; }
 
+/* Identité & personnalisation (marque blanche) */
+.color-field { display: flex; align-items: center; gap: 8px; }
+.color-field input[type="color"] { width: 46px; height: 38px; padding: 2px; border: 1.5px solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface); cursor: pointer; }
+.color-field input[type="text"] { width: 110px; text-transform: uppercase; font-family: ui-monospace, monospace; font-size: 13px; }
+.brand-logo-thumb { width: 48px; height: 48px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--surface-2); display: flex; align-items: center; justify-content: center; font-size: 26px; overflow: hidden; flex-shrink: 0; }
+.brand-logo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.brand-preview { --pv-brand: #f97316; --pv-dark: #ea580c; --pv-accent: #0f9d58; max-width: 720px; border-radius: var(--r-lg); padding: 22px 24px; color: #fff;
+  background: linear-gradient(120deg, var(--pv-brand), var(--pv-dark)); box-shadow: var(--shadow); }
+.brand-preview .bp-header { display: flex; align-items: center; gap: 10px; }
+.brand-preview .bp-mark { font-size: 30px; line-height: 1; }
+.brand-preview .bp-mark img { width: 34px; height: 34px; border-radius: 8px; object-fit: cover; vertical-align: middle; }
+.brand-preview .bp-name { font-size: 24px; font-weight: 800; }
+.brand-preview .bp-name span { filter: brightness(1.7); }
+.brand-preview .bp-tagline { font-size: 13.5px; opacity: .95; margin-top: 6px; }
+.brand-preview .bp-btns { display: flex; gap: 10px; margin-top: 14px; }
+.brand-preview .bp-btn { padding: 8px 16px; border-radius: var(--r-full); font-size: 13px; font-weight: 700; background: #fff; color: var(--pv-brand); }
+.brand-preview .bp-btn-accent { background: var(--pv-accent); color: #fff; }
+
 /* Console admin v2 : segments, message global, featured, analytics */
 .global-msg-bar { background: var(--brand-dark); color: #fff; text-align: center; padding: 8px 16px; font-size: 13.5px; font-weight: 600; }
 .home-admin-banner { background: var(--accent-soft); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: var(--r); padding: 12px 16px; font-weight: 600; margin-bottom: 14px; }

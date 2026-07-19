@@ -63,7 +63,7 @@
     const links = [["about", pages.about.title], ["faq", pages.faq.title], ["contact", pages.contact.title], ["cgu", pages.cgu.title], ["confidentialite", pages.confidentialite.title]];
     return `<footer class="app-footer">
       <div class="foot-links">${links.map(([sl, t]) => `<a href="#/page/${sl}">${UI.esc(t)}</a>`).join("")}</div>
-      <div class="foot-copy">© ${new Date().getFullYear()} Marché CI — Marketplace multi-vendeurs · Paiement à la livraison</div>
+      <div class="foot-copy">© ${new Date().getFullYear()} ${UI.esc(brandFullName())} · Paiement à la livraison</div>
     </footer>`;
   }
 
@@ -3344,6 +3344,7 @@
     shield: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M12 1 3 5v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V5z'/></svg>",
     coin: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15v1.5h-2V17a3 3 0 0 1-2-2.8h2a1 1 0 0 0 2 0c0-.6-.4-.9-1.6-1.2C10.1 12.6 9 12 9 10.3A2.8 2.8 0 0 1 11 7.6V6h2v1.6a2.9 2.9 0 0 1 2 2.7h-2a1 1 0 0 0-2 0c0 .5.4.8 1.6 1.1 1.3.4 2.4 1 2.4 2.8A2.9 2.9 0 0 1 13 17z'/></svg>",
     doc: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M6 2h8l4 4v16H6zm7 1.5V7h3.5zM8 12h8v1.6H8zm0 3.2h8v1.6H8zm0 3.2h5v1.6H8z'/></svg>",
+    brush: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M7 14a3 3 0 0 0-3 3c0 1.3-1 1.7-2 1.7A4.9 4.9 0 0 0 6 21a4 4 0 0 0 4-4 3 3 0 0 0-3-3zm13.7-9.9a1.5 1.5 0 0 0-2.1 0l-8 8 2.3 2.3 8-8a1.5 1.5 0 0 0-.2-2.3z'/></svg>",
   };
 
   // Réponses rapides (modèles) pour la messagerie vendeur.
@@ -3489,6 +3490,7 @@
       ["finance", "Finances", "#/admin?tab=finance", SICON.coin],
       ["coupons", "Coupons", "#/admin?tab=coupons", SICON.tag],
       ["content", "Contenu", "#/admin?tab=content", SICON.doc],
+      ["branding", "Identité", "#/admin?tab=branding", SICON.brush],
       ["comm", "Communication", "#/admin?tab=comm", SICON.chat],
       ["settings", "Paramètres", "#/admin?tab=settings", SICON.gear],
       ["audit", "Journal", "#/admin?tab=audit", SICON.copy],
@@ -3551,7 +3553,7 @@
 
   /** Feuille « Menu » de l'admin : sections restantes + retour + déconnexion. */
   function openAdminMenu() {
-    const emo = { overview: "📊", moderation: "🚩", users: "👤", stores: "🏪", orders: "🧾", finance: "💰", coupons: "🏷️", content: "📄", comm: "📣", settings: "⚙️", audit: "📋", data: "💾" };
+    const emo = { overview: "📊", moderation: "🚩", users: "👤", stores: "🏪", orders: "🧾", finance: "💰", coupons: "🏷️", content: "📄", branding: "🎨", comm: "📣", settings: "⚙️", audit: "📋", data: "💾" };
     const items = adminNav().map(([k, l, h]) => [h, emo[k] || "•", l]).concat([["#/", "🛒", "Retour à la marketplace"], ["#/notifications", "🔔", "Notifications"]]);
     UI.modal({
       title: "Menu administration",
@@ -5128,9 +5130,73 @@
     bannedWords: [],             // mots interdits (titres d'articles, avis)
     pages: null,                 // pages éditoriales { slug: {title, body} } (null = défaut)
     requireStoreApproval: false, // exiger l'approbation admin des nouvelles boutiques
+    branding: null,              // identité personnalisée (null = valeurs par défaut)
   };
   function adminSettings() { return Object.assign({}, SETTINGS_DEFAULT, DB.get(DB.KEYS.settings, {}) || {}); }
   function saveSettings(patch) { DB.set(DB.KEYS.settings, Object.assign({}, adminSettings(), patch)); }
+
+  /* ---------- Identité / personnalisation de la plateforme ---------- */
+  const BRANDING_DEFAULT = {
+    name: "Marché", nameAccent: "CI",
+    tagline: "Marketplace multi-vendeurs en Côte d'Ivoire. Paiement à la livraison.",
+    logo: "", logoEmoji: "🛒",
+    colors: { brand: "#f97316", brandDark: "#ea580c", accent: "#0f9d58" },
+    contact: { email: "", phone: "", whatsapp: "" },
+    socials: { facebook: "", instagram: "", tiktok: "" },
+  };
+  function branding() {
+    const b = adminSettings().branding || {};
+    return {
+      name: b.name || BRANDING_DEFAULT.name,
+      nameAccent: b.nameAccent != null ? b.nameAccent : BRANDING_DEFAULT.nameAccent,
+      tagline: b.tagline || BRANDING_DEFAULT.tagline,
+      logo: b.logo || "",
+      logoEmoji: b.logoEmoji || BRANDING_DEFAULT.logoEmoji,
+      colors: Object.assign({}, BRANDING_DEFAULT.colors, b.colors || {}),
+      contact: Object.assign({}, BRANDING_DEFAULT.contact, b.contact || {}),
+      socials: Object.assign({}, BRANDING_DEFAULT.socials, b.socials || {}),
+    };
+  }
+  /** Nom complet affiché de la plateforme. */
+  function brandFullName() { const b = branding(); return (b.name + (b.nameAccent || "")).trim() || "Marché CI"; }
+  /** Éclaircit une couleur hex vers le blanc (pour le ton « soft »). */
+  function _tint(hex, ratio) {
+    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec((hex || "").trim());
+    if (!m) return hex;
+    const mix = (c) => Math.round(parseInt(c, 16) * (1 - ratio) + 255 * ratio);
+    const h = (n) => n.toString(16).padStart(2, "0");
+    return "#" + h(mix(m[1])) + h(mix(m[2])) + h(mix(m[3]));
+  }
+  /** Applique l'identité personnalisée (nom, logo, couleurs, titre, favicon). */
+  function applyBranding() {
+    const b = branding();
+    const full = brandFullName();
+    // Titre du document + description.
+    document.title = full + " — " + b.tagline;
+    const desc = document.querySelector('meta[name="description"]');
+    if (desc) desc.setAttribute("content", full + " — " + b.tagline);
+    // Marque dans l'en-tête (emoji ou logo image) + nom.
+    const mark = document.querySelector(".brand .brand-mark");
+    if (mark) mark.innerHTML = b.logo ? `<img src="${UI.safeImg(b.logo, full)}" alt="" style="width:1.2em;height:1.2em;border-radius:6px;object-fit:cover;vertical-align:-0.2em" />` : UI.esc(b.logoEmoji);
+    const nameEl = document.querySelector(".brand .brand-name");
+    if (nameEl) nameEl.innerHTML = `${UI.esc(b.name)}<span class="brand-accent">${UI.esc(b.nameAccent)}</span>`;
+    const brandLink = document.querySelector(".brand");
+    if (brandLink) brandLink.setAttribute("aria-label", "Accueil " + full);
+    // Couleurs : surcharge inline des variables CSS (gagne sur la feuille de thème).
+    const root = document.documentElement.style;
+    const c = b.colors;
+    if (c.brand) { root.setProperty("--brand", c.brand); root.setProperty("--brand-soft", _tint(c.brand, 0.9)); }
+    if (c.brandDark) root.setProperty("--brand-dark", c.brandDark);
+    if (c.accent) { root.setProperty("--accent", c.accent); root.setProperty("--accent-soft", _tint(c.accent, 0.9)); }
+    // Couleur de la barre système (mobile).
+    const tc = document.querySelector('meta[name="theme-color"]');
+    if (tc && document.documentElement.getAttribute("data-theme") !== "dark" && c.brand) tc.setAttribute("content", c.brand);
+    // Favicon emoji (si pas de logo image).
+    if (!b.logo && b.logoEmoji) {
+      const fav = document.querySelector('link[rel="icon"]');
+      if (fav) fav.setAttribute("href", "data:image/svg+xml," + encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>${b.logoEmoji}</text></svg>`));
+    }
+  }
 
   /* ---------- Rôles d'administration (super-admin vs modérateur) ---------- */
   // Sections accessibles au modérateur (le super-admin a tout).
@@ -5185,12 +5251,12 @@
     if (!requireAuth()) return;
     if (!Auth.isAdmin()) { UI.toast("Accès réservé à l'administrateur.", "error"); Router.go("#/"); return; }
     const q = (params && params.query) || {};
-    const RENDER = { overview: adminOverview, moderation: adminModeration, users: adminUsers, stores: adminStores, orders: adminOrders, finance: adminFinance, coupons: adminCoupons, content: adminContent, comm: adminComm, settings: adminSettingsTab, audit: adminAudit, data: adminData };
-    const WIRE = { overview: wireAdminOverview, moderation: wireAdminModeration, users: wireAdminUsers, stores: wireAdminStores, orders: wireAdminOrders, finance: wireAdminFinance, coupons: wireAdminCoupons, content: wireAdminContent, comm: wireAdminComm, settings: wireAdminSettings, audit: wireAdminAudit, data: wireAdminData };
+    const RENDER = { overview: adminOverview, moderation: adminModeration, users: adminUsers, stores: adminStores, orders: adminOrders, finance: adminFinance, coupons: adminCoupons, content: adminContent, branding: adminBranding, comm: adminComm, settings: adminSettingsTab, audit: adminAudit, data: adminData };
+    const WIRE = { overview: wireAdminOverview, moderation: wireAdminModeration, users: wireAdminUsers, stores: wireAdminStores, orders: wireAdminOrders, finance: wireAdminFinance, coupons: wireAdminCoupons, content: wireAdminContent, branding: wireAdminBranding, comm: wireAdminComm, settings: wireAdminSettings, audit: wireAdminAudit, data: wireAdminData };
     let tab = RENDER[q.tab] ? q.tab : "overview";
     // Contrôle d'accès par rôle (modérateur restreint à certaines sections).
     if (!adminCan(tab)) { UI.toast("Section réservée au super-administrateur.", "error"); tab = "overview"; }
-    const TITLES = { overview: "Vue d'ensemble", moderation: "Modération", users: "Utilisateurs", stores: "Boutiques", orders: "Commandes", finance: "Finances & commissions", coupons: "Coupons globaux", content: "Contenu & catégories", comm: "Communication", settings: "Paramètres", audit: "Journal d'audit", data: "Données" };
+    const TITLES = { overview: "Vue d'ensemble", moderation: "Modération", users: "Utilisateurs", stores: "Boutiques", orders: "Commandes", finance: "Finances & commissions", coupons: "Coupons globaux", content: "Contenu & catégories", branding: "Identité & personnalisation", comm: "Communication", settings: "Paramètres", audit: "Journal d'audit", data: "Données" };
     adminLayout({ active: tab, title: TITLES[tab], subtitle: "Console de gestion de la marketplace", body: RENDER[tab](params) });
     WIRE[tab](params);
   }
@@ -5893,6 +5959,131 @@
     });
   }
 
+  /* ---------- Onglet : Identité & personnalisation (marque blanche) ---------- */
+  function adminBranding() {
+    const b = branding();
+    return `<p class="text-muted" style="font-size:13.5px;margin:0 0 14px">Personnalisez l'apparence de la plateforme : nom, logo, couleurs et coordonnées. Les changements s'appliquent immédiatement à toute la marketplace.</p>
+      <div class="brand-preview" id="brandPreview">
+        <div class="bp-header">
+          <span class="bp-mark" id="bpMark"></span>
+          <span class="bp-name" id="bpName"></span>
+        </div>
+        <div class="bp-tagline" id="bpTagline"></div>
+        <div class="bp-btns"><span class="bp-btn bp-btn-primary">Bouton principal</span><span class="bp-btn bp-btn-accent">Accent</span></div>
+      </div>
+      <div class="card card-pad mt-16" style="max-width:720px">
+        <h3 style="margin:0 0 10px">🏷️ Nom de la plateforme</h3>
+        <div class="form-grid form-2col">
+          <div class="field"><label>Nom</label><input id="brName" value="${UI.esc(b.name)}" placeholder="Marché" /></div>
+          <div class="field"><label>Suffixe coloré <span class="hint">(optionnel)</span></label><input id="brAccent" value="${UI.esc(b.nameAccent)}" placeholder="CI" /></div>
+        </div>
+        <div class="field mt-8"><label>Slogan / description</label><input id="brTagline" value="${UI.esc(b.tagline)}" placeholder="Marketplace multi-vendeurs…" /></div>
+      </div>
+      <div class="card card-pad mt-16" style="max-width:720px">
+        <h3 style="margin:0 0 10px">🖼️ Logo</h3>
+        <div class="flex gap-12 wrap" style="align-items:flex-end">
+          <div class="field" style="margin:0"><label>Emoji (repli si pas d'image)</label><input id="brEmoji" value="${UI.esc(b.logoEmoji)}" maxlength="2" style="width:90px;text-align:center;font-size:22px" /></div>
+          <div class="field" style="margin:0"><label>Image du logo</label>
+            <div class="flex gap-8" style="align-items:center">
+              <div id="brLogoThumb" class="brand-logo-thumb">${b.logo ? `<img src="${UI.safeImg(b.logo, "logo")}" alt="" />` : `<span>${UI.esc(b.logoEmoji)}</span>`}</div>
+              <button type="button" class="btn btn-ghost btn-sm" id="brLogoPick">Choisir…</button>
+              ${b.logo ? `<button type="button" class="btn btn-ghost btn-sm" id="brLogoClear">Retirer</button>` : ""}
+              <input type="file" id="brLogoInput" accept="image/*" hidden />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card card-pad mt-16" style="max-width:720px">
+        <h3 style="margin:0 0 10px">🎨 Couleurs</h3>
+        <div class="form-grid form-2col">
+          <div class="field"><label>Couleur principale</label><div class="color-field"><input type="color" id="brColBrand" value="${b.colors.brand}" /><input type="text" id="brColBrandHex" value="${b.colors.brand}" /></div></div>
+          <div class="field"><label>Principale (foncée) <span class="hint">— survols/dégradés</span></label><div class="color-field"><input type="color" id="brColDark" value="${b.colors.brandDark}" /><input type="text" id="brColDarkHex" value="${b.colors.brandDark}" /></div></div>
+        </div>
+        <div class="field mt-8" style="max-width:340px"><label>Couleur d'accent <span class="hint">— succès, prix</span></label><div class="color-field"><input type="color" id="brColAccent" value="${b.colors.accent}" /><input type="text" id="brColAccentHex" value="${b.colors.accent}" /></div></div>
+        <button type="button" class="btn btn-ghost btn-sm mt-8" id="brColPreset">↺ Couleurs d'origine (orange/vert)</button>
+      </div>
+      <div class="card card-pad mt-16" style="max-width:720px">
+        <h3 style="margin:0 0 10px">📞 Coordonnées & réseaux</h3>
+        <div class="form-grid form-2col">
+          <div class="field"><label>E-mail de contact</label><input id="brEmail" type="email" value="${UI.esc(b.contact.email)}" placeholder="contact@marche-ci.example" /></div>
+          <div class="field"><label>Téléphone</label><input id="brPhone" value="${UI.esc(b.contact.phone)}" placeholder="07 00 00 00 00" /></div>
+        </div>
+        <div class="form-grid form-2col">
+          <div class="field"><label>WhatsApp</label><input id="brWa" value="${UI.esc(b.contact.whatsapp)}" placeholder="2250700000000" /></div>
+          <div class="field"><label>Facebook</label><input id="brFb" value="${UI.esc(b.socials.facebook)}" placeholder="https://facebook.com/…" /></div>
+        </div>
+        <div class="form-grid form-2col">
+          <div class="field"><label>Instagram</label><input id="brIg" value="${UI.esc(b.socials.instagram)}" placeholder="https://instagram.com/…" /></div>
+          <div class="field"><label>TikTok</label><input id="brTk" value="${UI.esc(b.socials.tiktok)}" placeholder="https://tiktok.com/@…" /></div>
+        </div>
+      </div>
+      <div class="card card-pad mt-16" style="max-width:720px">
+        <h3 style="margin:0 0 6px">📄 Textes légaux</h3>
+        <p class="text-muted" style="font-size:13px;margin:0 0 10px">La <strong>politique de confidentialité</strong>, les <strong>CGU</strong>, les mentions et autres pages se modifient dans l'onglet Contenu.</p>
+        <a href="#/admin?tab=content" class="btn btn-ghost btn-sm">Aller aux pages d'information →</a>
+      </div>
+      <div class="flex gap-8 mt-16" style="max-width:720px">
+        <button class="btn btn-primary" id="brSave">Enregistrer l'identité</button>
+        <button class="btn btn-ghost" id="brReset">Rétablir par défaut</button>
+      </div>`;
+  }
+  function wireAdminBranding() {
+    const $ = (id) => document.getElementById(id);
+    let logoData = branding().logo;
+    // Aperçu en direct.
+    function updatePreview() {
+      const name = $("brName").value || "Marché", acc = $("brAccent").value || "";
+      const brand = $("brColBrandHex").value || "#f97316", dark = $("brColDarkHex").value || brand, accent = $("brColAccentHex").value || "#0f9d58";
+      const pv = $("brandPreview");
+      pv.style.setProperty("--pv-brand", brand); pv.style.setProperty("--pv-dark", dark); pv.style.setProperty("--pv-accent", accent);
+      $("bpMark").innerHTML = logoData ? `<img src="${UI.safeImg(logoData, "logo")}" alt="" />` : UI.esc($("brEmoji").value || "🛒");
+      $("bpName").innerHTML = `${UI.esc(name)}<span style="color:var(--pv-brand)">${UI.esc(acc)}</span>`;
+      $("bpTagline").textContent = $("brTagline").value || "";
+    }
+    // Synchronise chaque paire color/hex.
+    [["brColBrand", "brColBrandHex"], ["brColDark", "brColDarkHex"], ["brColAccent", "brColAccentHex"]].forEach(([c, h]) => {
+      $(c).addEventListener("input", () => { $(h).value = $(c).value; updatePreview(); });
+      $(h).addEventListener("input", () => { if (/^#[0-9a-f]{6}$/i.test($(h).value)) $(c).value = $(h).value; updatePreview(); });
+    });
+    ["brName", "brAccent", "brTagline", "brEmoji"].forEach((id) => $(id).addEventListener("input", updatePreview));
+    // Logo image.
+    $("brLogoPick").addEventListener("click", () => $("brLogoInput").click());
+    $("brLogoInput").addEventListener("change", async (e) => {
+      const f = e.target.files && e.target.files[0]; if (!f) return;
+      try { logoData = await UI.fileToDataURL(f, { maxSize: 400, maxBytes: 45 * 1024 }); $("brLogoThumb").innerHTML = `<img src="${logoData}" alt="" />`; updatePreview(); }
+      catch (err) { UI.toast("Image trop lourde ou invalide.", "error"); }
+    });
+    const clr = $("brLogoClear"); if (clr) clr.addEventListener("click", () => { logoData = ""; $("brLogoThumb").innerHTML = `<span>${UI.esc($("brEmoji").value || "🛒")}</span>`; updatePreview(); });
+    const preset = $("brColPreset");
+    if (preset) preset.addEventListener("click", () => { $("brColBrand").value = "#f97316"; $("brColBrandHex").value = "#f97316"; $("brColDark").value = "#ea580c"; $("brColDarkHex").value = "#ea580c"; $("brColAccent").value = "#0f9d58"; $("brColAccentHex").value = "#0f9d58"; updatePreview(); });
+    updatePreview();
+    // Enregistrement.
+    $("brSave").addEventListener("click", () => {
+      const hex = (v, d) => /^#[0-9a-f]{6}$/i.test(v) ? v : d;
+      const data = {
+        name: $("brName").value.trim() || "Marché",
+        nameAccent: $("brAccent").value.trim(),
+        tagline: $("brTagline").value.trim() || BRANDING_DEFAULT.tagline,
+        logo: logoData || "",
+        logoEmoji: $("brEmoji").value.trim() || "🛒",
+        colors: { brand: hex($("brColBrandHex").value, "#f97316"), brandDark: hex($("brColDarkHex").value, "#ea580c"), accent: hex($("brColAccentHex").value, "#0f9d58") },
+        contact: { email: $("brEmail").value.trim(), phone: $("brPhone").value.trim(), whatsapp: $("brWa").value.trim() },
+        socials: { facebook: $("brFb").value.trim(), instagram: $("brIg").value.trim(), tiktok: $("brTk").value.trim() },
+      };
+      saveSettings({ branding: data });
+      applyBranding();
+      logAudit("Identité de la plateforme modifiée", brandFullName());
+      UI.toast("Identité enregistrée ✓ Appliquée à toute la plateforme.", "success");
+      viewAdmin({ query: { tab: "branding" } });
+    });
+    $("brReset").addEventListener("click", async () => {
+      if (!(await UI.confirm("Rétablir l'identité par défaut (Marché CI, orange/vert) ?", { confirmLabel: "Rétablir" }))) return;
+      saveSettings({ branding: null }); applyBranding();
+      logAudit("Identité réinitialisée", "");
+      UI.toast("Identité réinitialisée.", "info"); viewAdmin({ query: { tab: "branding" } });
+    });
+  }
+
   /* ---------- Modale : détail d'une commande (admin) ---------- */
   function openAdminOrderDetail(orderId) {
     const o = Orders.get(orderId);
@@ -6271,7 +6462,7 @@
   function applyTheme(theme) {
     document.documentElement.setAttribute("data-theme", theme);
     DB.set(DB.KEYS.theme, theme);
-    document.querySelector('meta[name="theme-color"]').setAttribute("content", theme === "dark" ? "#0e1117" : "#f97316");
+    document.querySelector('meta[name="theme-color"]').setAttribute("content", theme === "dark" ? "#0e1117" : (branding().colors.brand || "#f97316"));
   }
 
   function wireHeader() {
@@ -6502,6 +6693,8 @@
     // Thème persistant (ou préférence système).
     const savedTheme = DB.get(DB.KEYS.theme, null) || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
     applyTheme(savedTheme);
+    // Identité personnalisée (nom, logo, couleurs).
+    applyBranding();
     // Multi-langue.
     if (I18n) I18n.init();
     // Accessibilité : taille d'affichage + contraste mémorisés.
