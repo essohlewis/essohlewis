@@ -2168,13 +2168,17 @@
   function viewOrders() {
     const orders = Orders.mine();
     const isGuest = !Auth.isLogged();
+    // Lien vers le suivi en ligne (statut réel mis à jour par l'admin) si backend + session.
+    const onlineTrack = (window.MP.Api && window.MP.Api.enabled && window.MP.Api.hasSession())
+      ? `<a href="${window.MP.Api.ordersUrl()}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">🌐 Suivi en ligne →</a>` : "";
     if (!orders.length) {
-      layout(emptyState("📦", T("orders.empty"), T("orders.emptySub"), `<a href="#/" class="btn btn-primary">${T("cart.discover")}</a>`));
+      layout(emptyState("📦", T("orders.empty"), T("orders.emptySub"),
+        `<a href="#/" class="btn btn-primary">${T("cart.discover")}</a>${onlineTrack ? " " + onlineTrack : ""}`));
       return;
     }
     layout(`
       <div class="page-head"><div><div class="page-title">${T("orders.title")}</div>
-        <div class="page-sub">${orders.length} commande(s)</div></div></div>
+        <div class="page-sub">${orders.length} commande(s)</div></div>${onlineTrack}</div>
       ${isGuest ? `<div class="guest-banner">💡 Ces commandes sont enregistrées sur cet appareil. <a href="#/login?adopt=1">Créez un compte</a> pour les retrouver partout.</div>` : ""}
       ${orders.map((o) => orderCardBuyer(o)).join("")}`);
 

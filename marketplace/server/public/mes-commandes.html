@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Suivi de mes commandes — Marché CI</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="/tailwind.css" />
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-3xl mx-auto px-4 py-3 flex items-center gap-2">
+      <a href="/" class="flex items-center gap-2"><span class="text-2xl">🛒</span><span class="font-extrabold text-lg">Marché<span class="text-brand">CI</span></span></a>
+      <span class="ml-auto pill bg-accent-soft text-accent">Suivi des commandes</span>
+    </div>
+  </header>
+
+  <main class="max-w-3xl mx-auto px-4 py-6">
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-2xl font-extrabold">🧾 Mes commandes</h1>
+      <button id="refresh" class="btn btn-ghost !py-1.5 !px-4 text-sm">↻ Rafraîchir</button>
+    </div>
+
+    <div id="noauth" class="card hidden text-center">
+      <p class="text-slate-600">Connectez-vous sur la marketplace pour suivre vos commandes en ligne.</p>
+      <a href="/" class="btn btn-brand mt-3">Aller à la marketplace</a>
+    </div>
+
+    <div id="list" class="space-y-4"></div>
+    <p id="empty" class="text-center text-slate-400 py-12 hidden">Vous n'avez pas encore de commande enregistrée en ligne.</p>
+    <a href="/" class="btn btn-ghost mt-6">← Retour à la marketplace</a>
+  </main>
+
+  <script>
+    const TOKEN_KEY = "marchesci_shopToken";
+    const $ = (s) => document.querySelector(s);
+    const fcfa = (n) => (n || 0).toLocaleString("fr-FR") + " FCFA";
+    const token = () => { try { return localStorage.getItem(TOKEN_KEY) || ""; } catch (e) { return ""; } };
+
+    const FLOW = [
+      { k: "pending", label: "En attente", icon: "🕓" },
+      { k: "confirmed", label: "Confirmée", icon: "✅" },
+      { k: "shipped", label: "Expédiée", icon: "🚚" },
+      { k: "delivered", label: "Livrée", icon: "📦" },
+    ];
+    function timeline(status) {
+      if (status === "cancelled") return `<div class="mt-3 pill bg-red-100 text-red-700">❌ Commande annulée</div>`;
+      const idx = FLOW.findIndex((s) => s.k === status);
+      return `<div class="flex items-center mt-3">` + FLOW.map((s, i) => {
+        const done = i <= idx;
+        const dot = `<div class="flex flex-col items-center text-center" style="min-width:64px">
+            <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm ${done ? "bg-accent text-white" : "bg-slate-200 text-slate-400"}">${s.icon}</div>
+            <div class="text-[11px] mt-1 ${done ? "text-accent font-semibold" : "text-slate-400"}">${s.label}</div></div>`;
+        const bar = i < FLOW.length - 1 ? `<div class="flex-1 h-1 mx-1 rounded ${i < idx ? "bg-accent" : "bg-slate-200"}"></div>` : "";
+        return dot + bar;
+      }).join("") + `</div>`;
+    }
+    function card(o) {
+      const lines = (o.items || []).map((i) => `<li class="flex justify-between gap-2"><span>${i.name} <span class="text-slate-400">×${i.qty}</span></span><span class="text-slate-500">${fcfa(i.price * i.qty)}</span></li>`).join("");
+      const ref = (o.note && o.note.replace(/^Réf\.\s*/, "")) || o.id;
+      return `<div class="card">
+        <div class="flex items-start justify-between flex-wrap gap-2">
+          <div><div class="font-bold">${ref}</div>
+            <div class="text-xs text-slate-500">${new Date(o.createdAt).toLocaleString("fr-FR")}${o.city ? " · " + o.city : ""}</div></div>
+          <div class="text-right"><div class="text-lg font-extrabold">${fcfa(o.total)}</div><div class="text-xs text-slate-400">à la livraison</div></div>
+        </div>
+        <ul class="text-sm mt-2 border-t border-slate-100 pt-2 space-y-1">${lines}</ul>
+        ${timeline(o.status)}
+      </div>`;
+    }
+    async function load() {
+      const t = token();
+      if (!t) { $("#noauth").classList.remove("hidden"); return; }
+      $("#noauth").classList.add("hidden");
+      try {
+        const r = await fetch("/api/shop/orders", { headers: { Authorization: "Bearer " + t } });
+        if (r.status === 401) { $("#noauth").classList.remove("hidden"); $("#list").innerHTML = ""; return; }
+        const j = await r.json();
+        const items = j.items || [];
+        $("#empty").classList.toggle("hidden", items.length > 0);
+        $("#list").innerHTML = items.map(card).join("");
+      } catch (e) { $("#empty").classList.remove("hidden"); }
+    }
+    $("#refresh").addEventListener("click", load);
+    load();
+  </script>
+</body>
+</html>

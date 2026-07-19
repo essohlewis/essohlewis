@@ -57,32 +57,45 @@ window.MP = window.MP || {};
   }
 
   /* --------------------------- Comptes (write-through) --------------------------- */
-  async function syncRegister(user, password) {
-    if (!API.enabled || !user || !password) return;
+  // Dernière opération d'authentification en cours : les commandes l'attendent
+  // pour être rattachées au bon compte (évite une course inscription/commande).
+  let authOp = Promise.resolve();
+
+  async function _register(user, password) {
     try {
       const r = await post("/register", { name: user.name, email: user.email, phone: user.phone, password });
       if (r && r.json && r.json.ok) { setToken(r.json.token); return; }
-      // E-mail déjà en base → on tente de récupérer une session.
       const l = await post("/login", { email: user.email, password });
       if (l && l.json && l.json.ok) setToken(l.json.token);
     } catch (e) {}
   }
-  async function syncLogin(email, password) {
-    if (!API.enabled) return;
+  async function _login(email, password) {
     try {
       const l = await post("/login", { email, password });
       if (l && l.json && l.json.ok) { setToken(l.json.token); return; }
-      // Compte créé hors-ligne (avant l'arrivée du serveur) → on l'enregistre en base.
       const u = window.MP.Auth && window.MP.Auth.current && window.MP.Auth.current();
       const r = await post("/register", { name: u ? u.name : "", email, phone: u ? u.phone : "", password });
       if (r && r.json && r.json.ok) setToken(r.json.token);
     } catch (e) {}
   }
-  function logout() { if (API.enabled) { post("/logout", {}).catch(() => {}); } setToken(""); }
+  function syncRegister(user, password) {
+    if (!API.enabled || !user || !password) return authOp;
+    authOp = _register(user, password);
+    return authOp;
+  }
+  function syncLogin(email, password) {
+    if (!API.enabled) return authOp;
+    authOp = _login(email, password);
+    return authOp;
+  }
+  function logout() { if (API.enabled) { post("/logout", {}).catch(() => {}); } setToken(""); authOp = Promise.resolve(); }
 
   /* --------------------------- Commandes (write-through) -------------------------- */
   async function syncOrders(orders) {
     if (!API.enabled || !Array.isArray(orders)) return;
+    // Attend qu'une inscription/connexion en cours ait posé le jeton de session,
+    // pour rattacher la commande au compte plutôt que de la créer en « invité ».
+    try { await authOp; } catch (e) {}
     for (const o of orders) {
       const body = {
         items: (o.items || []).map((i) => ({
@@ -124,5 +137,7 @@ window.MP = window.MP || {};
   API.myOrders = myOrders;
   API.token = token;
   API.adminUrl = adminUrl;
+  API.ordersUrl = function () { return "/mes-commandes"; };
+  API.hasSession = function () { return !!token(); };
   window.MP.Api = API;
 })();
