@@ -94,6 +94,66 @@ window.MP = window.MP || {};
     return { ok: true, user: updated };
   }
 
+  /** Change le mot de passe de l'utilisateur courant. */
+  function changePassword(currentPw, newPw) {
+    const user = current();
+    if (!user) return { ok: false, error: "Non connecté." };
+    if (user.password !== currentPw) return { ok: false, error: "Mot de passe actuel incorrect." };
+    if (!newPw || newPw.length < 4) return { ok: false, error: "Nouveau mot de passe trop court (min. 4)." };
+    if (newPw === currentPw) return { ok: false, error: "Le nouveau mot de passe doit être différent." };
+    DB.update(K, user.id, { password: newPw });
+    return { ok: true };
+  }
+
+  /**
+   * Rassemble toutes les données personnelles de l'utilisateur (portabilité).
+   * @returns {object} données exportables (sans le mot de passe)
+   */
+  function exportData() {
+    const user = current();
+    if (!user) return null;
+    const safeUser = Object.assign({}, user);
+    delete safeUser.password;
+    const has = (list, fn) => DB.all(list).filter(fn);
+    return {
+      exporte_le: new Date().toISOString(),
+      profil: safeUser,
+      commandes: has(DB.KEYS.orders, (o) => o.buyerId === user.id),
+      avis: has(DB.KEYS.reviews, (r) => r.userId === user.id),
+      questions: has(DB.KEYS.questions, (q) => q.userId === user.id),
+      favoris: (DB.get(DB.KEYS.favorites, {})[user.id]) || [],
+      abonnements: (DB.get(DB.KEYS.subscriptions, {})[user.id]) || [],
+      alertes: has(DB.KEYS.alerts, (a) => a.userId === user.id),
+      recherches_enregistrees: has(DB.KEYS.savedSearches, (s) => s.userId === user.id),
+      messages: has(DB.KEYS.messages, (m) => m.buyerId === user.id),
+    };
+  }
+
+  /**
+   * Supprime le compte courant et ses données personnelles côté client.
+   * Les commandes sont conservées (registre du vendeur) mais anonymisées.
+   */
+  function deleteAccount() {
+    const user = current();
+    if (!user) return { ok: false, error: "Non connecté." };
+    const id = user.id;
+    // Anonymise les commandes du client (conservées pour le vendeur).
+    DB.all(DB.KEYS.orders).forEach((o) => {
+      if (o.buyerId === id) DB.update(DB.KEYS.orders, o.id, { buyerId: "compte_supprime", buyerName: "Client supprimé" });
+    });
+    // Supprime les données rattachées à l'utilisateur.
+    [DB.KEYS.reviews, DB.KEYS.questions, DB.KEYS.alerts, DB.KEYS.savedSearches].forEach((key) => {
+      DB.all(key).filter((x) => x.userId === id).forEach((x) => DB.removeItem(key, x.id));
+    });
+    ["favorites", "subscriptions", "recent", "searchHist", "carts"].forEach((k) => {
+      const map = DB.get(DB.KEYS[k], {});
+      if (map && map[id] !== undefined) { delete map[id]; DB.set(DB.KEYS[k], map); }
+    });
+    DB.removeItem(DB.KEYS.users, id);
+    logout();
+    return { ok: true };
+  }
+
   /** Transforme le compte courant en vendeur (activation "Ouvrir ma boutique"). */
   function becomeVendor() {
     const user = current();
@@ -108,5 +168,6 @@ window.MP = window.MP || {};
   window.MP.Auth = {
     current, isLogged, findByEmail, validEmail, validPhone,
     register, login, logout, updateProfile, becomeVendor, isVendor, isAdmin,
+    changePassword, exportData, deleteAccount,
   };
 })();

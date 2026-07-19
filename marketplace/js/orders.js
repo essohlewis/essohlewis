@@ -44,10 +44,19 @@ window.MP = window.MP || {};
    * @param {object} delivery coordonnées de livraison
    * @returns { ok, error?, orders? }
    */
+  /** Identifiant d'invité persistant par navigateur (commandes sans compte). */
+  function guestId() {
+    let gid = DB.get("guestId", null);
+    if (!gid) { gid = DB.uid("guest"); DB.set("guestId", gid); }
+    return gid;
+  }
+
   function checkout(delivery, opts) {
     opts = opts || {};
     const user = window.MP.Auth.current();
-    if (!user) return { ok: false, error: "Connexion requise." };
+    // Invité autorisé : la commande est rattachée à un identifiant de navigateur.
+    const buyerId = user ? user.id : guestId();
+    const buyerName = user ? user.name : (delivery.name || "Invité");
 
     const err = validateDelivery(delivery);
     if (err) return { ok: false, error: err };
@@ -88,8 +97,9 @@ window.MP = window.MP || {};
       const order = {
         id: DB.uid("ord"),
         number: _number(),
-        buyerId: user.id,
-        buyerName: user.name,
+        buyerId,
+        buyerName,
+        guest: !user,                  // commande passée sans compte
         storeId: g.store.id,
         storeName: g.store.name,
         items: g.lines.map((l) => ({
@@ -159,6 +169,25 @@ window.MP = window.MP || {};
     return DB.all(K).filter((o) => o.buyerId === userId).sort((a, b) => b.createdAt - a.createdAt);
   }
 
+  /** Commandes de l'utilisateur courant, ou de l'invité si non connecté. */
+  function mine() {
+    const user = window.MP.Auth.current();
+    return byBuyer(user ? user.id : guestId());
+  }
+
+  /** Rattache les commandes passées en invité au nouveau compte (à la connexion/inscription). */
+  function adoptGuestOrders(userId) {
+    const gid = DB.get("guestId", null);
+    if (!gid) return 0;
+    const user = window.MP.DB.find(DB.KEYS.users, userId);
+    let n = 0;
+    DB.all(K).filter((o) => o.buyerId === gid).forEach((o) => {
+      DB.update(K, o.id, { buyerId: userId, buyerName: (user && user.name) || o.buyerName, guest: false });
+      n++;
+    });
+    return n;
+  }
+
   /** Commandes reçues par une boutique. */
   function byStore(storeId) {
     return DB.all(K).filter((o) => o.storeId === storeId).sort((a, b) => b.createdAt - a.createdAt);
@@ -215,6 +244,65 @@ window.MP = window.MP || {};
     return { ok: true };
   }
 
+  /**
+   * L'acheteur demande un retour / échange / remboursement (commande livrée).
+   * @param {object} data { type:"retour"|"echange"|"remboursement", reason, note }
+   */
+  function requestReturn(orderId, data) {
+    const order = get(orderId);
+    if (!order) return { ok: false };
+    if (order.status !== "livree") return { ok: false, error: "Le retour n'est possible qu'après la livraison." };
+    if (order.return && order.return.status === "requested") return { ok: false, error: "Une demande est déjà en cours." };
+    const ret = {
+      type: data.type || "retour",
+      reason: String(data.reason || "").trim(),
+      note: String(data.note || "").trim(),
+      status: "requested",     // requested | accepted | refused
+      requestedAt: Date.now(),
+      resolvedAt: 0,
+      resolution: "",
+    };
+    DB.update(K, orderId, { return: ret });
+    const store = window.MP.Store.get(order.storeId);
+    if (store) window.MP.Notifications.push(store.ownerId, {
+      type: "order_status",
+      message: `↩️ Demande de ${ret.type} sur la commande ${order.number} : ${ret.reason}`,
+      link: "#/seller/orders",
+    });
+    return { ok: true };
+  }
+
+  /**
+   * Le vendeur traite la demande de retour (accepter / refuser).
+   * @param {string} status "accepted" | "refused"
+   */
+  function resolveReturn(orderId, status, resolution) {
+    const order = get(orderId);
+    if (!order || !order.return) return { ok: false };
+    const ret = Object.assign({}, order.return, { status, resolvedAt: Date.now(), resolution: String(resolution || "").trim() });
+    DB.update(K, orderId, { return: ret });
+    window.MP.Notifications.push(order.buyerId, {
+      type: "order_status",
+      message: status === "accepted"
+        ? `✅ Votre demande de ${ret.type} (commande ${order.number}) a été acceptée.${ret.resolution ? " " + ret.resolution : ""}`
+        : `❌ Votre demande de ${ret.type} (commande ${order.number}) a été refusée.${ret.resolution ? " Motif : " + ret.resolution : ""}`,
+      link: "#/orders",
+    });
+    return { ok: true };
+  }
+
+  /** Estimation de la fenêtre de livraison d'une commande (min/max en jours). */
+  function estimatedDelivery(order) {
+    const store = window.MP.Store.get(order.storeId);
+    const minD = (store && store.deliveryDaysMin) || 1;
+    const maxD = (store && store.deliveryDaysMax) || 3;
+    // Point de départ : confirmation/expédition si connue, sinon création.
+    const h = order.history || [];
+    const shipped = h.find((x) => x.status === "expediee");
+    const base = shipped ? shipped.at : order.createdAt;
+    return { from: base + minD * 86400000, to: base + maxD * 86400000, minD, maxD };
+  }
+
   /** L'acheteur note son expérience de livraison (1–5 étoiles). */
   function rateDelivery(orderId, stars, comment) {
     const order = get(orderId);
@@ -243,6 +331,8 @@ window.MP = window.MP || {};
   }
 
   window.MP.Orders = {
-    STATUS, STATUS_FLOW, checkout, get, byBuyer, byStore, setStatus, setPaid, setDeliveryFee, cancel, rateDelivery, validateDelivery,
+    STATUS, STATUS_FLOW, checkout, get, byBuyer, byStore, mine, guestId, adoptGuestOrders,
+    setStatus, setPaid, setDeliveryFee, cancel, rateDelivery, validateDelivery,
+    requestReturn, resolveReturn, estimatedDelivery,
   };
 })();

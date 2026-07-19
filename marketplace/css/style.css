@@ -906,3 +906,29 @@ body.seller-mode .bottom-nav { display: none !important; }
 .chatbot-input button { width: 40px; border: none; border-radius: 50%; background: var(--brand); color: var(--text-on-brand); font-size: 16px; cursor: pointer; }
 /* Le chatbot est réservé à l'espace client */
 body.seller-mode #chatbotRoot { display: none; }
+
+/* =========================================================================
+   Bloc « finalisation » espace client : compte, invité, retours, ETA
+   ========================================================================= */
+
+/* Bannière invité (checkout / confirmation / commandes) */
+.guest-banner { background: var(--brand-soft); color: var(--brand-dark); border: 1px solid color-mix(in srgb, var(--brand) 35%, transparent); border-radius: var(--r); padding: 12px 16px; font-size: 13.5px; margin-bottom: 16px; }
+.guest-banner a { font-weight: 700; text-decoration: underline; }
+
+/* Sécurité du compte : zone dangereuse */
+.account-danger { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 12px; padding: 14px; border: 1px solid var(--danger); border-radius: var(--r); background: var(--danger-soft); }
+
+/* Estimation de livraison sur la carte commande */
+.order-eta { margin-top: 12px; background: var(--accent-soft); color: var(--accent); border-radius: var(--r-sm); padding: 9px 12px; font-size: 13px; }
+
+/* Statut de demande de retour côté client */
+.order-return-note { margin-top: 10px; border-radius: var(--r-sm); padding: 8px 12px; font-size: 12.5px; font-weight: 600; border: 1px solid var(--border); }
+.order-return-note.return-requested { background: var(--surface-3); color: var(--text-2); }
+.order-return-note.return-accepted { background: var(--accent-soft); color: var(--accent); }
+.order-return-note.return-refused { background: var(--danger-soft); color: var(--danger); }
+
+/* Bloc de demande de retour côté vendeur */
+.seller-return-box { margin-top: 10px; border-radius: var(--r-sm); padding: 12px; border: 1px solid var(--border-strong); background: var(--surface-2); font-size: 13.5px; }
+.seller-return-box.return-requested { border-color: var(--warning); background: color-mix(in srgb, var(--warning) 10%, var(--surface)); }
+.seller-return-box.return-accepted { border-color: var(--accent); }
+.seller-return-box.return-refused { border-color: var(--danger); }

@@ -842,6 +842,23 @@
     UI.refreshBadges();
   }
 
+  /** Rappel de suivi : notifie pour les commandes expédiées dont la livraison est proche. */
+  function orderTrackingReminder() {
+    const orders = Orders.mine().filter((o) => o.status === "expediee");
+    if (!orders.length) return;
+    orders.forEach((o) => {
+      const key = "track_" + o.id;
+      if (sessionStorage.getItem(key)) return;
+      const eta = Orders.estimatedDelivery(o);
+      // Rappel seulement quand la fenêtre de livraison a commencé.
+      if (Date.now() < eta.from - 86400000) return;
+      sessionStorage.setItem(key, "1");
+      const uid = Auth.isLogged() ? Auth.current().id : o.buyerId;
+      Notifications.push(uid, { type: "order_status", message: `📦 Votre commande ${o.number} est en route — livraison attendue d'ici le ${UI.dateFR(eta.to)}.`, link: "#/orders" });
+    });
+    UI.refreshBadges();
+  }
+
   /** Barre de comparaison flottante (visible dès qu'un article est ajouté). */
   function renderCompareBar() {
     const root = document.getElementById("compareBarRoot");
@@ -1239,17 +1256,21 @@
     const me = Auth.current();
     const helpful = (r.helpfulBy || []).length;
     const votedByMe = me && (r.helpfulBy || []).includes(me.id);
+    const isAuthor = me && me.id === r.userId;
     return `<div class="review" data-review="${r.id}">
       <div class="review-head">
         <div class="review-avatar">${UI.esc(initials)}</div>
         <div><strong>${UI.esc(r.userName)}</strong> ${r.verified ? `<span class="verified-badge">✓ Achat vérifié</span>` : ""} ${UI.starsHTML(r.rating)}
-          <div class="notif-time">${UI.timeAgo(r.createdAt)}</div></div>
+          <div class="notif-time">${UI.timeAgo(r.createdAt)}${r.editedAt ? " · modifié" : ""}</div></div>
       </div>
       ${r.comment ? `<p style="margin:6px 0 0">${UI.esc(r.comment)}</p>` : ""}
       ${r.photo ? `<img class="review-photo" src="${UI.safeImg(r.photo, "avis")}" data-revphoto="${r.id}" alt="Photo de l'avis" />` : ""}
-      <div class="flex gap-8 mt-8" style="align-items:center">
+      <div class="flex gap-8 mt-8 wrap" style="align-items:center">
         <button class="btn btn-ghost btn-sm helpful-btn ${votedByMe ? "active" : ""}" data-helpful="${r.id}">👍 Utile${helpful ? ` (${helpful})` : ""}</button>
         ${!r.reply ? `<button class="btn btn-ghost btn-sm reply-btn" data-reply="${r.id}" hidden>Répondre</button>` : ""}
+        ${isAuthor ? `<button class="btn btn-ghost btn-sm" data-editrev="${r.id}">✏️ Modifier</button>
+          <button class="btn btn-ghost btn-sm" data-delrev="${r.id}">🗑️ Supprimer</button>`
+          : (me ? `<button class="btn btn-ghost btn-sm" data-reportrev="${r.id}" title="Signaler cet avis">⚑</button>` : "")}
       </div>
       ${r.reply ? `<div class="review-reply"><strong>Réponse du vendeur :</strong> ${UI.esc(r.reply.text)}</div>` : ""}
     </div>`;
@@ -1278,6 +1299,58 @@
     }));
     // Photo d'avis → visionneuse.
     box.querySelectorAll("[data-revphoto]").forEach((img) => img.addEventListener("click", () => openLightbox([img.getAttribute("src")], 0)));
+
+    // Gestion de son propre avis : modifier / supprimer.
+    box.querySelectorAll("[data-editrev]").forEach((b) => b.addEventListener("click", () => openEditReviewModal(b.getAttribute("data-editrev"), targetId, targetType)));
+    box.querySelectorAll("[data-delrev]").forEach((b) => b.addEventListener("click", () => {
+      UI.confirm("Supprimer votre avis ? Cette action est définitive.", { danger: true, confirmLabel: "Supprimer" }).then((ok) => {
+        if (!ok) return;
+        const r = Products.removeReview(b.getAttribute("data-delrev"));
+        if (r.ok) { UI.toast("Avis supprimé.", "info"); Router.resolve(); }
+        else UI.toast(r.error, "error");
+      });
+    }));
+    // Signalement d'un avis (par un autre utilisateur).
+    box.querySelectorAll("[data-reportrev]").forEach((b) => b.addEventListener("click", () => {
+      const reason = prompt("Motif du signalement (optionnel) :", "");
+      if (reason === null) return; // annulé
+      const r = Products.reportReview(b.getAttribute("data-reportrev"), reason);
+      UI.toast(r.ok ? "Merci, l'avis a été signalé à la modération." : r.error, r.ok ? "success" : "info");
+    }));
+  }
+
+  /** Modale d'édition de son propre avis (pré-remplie). */
+  function openEditReviewModal(reviewId, targetId, targetType) {
+    const src = targetType === "store" ? Store : Products;
+    const rev = src.reviews(targetId).find((x) => x.id === reviewId);
+    if (!rev) { UI.toast("Avis introuvable.", "error"); return; }
+    let rating = rev.rating, photo = rev.photo || "";
+    UI.modal({
+      title: "Modifier mon avis",
+      body: `<div class="field"><label>Note</label>${starPicker("erStars")}</div>
+        <div class="field mt-16"><label>Commentaire (optionnel)</label>
+        <textarea id="erComment" placeholder="Partagez votre expérience…">${UI.esc(rev.comment || "")}</textarea></div>
+        <div class="field mt-8"><label>Photo (optionnel)</label>
+        <input type="file" id="erPhoto" accept="image/*" /><div class="upl-previews" id="erPhotoPrev">${photo ? `<div class="upl-thumb"><img src="${photo}" alt=""/></div>` : ""}</div></div>`,
+      footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-primary" id="erSave">Enregistrer</button>`,
+      onMount(m, close) {
+        // Pré-sélectionne les étoiles existantes.
+        const stars = m.querySelector("#erStars");
+        stars.querySelectorAll("span").forEach((s) => s.classList.toggle("on", Number(s.getAttribute("data-v")) <= rating));
+        wireStarPicker("erStars", (v) => (rating = v));
+        m.querySelector("#erPhoto").addEventListener("change", async (e) => {
+          const f = e.target.files[0]; if (!f) return;
+          try { photo = await UI.fileToDataURL(f, { maxSize: 900, maxBytes: 90 * 1024 }); m.querySelector("#erPhotoPrev").innerHTML = `<div class="upl-thumb"><img src="${photo}" alt=""/></div>`; }
+          catch (x) { UI.toast("Image invalide.", "error"); }
+        });
+        m.querySelector("#erSave").addEventListener("click", () => {
+          if (!rating) { UI.toast("Sélectionnez une note.", "error"); return; }
+          const res = Products.updateReview(reviewId, { rating, comment: m.querySelector("#erComment").value, photo });
+          if (res.ok) { UI.toast("Avis mis à jour ✓", "success"); close(); Router.resolve(); }
+          else UI.toast(res.error, "error");
+        });
+      },
+    });
   }
 
   function starPicker(id) {
@@ -1508,15 +1581,17 @@
      VUE : Checkout (paiement à la livraison)
      ============================================================ */
   function viewCheckout() {
-    if (!requireAuth()) return;
     const groups = Cart.grouped();
     if (!groups.length) { Router.go("#/cart"); return; }
-    const user = Auth.current();
+    // Commande possible en tant qu'invité (sans compte).
+    const user = Auth.current() || { name: "", phone: "", commune: "", address: "", addresses: [] };
+    const isGuest = !Auth.isLogged();
     const itemsTotal = Cart.total();
     const communeOpts = UI.COMMUNES.map((c) => `<option value="${c}" ${user.commune === c ? "selected" : ""}>${c}</option>`).join("");
 
     layout(`
       <nav class="breadcrumb"><a href="#/cart">Panier</a> › <span>Commande</span></nav>
+      ${isGuest ? `<div class="guest-banner">🛍️ Vous commandez <strong>en tant qu'invité</strong>. <a href="#/login">Connectez-vous</a> ou créez un compte pour retrouver et suivre vos commandes.</div>` : ""}
       <div class="cart-layout">
         <div>
           <div class="card card-pad">
@@ -1636,7 +1711,8 @@
       };
       const err = Orders.validateDelivery(delivery);
       if (err) { UI.toast(err, "error"); return; }
-      Auth.updateProfile({ phone: delivery.phone, commune: delivery.commune, address: delivery.address });
+      // Ne met à jour le profil que pour un utilisateur connecté (pas les invités).
+      if (Auth.isLogged()) Auth.updateProfile({ phone: delivery.phone, commune: delivery.commune, address: delivery.address });
       const res = Orders.checkout(delivery, { code: couponCode, slot: document.getElementById("dSlot").value });
       if (res.ok) {
         Router.go("#/order/" + res.orders[0].id + "?multi=" + res.orders.length);
@@ -1671,6 +1747,7 @@
           </div>
           <div class="cod-note" style="text-align:left"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm-1 15-4-4 1.4-1.4L11 14.2l5.6-5.6L18 10z"/></svg>
             <span>Le vendeur vous contactera au <strong>${UI.esc(order.delivery.phone)}</strong> pour organiser la livraison.</span></div>
+          ${order.guest ? `<div class="guest-banner" style="margin-top:16px">💡 Créez un compte pour <strong>suivre cette commande</strong> et retrouver votre historique. <a href="#/login?adopt=1">Créer mon compte</a></div>` : ""}
           <div class="flex gap-12 wrap" style="justify-content:center;margin-top:16px">
             <a href="#/orders" class="btn btn-primary">Voir mes commandes</a>
             <a href="#/" class="btn btn-ghost">Continuer mes achats</a>
@@ -1683,9 +1760,8 @@
      VUE : Historique des commandes (acheteur)
      ============================================================ */
   function viewOrders() {
-    if (!requireAuth()) return;
-    const user = Auth.current();
-    const orders = Orders.byBuyer(user.id);
+    const orders = Orders.mine();
+    const isGuest = !Auth.isLogged();
     if (!orders.length) {
       layout(emptyState("📦", "Aucune commande", "Vous n'avez pas encore passé de commande.", `<a href="#/" class="btn btn-primary">Découvrir les articles</a>`));
       return;
@@ -1693,6 +1769,7 @@
     layout(`
       <div class="page-head"><div><div class="page-title">Mes commandes</div>
         <div class="page-sub">${orders.length} commande(s)</div></div></div>
+      ${isGuest ? `<div class="guest-banner">💡 Ces commandes sont enregistrées sur cet appareil. <a href="#/login?adopt=1">Créez un compte</a> pour les retrouver partout.</div>` : ""}
       ${orders.map((o) => orderCardBuyer(o)).join("")}`);
 
     V().querySelectorAll("[data-cancel]").forEach((b) => b.addEventListener("click", () => openCancelModal(b.getAttribute("data-cancel"), "buyer", viewOrders)));
@@ -1705,6 +1782,34 @@
     }));
     V().querySelectorAll("[data-rate]").forEach((b) => b.addEventListener("click", () => openRateDeliveryModal(b.getAttribute("data-rate"))));
     V().querySelectorAll("[data-problem]").forEach((b) => b.addEventListener("click", () => openOrderProblemModal(b.getAttribute("data-problem"))));
+    V().querySelectorAll("[data-return]").forEach((b) => b.addEventListener("click", () => openReturnModal(b.getAttribute("data-return"))));
+  }
+
+  /** Demande de retour / échange / remboursement (commande livrée). */
+  function openReturnModal(orderId) {
+    const o = Orders.get(orderId);
+    if (!o) return;
+    const reasons = ["Article défectueux", "Ne correspond pas à la description", "Mauvaise taille", "Article endommagé à la livraison", "Erreur d'article", "Autre"];
+    UI.modal({
+      title: "↩️ Retour / échange",
+      body: `<p class="text-muted" style="margin:0 0 12px;font-size:13.5px">Commande N° ${UI.esc(o.number)} — ${UI.esc(o.storeName)}. Le vendeur examinera votre demande.</p>
+        <div class="field"><label>Type de demande</label>
+          <select id="rtType"><option value="retour">Retour (remboursement)</option><option value="echange">Échange</option><option value="remboursement">Remboursement partiel</option></select></div>
+        <div class="field mt-8"><label>Motif</label><select id="rtReason">${reasons.map((r) => `<option>${r}</option>`).join("")}</select></div>
+        <div class="field mt-8"><label>Description (optionnel)</label><textarea id="rtNote" placeholder="Précisez votre demande…"></textarea></div>`,
+      footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-primary" id="rtGo">Envoyer la demande</button>`,
+      onMount(m, close) {
+        m.querySelector("#rtGo").addEventListener("click", () => {
+          const r = Orders.requestReturn(orderId, {
+            type: m.querySelector("#rtType").value,
+            reason: m.querySelector("#rtReason").value,
+            note: m.querySelector("#rtNote").value,
+          });
+          if (!r.ok) { UI.toast(r.error || "Demande impossible.", "error"); return; }
+          UI.toast("Demande envoyée au vendeur ✓", "success"); close(); viewOrders();
+        });
+      },
+    });
   }
 
   /** Signaler un problème sur une commande (au vendeur + admin). */
@@ -1778,6 +1883,7 @@
         <span class="status ${o.status}">${Orders.STATUS[o.status]}</span>
       </div>
       ${o.status !== "annulee" ? deliveryStepper(o.status) : ""}
+      ${(o.status !== "annulee" && o.status !== "livree") ? (() => { const e = Orders.estimatedDelivery(o); return `<div class="order-eta">🚚 Livraison estimée : <strong>entre le ${UI.dateFR(e.from)} et le ${UI.dateFR(e.to)}</strong></div>`; })() : ""}
       <div class="divider" style="margin:14px 0"></div>
       ${o.items.map((it) => `<div class="cart-item" style="padding:8px 0;border:none">
         <img src="${UI.safeImg(it.image, it.title)}" alt="" style="width:54px;height:54px" />
@@ -1792,9 +1898,11 @@
         <button class="btn btn-ghost btn-sm" data-invoice="${o.id}">🧾 Reçu / facture</button>
         <button class="btn btn-ghost btn-sm" data-reorder="${o.id}">🔁 Commander à nouveau</button>
         ${o.status === "livree" && !o.deliveryRating ? `<button class="btn btn-accent btn-sm" data-rate="${o.id}">⭐ Noter la livraison</button>` : ""}
+        ${o.status === "livree" && (!o.return || o.return.status === "refused") ? `<button class="btn btn-ghost btn-sm" data-return="${o.id}">↩️ Retour / échange</button>` : ""}
         ${o.status !== "annulee" ? `<button class="btn btn-ghost btn-sm" data-problem="${o.id}">⚠️ Signaler un problème</button>` : ""}
         ${(o.status === "en_attente" || o.status === "confirmee") ? `<button class="btn btn-danger btn-sm" data-cancel="${o.id}">Annuler la commande</button>` : ""}
       </div>
+      ${o.return ? `<div class="order-return-note return-${o.return.status}">↩️ Demande de ${UI.esc(o.return.type)} — ${o.return.status === "requested" ? "en attente du vendeur" : o.return.status === "accepted" ? "acceptée ✅" : "refusée ❌"}${o.return.resolution ? " — " + UI.esc(o.return.resolution) : ""}</div>` : ""}
       ${o.problem ? `<div class="order-problem-note">⚠️ Problème signalé : ${UI.esc(o.problem.reason)}${o.problem.resolved ? " <span class=\"text-muted\">(traité)</span>" : " <span class=\"text-muted\">(en cours de traitement)</span>"}</div>` : ""}
       ${o.deliveryRating ? `<div class="text-muted" style="font-size:13px;margin-top:6px">Votre note de livraison : ${UI.starsHTML(o.deliveryRating.stars)}${o.deliveryRating.comment ? " — " + UI.esc(o.deliveryRating.comment) : ""}</div>` : ""}
     </div>`;
@@ -1874,7 +1982,9 @@
      ============================================================ */
   function viewLogin(params) {
     if (Auth.isLogged()) { Router.go("#/profile"); return; }
-    const mode = (params.query && params.query.mode) === "register" ? "register" : "login";
+    // ?mode=register ou ?adopt=1 (invité invité à créer un compte) ouvrent l'inscription.
+    const q = params.query || {};
+    const mode = (q.mode === "register" || q.adopt === "1") ? "register" : "login";
     SB().innerHTML = "";
     V().innerHTML = `
       <div class="auth-wrap">
@@ -1908,7 +2018,7 @@
         document.getElementById("loginForm").addEventListener("submit", (e) => {
           e.preventDefault();
           const res = Auth.login(document.getElementById("lEmail").value, document.getElementById("lPass").value);
-          if (res.ok) { Cart.mergeGuestInto(res.user.id); UI.toast("Connecté ✓", "success"); afterAuth(); }
+          if (res.ok) { Cart.mergeGuestInto(res.user.id); const adopted = Orders.adoptGuestOrders(res.user.id); UI.toast("Connecté ✓" + (adopted ? ` — ${adopted} commande(s) invité récupérée(s)` : ""), "success"); afterAuth(); }
           else UI.toast(res.error, "error");
         });
       } else {
@@ -1934,7 +2044,8 @@
           });
           if (res.ok) {
             Cart.mergeGuestInto(res.user.id);
-            UI.toast("Compte créé ✓", "success");
+            const adopted = Orders.adoptGuestOrders(res.user.id);
+            UI.toast("Compte créé ✓" + (adopted ? ` — ${adopted} commande(s) récupérée(s)` : ""), "success");
             if (res.user.role === "vendor") { renderHeaderUser(); Router.go("#/seller/store"); }
             else afterAuth();
           } else UI.toast(res.error, "error");
@@ -2043,6 +2154,18 @@
 
       ${user.role === "admin" ? `<div class="section-title">Administration</div><div class="card card-pad"><a href="#/admin" class="btn btn-ghost">Console d'administration</a></div>` : ""}
 
+      <div class="section-title">Sécurité du compte</div>
+      <div class="card card-pad form-grid">
+        <div class="flex gap-8 wrap">
+          <button class="btn btn-ghost btn-sm" id="changePwBtn">🔑 Changer mon mot de passe</button>
+          <button class="btn btn-ghost btn-sm" id="exportDataBtn">⬇️ Exporter mes données</button>
+        </div>
+        <div class="account-danger">
+          <div><strong>Supprimer mon compte</strong><div class="text-muted" style="font-size:13px">Action définitive : vos données personnelles seront effacées.</div></div>
+          <button class="btn btn-danger btn-sm" id="deleteAccBtn">Supprimer</button>
+        </div>
+      </div>
+
       <div class="mt-24"><button class="btn btn-danger" id="logoutBtn">Se déconnecter</button></div>
     `);
 
@@ -2103,6 +2226,59 @@
 
     document.getElementById("logoutBtn").addEventListener("click", () => {
       Auth.logout(); renderHeaderUser(); UI.refreshBadges(); UI.toast("Déconnecté.", "info"); Router.go("#/");
+    });
+
+    // Sécurité : changer le mot de passe.
+    document.getElementById("changePwBtn").addEventListener("click", () => {
+      UI.modal({
+        title: "🔑 Changer mon mot de passe",
+        body: `<div class="field"><label>Mot de passe actuel</label><input type="password" id="cpCurrent" /></div>
+          <div class="field mt-8"><label>Nouveau mot de passe</label><input type="password" id="cpNew" placeholder="Min. 4 caractères" /></div>
+          <div class="field mt-8"><label>Confirmer le nouveau mot de passe</label><input type="password" id="cpConfirm" /></div>`,
+        footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-primary" id="cpGo">Mettre à jour</button>`,
+        onMount(m, close) {
+          m.querySelector("#cpGo").addEventListener("click", () => {
+            const cur = m.querySelector("#cpCurrent").value;
+            const nw = m.querySelector("#cpNew").value;
+            const cf = m.querySelector("#cpConfirm").value;
+            if (nw !== cf) { UI.toast("Les mots de passe ne correspondent pas.", "error"); return; }
+            const r = Auth.changePassword(cur, nw);
+            if (!r.ok) { UI.toast(r.error, "error"); return; }
+            UI.toast("Mot de passe mis à jour ✓", "success"); close();
+          });
+        },
+      });
+    });
+
+    // Sécurité : exporter mes données (téléchargement JSON).
+    document.getElementById("exportDataBtn").addEventListener("click", () => {
+      const data = Auth.exportData();
+      if (!data) return;
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "mes-donnees-marcheci.json";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      UI.toast("Vos données ont été exportées ⬇️", "success");
+    });
+
+    // Sécurité : supprimer le compte (double confirmation).
+    document.getElementById("deleteAccBtn").addEventListener("click", () => {
+      UI.modal({
+        title: "Supprimer mon compte ?",
+        body: `<p style="margin:0 0 12px">Cette action est <strong>définitive</strong>. Vos favoris, avis, questions et alertes seront effacés. Vos commandes passées sont conservées de manière anonyme pour les vendeurs.</p>
+          <div class="field"><label>Pour confirmer, tapez <strong>SUPPRIMER</strong></label><input type="text" id="delConfirm" placeholder="SUPPRIMER" /></div>`,
+        footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-danger" id="delGo">Supprimer définitivement</button>`,
+        onMount(m, close) {
+          m.querySelector("#delGo").addEventListener("click", () => {
+            if (m.querySelector("#delConfirm").value.trim().toUpperCase() !== "SUPPRIMER") { UI.toast("Veuillez taper SUPPRIMER pour confirmer.", "error"); return; }
+            Auth.deleteAccount();
+            close(); renderHeaderUser(); UI.refreshBadges();
+            UI.toast("Votre compte a été supprimé.", "info"); Router.go("#/");
+          });
+        },
+      });
     });
   }
 
@@ -3276,6 +3452,30 @@
     V().querySelectorAll("[data-cancel]").forEach((b) =>
       b.addEventListener("click", () => openCancelModal(b.getAttribute("data-cancel"), "seller", () => viewSellerOrders(params)))
     );
+    // Traitement des demandes de retour (accepter / refuser).
+    V().querySelectorAll("[data-return-accept]").forEach((b) =>
+      b.addEventListener("click", () => openResolveReturnModal(b.getAttribute("data-return-accept"), "accepted", () => viewSellerOrders(params)))
+    );
+    V().querySelectorAll("[data-return-refuse]").forEach((b) =>
+      b.addEventListener("click", () => openResolveReturnModal(b.getAttribute("data-return-refuse"), "refused", () => viewSellerOrders(params)))
+    );
+  }
+
+  /** Modale vendeur : accepter/refuser une demande de retour avec message. */
+  function openResolveReturnModal(orderId, status, after) {
+    UI.modal({
+      title: status === "accepted" ? "✅ Accepter le retour" : "❌ Refuser le retour",
+      body: `<div class="field"><label>${status === "accepted" ? "Instructions pour le client (optionnel)" : "Motif du refus (optionnel)"}</label>
+        <textarea id="rrNote" placeholder="${status === "accepted" ? "Ex : renvoyez l'article à l'adresse de la boutique, remboursement à réception." : "Ex : article utilisé, hors délai…"}"></textarea></div>`,
+      footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn ${status === "accepted" ? "btn-accent" : "btn-danger"}" id="rrGo">Confirmer</button>`,
+      onMount(m, close) {
+        m.querySelector("#rrGo").addEventListener("click", () => {
+          Orders.resolveReturn(orderId, status, m.querySelector("#rrNote").value);
+          UI.toast(status === "accepted" ? "Retour accepté ✓ Le client est notifié." : "Retour refusé. Le client est notifié.", "success");
+          close(); if (after) after();
+        });
+      },
+    });
   }
 
   function sellerOrderCard(o) {
@@ -3320,6 +3520,12 @@
         ${o.status !== "livree" && o.status !== "annulee" ? `<button class="btn btn-danger btn-sm" data-cancel="${o.id}">Annuler</button>` : ""}
       </div>
       ${o.cancelReason ? `<div class="text-muted" style="font-size:12.5px;margin-top:6px"><em>Annulée : ${UI.esc(o.cancelReason)}</em></div>` : ""}
+      ${o.return ? `<div class="seller-return-box return-${o.return.status}">
+        <div><strong>↩️ Demande de ${UI.esc(o.return.type)}</strong> — ${UI.esc(o.return.reason)}${o.return.note ? `<div class="text-muted" style="font-size:12.5px">${UI.esc(o.return.note)}</div>` : ""}</div>
+        ${o.return.status === "requested"
+          ? `<div class="flex gap-8 mt-8"><button class="btn btn-accent btn-sm" data-return-accept="${o.id}">✅ Accepter</button><button class="btn btn-danger btn-sm" data-return-refuse="${o.id}">❌ Refuser</button></div>`
+          : `<div class="text-muted" style="font-size:12.5px;margin-top:4px">${o.return.status === "accepted" ? "Acceptée ✅" : "Refusée ❌"}${o.return.resolution ? " — " + UI.esc(o.return.resolution) : ""}</div>`}
+      </div>` : ""}
     </div>`;
   }
 
@@ -4148,6 +4354,8 @@
     if (cu && cu.highContrast) document.documentElement.setAttribute("data-contrast", "high");
     // Rappel de panier abandonné (une fois par session, après un délai).
     setTimeout(abandonedCartReminder, 60000);
+    // Rappel de suivi des commandes expédiées (peu après le chargement).
+    setTimeout(orderTrackingReminder, 4000);
     // En-tête + délégation + badges.
     wireHeader();
     wireGlobalDelegation();

@@ -79,6 +79,13 @@ Données de démo : **4 boutiques**, **16 articles**, quelques avis, abonnements
 - **Multi-langue Français / English** (sélecteur dans le profil, chrome traduit).
 - **Contraste élevé** (accessibilité) et **assistant virtuel** flottant (chatbot d'aide à réponses guidées).
 
+##### ✅ Finalisation de l'espace client
+- **Gestion du compte** : **changer son mot de passe**, **exporter ses données** (fichier JSON, portabilité), **supprimer son compte** (avec anonymisation des commandes conservées côté vendeur).
+- **Commande en tant qu'invité** (sans compte) : les commandes sont rattachées à l'appareil, puis **récupérées automatiquement** à la création d'un compte ou à la connexion.
+- **Retours / échanges** : demande depuis une commande livrée (type, motif, description) → le **vendeur accepte ou refuse** (avec message), suivi du statut côté client.
+- **Gestion de ses avis** : **modifier** / **supprimer** son propre avis, et **signaler** un avis abusif (transmis à la modération).
+- **Livraison estimée** : fenêtre de dates affichée sur la commande + **rappel de suivi** pour les commandes expédiées.
+
 ### Vendeur — espace dédié (back-office)
 L'espace vendeur est un **véritable back-office distinct de l'espace client** : barre latérale sombre de navigation, en-tête « Espace Vendeur » (le chrome d'achat — recherche, panier, favoris, nav basse mobile — est masqué), et zone de travail professionnelle.
 

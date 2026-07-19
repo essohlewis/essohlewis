@@ -249,6 +249,46 @@ window.MP = window.MP || {};
     return { ok: true, count: by.length };
   }
 
+  /** Modifie son propre avis (auteur uniquement). */
+  function updateReview(reviewId, { rating, comment, photo }) {
+    const user = window.MP.Auth.current();
+    if (!user) return { ok: false, error: "Connexion requise." };
+    const rev = DB.find(DB.KEYS.reviews, reviewId);
+    if (!rev) return { ok: false, error: "Avis introuvable." };
+    if (rev.userId !== user.id) return { ok: false, error: "Vous ne pouvez modifier que vos propres avis." };
+    if (!(rating >= 1 && rating <= 5)) return { ok: false, error: "Note requise." };
+    const patch = { rating: Math.round(rating), comment: String(comment || "").trim(), editedAt: Date.now() };
+    if (photo !== undefined) patch.photo = photo || "";
+    DB.update(DB.KEYS.reviews, reviewId, patch);
+    return { ok: true };
+  }
+
+  /** Supprime son propre avis (ou modération admin). */
+  function removeReview(reviewId) {
+    const user = window.MP.Auth.current();
+    if (!user) return { ok: false, error: "Connexion requise." };
+    const rev = DB.find(DB.KEYS.reviews, reviewId);
+    if (!rev) return { ok: false };
+    if (rev.userId !== user.id && user.role !== "admin") return { ok: false, error: "Non autorisé." };
+    DB.removeItem(DB.KEYS.reviews, reviewId);
+    return { ok: true };
+  }
+
+  /** Signale un avis abusif -> notifie les administrateurs. */
+  function reportReview(reviewId, reason) {
+    const user = window.MP.Auth.current();
+    if (!user) return { ok: false, error: "Connexion requise." };
+    const rev = DB.find(DB.KEYS.reviews, reviewId);
+    if (!rev) return { ok: false };
+    const reportedBy = rev.reportedBy || [];
+    if (reportedBy.includes(user.id)) return { ok: false, error: "Vous avez déjà signalé cet avis." };
+    reportedBy.push(user.id);
+    DB.update(DB.KEYS.reviews, reviewId, { reportedBy });
+    window.MP.DB.all(DB.KEYS.users).filter((u) => u.role === "admin").forEach((a) =>
+      window.MP.Notifications.push(a.id, { type: "info", message: `⚑ Avis signalé (${String(reason || "").trim() || "contenu inapproprié"}) de ${rev.userName}.`, link: rev.targetType === "product" ? "#/product/" + rev.targetId : "#/store/" + rev.targetId }));
+    return { ok: true };
+  }
+
   /** Réponse du vendeur à un avis -> notifie l'auteur de l'avis. */
   function replyReview(reviewId, text) {
     const rev = DB.find(DB.KEYS.reviews, reviewId);
@@ -342,6 +382,6 @@ window.MP = window.MP || {};
   window.MP.Products = {
     all, get, byStore, published, create, update, remove,
     addView, decrementStock, addCartCount, effectivePrice, promoActive, quickSet, margin,
-    reviews, rating, addReview, voteHelpful, replyReview, search, priceHistory, boughtTogether,
+    reviews, rating, addReview, voteHelpful, replyReview, updateReview, removeReview, reportReview, search, priceHistory, boughtTogether,
   };
 })();
