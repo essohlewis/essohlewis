@@ -1,0 +1,6 @@
+# Artéfacts de build / distribution (générés, non versionnés)
+marche-ci.zip
+*.zip
+
+# Divers
+.DS_Store
