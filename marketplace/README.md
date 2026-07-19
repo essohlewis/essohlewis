@@ -285,12 +285,16 @@ marketplace/
 
 Architecture : chaque module s'attache au **namespace global `window.MP`** (scripts classiques, compatibles avec l'ouverture directe en `file://` — pas de modules ES pour éviter les restrictions CORS locales). **100 % front-end, sans serveur.**
 
-### 🪪 Vérification d'identité vendeur (100 % front)
+### 🪪 Vérification d'identité vendeur
 - **Parcours vendeur** : assistant en 3 étapes — pièce d'identité + **selfie capturé en direct par la caméra** (`getUserMedia`, guide ovale, détection de visage via `FaceDetector` si disponible) + consentement.
-- **Revue admin** : dans l'onglet Sécurité, la file KYC affiche **pièce et selfie côte à côte** ; validation ou refus.
+- **Revue admin** : **pièce et selfie côte à côte** ; validation ou refus.
 - **Éligibilité** : tant que l'identité n'est pas approuvée, le vendeur **ne peut pas publier** (réglable dans Paramètres).
-- Les pièces/selfies sont stockés **localement** (localStorage), comme le reste des données.
-- ⚠️ La **caméra** exige `http(s)`/`localhost` : en ouverture directe `file://`, elle est bloquée par le navigateur → un **repli « importer une photo »** est proposé.
+
+Deux modes selon l'hébergement :
+- **100 % front (ouverture `file://`)** : pièces/selfies stockés **localement** (localStorage), revue manuelle par l'admin.
+- **Avec le backend Node.js (`server/`)** : **reconnaissance faciale automatique réelle** (dlib/ResNet) qui **compare le selfie au visage de la pièce**, avec des **pages Tailwind** dédiées (`/verify` vendeur et `/admin/kyc` revue). Le front détecte le serveur et bascule automatiquement dessus. Voir **`server/README.md`**.
+
+> ⚠️ La **caméra** exige `http(s)`/`localhost` : en ouverture directe `file://` elle est bloquée → un **repli « importer une photo »** est proposé.
 
 ---
 

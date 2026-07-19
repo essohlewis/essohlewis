@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-semibold transition; }
+  .btn-brand { @apply bg-brand text-white hover:bg-brand-dark; }
+  .btn-accent { @apply bg-accent text-white hover:brightness-110; }
+  .btn-ghost { @apply border border-slate-300 text-slate-700 hover:bg-slate-100; }
+  .card { @apply bg-white rounded-2xl shadow-sm border border-slate-200 p-6; }
+  .pill { @apply inline-block rounded-full px-3 py-0.5 text-xs font-bold; }
+}

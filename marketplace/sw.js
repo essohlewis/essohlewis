@@ -5,7 +5,7 @@
    ouverture directe via file://, ils ne s'enregistrent pas (dégradation propre).
    ========================================================================= */
 
-const CACHE = "marchesci-v2";
+const CACHE = "marchesci-v3";
 const ASSETS = [
   "./",
   "./index.html",
@@ -47,6 +47,18 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
+  const url = e.request.url;
+  // Réseau direct (jamais de cache) pour l'API et les pages back-office Node.
+  if (url.indexOf("/api/") !== -1 || url.indexOf("/verify") !== -1 || url.indexOf("/admin/kyc") !== -1) return;
+  // Scripts & styles : réseau d'abord (évite de servir une version périmée), cache en repli.
+  if (/\.(?:js|css)(?:\?|$)/.test(url)) {
+    e.respondWith(
+      fetch(e.request)
+        .then((resp) => { const copy = resp.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {}); return resp; })
+        .catch(() => caches.match(e.request))
+    );
+    return;
+  }
   e.respondWith(
     caches.match(e.request).then((cached) =>
       cached ||
@@ -56,7 +68,8 @@ self.addEventListener("fetch", (e) => {
           caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
           return resp;
         })
-        .catch(() => caches.match("./index.html"))
+        // Repli index.html uniquement pour les navigations (jamais pour js/css/images).
+        .catch(() => (e.request.mode === "navigate" ? caches.match("./index.html") : Response.error()))
     )
   );
 });

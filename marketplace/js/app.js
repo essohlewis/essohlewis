@@ -2912,6 +2912,12 @@
    * Assistant de vérification d'identité vendeur (KYC) : pièce d'identité +
    * selfie capturé EN DIRECT par la caméra. Envoie au backend PHP si présent.
    */
+  /** Démarre la vérification d'\''identité : page Tailwind (backend Node) ou modale locale. */
+  function startKycVerification(store, onDone) {
+    if (KYC && KYC.enabled) { window.location.href = KYC.verifyUrl(store); return; }
+    openKycFlow(store, onDone);
+  }
+
   function openKycFlow(store, onDone) {
     const user = Auth.current();
     const state = { idType: "CNI", idNumber: "", idImage: "", idImageBack: "", selfie: "", faceDetected: null };
@@ -3206,7 +3212,7 @@
     const galUp = wireUploader("galUp", s.gallery || [], true);
     // Bouton de lancement de l'assistant de vérification d'identité (caméra).
     const kycBtn = document.getElementById("kycStartBtn");
-    if (kycBtn) kycBtn.addEventListener("click", () => openKycFlow(store, () => Router.go("#/seller/dashboard")));
+    if (kycBtn) kycBtn.addEventListener("click", () => startKycVerification(store, () => Router.go("#/seller/dashboard")));
 
     // Horaires : affichage conditionnel + activer/désactiver les champs par jour.
     const useSch = document.getElementById("sUseSchedule");
@@ -3479,7 +3485,7 @@
     const announceBtn = document.getElementById("announceBtn");
     if (announceBtn) announceBtn.addEventListener("click", () => openAnnounceModal(store));
     const dashKyc = document.getElementById("dashKycBtn");
-    if (dashKyc) dashKyc.addEventListener("click", () => openKycFlow(store, () => viewSellerDashboard()));
+    if (dashKyc) dashKyc.addEventListener("click", () => startKycVerification(store, () => viewSellerDashboard()));
     // Synchronise le statut de vérification depuis le backend (si présent).
     syncKycStatus(store).then((changed) => { if (changed) viewSellerDashboard(); });
   }
@@ -3488,6 +3494,7 @@
   async function syncKycStatus(store) {
     if (!KYC || !store) return false;
     try {
+      if (KYC.ready) { try { await KYC.ready; } catch (e) {} } // attend la détection du backend
       const r = await KYC.status(store.ownerId, store);
       if (!r || !r.status || r.status === "none" || r.local) return false;
       const cur = store.kyc && store.kyc.status;
@@ -4707,7 +4714,7 @@
       const myStore = sellerStore();
       if (requireVendorKyc() && (status === "published" || status === "scheduled") && !kycApproved(myStore)) {
         UI.toast("Vérifiez votre identité pour publier vos articles.", "info");
-        openKycFlow(myStore, () => Router.go("#/seller/dashboard"));
+        startKycVerification(myStore, () => Router.go("#/seller/dashboard"));
         return;
       }
       const bad = bannedWordIn(data.title + " " + data.description);
@@ -6335,6 +6342,10 @@
         ${statCard(sig.messages.length ? "ic-orange" : "ic-green", "💬", sig.messages.length, "Messages suspects")}
         ${statCard((sig.accounts.length || sig.reviews.length) ? "ic-orange" : "ic-green", "👤", sig.accounts.length + sig.reviews.length, "Comptes / avis suspects")}
       </div>
+      ${(KYC && KYC.enabled) ? `<div class="card card-pad mt-16" style="border-left:4px solid var(--accent)">
+        <div class="flex-between wrap" style="gap:10px"><div><strong>🤖 Reconnaissance faciale ${KYC.faceMatch ? "active" : "(revue manuelle)"}</strong>
+          <div class="text-muted" style="font-size:12.5px">Les vérifications passent par le back-office dédié (pièce + selfie, comparaison automatique des visages).</div></div>
+          <a href="${KYC.adminUrl()}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Ouvrir la revue des vérifications →</a></div></div>` : ""}
       ${kyc.length ? section("🪪 Vérifications d'identité (KYC) en attente", kyc.length, kyc.map((s) => `<div class="card card-pad mt-12 mod-card">
         <div class="flex-between wrap" style="margin-bottom:8px"><div><strong><a href="#" data-secstore="${s.id}">${UI.esc(s.name)}</a></strong>
           <div class="text-muted" style="font-size:12.5px">${UI.esc(s.kyc.idType || "Pièce")}${s.kyc.idNumber ? " · N° " + UI.esc(s.kyc.idNumber) : ""} · transmise ${UI.timeAgo(s.kyc.submittedAt || s.createdAt)}</div></div></div>

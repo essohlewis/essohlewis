@@ -1,8 +1,9 @@
 /* =========================================================================
-   kyc.js — Vérification d'identité vendeur (100 % front-end).
-   Pièce d'identité + selfie capturé en direct (getUserMedia), stockés
-   localement (localStorage). La revue est faite manuellement par l'admin.
-   Détection de visage best-effort via l'API FaceDetector si disponible.
+   kyc.js — Vérification d'identité vendeur.
+   • Sous le serveur Node (Express) : redirige vers les pages Tailwind /verify
+     et /admin/kyc, avec reconnaissance faciale réelle côté serveur.
+   • Sans serveur (file://) : repli 100 % local (pièce + selfie en localStorage,
+     revue manuelle par l'admin). Capture caméra via getUserMedia.
    ========================================================================= */
 
 window.MP = window.MP || {};
@@ -13,13 +14,40 @@ window.MP = window.MP || {};
   const DB = window.MP.DB;
 
   const KYC = {
-    enabled: false,   // pas de backend : fonctionnement 100 % local
-    faceMatch: false, // pas de service biométrique
+    enabled: false,   // backend Node joignable ?
+    faceMatch: false, // reconnaissance faciale réelle active ?
+    adminToken: "admin-demo-token",
     _stream: null,
   };
 
-  /** Initialisation (aucun backend). */
-  function init() { KYC.enabled = false; KYC.faceMatch = false; }
+  /** Base de l'API Node, ou null en file://. */
+  function apiBase() {
+    if (location.protocol !== "http:" && location.protocol !== "https:") return null;
+    return "/api/kyc";
+  }
+
+  /** Détecte le backend Node (endpoint /health). Mémorise la promesse (KYC.ready). */
+  function init() {
+    KYC.ready = (async () => {
+      const b = apiBase();
+      if (!b) { KYC.enabled = false; return; }
+      try {
+        const j = await (await fetch(b + "/health", { cache: "no-store" })).json();
+        KYC.enabled = !!(j && j.ok);
+        KYC.faceMatch = !!(j && j.face);
+      } catch (e) { KYC.enabled = false; }
+    })();
+    return KYC.ready;
+  }
+
+  /** URL de la page Tailwind de vérification (vendeur). */
+  function verifyUrl(store) {
+    const u = window.MP.Auth.current();
+    const q = new URLSearchParams({ vendorId: u ? u.id : "", vendorName: u ? u.name : "", storeId: store ? store.id : "" });
+    return "/verify?" + q.toString();
+  }
+  /** URL de la page Tailwind de revue admin. */
+  function adminUrl() { return "/admin/kyc?token=" + encodeURIComponent(KYC.adminToken); }
 
   /** Contexte sécurisé requis par la caméra (http(s) ou localhost). */
   function secureContextOk() {
@@ -27,7 +55,7 @@ window.MP = window.MP || {};
   }
 
   /* -------------------- API vendeur -------------------- */
-  /** Enregistre la vérification dans la boutique (localStorage). */
+  /** Enregistre la vérification en local (repli sans backend). */
   async function submit(payload) {
     if (payload.storeId) {
       DB.update(DB.KEYS.stores, payload.storeId, {
@@ -37,8 +65,12 @@ window.MP = window.MP || {};
     return { ok: true, status: "pending", local: true };
   }
 
-  /** Statut de vérification lu depuis la boutique (localStorage). */
+  /** Statut de vérification : backend Node si présent, sinon localStorage. */
   async function status(vendorId, store) {
+    if (KYC.enabled) {
+      try { return await (await fetch(apiBase() + "/status?vendorId=" + encodeURIComponent(vendorId), { cache: "no-store" })).json(); }
+      catch (e) { /* repli local */ }
+    }
     const st = store && store.kyc ? store.kyc.status : "none";
     return { ok: true, status: st || "none", reason: (store && store.kyc && store.kyc.reason) || "", local: true };
   }
@@ -97,6 +129,9 @@ window.MP = window.MP || {};
   }
 
   KYC.init = init;
+  KYC.apiBase = apiBase;
+  KYC.verifyUrl = verifyUrl;
+  KYC.adminUrl = adminUrl;
   KYC.secureContextOk = secureContextOk;
   KYC.submit = submit;
   KYC.status = status;

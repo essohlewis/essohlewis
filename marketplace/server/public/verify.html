@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vérification d'identité — Marché CI</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="/tailwind.css" />
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-3xl mx-auto px-4 py-3 flex items-center gap-2">
+      <span class="text-2xl">🛒</span>
+      <span class="font-extrabold text-lg">Marché<span class="text-brand">CI</span></span>
+      <span class="ml-auto pill bg-accent-soft text-accent">Vérification vendeur</span>
+    </div>
+  </header>
+
+  <main class="max-w-3xl mx-auto px-4 py-6">
+    <h1 class="text-2xl font-extrabold mb-1">🪪 Vérifiez votre identité</h1>
+    <p class="text-slate-500 mb-5 text-sm">Pour vendre sur Marché CI, envoyez votre pièce d'identité et un selfie pris <strong>en direct</strong>. La plateforme compare automatiquement les deux visages.</p>
+
+    <!-- Fil des étapes -->
+    <div class="flex gap-2 mb-6" id="steps">
+      <span data-s="1" class="flex-1 text-center text-xs font-bold py-2 rounded-full bg-brand text-white">1 · Pièce</span>
+      <span data-s="2" class="flex-1 text-center text-xs font-bold py-2 rounded-full bg-slate-200 text-slate-500">2 · Selfie</span>
+      <span data-s="3" class="flex-1 text-center text-xs font-bold py-2 rounded-full bg-slate-200 text-slate-500">3 · Envoi</span>
+    </div>
+
+    <!-- Étape 1 : pièce -->
+    <section data-step="1" class="card">
+      <div class="grid sm:grid-cols-2 gap-4">
+        <label class="block"><span class="text-sm font-semibold">Type de pièce</span>
+          <select id="idType" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
+            <option value="CNI">Carte nationale d'identité</option>
+            <option value="Passeport">Passeport</option>
+            <option value="Permis">Permis de conduire</option>
+            <option value="Attestation">Attestation d'identité</option>
+          </select></label>
+        <label class="block"><span class="text-sm font-semibold">Numéro de la pièce</span>
+          <input id="idNumber" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" placeholder="Ex : CI0123456789" /></label>
+      </div>
+      <label class="block mt-4"><span class="text-sm font-semibold">Photo de la pièce (recto) *</span>
+        <div id="idDrop" class="mt-1 border-2 border-dashed border-slate-300 rounded-xl p-6 text-center text-slate-500 cursor-pointer hover:border-brand">
+          <span>📷 Cliquez pour ajouter la photo</span><input type="file" accept="image/*" class="hidden" />
+        </div></label>
+      <div class="flex justify-end mt-4"><button id="next1" class="btn btn-brand" disabled>Suivant →</button></div>
+    </section>
+
+    <!-- Étape 2 : selfie -->
+    <section data-step="2" class="card hidden">
+      <p class="text-sm text-slate-500 mb-3">Placez votre visage dans l'ovale et prenez la photo. La capture est faite <strong>en direct</strong> par votre caméra.</p>
+      <div id="camWrap" class="relative w-64 h-64 mx-auto rounded-full overflow-hidden bg-slate-900">
+        <video id="video" playsinline muted class="w-full h-full object-cover"></video>
+        <img id="shot" class="w-full h-full object-cover hidden" alt="" />
+        <div class="absolute inset-0 rounded-full border-[3px] border-dashed border-white/70 pointer-events-none"></div>
+      </div>
+      <p id="camMsg" class="text-center text-sm text-slate-500 mt-2"></p>
+      <div id="camNoSecure" class="hidden mt-3 rounded-lg bg-amber-100 text-amber-800 text-sm p-3">📷 La caméra nécessite <strong>http(s)/localhost</strong>. Importez une photo à défaut : <input type="file" accept="image/*" id="selfieFile" class="mt-2 block" /></div>
+      <div class="flex justify-center gap-2 mt-3" id="camBtns">
+        <button id="camStart" class="btn btn-ghost">Démarrer la caméra</button>
+        <button id="capture" class="btn btn-brand hidden">📸 Prendre la photo</button>
+        <button id="retake" class="btn btn-ghost hidden">↺ Reprendre</button>
+      </div>
+      <div class="flex justify-between mt-4"><button data-back="1" class="btn btn-ghost">← Retour</button><button id="next2" class="btn btn-brand" disabled>Suivant →</button></div>
+    </section>
+
+    <!-- Étape 3 : envoi -->
+    <section data-step="3" class="card hidden">
+      <div class="grid grid-cols-2 gap-3">
+        <figure class="m-0"><figcaption class="text-xs font-bold text-slate-500 mb-1">Pièce</figcaption><img id="revId" class="w-full aspect-square object-cover rounded-lg border border-slate-200" alt="" /></figure>
+        <figure class="m-0"><figcaption class="text-xs font-bold text-slate-500 mb-1">Selfie</figcaption><img id="revSelfie" class="w-full aspect-square object-cover rounded-lg border border-slate-200" alt="" /></figure>
+      </div>
+      <label class="flex items-start gap-2 mt-4 rounded-lg border border-slate-300 p-3 text-sm"><input type="checkbox" id="consent" class="mt-1" /> <span>Je certifie que ces documents sont authentiques et m'appartiennent, et j'accepte leur vérification automatique.</span></label>
+      <div class="flex justify-between mt-4"><button data-back="2" class="btn btn-ghost">← Retour</button><button id="submit" class="btn btn-brand" disabled>Envoyer ma vérification</button></div>
+      <div id="result" class="mt-4"></div>
+    </section>
+  </main>
+
+  <script>
+    const qs = new URLSearchParams(location.search);
+    const ctx = { vendorId: qs.get("vendorId") || "", vendorName: qs.get("vendorName") || "", storeId: qs.get("storeId") || "" };
+    const state = { idType: "CNI", idNumber: "", idImage: "", selfie: "", faceDetected: null };
+    let stream = null;
+    const $ = (s) => document.querySelector(s);
+
+    function showStep(n) {
+      document.querySelectorAll("[data-step]").forEach((el) => el.classList.toggle("hidden", el.getAttribute("data-step") !== String(n)));
+      document.querySelectorAll("#steps [data-s]").forEach((el) => {
+        const on = Number(el.getAttribute("data-s")) <= n;
+        el.className = "flex-1 text-center text-xs font-bold py-2 rounded-full " + (on ? "bg-brand text-white" : "bg-slate-200 text-slate-500");
+      });
+      if (n !== 2 && stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
+    }
+    function fileToDataURL(file, maxSize) {
+      return new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            let { width: w, height: h } = img; const m = maxSize || 1000;
+            if (Math.max(w, h) > m) { const k = m / Math.max(w, h); w = Math.round(w * k); h = Math.round(h * k); }
+            const c = document.createElement("canvas"); c.width = w; c.height = h;
+            c.getContext("2d").drawImage(img, 0, 0, w, h);
+            res(c.toDataURL("image/jpeg", 0.85));
+          };
+          img.onerror = rej; img.src = r.result;
+        };
+        r.onerror = rej; r.readAsDataURL(file);
+      });
+    }
+
+    // Étape 1
+    (function () {
+      const drop = $("#idDrop"), input = drop.querySelector("input");
+      drop.addEventListener("click", () => input.click());
+      input.addEventListener("change", async () => {
+        const f = input.files[0]; if (!f) return;
+        state.idImage = await fileToDataURL(f, 1100);
+        drop.innerHTML = `<img src="${state.idImage}" class="max-h-40 mx-auto rounded-lg" alt="" />`;
+        $("#next1").disabled = false;
+      });
+      $("#next1").addEventListener("click", () => { state.idType = $("#idType").value; state.idNumber = $("#idNumber").value.trim(); showStep(2); });
+    })();
+
+    // Étape 2 : caméra
+    (function () {
+      const secure = window.isSecureContext || location.hostname === "localhost" || location.hostname === "127.0.0.1";
+      const canCam = secure && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+      if (!canCam) { $("#camWrap").classList.add("hidden"); $("#camBtns").classList.add("hidden"); $("#camNoSecure").classList.remove("hidden"); }
+      const video = $("#video"), shot = $("#shot"), msg = $("#camMsg");
+      async function detectFace(dataUrl) {
+        if (!("FaceDetector" in window)) return null;
+        try { const img = new Image(); await new Promise((r, j) => { img.onload = r; img.onerror = j; img.src = dataUrl; });
+          const fd = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 1 }); const f = await fd.detect(img); return f && f.length > 0; }
+        catch (e) { return null; }
+      }
+      async function setSelfie(url) {
+        state.selfie = url; state.faceDetected = await detectFace(url);
+        msg.textContent = state.faceDetected === true ? "✅ Visage détecté" : state.faceDetected === false ? "⚠️ Aucun visage détecté — recadrez." : "Photo prise ✓";
+        $("#next2").disabled = !url || state.faceDetected === false;
+      }
+      $("#camStart") && $("#camStart").addEventListener("click", async () => {
+        try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: 640, height: 640 }, audio: false });
+          video.srcObject = stream; await video.play(); video.classList.remove("hidden"); shot.classList.add("hidden");
+          $("#camStart").classList.add("hidden"); $("#capture").classList.remove("hidden"); }
+        catch (e) { msg.textContent = "Impossible d'accéder à la caméra."; }
+      });
+      $("#capture") && $("#capture").addEventListener("click", () => {
+        const w = video.videoWidth || 480, h = video.videoHeight || 480, side = Math.min(w, h);
+        const c = document.createElement("canvas"); c.width = 480; c.height = 480; const g = c.getContext("2d");
+        g.translate(480, 0); g.scale(-1, 1); g.drawImage(video, (w - side) / 2, (h - side) / 2, side, side, 0, 0, 480, 480);
+        const url = c.toDataURL("image/jpeg", 0.85);
+        shot.src = url; shot.classList.remove("hidden"); video.classList.add("hidden"); stream && stream.getTracks().forEach((t) => t.stop());
+        $("#capture").classList.add("hidden"); $("#retake").classList.remove("hidden"); setSelfie(url);
+      });
+      $("#retake") && $("#retake").addEventListener("click", async () => {
+        state.selfie = ""; $("#next2").disabled = true; msg.textContent = "";
+        try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+          video.srcObject = stream; await video.play(); video.classList.remove("hidden"); shot.classList.add("hidden");
+          $("#retake").classList.add("hidden"); $("#capture").classList.remove("hidden"); } catch (e) {}
+      });
+      const sf = $("#selfieFile"); if (sf) sf.addEventListener("change", async () => { const f = sf.files[0]; if (f) setSelfie(await fileToDataURL(f, 640)); });
+      $("#next2").addEventListener("click", () => { $("#revId").src = state.idImage; $("#revSelfie").src = state.selfie; showStep(3); });
+    })();
+
+    document.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", () => showStep(Number(b.getAttribute("data-back")))));
+
+    // Étape 3 : envoi
+    $("#consent").addEventListener("change", (e) => { $("#submit").disabled = !e.target.checked; });
+    $("#submit").addEventListener("click", async () => {
+      $("#submit").disabled = true; $("#result").innerHTML = `<p class="text-sm text-slate-500">Analyse en cours…</p>`;
+      try {
+        const r = await fetch("/api/kyc/submit", { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ vendorId: ctx.vendorId, vendorName: ctx.vendorName, storeId: ctx.storeId, idType: state.idType, idNumber: state.idNumber, idImage: state.idImage, selfie: state.selfie, faceDetected: state.faceDetected === true, consent: true }) });
+        const j = await r.json();
+        if (!j.ok) { $("#result").innerHTML = `<div class="rounded-lg bg-red-100 text-red-700 p-3 text-sm">${j.error || "Échec."}</div>`; $("#submit").disabled = false; return; }
+        let bio = "";
+        if (j.faceAvailable) bio = j.match ? `<div class="mt-2 pill bg-accent-soft text-accent">✅ Visages concordants (score ${j.score})</div>` : `<div class="mt-2 pill bg-red-100 text-red-700">⚠️ Visages non concordants (score ${j.score}) — un admin vérifiera</div>`;
+        $("#result").innerHTML = `<div class="rounded-lg bg-accent-soft text-accent p-3 text-sm">✅ Vérification envoyée ! Un administrateur la validera.${bio}</div>
+          <a href="/" class="btn btn-ghost mt-3">Retour à la marketplace</a>`;
+      } catch (e) { $("#result").innerHTML = `<div class="rounded-lg bg-red-100 text-red-700 p-3 text-sm">Erreur réseau.</div>`; $("#submit").disabled = false; }
+    });
+  </script>
+</body>
+</html>
