@@ -114,9 +114,29 @@ window.MP = window.MP || {};
         discount: o.discount || 0,
         note: "Réf. " + (o.number || o.id) + (o.storeName ? " — " + o.storeName : ""),
         payment: "cod",
+        paymentMethod: o.paymentMethod || "cod",
       };
       try { await post("/orders", body); } catch (e) {}
     }
+  }
+
+  /* ------------------------------- Paiement --------------------------------------- */
+  async function paymentMethods() {
+    if (!API.enabled) return [];
+    try { const j = await get("/payments/methods"); return (j && j.methods) || []; } catch (e) { return []; }
+  }
+  async function initiatePayment(orderId, method, phone) {
+    if (!API.enabled) return null;
+    try { const r = await post("/payments/initiate", { orderId, method, phone }); return r && r.json; } catch (e) { return null; }
+  }
+  async function confirmPayment(paymentId) {
+    if (!API.enabled) return null;
+    try { const r = await post("/payments/" + encodeURIComponent(paymentId) + "/confirm", {}); return r && r.json; } catch (e) { return null; }
+  }
+  // Commandes du client en attente de paiement (mobile money / carte).
+  async function pendingPayments() {
+    if (!API.enabled || !token()) return [];
+    try { const j = await get("/orders"); return ((j && j.items) || []).filter((o) => o.paymentStatus === "pending"); } catch (e) { return []; }
   }
 
   /* -------------------------- Boutique (write-through) ---------------------------- */
@@ -199,6 +219,11 @@ window.MP = window.MP || {};
   API.syncReview = syncReview;
   API.syncStore = syncStore;
   API.salesUrl = function () { return "/mes-ventes"; };
+  API.payUrl = function () { return "/paiement"; };
+  API.paymentMethods = paymentMethods;
+  API.initiatePayment = initiatePayment;
+  API.confirmPayment = confirmPayment;
+  API.pendingPayments = pendingPayments;
   API.syncCollection = syncCollection;
   API.pullCollections = pullCollections;
   API.reviewsFor = reviewsFor;

@@ -33,6 +33,7 @@
           <button data-t="orders" class="btn btn-brand !py-1.5 !px-4">Commandes</button>
           <button data-t="catalog" class="btn btn-ghost !py-1.5 !px-4">Catalogue</button>
           <button data-t="stores" class="btn btn-ghost !py-1.5 !px-4">Boutiques</button>
+          <button data-t="payments" class="btn btn-ghost !py-1.5 !px-4">Paiements</button>
           <button data-t="reviews" class="btn btn-ghost !py-1.5 !px-4">Avis</button>
           <button data-t="data" class="btn btn-ghost !py-1.5 !px-4">Données</button>
         </div>
@@ -67,6 +68,12 @@
           </div>
         </div>
         <div id="catalog" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+      </section>
+
+      <!-- Paiements -->
+      <section id="pane-payments" class="hidden">
+        <div id="payments" class="space-y-2"></div>
+        <p id="payEmpty" class="text-center text-slate-400 py-10 hidden">Aucun paiement enregistré.</p>
       </section>
 
       <!-- Boutiques -->
@@ -111,7 +118,21 @@
       if (r.status === 401) { $("#authErr").classList.remove("hidden"); return; }
       $("#auth").classList.add("hidden"); $("#app").classList.remove("hidden"); loadAll();
     }
-    async function loadAll() { await Promise.all([loadStats(), loadOrders(), loadCatalog(), loadReviews(), loadData(), loadStores()]); }
+    async function loadAll() { await Promise.all([loadStats(), loadOrders(), loadCatalog(), loadReviews(), loadData(), loadStores(), loadPayments()]); }
+    const PAY_METHOD = { cod: "💵 Livraison", orange: "🟠 Orange Money", mtn: "🟡 MTN MoMo", moov: "🔵 Moov Money", wave: "🌊 Wave", card: "💳 Carte" };
+    const PAY_ST = { pending: ["En attente", "bg-amber-100 text-amber-700"], paid: ["Payé", "bg-accent-soft text-accent"], failed: ["Échoué", "bg-red-100 text-red-700"], cod: ["Livraison", "bg-slate-200 text-slate-600"] };
+    async function loadPayments() {
+      const j = await (await fetch("/api/shop/admin/payments", { headers: H() })).json();
+      const items = j.items || [];
+      $("#payEmpty").classList.toggle("hidden", items.length > 0);
+      $("#payments").innerHTML = items.map((p) => {
+        const st = PAY_ST[p.status] || [p.status, "bg-slate-200 text-slate-600"];
+        return `<div class="card !py-3 flex items-center justify-between flex-wrap gap-2">
+          <div><div class="font-semibold">${PAY_METHOD[p.method] || p.method} <span class="pill ${st[1]}">${st[0]}</span></div>
+            <div class="text-xs text-slate-500">${p.reference || ""}${p.phone ? " · " + p.phone : ""} · ${new Date(p.createdAt).toLocaleString("fr-FR")}</div></div>
+          <div class="font-extrabold">${fcfa(p.amount)}</div></div>`;
+      }).join("");
+    }
     const ST_STORE = { pending: ["⏳ En attente", "bg-amber-100 text-amber-700"], approved: ["✅ Approuvée", "bg-accent-soft text-accent"], suspended: ["⛔ Suspendue", "bg-red-100 text-red-700"] };
     async function loadStores() {
       const j = await (await fetch("/api/shop/admin/stores", { headers: H() })).json();
@@ -242,6 +263,7 @@
       $("#pane-catalog").classList.toggle("hidden", t !== "catalog");
       $("#pane-reviews").classList.toggle("hidden", t !== "reviews");
       $("#pane-stores").classList.toggle("hidden", t !== "stores");
+      $("#pane-payments").classList.toggle("hidden", t !== "payments");
       $("#pane-data").classList.toggle("hidden", t !== "data");
       document.querySelectorAll("#tabs [data-t]").forEach((b) => b.className = "btn btn-ghost !py-1.5 !px-4");
       document.querySelector(`#tabs [data-t="${t}"]`).className = "btn btn-brand !py-1.5 !px-4";

@@ -6,6 +6,7 @@
 "use strict";
 
 const express = require("express");
+const payments = require("./payments");
 
 module.exports = function createShopRouter(shopdb, adminToken) {
   const router = express.Router();
@@ -102,6 +103,46 @@ module.exports = function createShopRouter(shopdb, adminToken) {
     res.json({ ok: true, items: shopdb.listReviews({ targetType, targetId, status: "visible" }), rating: targetId ? shopdb.ratingFor(targetType || "product", targetId) : null });
   });
 
+  /* ------------------------------ Paiements ---------------------------- */
+  // Moyens de paiement proposés (COD toujours ; mobile money & carte selon config).
+  router.get("/payments/methods", (req, res) => res.json({ ok: true, methods: payments.methods(), live: payments.LIVE }));
+
+  // Initie un paiement pour une commande (client connecté propriétaire de la commande).
+  router.post("/payments/initiate", maybeAuth, (req, res) => {
+    const b = req.body || {};
+    const order = shopdb.getOrder(b.orderId);
+    if (!order) return res.status(404).json({ ok: false, error: "Commande introuvable." });
+    if (order.userId && order.userId !== req.userId) return res.status(403).json({ ok: false, error: "Accès refusé." });
+    if (order.paymentStatus === "paid") return res.status(409).json({ ok: false, error: "Commande déjà réglée." });
+    const r = payments.initiate(b.method, { amount: order.total, phone: b.phone || order.phone });
+    if (r.error) return res.status(400).json({ ok: false, error: r.error });
+    const pay = shopdb.createPayment({ orderId: order.id, method: b.method, amount: order.total, phone: b.phone || order.phone, reference: r.reference, instructions: r.instructions, status: r.status });
+    res.json({ ok: true, payment: pay, live: r.live });
+  });
+
+  // Confirmation (rappel opérateur en production ; action « J'ai payé » en démo).
+  router.post("/payments/:id/confirm", (req, res) => {
+    const p = shopdb.getPayment(req.params.id);
+    if (!p) return res.status(404).json({ ok: false, error: "Paiement introuvable." });
+    const v = payments.verify(p.method, p.reference);
+    const updated = shopdb.setPaymentStatus(p.id, v.status);
+    res.json({ ok: true, payment: updated });
+  });
+
+  // Webhook opérateur/agrégateur (production). Idempotent, par référence.
+  router.post("/payments/webhook/:provider", (req, res) => {
+    const ref = (req.body || {}).reference, status = (req.body || {}).status || "paid";
+    const p = shopdb.listPayments({}).find((x) => x.reference === ref);
+    if (p) shopdb.setPaymentStatus(p.id, status === "success" || status === "paid" ? "paid" : "failed");
+    res.json({ ok: true });
+  });
+
+  router.get("/payments/:id", (req, res) => {
+    const p = shopdb.getPayment(req.params.id);
+    if (!p) return res.status(404).json({ ok: false, error: "Paiement introuvable." });
+    res.json({ ok: true, payment: p });
+  });
+
   /* ------------------------------ Boutiques ---------------------------- */
   router.get("/stores", (req, res) => res.json({ ok: true, items: shopdb.listStores({ status: "approved" }) }));
   router.get("/stores/:id", (req, res) => {
@@ -145,6 +186,7 @@ module.exports = function createShopRouter(shopdb, adminToken) {
     if (!s) return res.status(400).json({ ok: false, error: "Statut invalide ou boutique introuvable." });
     res.json({ ok: true, store: s });
   });
+  router.get("/admin/payments", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.listPayments({ status: req.query.status }) }));
   router.get("/admin/data", requireAdmin, (req, res) => res.json({ ok: true, collections: shopdb.listCollections() }));
   router.get("/admin/data/:collection", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.listDocs(req.params.collection) }));
   router.get("/admin/reviews", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.listReviews({ status: req.query.status }) }));

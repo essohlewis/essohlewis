@@ -1164,3 +1164,11 @@ body.seller-mode #chatbotRoot { display: none; }
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
   }
 }
+
+/* Sélecteur de mode de paiement (checkout) */
+.pay-methods { display: grid; gap: 8px; }
+.pay-opt { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: var(--r-sm); cursor: pointer; background: var(--surface-2); font-size: 14px; transition: border-color .15s, background .15s; }
+.pay-opt:hover { border-color: var(--brand); }
+.pay-opt.selected { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 8%, transparent); }
+.pay-opt input { accent-color: var(--brand); }
+.pay-sim { font-style: normal; font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 99px; padding: 1px 6px; }

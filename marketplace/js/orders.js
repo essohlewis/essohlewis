@@ -126,6 +126,7 @@ window.MP = window.MP || {};
         status: "en_attente",
         paid: false,                   // encaissement (COD)
         payment: "livraison",          // paiement à la livraison
+        paymentMethod: opts.paymentMethod || "cod", // cod | orange | mtn | moov | wave | card
         slot,                          // créneau de livraison souhaité
         cancelReason: "",              // motif d'annulation
         delivery: {

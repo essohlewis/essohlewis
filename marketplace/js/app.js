@@ -2020,8 +2020,8 @@
               <div id="couponMsg" style="font-size:12px"></div>
             </div>
             <div class="summary-row total"><span>À régler à la livraison</span><span id="grandTotal">${UI.fcfa(itemsTotal)}</span></div>
-            <div class="cod-note"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 1 3 5v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V5z"/></svg>
-              <span>Paiement <strong>en espèces</strong> uniquement, à la réception.</span></div>
+            <div class="field" style="margin-top:12px"><label style="font-size:13px">Mode de paiement</label>
+              <div id="payMethods" class="pay-methods"></div></div>
             <button class="btn btn-primary btn-block btn-lg mt-16" id="placeOrder">Valider la commande</button>
           </div>
         </div>
@@ -2106,6 +2106,23 @@
       );
     });
 
+    // Modes de paiement : mobile money / carte via le backend, sinon espèces à la livraison.
+    let selectedPay = "cod";
+    (function initPay() {
+      const box = document.getElementById("payMethods");
+      const codHtml = `<label class="pay-opt selected"><input type="radio" name="pay" value="cod" checked /> <span>💵 Paiement à la livraison</span></label>`;
+      if (!(window.MP.Api && window.MP.Api.enabled)) { box.innerHTML = codHtml; return; }
+      window.MP.Api.paymentMethods().then((methods) => {
+        if (!methods.length) { box.innerHTML = codHtml; return; }
+        box.innerHTML = methods.map((m, i) => `<label class="pay-opt ${i === 0 ? "selected" : ""}"><input type="radio" name="pay" value="${m.id}" ${i === 0 ? "checked" : ""} /> <span>${m.icon || ""} ${UI.esc(m.label)}${m.kind !== "cod" && !m.live ? ` <em class="pay-sim">simulateur</em>` : ""}</span></label>`).join("");
+        box.querySelectorAll("input[name=pay]").forEach((r) => r.addEventListener("change", () => {
+          selectedPay = r.value;
+          box.querySelectorAll(".pay-opt").forEach((l) => l.classList.remove("selected"));
+          r.closest(".pay-opt").classList.add("selected");
+        }));
+      });
+    })();
+
     document.getElementById("placeOrder").addEventListener("click", () => {
       const delivery = {
         name: document.getElementById("dName").value,
@@ -2119,8 +2136,14 @@
       if (err) { UI.toast(err, "error"); return; }
       // Ne met à jour le profil que pour un utilisateur connecté (pas les invités).
       if (Auth.isLogged()) Auth.updateProfile({ phone: delivery.phone, commune: delivery.commune, address: delivery.address });
-      const res = Orders.checkout(delivery, { code: couponCode, slot: document.getElementById("dSlot").value });
+      const res = Orders.checkout(delivery, { code: couponCode, slot: document.getElementById("dSlot").value, paymentMethod: selectedPay });
       if (res.ok) {
+        // Paiement en ligne (mobile money / carte) : direction la page de règlement.
+        if (selectedPay !== "cod" && window.MP.Api && window.MP.Api.enabled) {
+          UI.toast("Commande créée — finalisez le paiement.", "success");
+          setTimeout(() => { window.location.href = window.MP.Api.payUrl(); }, 500);
+          return;
+        }
         Router.go("#/order/" + res.orders[0].id + "?multi=" + res.orders.length);
       } else UI.toast(res.error, "error");
     });

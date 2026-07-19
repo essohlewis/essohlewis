@@ -47,8 +47,14 @@ function init() {
       id TEXT PRIMARY KEY, userId TEXT, customerName TEXT, phone TEXT, address TEXT,
       city TEXT, itemsTotal INTEGER DEFAULT 0, deliveryFee INTEGER DEFAULT 0, discount INTEGER DEFAULT 0,
       total INTEGER, currency TEXT DEFAULT 'FCFA', payment TEXT DEFAULT 'cod',
+      paymentMethod TEXT DEFAULT 'cod', paymentStatus TEXT DEFAULT 'cod',
       status TEXT DEFAULT 'pending', note TEXT, createdAt INTEGER, updatedAt INTEGER
     );
+    CREATE TABLE IF NOT EXISTS payments (
+      id TEXT PRIMARY KEY, orderId TEXT, method TEXT, amount INTEGER, phone TEXT,
+      reference TEXT, instructions TEXT, status TEXT DEFAULT 'pending', createdAt INTEGER, updatedAt INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_pay_order ON payments(orderId);
     CREATE TABLE IF NOT EXISTS order_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT, orderId TEXT, productId TEXT,
       name TEXT, price INTEGER, qty INTEGER, variant TEXT, storeId TEXT, storeName TEXT
@@ -82,6 +88,9 @@ function init() {
   }
   for (const col of ["storeId TEXT", "storeName TEXT"]) {
     try { db.exec(`ALTER TABLE order_items ADD COLUMN ${col}`); } catch (e) { /* déjà présente */ }
+  }
+  for (const col of ["paymentMethod TEXT DEFAULT 'cod'", "paymentStatus TEXT DEFAULT 'cod'"]) {
+    try { db.exec(`ALTER TABLE orders ADD COLUMN ${col}`); } catch (e) { /* déjà présente */ }
   }
   return true;
 }
@@ -190,14 +199,16 @@ function createOrder(userId, payload) {
   const deliveryFee = Math.max(0, parseInt(payload.deliveryFee, 10) || 0);
   const discount = Math.max(0, parseInt(payload.discount, 10) || 0);
   const total = Math.max(0, itemsTotal - discount) + deliveryFee;
+  const paymentMethod = payload.paymentMethod || "cod";
   const o = {
     id: uid("cmd"), userId: userId || null,
     customerName: payload.customerName || "", phone: payload.phone || "", address: payload.address || "",
     city: payload.city || "", itemsTotal, deliveryFee, discount, total, currency: "FCFA", payment: payload.payment || "cod",
+    paymentMethod, paymentStatus: paymentMethod === "cod" ? "cod" : "pending",
     status: "pending", note: payload.note || "", createdAt: now(), updatedAt: now(),
   };
-  const insertOrder = db.prepare(`INSERT INTO orders (id,userId,customerName,phone,address,city,itemsTotal,deliveryFee,discount,total,currency,payment,status,note,createdAt,updatedAt)
-    VALUES (@id,@userId,@customerName,@phone,@address,@city,@itemsTotal,@deliveryFee,@discount,@total,@currency,@payment,@status,@note,@createdAt,@updatedAt)`);
+  const insertOrder = db.prepare(`INSERT INTO orders (id,userId,customerName,phone,address,city,itemsTotal,deliveryFee,discount,total,currency,payment,paymentMethod,paymentStatus,status,note,createdAt,updatedAt)
+    VALUES (@id,@userId,@customerName,@phone,@address,@city,@itemsTotal,@deliveryFee,@discount,@total,@currency,@payment,@paymentMethod,@paymentStatus,@status,@note,@createdAt,@updatedAt)`);
   const insertItem = db.prepare("INSERT INTO order_items (orderId,productId,name,price,qty,variant,storeId,storeName) VALUES (?,?,?,?,?,?,?,?)");
   const decStock = db.prepare("UPDATE products SET stock = MAX(0, stock - ?) WHERE id=? AND stock > 0");
   // node:sqlite n'a pas de helper transaction() → BEGIN/COMMIT manuels.
@@ -241,6 +252,7 @@ function stats() {
     reviews: db.prepare("SELECT COUNT(*) c FROM reviews").get().c,
     documents: db.prepare("SELECT COUNT(*) c FROM documents").get().c,
     stores: db.prepare("SELECT COUNT(*) c FROM stores").get().c,
+    paidOnline: db.prepare("SELECT COALESCE(SUM(amount),0) s FROM payments WHERE status='paid'").get().s,
   };
 }
 
@@ -275,6 +287,41 @@ function setReviewStatus(id, status) {
   if (!["visible", "hidden"].includes(status)) return null;
   db.prepare("UPDATE reviews SET status=? WHERE id=?").run(status, id);
   return db.prepare("SELECT * FROM reviews WHERE id=?").get(id) || null;
+}
+
+/* ------------------------------ Paiements -------------------------------- */
+function createPayment(p) {
+  const row = {
+    id: uid("pay"), orderId: p.orderId || null, method: p.method || "", amount: Math.max(0, parseInt(p.amount, 10) || 0),
+    phone: p.phone || "", reference: p.reference || "", instructions: p.instructions || "",
+    status: p.status || "pending", createdAt: now(), updatedAt: now(),
+  };
+  db.prepare(`INSERT INTO payments (id,orderId,method,amount,phone,reference,instructions,status,createdAt,updatedAt)
+    VALUES (@id,@orderId,@method,@amount,@phone,@reference,@instructions,@status,@createdAt,@updatedAt)`).run(row);
+  if (row.orderId) setOrderPayment(row.orderId, row.method, row.status);
+  return row;
+}
+function getPayment(id) { return db.prepare("SELECT * FROM payments WHERE id=?").get(id) || null; }
+function paymentsForOrder(orderId) { return db.prepare("SELECT * FROM payments WHERE orderId=? ORDER BY createdAt DESC").all(orderId); }
+function listPayments({ status } = {}) {
+  let sql = "SELECT * FROM payments", args = {};
+  if (status && status !== "all") { sql += " WHERE status=@status"; args.status = status; }
+  return db.prepare(sql + " ORDER BY createdAt DESC LIMIT 500").all(args);
+}
+function setPaymentStatus(id, status) {
+  const p = getPayment(id); if (!p) return null;
+  db.prepare("UPDATE payments SET status=?,updatedAt=? WHERE id=?").run(status, now(), id);
+  if (p.orderId) setOrderPayment(p.orderId, p.method, status);
+  return getPayment(id);
+}
+// Répercute le statut de paiement sur la commande (payé → confirme la commande).
+function setOrderPayment(orderId, method, paymentStatus) {
+  const o = getOrder(orderId); if (!o) return;
+  const patch = { paymentMethod: method || o.paymentMethod, paymentStatus, updatedAt: now() };
+  // Un paiement encaissé confirme automatiquement la commande encore en attente.
+  if (paymentStatus === "paid" && o.status === "pending") patch.status = "confirmed";
+  db.prepare("UPDATE orders SET paymentMethod=?,paymentStatus=?,status=?,updatedAt=? WHERE id=?")
+    .run(patch.paymentMethod, patch.paymentStatus, patch.status || o.status, patch.updatedAt, orderId);
 }
 
 /* ------------------------------ Boutiques -------------------------------- */
@@ -358,4 +405,5 @@ module.exports = {
   createOrder, getOrder, listOrders, setOrderStatus, stats,
   addReview, listReviews, ratingFor, setReviewStatus,
   upsertStore, getStoreById, getStoreByOwner, listStores, setStoreStatus, vendorSales,
+  createPayment, getPayment, paymentsForOrder, listPayments, setPaymentStatus,
 };

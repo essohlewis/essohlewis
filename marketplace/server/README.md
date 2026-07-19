@@ -85,9 +85,22 @@ la vérification retombe sur le mode 100 % local (localStorage).
 | GET | `/admin/stats` | admin | Comptes, produits, commandes, chiffre d'affaires |
 
 **Tables SQLite** : `users`, `products`, `carts`, `orders`, `order_items`,
-`sessions`. Mots de passe hachés (scrypt + sel). Le **total de commande est
-toujours recalculé côté serveur** à partir du catalogue (sécurité anti-fraude) ;
-le stock est décrémenté et le panier vidé dans une transaction.
+`sessions`, `reviews`, `stores`, `payments`, `documents`. Mots de passe hachés
+(scrypt + sel). Le **total de commande est toujours recalculé côté serveur** à
+partir du catalogue (sécurité anti-fraude) ; le stock est décrémenté et le
+panier vidé dans une transaction.
+
+### Paiement (mobile money / carte) — `payments.js`
+Architecture **enfichable** : chaque moyen (Orange Money, MTN MoMo, Moov Money,
+Wave, carte) est un adaptateur. Sans clés d'API, tout bascule sur un
+**simulateur** qui reproduit le déroulé réel (initiation → référence +
+instructions USSD/appli → confirmation par « J'ai payé » / webhook). Endpoints :
+`GET /payments/methods`, `POST /payments/initiate`, `POST /payments/:id/confirm`,
+`POST /payments/webhook/:provider`, `GET /payments/:id`, `GET /admin/payments`.
+Un paiement encaissé **confirme automatiquement** la commande. Page vendeur
+client : `/paiement`. **Production** : renseignez `CINETPAY_API_KEY` (ou
+`PAYSTACK_SECRET_KEY`) et implémentez l'appel réel dans `payments.initiate/verify`
+— le reste de l'application ne change pas.
 
 ## Résultats de référence (validés)
 - Reconnaissance faciale : même personne → `match:true`, score ~87 ;

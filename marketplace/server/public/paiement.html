@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Paiement — Marché CI</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="/tailwind.css" />
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-2xl mx-auto px-4 py-3 flex items-center gap-2">
+      <a href="/" class="flex items-center gap-2"><span class="text-2xl">🛒</span><span class="font-extrabold text-lg">Marché<span class="text-brand">CI</span></span></a>
+      <span class="ml-auto pill bg-accent-soft text-accent">Paiement sécurisé</span>
+    </div>
+  </header>
+
+  <main class="max-w-2xl mx-auto px-4 py-6">
+    <h1 class="text-2xl font-extrabold mb-1">💳 Régler ma commande</h1>
+    <p id="simnote" class="text-xs text-slate-400 mb-4 hidden">Mode démonstration : aucun débit réel. Branchez un agrégateur (CinetPay, Paystack…) pour la production.</p>
+
+    <div id="noauth" class="card hidden text-center">
+      <p class="text-slate-600">Connectez-vous sur la marketplace pour régler vos commandes.</p>
+      <a href="/" class="btn btn-brand mt-3">Aller à la marketplace</a>
+    </div>
+
+    <div id="empty" class="card hidden text-center">
+      <p class="text-slate-600">✅ Aucune commande en attente de paiement.</p>
+      <a href="/mes-commandes" class="btn btn-ghost mt-3">Voir mes commandes</a>
+    </div>
+
+    <div id="orders" class="space-y-4"></div>
+    <a href="/" class="btn btn-ghost mt-6">← Retour à la marketplace</a>
+  </main>
+
+  <script>
+    const TOKEN_KEY = "marchesci_shopToken";
+    const $ = (s) => document.querySelector(s);
+    const fcfa = (n) => (n || 0).toLocaleString("fr-FR") + " FCFA";
+    const token = () => { try { return localStorage.getItem(TOKEN_KEY) || ""; } catch (e) { return ""; } };
+    const H = () => ({ "Content-Type": "application/json", Authorization: "Bearer " + token() });
+    let METHODS = [];
+
+    async function boot() {
+      if (!token()) { $("#noauth").classList.remove("hidden"); return; }
+      const mj = await (await fetch("/api/shop/payments/methods")).json();
+      METHODS = (mj.methods || []).filter((m) => m.kind !== "cod");
+      if (!mj.live) $("#simnote").classList.remove("hidden");
+      await load(6); // laisse le temps à la commande d'arriver en base (après le checkout)
+    }
+
+    async function load(retries) {
+      const r = await fetch("/api/shop/orders", { headers: { Authorization: "Bearer " + token() } });
+      if (r.status === 401) { $("#noauth").classList.remove("hidden"); return; }
+      const j = await r.json();
+      const pend = (j.items || []).filter((o) => o.paymentStatus === "pending");
+      if (!pend.length && retries > 0) { setTimeout(() => load(retries - 1), 1200); return; }
+      $("#empty").classList.toggle("hidden", pend.length > 0);
+      $("#orders").innerHTML = pend.map(orderCard).join("");
+      pend.forEach(wire);
+    }
+
+    function orderCard(o) {
+      const ref = (o.note && o.note.replace(/^Réf\.\s*/, "")) || o.id;
+      const opts = METHODS.map((m) => `<button class="pill border border-slate-300 hover:border-brand !text-sm !py-1.5 !px-3" data-m="${m.id}" data-o="${o.id}">${m.icon || ""} ${m.label}</button>`).join("");
+      return `<div class="card" id="card-${o.id}">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div><div class="font-bold">${ref}</div><div class="text-xs text-slate-500">${(o.items || []).length} article(s)${o.city ? " · " + o.city : ""}</div></div>
+          <div class="text-xl font-extrabold">${fcfa(o.total)}</div>
+        </div>
+        <div class="mt-3"><div class="text-sm font-semibold mb-2">Choisissez votre moyen de paiement</div>
+          <div class="flex flex-wrap gap-2" data-methods="${o.id}">${opts}</div></div>
+        <div class="mt-3 hidden" data-phonebox="${o.id}">
+          <label class="text-sm font-semibold">Numéro mobile money</label>
+          <input data-phone="${o.id}" value="${o.phone || ""}" placeholder="07 00 00 00 00" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+          <button class="btn btn-brand mt-2 w-full" data-pay="${o.id}">Payer ${fcfa(o.total)}</button>
+        </div>
+        <div class="mt-3 hidden" data-result="${o.id}"></div>
+      </div>`;
+    }
+
+    function wire(o) {
+      let chosen = null;
+      const methodsBox = document.querySelector(`[data-methods="${o.id}"]`);
+      const phoneBox = document.querySelector(`[data-phonebox="${o.id}"]`);
+      methodsBox.querySelectorAll("[data-m]").forEach((b) => b.addEventListener("click", () => {
+        chosen = b.dataset.m;
+        methodsBox.querySelectorAll("[data-m]").forEach((x) => x.classList.remove("bg-accent-soft", "text-accent", "border-accent"));
+        b.classList.add("bg-accent-soft", "text-accent", "border-accent");
+        const needPhone = (METHODS.find((m) => m.id === chosen) || {}).kind === "mobile";
+        phoneBox.classList.remove("hidden");
+        phoneBox.querySelector("[data-phone]").parentElement.querySelector("label").classList.toggle("hidden", !needPhone);
+        phoneBox.querySelector("[data-phone]").classList.toggle("hidden", !needPhone);
+      }));
+      document.querySelector(`[data-pay="${o.id}"]`).addEventListener("click", async () => {
+        if (!chosen) return;
+        const phone = phoneBox.querySelector("[data-phone]").value;
+        const res = $("#" + "card-" + o.id).querySelector(`[data-result="${o.id}"]`);
+        res.classList.remove("hidden"); res.innerHTML = `<p class="text-sm text-slate-500">Initialisation du paiement…</p>`;
+        const init = await (await fetch("/api/shop/payments/initiate", { method: "POST", headers: H(), body: JSON.stringify({ orderId: o.id, method: chosen, phone }) })).json();
+        if (!init.ok) { res.innerHTML = `<div class="rounded-lg bg-red-100 text-red-700 p-3 text-sm">${init.error || "Échec."}</div>`; return; }
+        const p = init.payment;
+        res.innerHTML = `<div class="rounded-lg bg-amber-50 border border-amber-200 text-amber-800 p-3 text-sm">📲 ${p.instructions}</div>
+          <button class="btn btn-accent mt-2 w-full" id="done-${p.id}">✅ J'ai effectué le paiement</button>
+          <p class="text-xs text-slate-400 mt-1">${init.live ? "En attente de confirmation de l'opérateur…" : "Démo : cliquez pour simuler la confirmation."}</p>`;
+        document.getElementById("done-" + p.id).addEventListener("click", async () => {
+          const c = await (await fetch("/api/shop/payments/" + p.id + "/confirm", { method: "POST", headers: H() })).json();
+          if (c.ok && c.payment.status === "paid") {
+            res.innerHTML = `<div class="rounded-lg bg-accent-soft text-accent p-3 text-sm font-semibold">✅ Paiement confirmé — merci ! Votre commande est en préparation.</div>`;
+            setTimeout(() => load(0), 1200);
+          } else { res.innerHTML = `<div class="rounded-lg bg-red-100 text-red-700 p-3 text-sm">Paiement non confirmé, réessayez.</div>`; }
+        });
+      });
+    }
+    boot();
+  </script>
+</body>
+</html>
