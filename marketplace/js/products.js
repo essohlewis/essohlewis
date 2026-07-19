@@ -288,6 +288,8 @@ window.MP = window.MP || {};
       createdAt: Date.now(),
     };
     DB.insert(DB.KEYS.reviews, review);
+    // Écriture en base côté serveur (si backend présent) — sinon sans effet.
+    if (window.MP.Api) window.MP.Api.syncReview(review);
     return { ok: true, review };
   }
 

@@ -89,7 +89,26 @@ module.exports = function createShopRouter(shopdb, adminToken) {
     res.json({ ok: true, order: o });
   });
 
+  /* -------------------------------- Avis ------------------------------- */
+  router.post("/reviews", auth, (req, res) => {
+    const b = req.body || {};
+    const user = shopdb.getUser(req.userId);
+    const r = shopdb.addReview(req.userId, { id: b.id, targetType: b.targetType, targetId: b.targetId, rating: b.rating, comment: b.comment, verified: b.verified, authorName: (user && user.name) || b.authorName, createdAt: b.createdAt });
+    if (r.error) return res.status(400).json({ ok: false, error: r.error });
+    res.json({ ok: true, review: r.review });
+  });
+  router.get("/reviews", (req, res) => {
+    const { targetType, targetId } = req.query;
+    res.json({ ok: true, items: shopdb.listReviews({ targetType, targetId, status: "visible" }), rating: targetId ? shopdb.ratingFor(targetType || "product", targetId) : null });
+  });
+
   /* ------------------------------- Admin ------------------------------- */
+  router.get("/admin/reviews", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.listReviews({ status: req.query.status }) }));
+  router.post("/admin/reviews/:id/status", requireAdmin, (req, res) => {
+    const r = shopdb.setReviewStatus(req.params.id, (req.body || {}).status);
+    if (!r) return res.status(400).json({ ok: false, error: "Statut invalide ou avis introuvable." });
+    res.json({ ok: true, review: r });
+  });
   router.get("/admin/orders", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.listOrders({ status: req.query.status }) }));
   router.post("/admin/orders/:id/status", requireAdmin, (req, res) => {
     const o = shopdb.setOrderStatus(req.params.id, (req.body || {}).status);

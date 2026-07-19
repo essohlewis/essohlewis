@@ -56,6 +56,12 @@ function init() {
     CREATE TABLE IF NOT EXISTS sessions (
       token TEXT PRIMARY KEY, userId TEXT, createdAt INTEGER
     );
+    CREATE TABLE IF NOT EXISTS reviews (
+      id TEXT PRIMARY KEY, targetType TEXT, targetId TEXT, userId TEXT,
+      authorName TEXT, rating INTEGER, comment TEXT, verified INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'visible', createdAt INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_reviews_target ON reviews(targetType, targetId);
     CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(userId);
     CREATE INDEX IF NOT EXISTS idx_items_order ON order_items(orderId);
     CREATE INDEX IF NOT EXISTS idx_products_cat ON products(category);
@@ -218,7 +224,41 @@ function stats() {
     products: countProducts(),
     orders: db.prepare("SELECT COUNT(*) c FROM orders").get().c,
     revenue: db.prepare("SELECT COALESCE(SUM(total),0) s FROM orders WHERE status IN ('confirmed','shipped','delivered')").get().s,
+    reviews: db.prepare("SELECT COUNT(*) c FROM reviews").get().c,
   };
+}
+
+/* -------------------------------- Avis ----------------------------------- */
+function addReview(userId, p) {
+  const rating = Math.max(1, Math.min(5, parseInt(p.rating, 10) || 0));
+  if (!p.targetId || !rating) return { error: "Cible et note requises." };
+  const r = {
+    id: p.id || uid("rev"), targetType: p.targetType === "store" ? "store" : "product",
+    targetId: String(p.targetId), userId: userId || null, authorName: p.authorName || "Client",
+    rating, comment: String(p.comment || "").trim(), verified: p.verified ? 1 : 0,
+    status: "visible", createdAt: p.createdAt || now(),
+  };
+  db.prepare(`INSERT INTO reviews (id,targetType,targetId,userId,authorName,rating,comment,verified,status,createdAt)
+    VALUES (@id,@targetType,@targetId,@userId,@authorName,@rating,@comment,@verified,@status,@createdAt)
+    ON CONFLICT(id) DO UPDATE SET rating=@rating,comment=@comment`).run(r);
+  return { review: r };
+}
+function listReviews({ targetType, targetId, status } = {}) {
+  let sql = "SELECT * FROM reviews WHERE 1=1", args = {};
+  if (targetType) { sql += " AND targetType=@targetType"; args.targetType = targetType; }
+  if (targetId) { sql += " AND targetId=@targetId"; args.targetId = String(targetId); }
+  if (status && status !== "all") { sql += " AND status=@status"; args.status = status; }
+  sql += " ORDER BY createdAt DESC LIMIT 500";
+  return db.prepare(sql).all(args);
+}
+function ratingFor(targetType, targetId) {
+  const r = db.prepare("SELECT COUNT(*) c, COALESCE(AVG(rating),0) a FROM reviews WHERE targetType=? AND targetId=? AND status='visible'").get(targetType, String(targetId));
+  return { count: r.c, average: Math.round(r.a * 10) / 10 };
+}
+function setReviewStatus(id, status) {
+  if (!["visible", "hidden"].includes(status)) return null;
+  db.prepare("UPDATE reviews SET status=? WHERE id=?").run(status, id);
+  return db.prepare("SELECT * FROM reviews WHERE id=?").get(id) || null;
 }
 
 module.exports = {
@@ -228,4 +268,5 @@ module.exports = {
   upsertProduct, listProducts, getProduct, countProducts,
   getCart, setCart,
   createOrder, getOrder, listOrders, setOrderStatus, stats,
+  addReview, listReviews, ratingFor, setReviewStatus,
 };

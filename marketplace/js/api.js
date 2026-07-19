@@ -115,7 +115,25 @@ window.MP = window.MP || {};
     }
   }
 
+  /* ---------------------------- Avis (write-through) ------------------------------ */
+  async function syncReview(review) {
+    if (!API.enabled || !review) return;
+    try {
+      await authOp;               // attend que l'inscription/connexion ait posé le jeton
+      if (!token()) return;       // avis réservé aux clients connectés
+      await post("/reviews", {
+        targetType: review.targetType, targetId: review.targetId, rating: review.rating,
+        comment: review.comment, verified: !!review.verified, authorName: review.userName,
+      });
+    } catch (e) {}
+  }
+
   /* --------------------------- Consultations (lecture) ---------------------------- */
+  async function reviewsFor(targetType, targetId) {
+    if (!API.enabled) return { items: [], rating: null };
+    const j = await get("/reviews?targetType=" + encodeURIComponent(targetType) + "&targetId=" + encodeURIComponent(targetId));
+    return { items: (j && j.items) || [], rating: (j && j.rating) || null };
+  }
   async function products(params) {
     if (!API.enabled) return [];
     const qs = new URLSearchParams(params || {}).toString();
@@ -133,6 +151,8 @@ window.MP = window.MP || {};
   API.syncLogin = syncLogin;
   API.logout = logout;
   API.syncOrders = syncOrders;
+  API.syncReview = syncReview;
+  API.reviewsFor = reviewsFor;
   API.products = products;      // fonction (le nombre est dans API.productCount)
   API.myOrders = myOrders;
   API.token = token;
