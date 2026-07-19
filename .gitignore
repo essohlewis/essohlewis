@@ -4,3 +4,7 @@ marche-ci.zip
 
 # Divers
 .DS_Store
+
+# Python
+__pycache__/
+*.pyc

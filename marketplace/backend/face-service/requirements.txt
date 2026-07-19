@@ -1,0 +1,8 @@
+# Microservice de reconnaissance faciale — dépendances (toutes sur PyPI).
+# Les modèles dlib sont embarqués dans face_recognition_models (aucun
+# téléchargement depuis un CDN externe requis).
+face_recognition
+face_recognition_models
+dlib
+Pillow
+numpy

@@ -6435,7 +6435,10 @@
     let items = [];
     try { items = await KYC.list("pending"); } catch (e) { el.innerHTML = `<div class="scam-warn" style="margin-top:12px">Backend injoignable pour la file KYC.</div>`; return; }
     if (!items.length) return;
-    const matchBadge = (it) => it.autoMatch ? `<span class="risk-pill trust-high">✅ Correspondance probable</span>` : `<span class="risk-pill risk-med">À vérifier manuellement</span>`;
+    const bio = KYC.faceMatch; // service biométrique réel branché ?
+    const matchBadge = (it) => it.autoMatch
+      ? `<span class="risk-pill trust-high">✅ ${bio ? "Visages concordants (biométrie)" : "Correspondance probable"}</span>`
+      : `<span class="risk-pill risk-med">${bio ? "Visages non concordants" : "À vérifier manuellement"}</span>`;
     el.innerHTML = `<div class="section-title">🪪 Vérifications d'identité (KYC) — backend (${items.length})</div>` + items.map((it) => `
       <div class="card card-pad mt-12 mod-card" data-krow="${it.id}">
         <div class="flex-between wrap" style="margin-bottom:8px"><div><strong>${UI.esc(it.vendorName || it.vendorId)}</strong>
@@ -6445,7 +6448,7 @@
           <figure><figcaption>Pièce d'identité</figcaption><img src="${it.idImageUrl}" alt="pièce" data-zoom="${it.idImageUrl}" /></figure>
           <figure><figcaption>Selfie (capture live)</figcaption><img src="${it.selfieUrl}" alt="selfie" data-zoom="${it.selfieUrl}" /></figure>
         </div>
-        <div class="text-muted" style="font-size:12px;margin:4px 0 8px">Qualité : ${it.quality}/100 · Similarité (indicative) : ${it.similarity}% · Visage détecté : ${it.faceDetected ? "oui" : "non"}</div>
+        <div class="text-muted" style="font-size:12px;margin:4px 0 8px">Qualité : ${it.quality}/100 · ${bio ? "Score biométrique" : "Similarité (indicative)"} : ${it.similarity}% · Visage détecté : ${it.faceDetected ? "oui" : "non"}</div>
         <div class="flex gap-8"><button class="btn btn-accent btn-sm" data-kbok="${it.id}" data-vid="${it.vendorId}">✔️ Valider</button>
           <button class="btn btn-danger btn-sm" data-kbno="${it.id}" data-vid="${it.vendorId}">Refuser</button></div>
       </div>`).join("");

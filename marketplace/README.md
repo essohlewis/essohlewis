@@ -297,7 +297,7 @@ La marketplace reste **100 % front** ; **seule la vérification d'identité vend
 - **Revue admin** : dans l'onglet Sécurité, la file KYC affiche **pièce et selfie côte à côte** avec les scores ; validation/refus (avec motif) via l'API.
 - **Éligibilité** : tant que l'identité n'est pas approuvée, le vendeur **ne peut pas publier** (réglable dans Paramètres).
 - **Démarrage** : depuis `marketplace/`, lancer `php -S localhost:8000` puis ouvrir `http://localhost:8000/index.html`. Le front détecte le backend (`ping`) ; s'il est absent (ex. `file://`), la vérification **retombe proprement** sur un mode local (localStorage).
-- **Reconnaissance faciale automatique** : la vraie biométrie (comparaison selfie ↔ pièce) n'est pas fiable en PHP pur → **point d'intégration** prévu (`KYC_FACE_MATCH_URL` vers un service externe) ; sinon la décision revient à l'admin, assisté par la mise en parallèle et les scores. Détails dans `backend/README.md`.
+- **Reconnaissance faciale automatique RÉELLE** : un microservice biométrique est fourni dans **`backend/face-service/`** (Python, `http.server` — sans framework) utilisant **dlib / ResNet** (embeddings 128-D, modèles PyPI, hors-ligne). Branché via `KYC_FACE_MATCH_URL`, il compare **automatiquement** le selfie au visage de la pièce et renvoie `{match, score}`. Validé : même personne → correspondance (score ~87), personnes différentes → rejet (score ~19), aucun visage → rejet. Adaptateurs **Face++** et **AWS Rekognition** également fournis (même contrat). Sans service branché, le PHP retombe sur une heuristique + décision admin. Détails : `backend/face-service/README.md`.
 - ⚠️ La **caméra** exige `http(s)`/`localhost` : bloquée en ouverture `file://` (repli « importer une photo » proposé).
 
 ---

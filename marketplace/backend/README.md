@@ -37,16 +37,25 @@ retombe sur un mode local (localStorage) — voir la note plus bas.
   et chiffrez/expirez les pièces d'identité.
 
 ## Reconnaissance faciale
-- Le backend calcule côté serveur (GD) un **score de qualité** et une
-  **similarité perceptuelle** (aide à la décision), et enregistre l'indicateur
-  « visage détecté » fourni par le navigateur.
-- La **vraie biométrie** (comparaison automatique selfie ↔ pièce) n'est pas
-  faisable de façon fiable en PHP pur. Un **point d'intégration** est prévu :
-  définissez `KYC_FACE_MATCH_URL` (variable d'environnement) vers un service
-  qui reçoit `{idImage, selfie}` en JSON et renvoie `{match:bool, score:0..100}`
-  (ex. un microservice Python, AWS Rekognition, Face++…). Sans lui, la
-  **décision finale revient à l'administrateur**, assisté par la mise en
-  parallèle pièce/selfie et les scores.
+Deux niveaux, selon que le microservice biométrique est branché ou non :
+
+1. **Sans service** (défaut) — le backend calcule en PHP (GD) un **score de
+   qualité** et une **similarité perceptuelle** (aide à la décision) et
+   enregistre l'indicateur « visage détecté » du navigateur ; la **décision
+   finale revient à l'administrateur** (pièce et selfie côte à côte dans l'admin).
+
+2. **Avec service biométrique RÉEL** (recommandé) — définissez
+   `KYC_FACE_MATCH_URL` vers le microservice fourni dans **`face-service/`** :
+   ```bash
+   # 1) lancer le service de reconnaissance faciale (local, dlib) :
+   cd face-service && pip install -r requirements.txt && python3 face_service.py
+   # 2) lancer le PHP avec le hook (depuis marketplace/) :
+   KYC_FACE_MATCH_URL="http://127.0.0.1:5000/" php -S localhost:8000
+   ```
+   Le PHP POST `{idImage, selfie}` au service, qui renvoie `{match, score}` :
+   la **correspondance des visages est alors calculée automatiquement** (embeddings
+   dlib/ResNet 128-D). `face-service/` propose aussi des adaptateurs **Face++**
+   et **AWS Rekognition** (même contrat). Voir `face-service/README.md`.
 
 ## Endpoints (`backend/api.php?action=…`)
 | Action | Méthode | Rôle | Description |
