@@ -17,7 +17,34 @@ window.MP = window.MP || {};
 
   function byCode(storeId, code) {
     const norm = String(code || "").trim().toUpperCase();
-    return all().find((c) => c.storeId === storeId && c.code.toUpperCase() === norm) || null;
+    // Coupon de la boutique, sinon coupon global marketplace ("*").
+    return all().find((c) => c.storeId === storeId && c.code.toUpperCase() === norm)
+      || all().find((c) => c.storeId === "*" && c.code.toUpperCase() === norm)
+      || null;
+  }
+
+  /** Coupons globaux (marketplace) — administration. */
+  function globalCoupons() { return all().filter((c) => c.storeId === "*").sort((a, b) => b.createdAt - a.createdAt); }
+
+  /** Crée un coupon global (admin) valable sur toutes les boutiques. */
+  function createGlobal(data) {
+    const user = window.MP.Auth.current();
+    if (!user || user.role !== "admin") return { ok: false, error: "Réservé à l'administrateur." };
+    const code = String(data.code || "").trim().toUpperCase().replace(/\s+/g, "");
+    if (!/^[A-Z0-9]{3,20}$/.test(code)) return { ok: false, error: "Code invalide (3–20 lettres/chiffres)." };
+    if (byCode("*", code)) return { ok: false, error: "Ce code existe déjà." };
+    const type = ["percent", "amount", "freeship"].includes(data.type) ? data.type : "percent";
+    if (type === "percent" && !(Number(data.value) > 0 && Number(data.value) <= 90)) return { ok: false, error: "Pourcentage invalide (1–90)." };
+    if (type === "amount" && !(Number(data.value) > 0)) return { ok: false, error: "Montant invalide." };
+    const coupon = {
+      id: DB.uid("cpn"), storeId: "*", code, type,
+      value: type === "freeship" ? 0 : Math.round(Number(data.value)),
+      minTotal: Math.max(0, Math.round(Number(data.minTotal) || 0)),
+      maxUses: Math.max(0, Math.round(Number(data.maxUses) || 0)),
+      uses: 0, until: data.until ? Number(data.until) : 0, active: true, global: true, createdAt: Date.now(),
+    };
+    DB.insert(K, coupon);
+    return { ok: true, coupon };
   }
 
   /** Crée un coupon pour la boutique du vendeur courant. */
@@ -84,5 +111,5 @@ window.MP = window.MP || {};
     if (c) DB.update(K, id, { uses: (c.uses || 0) + 1 });
   }
 
-  window.MP.Coupons = { all, byStore, byCode, create, update, remove, label, validate, redeem };
+  window.MP.Coupons = { all, byStore, byCode, create, update, remove, label, validate, redeem, globalCoupons, createGlobal };
 })();

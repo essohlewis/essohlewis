@@ -204,13 +204,17 @@ L'espace vendeur est un **véritable back-office distinct de l'espace client** :
 - **Sauvegarde / restauration** complète des données (JSON).
 
 ### Admin — console d'administration (à onglets)
-Console complète accessible via `#/admin` (compte admin), organisée en 6 onglets :
-- **Vue d'ensemble** : indicateurs clés (boutiques, articles, utilisateurs, volume commandé), **croissance 7 jours**, file de modération, **répartition par catégorie** et **top boutiques par CA**.
-- **Modération** : file centralisée des **articles signalés**, **avis signalés** et **litiges commandes** — retirer le contenu, supprimer un avis, marquer un litige résolu, ou ignorer.
-- **Utilisateurs** : recherche, **changement de rôle** (client/vendeur/admin), **suspension/réactivation** (un compte suspendu ne peut plus se connecter), suppression — avec garde-fous sur son propre compte.
-- **Boutiques** : **badge « Vérifiée »**, **suspension/réactivation** (masque la boutique et bloque les commandes), suppression.
-- **Commandes** : vue globale de toutes les commandes avec repérage des **litiges**.
-- **Données** : export/restauration d'une **sauvegarde JSON complète** et réinitialisation des données de démonstration.
+Console complète accessible via `#/admin` (compte admin), organisée en **10 onglets** :
+- **Vue d'ensemble (analytique)** : **filtre de période** (7j / 30j / tout), **courbe temporelle du volume commandé**, **donut des statuts**, panier moyen, croissance, **top articles vendus**, **top communes**, **top boutiques** + **rapport imprimable**.
+- **Modération** : file centralisée — **articles**, **boutiques** et **questions** signalés, **avis signalés**, **litiges commandes** — retirer/supprimer/suspendre, marquer résolu ou ignorer.
+- **Utilisateurs** : **segments** (clients/vendeurs/admins/suspendus), recherche, **fiche détail** (commandes, dépenses, avis, boutique), changement de rôle, suspension, suppression, **création manuelle** d'un compte — avec garde-fous sur son propre compte.
+- **Boutiques** : **badge « Vérifiée »**, suspension/réactivation (masque la boutique + bloque les commandes), suppression.
+- **Commandes** : **filtres** (statut / période / recherche) + **export CSV global**.
+- **Coupons** : création et gestion de **codes promo globaux** valables sur toute la marketplace.
+- **Communication** : **annonce globale** (broadcast) vers tous les utilisateurs ou un segment (clients / vendeurs).
+- **Paramètres** : **bannière d'accueil**, **message global**, **mode maintenance** (bloque les commandes), **visibilité des catégories**, **boutiques à la une** (mises en avant sur l'accueil).
+- **Journal** : **audit** horodaté des actions d'administration (qui, quoi, quand).
+- **Données** : **santé du stockage** (jauge localStorage + alerte quota), sauvegarde/restauration JSON, réinitialisation démo.
 
 ### Notifications (client-side)
 - Cloche avec badge de non-lus.

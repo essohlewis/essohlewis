@@ -437,6 +437,15 @@
     // Sections découverte (uniquement en vue par défaut).
     let sections = "";
     if (!hasFilters) {
+      // Boutiques à la une (mises en avant par l'administrateur).
+      const featIds = adminSettings().featuredStores || [];
+      const feat = featIds.map((id) => Store.get(id)).filter((s) => s && !s.suspended);
+      if (feat.length) sections += `<div class="section-title">⭐ Boutiques à la une</div><div class="scroll-row">${feat.map((s) => {
+        const rt = Store.rating(s.id);
+        return `<a href="#/store/${s.id}" class="feat-store-card"><div class="feat-store-banner" style="${s.banner ? `background-image:url('${UI.esc(s.banner)}')` : (s.themeColor ? `background:${UI.esc(s.themeColor)}` : "")}"></div>
+          <div class="feat-store-body"><img src="${UI.safeImg(s.logo, s.name)}" alt=""/><div><div class="feat-store-name">${UI.esc(s.name)}${s.verified ? " ✔️" : ""}</div>
+          <div class="text-muted" style="font-size:12px">📍 ${UI.esc(s.commune)}${rt.count ? " · ★ " + rt.avg.toFixed(1) : ""}</div></div></div></a>`;
+      }).join("")}</div>`;
       const recent = user ? Recent.list().slice(0, 10) : [];
       if (recent.length) sections += `<div class="section-title">${T("home.recentlyViewed")}</div><div class="scroll-row">${recent.map(productCard).join("")}</div>`;
       const reco = recommendedProducts(8);
@@ -476,7 +485,9 @@
       ${Compare.count() ? `<a href="#/compare" class="chip">⚖️ Comparer (${Compare.count()})</a>` : ""}
     </div>`;
 
+    const homeBanner = adminSettings().homeBanner;
     layout(
+      (homeBanner && !hasFilters ? `<div class="home-admin-banner">🎉 ${UI.esc(homeBanner)}</div>` : "") +
       `<div class="hero-banner"><h1>${T("home.heroTitle")}</h1>
         <p>${T("home.heroSub")}</p>
         <div class="hero-badges">
@@ -538,7 +549,7 @@
   }
 
   function categoryChips(active) {
-    const chips = UI.CATEGORIES.map(
+    const chips = visibleCategories().map(
       (c) => `<button class="chip ${active === c.id ? "active" : ""}" data-cat="${c.id}">${c.icon} ${c.label}</button>`
     ).join("");
     return `<div class="filter-bar">
@@ -1380,7 +1391,7 @@
     }
     const items = list.length
       ? list.map((q) => `<div class="qna-item">
-          <div class="qna-q"><span class="qna-icon">Q</span><div><strong>${UI.esc(q.userName || "Client")}</strong> — ${UI.dateFR(q.createdAt)}<div>${UI.esc(q.question)}</div></div></div>
+          <div class="qna-q"><span class="qna-icon">Q</span><div style="flex:1"><strong>${UI.esc(q.userName || "Client")}</strong> — ${UI.dateFR(q.createdAt)}<div>${UI.esc(q.question)}</div></div>${!isOwner && Auth.isLogged() ? `<button class="btn-icon-mini" data-reportq="${q.id}" title="Signaler">⚑</button>` : ""}</div>
           ${q.answer ? `<div class="qna-a"><span class="qna-icon">R</span><div><strong>Réponse du vendeur</strong><div>${UI.esc(q.answer)}</div></div></div>`
             : (isOwner ? `<div class="qna-answer-form"><textarea data-ansfield="${q.id}" placeholder="Répondre publiquement…" rows="2"></textarea><button class="btn btn-primary btn-sm" data-ans="${q.id}">Répondre</button></div>`
               : `<div class="qna-pending text-muted">En attente de réponse du vendeur…</div>`)}
@@ -1409,6 +1420,7 @@
       Questions.answer(id, t);
       UI.toast("Réponse publiée ✓", "success"); refresh();
     }));
+    box.querySelectorAll("[data-reportq]").forEach((b) => b.addEventListener("click", () => openContentReportModal("question", b.getAttribute("data-reportq"), "")));
   }
 
   /* ============================================================
@@ -1642,6 +1654,7 @@
               : `<button class="btn ${subscribed ? "btn-ghost" : "store-accent-btn"}" id="subBtn">${subscribed ? "✓ Abonné" : "S'abonner"}</button>`}
             ${store.whatsapp ? `<a class="btn wa-btn" href="https://wa.me/225${UI.esc(store.whatsapp.replace(/\D/g, ""))}" target="_blank" rel="noopener">
               <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.9.9-2.7-.2-.3A8 8 0 1 1 12 20zm4.4-6c-.2-.1-1.4-.7-1.6-.8s-.4-.1-.5.1-.6.8-.8 1-.3.2-.5.1a6.5 6.5 0 0 1-3.2-2.8c-.2-.4.2-.4.6-1.2.1-.2 0-.3 0-.5s-.5-1.3-.7-1.7-.4-.4-.5-.4h-.5a1 1 0 0 0-.7.3A3 3 0 0 0 6 8.9c0 1.8 1.3 3.5 1.5 3.7s2.6 4 6.3 5.4c2.2.8 2.6.6 3.1.6s1.4-.6 1.6-1.1.2-1 .1-1.1-.3-.2-.5-.3z"/></svg>WhatsApp</a>` : ""}
+            ${!isOwner ? `<button class="btn btn-ghost btn-sm" id="reportStoreBtn" title="Signaler la boutique">⚑</button>` : ""}
           </div>
         </div>
       </div>
@@ -1692,7 +1705,32 @@
       const res = Store.toggleSubscribe(store.id);
       if (res.ok) { UI.toast(res.subscribed ? "Abonné ✓ Vous recevrez ses nouveautés." : "Désabonné.", res.subscribed ? "success" : "info"); Router.resolve(); }
     });
+    const reportStoreBtn = document.getElementById("reportStoreBtn");
+    if (reportStoreBtn) reportStoreBtn.addEventListener("click", () => openContentReportModal("store", store.id, store.name));
     wireReviews(store.id, "store", store.ownerId);
+  }
+
+  /** Signalement générique de contenu (boutique / question) → file de modération. */
+  function openContentReportModal(type, targetId, title) {
+    if (!Auth.isLogged()) { UI.toast("Connectez-vous pour signaler.", "info"); Router.go("#/login"); return; }
+    const reasons = type === "store"
+      ? ["Boutique frauduleuse", "Contenu inapproprié", "Contrefaçon", "Ne livre jamais", "Autre"]
+      : ["Contenu inapproprié", "Spam / publicité", "Propos injurieux", "Hors sujet", "Autre"];
+    UI.modal({
+      title: type === "store" ? "Signaler la boutique" : "Signaler la question",
+      body: `<div class="field"><label>Motif</label><select id="crReason">${reasons.map((r) => `<option>${r}</option>`).join("")}</select></div>
+        <div class="field mt-8"><label>Précision (optionnel)</label><textarea id="crNote" placeholder="Décrivez le problème…"></textarea></div>`,
+      footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-danger" id="crGo">Envoyer le signalement</button>`,
+      onMount(m, close) {
+        m.querySelector("#crGo").addEventListener("click", () => {
+          const reason = m.querySelector("#crReason").value + (m.querySelector("#crNote").value.trim() ? " — " + m.querySelector("#crNote").value.trim() : "");
+          const me = Auth.current();
+          DB.insert(DB.KEYS.reports, { id: DB.uid("rep"), type, targetId, title: title || "", reason, byUserId: me.id, byName: me.name, status: "pending", createdAt: Date.now() });
+          DB.all(DB.KEYS.users).filter((u) => u.role === "admin").forEach((a) => Notifications.push(a.id, { type: "info", message: `⚑ ${type === "store" ? "Boutique" : "Question"} signalée : ${reason}`, link: "#/admin?tab=moderation" }));
+          UI.toast("Merci, votre signalement a été transmis à la modération.", "success"); close();
+        });
+      },
+    });
   }
 
   /* ============================================================
@@ -4953,6 +4991,16 @@
   /* ============================================================
      ADMIN : Console de modération
      ============================================================ */
+  /* ---------- Paramètres marketplace & journal d'audit ---------- */
+  const SETTINGS_DEFAULT = { homeBanner: "", maintenance: { on: false, msg: "" }, globalMessage: "", hiddenCategories: [], featuredStores: [] };
+  function adminSettings() { return Object.assign({}, SETTINGS_DEFAULT, DB.get(DB.KEYS.settings, {}) || {}); }
+  function saveSettings(patch) { DB.set(DB.KEYS.settings, Object.assign({}, adminSettings(), patch)); }
+  /** Journalise une action d'administration (audit). */
+  function logAudit(action, detail) {
+    const u = Auth.current();
+    DB.insert(DB.KEYS.auditLog, { id: DB.uid("aud"), adminId: u ? u.id : "?", adminName: u ? u.name : "?", action, detail: detail || "", at: Date.now() });
+  }
+
   /** Éléments en attente de modération (signalements, avis signalés, litiges). */
   function moderationQueue() {
     const reports = DB.all(DB.KEYS.reports).filter((r) => r.status === "pending");
@@ -4965,62 +5013,108 @@
     if (!requireAuth()) return;
     if (!Auth.isAdmin()) { UI.toast("Accès réservé à l'administrateur.", "error"); Router.go("#/"); return; }
     const q = (params && params.query) || {};
-    const tab = ["overview", "moderation", "users", "stores", "orders", "data"].includes(q.tab) ? q.tab : "overview";
+    const RENDER = { overview: adminOverview, moderation: adminModeration, users: adminUsers, stores: adminStores, orders: adminOrders, coupons: adminCoupons, comm: adminComm, settings: adminSettingsTab, audit: adminAudit, data: adminData };
+    const WIRE = { overview: wireAdminOverview, moderation: wireAdminModeration, users: wireAdminUsers, stores: wireAdminStores, orders: wireAdminOrders, coupons: wireAdminCoupons, comm: wireAdminComm, settings: wireAdminSettings, audit: wireAdminAudit, data: wireAdminData };
+    const tab = RENDER[q.tab] ? q.tab : "overview";
     const modCount = moderationQueue().total;
     const tabs = [
       ["overview", "Vue d'ensemble"], ["moderation", "Modération" + (modCount ? ` (${modCount})` : "")],
-      ["users", "Utilisateurs"], ["stores", "Boutiques"], ["orders", "Commandes"], ["data", "Données"],
+      ["users", "Utilisateurs"], ["stores", "Boutiques"], ["orders", "Commandes"],
+      ["coupons", "Coupons"], ["comm", "Communication"], ["settings", "Paramètres"], ["audit", "Journal"], ["data", "Données"],
     ];
-    const body = { overview: adminOverview, moderation: adminModeration, users: adminUsers, stores: adminStores, orders: adminOrders, data: adminData }[tab]();
     layout(`
       <div class="page-head"><div><div class="page-title">🛡️ Administration</div>
         <div class="page-sub">Console de gestion de la marketplace</div></div></div>
       <div class="filter-bar admin-tabs">${tabs.map(([k, l]) => `<a href="#/admin${k === "overview" ? "" : "?tab=" + k}" class="chip ${tab === k ? "active" : ""}">${l}</a>`).join("")}</div>
-      ${body}`);
-    ({ overview: wireAdminOverview, moderation: wireAdminModeration, users: wireAdminUsers, stores: wireAdminStores, orders: wireAdminOrders, data: wireAdminData }[tab])();
+      ${RENDER[tab](params)}`);
+    WIRE[tab](params);
   }
 
-  /* ---------- Onglet : Vue d'ensemble ---------- */
-  function adminOverview() {
-    const stores = Store.all(), products = Products.all(), orders = DB.all(DB.KEYS.orders), users = DB.all(DB.KEYS.users);
-    const revenue = orders.filter((o) => o.status !== "annulee").reduce((s, o) => s + o.total, 0);
+  /* ---------- Onglet : Vue d'ensemble (analytique) ---------- */
+  function adminOverview(params) {
+    const q = (params && params.query) || {};
+    const period = ["7d", "30d", "all"].includes(q.p) ? q.p : "30d";
     const DAY = 86400000, now = Date.now();
-    const newUsers7 = users.filter((u) => now - (u.createdAt || 0) < 7 * DAY).length;
-    const newOrders7 = orders.filter((o) => now - o.createdAt < 7 * DAY).length;
-    // Répartition par catégorie.
-    const byCat = {}; products.forEach((p) => { byCat[p.category] = (byCat[p.category] || 0) + 1; });
-    const cats = UI.CATEGORIES.map((c) => ({ c, n: byCat[c.id] || 0 })).filter((x) => x.n).sort((a, b) => b.n - a.n);
-    const maxCat = Math.max(1, ...cats.map((x) => x.n));
-    // Top boutiques par CA.
-    const topStores = stores.slice().sort((a, b) => (b.revenueSim || 0) - (a.revenueSim || 0)).slice(0, 5);
+    const windowMs = period === "7d" ? 7 * DAY : period === "30d" ? 30 * DAY : Infinity;
+    const since = period === "all" ? 0 : now - windowMs;
+
+    const stores = Store.all(), products = Products.all();
+    const allOrders = DB.all(DB.KEYS.orders), users = DB.all(DB.KEYS.users);
+    const orders = allOrders.filter((o) => o.createdAt >= since);
+    const revenue = orders.filter((o) => o.status !== "annulee").reduce((s, o) => s + o.total, 0);
+    const newUsers = users.filter((u) => (u.createdAt || 0) >= since).length;
+
+    // Série temporelle (nb de jours selon la période, borné à 30 barres).
+    const nDays = period === "7d" ? 7 : period === "30d" ? 30 : Math.min(30, Math.ceil((now - Math.min(...allOrders.map((o) => o.createdAt), now)) / DAY) + 1);
+    const series = [];
+    for (let i = nDays - 1; i >= 0; i--) {
+      const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0); dayStart.setDate(dayStart.getDate() - i);
+      const s = dayStart.getTime(), e = s + DAY;
+      const dayRev = allOrders.filter((o) => o.createdAt >= s && o.createdAt < e && o.status !== "annulee").reduce((a, o) => a + o.total, 0);
+      series.push({ label: dayStart.toLocaleDateString("fr-FR", { day: "2-digit", month: nDays <= 7 ? "short" : "numeric" }), value: dayRev });
+    }
+    // Donut statuts (période).
+    const statusColors = { en_attente: "#f59e0b", confirmee: "#2563eb", expediee: "#7c3aed", livree: "#0f9d58", annulee: "#e11d48" };
+    const donutSegs = Object.keys(Orders.STATUS).map((k) => ({ label: Orders.STATUS[k], value: orders.filter((o) => o.status === k).length, color: statusColors[k] }));
+    // Top produits (par ventes sur la période).
+    const sold = {}; orders.forEach((o) => (o.items || []).forEach((it) => { sold[it.productId] = (sold[it.productId] || 0) + it.qty; }));
+    const topProducts = Object.keys(sold).map((id) => ({ p: Products.get(id), qty: sold[id] })).filter((x) => x.p).sort((a, b) => b.qty - a.qty).slice(0, 5);
+    // Top communes (par commandes).
+    const byCommune = {}; orders.forEach((o) => { const c = o.delivery && o.delivery.commune; if (c) byCommune[c] = (byCommune[c] || 0) + 1; });
+    const topCommunes = Object.keys(byCommune).map((c) => ({ c, n: byCommune[c] })).sort((a, b) => b.n - a.n).slice(0, 6);
+    const maxCommune = Math.max(1, ...topCommunes.map((x) => x.n));
+    const avg = orders.length ? Math.round(revenue / orders.filter((o) => o.status !== "annulee").length || 0) : 0;
+
+    const pTabs = [["7d", "7 jours"], ["30d", "30 jours"], ["all", "Tout"]];
     return `
+      <div class="flex-between wrap" style="margin-bottom:14px">
+        <div class="seg-toggle">${pTabs.map(([k, l]) => `<a href="#/admin?p=${k}" class="seg ${period === k ? "active" : ""}">${l}</a>`).join("")}</div>
+        <button class="btn btn-ghost btn-sm" id="admReport">${SICON.printer} Rapport imprimable</button>
+      </div>
       <div class="stat-grid">
+        ${statCard("ic-green", "💰", UI.fcfa(revenue), "Volume (" + (period === "all" ? "total" : period) + ")")}
+        ${statCard("ic-blue", "🧾", orders.length, "Commandes")}
+        ${statCard("ic-orange", "🛒", UI.fcfa(avg || 0), "Panier moyen")}
+        ${statCard("ic-purple", "📈", "+" + newUsers, "Nouveaux users")}
+      </div>
+      <div class="stat-grid mt-16">
         ${statCard("ic-orange", "🏪", stores.length, "Boutiques")}
         ${statCard("ic-blue", "📦", products.length, "Articles")}
         ${statCard("ic-purple", "👤", users.length, "Utilisateurs")}
-        ${statCard("ic-green", "💰", UI.fcfa(revenue), "Volume commandé")}
-      </div>
-      <div class="stat-grid mt-16">
-        ${statCard("ic-blue", "🧾", orders.length, "Commandes totales")}
-        ${statCard("ic-green", "📈", "+" + newUsers7, "Nouveaux users (7j)")}
-        ${statCard("ic-orange", "🛒", "+" + newOrders7, "Commandes (7j)")}
         ${statCard(moderationQueue().total ? "ic-orange" : "ic-green", "🚩", moderationQueue().total, "À modérer")}
+      </div>
+      <div class="card card-pad mt-16">
+        <div class="panel-head"><h3>Évolution du volume commandé</h3><span class="text-muted" style="font-size:13px">${UI.fcfa(series.reduce((s, d) => s + d.value, 0))}</span></div>
+        ${barChartHTML(series)}
       </div>
       <div class="seller-cols mt-16">
         <div class="card card-pad">
-          <div class="panel-head"><h3>Répartition par catégorie</h3></div>
-          ${cats.length ? cats.map((x) => `<div style="margin-bottom:10px"><div class="flex-between" style="font-size:13px"><span>${x.c.icon} ${UI.esc(x.c.label)}</span><strong>${x.n}</strong></div>
-            <div class="goal-bar" style="height:8px"><div class="goal-fill" style="width:${Math.round(x.n / maxCat * 100)}%"></div></div></div>`).join("") : `<p class="text-muted">Aucun article.</p>`}
+          <div class="panel-head"><h3>Commandes par statut</h3></div>
+          ${donutHTML(donutSegs, orders.length, "commandes")}
         </div>
         <div class="card card-pad">
-          <div class="panel-head"><h3>Top boutiques (CA)</h3></div>
-          ${topStores.length ? `<table class="data-table"><tbody>${topStores.map((s, i) => `<tr>
-            <td>${i + 1}. <a href="#/store/${s.id}" style="font-weight:600">${UI.esc(s.name)}</a></td>
-            <td style="text-align:right"><strong>${UI.fcfa(s.revenueSim || 0)}</strong></td></tr>`).join("")}</tbody></table>` : `<p class="text-muted">Aucune boutique.</p>`}
+          <div class="panel-head"><h3>Top communes</h3></div>
+          ${topCommunes.length ? topCommunes.map((x) => `<div style="margin-bottom:9px"><div class="flex-between" style="font-size:13px"><span>📍 ${UI.esc(x.c)}</span><strong>${x.n}</strong></div>
+            <div class="goal-bar" style="height:7px"><div class="goal-fill" style="width:${Math.round(x.n / maxCommune * 100)}%"></div></div></div>`).join("") : `<p class="text-muted">Aucune commande sur la période.</p>`}
+        </div>
+      </div>
+      <div class="seller-cols mt-16">
+        <div class="card card-pad">
+          <div class="panel-head"><h3>Top articles vendus</h3></div>
+          ${topProducts.length ? `<table class="data-table"><tbody>${topProducts.map((x, i) => `<tr>
+            <td>${i + 1}. <a href="#/product/${x.p.id}" style="font-weight:600">${UI.esc(x.p.title)}</a></td>
+            <td style="text-align:right"><strong>${x.qty}</strong> vendu(s)</td></tr>`).join("")}</tbody></table>` : `<p class="text-muted">Aucune vente sur la période.</p>`}
+        </div>
+        <div class="card card-pad">
+          <div class="panel-head"><h3>Top boutiques (CA total)</h3></div>
+          ${stores.slice().sort((a, b) => (b.revenueSim || 0) - (a.revenueSim || 0)).slice(0, 5).map((s, i) => `<div class="flex-between" style="padding:7px 0;border-bottom:1px solid var(--border)"><span>${i + 1}. <a href="#/store/${s.id}" style="font-weight:600">${UI.esc(s.name)}</a></span><strong>${UI.fcfa(s.revenueSim || 0)}</strong></div>`).join("")}
         </div>
       </div>`;
   }
-  function wireAdminOverview() {}
+  function wireAdminOverview() {
+    const rep = document.getElementById("admReport");
+    if (rep) rep.addEventListener("click", () => window.print());
+  }
 
   /* ---------- Onglet : Modération ---------- */
   function adminModeration() {
@@ -5029,11 +5123,25 @@
       return emptyState("✅", "Rien à modérer", "Aucun signalement ni litige en attente. Tout est en ordre !");
     }
     const section = (title, items) => items.length ? `<div class="section-title">${title} (${items.length})</div>${items.join("")}` : "";
-    const repCards = reports.map((r) => `<div class="card card-pad mt-12 mod-card">
+    const prodReports = reports.filter((r) => !r.type || r.type === "product");
+    const storeReports = reports.filter((r) => r.type === "store");
+    const qReports = reports.filter((r) => r.type === "question");
+    const repCards = prodReports.map((r) => `<div class="card card-pad mt-12 mod-card">
       <div class="flex-between wrap"><div><strong>⚑ Article signalé</strong> — <a href="#/product/${r.targetId}">${UI.esc(r.title || "article")}</a>
         <div class="text-muted" style="font-size:12.5px">Motif : ${UI.esc(r.reason)} · par ${UI.esc(r.byName)} · ${UI.timeAgo(r.createdAt)}</div></div>
         <div class="flex gap-8"><button class="btn btn-danger btn-sm" data-modremoveprod="${r.targetId}" data-repid="${r.id}">Retirer l'article</button>
           <button class="btn btn-ghost btn-sm" data-repdismiss="${r.id}">Ignorer</button></div></div></div>`);
+    const storeCards = storeReports.map((r) => `<div class="card card-pad mt-12 mod-card">
+      <div class="flex-between wrap"><div><strong>⚑ Boutique signalée</strong> — <a href="#/store/${r.targetId}">${UI.esc(r.title || "boutique")}</a>
+        <div class="text-muted" style="font-size:12.5px">Motif : ${UI.esc(r.reason)} · par ${UI.esc(r.byName)} · ${UI.timeAgo(r.createdAt)}</div></div>
+        <div class="flex gap-8"><button class="btn btn-danger btn-sm" data-modsuspendstore="${r.targetId}" data-repid="${r.id}">Suspendre</button>
+          <button class="btn btn-ghost btn-sm" data-repdismiss="${r.id}">Ignorer</button></div></div></div>`);
+    const qCards = qReports.map((r) => { const qn = DB.find(DB.KEYS.questions, r.targetId); return `<div class="card card-pad mt-12 mod-card">
+      <div class="flex-between wrap"><div><strong>⚑ Question signalée</strong>
+        <div class="text-muted" style="font-size:12.5px">Motif : ${UI.esc(r.reason)} · par ${UI.esc(r.byName)} · ${UI.timeAgo(r.createdAt)}</div>
+        ${qn ? `<div style="font-size:13.5px;margin-top:4px">« ${UI.esc(qn.question)} »</div>` : `<div class="text-muted" style="font-size:12.5px">(question supprimée)</div>`}</div>
+        <div class="flex gap-8">${qn ? `<button class="btn btn-danger btn-sm" data-moddelq="${r.targetId}" data-repid="${r.id}">Supprimer</button>` : ""}
+          <button class="btn btn-ghost btn-sm" data-repdismiss="${r.id}">Ignorer</button></div></div></div>`; });
     const revCards = reportedReviews.map((r) => `<div class="card card-pad mt-12 mod-card">
       <div class="flex-between wrap"><div><strong>⚑ Avis signalé</strong> (${(r.reportedBy || []).length}×) — ${UI.starsHTML(r.rating)}
         <div class="text-muted" style="font-size:12.5px">${UI.esc(r.userName)} · ${UI.timeAgo(r.createdAt)}</div>
@@ -5044,14 +5152,32 @@
       <div class="flex-between wrap"><div><strong>⚠️ Litige commande</strong> N° ${UI.esc(o.number)} — ${UI.esc(o.storeName)}
         <div class="text-muted" style="font-size:12.5px">${UI.esc(o.problem.reason)} · ${UI.timeAgo(o.problem.at || o.createdAt)}</div></div>
         <div class="flex gap-8"><button class="btn btn-primary btn-sm" data-litresolve="${o.id}">Marquer résolu</button></div></div></div>`);
-    return section("Articles signalés", repCards) + section("Avis signalés", revCards) + section("Litiges commandes", litCards);
+    return section("Articles signalés", repCards) + section("Boutiques signalées", storeCards) + section("Questions signalées", qCards) + section("Avis signalés", revCards) + section("Litiges commandes", litCards);
   }
   function wireAdminModeration() {
     V().querySelectorAll("[data-modremoveprod]").forEach((b) => b.addEventListener("click", async () => {
       if (!(await UI.confirm("Retirer définitivement cet article ?", { danger: true, confirmLabel: "Retirer" }))) return;
+      const p = Products.get(b.getAttribute("data-modremoveprod"));
       Products.remove(b.getAttribute("data-modremoveprod"));
       DB.update(DB.KEYS.reports, b.getAttribute("data-repid"), { status: "resolved" });
+      logAudit("Article retiré (modération)", p ? p.title : b.getAttribute("data-modremoveprod"));
       UI.toast("Article retiré.", "info"); viewAdmin({ query: { tab: "moderation" } });
+    }));
+    V().querySelectorAll("[data-modsuspendstore]").forEach((b) => b.addEventListener("click", async () => {
+      if (!(await UI.confirm("Suspendre cette boutique ?", { danger: true, confirmLabel: "Suspendre" }))) return;
+      const s = Store.get(b.getAttribute("data-modsuspendstore"));
+      DB.update(DB.KEYS.stores, s.id, { suspended: true });
+      DB.update(DB.KEYS.reports, b.getAttribute("data-repid"), { status: "resolved" });
+      Notifications.push(s.ownerId, { type: "info", message: `⛔ Votre boutique « ${s.name} » a été suspendue par la modération.`, link: "#/seller/dashboard" });
+      logAudit("Boutique suspendue (modération)", s.name);
+      UI.toast("Boutique suspendue.", "info"); viewAdmin({ query: { tab: "moderation" } });
+    }));
+    V().querySelectorAll("[data-moddelq]").forEach((b) => b.addEventListener("click", async () => {
+      if (!(await UI.confirm("Supprimer cette question ?", { danger: true, confirmLabel: "Supprimer" }))) return;
+      DB.removeItem(DB.KEYS.questions, b.getAttribute("data-moddelq"));
+      DB.update(DB.KEYS.reports, b.getAttribute("data-repid"), { status: "resolved" });
+      logAudit("Question supprimée (modération)", "");
+      UI.toast("Question supprimée.", "info"); viewAdmin({ query: { tab: "moderation" } });
     }));
     V().querySelectorAll("[data-repdismiss]").forEach((b) => b.addEventListener("click", () => {
       DB.update(DB.KEYS.reports, b.getAttribute("data-repdismiss"), { status: "dismissed" });
@@ -5075,18 +5201,28 @@
   }
 
   /* ---------- Onglet : Utilisateurs ---------- */
-  function adminUsers() {
-    const users = DB.all(DB.KEYS.users).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  function adminUsers(params) {
+    const q = (params && params.query) || {};
+    const seg = ["all", "client", "vendor", "admin", "suspended"].includes(q.seg) ? q.seg : "all";
     const roleLabel = { admin: "Admin", vendor: "Vendeur", client: "Client" };
-    return `<div class="admin-toolbar"><input type="search" id="admUserSearch" class="ss-search" placeholder="Rechercher (nom, e-mail)…" /></div>
+    let users = DB.all(DB.KEYS.users).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    const counts = { all: users.length, client: users.filter((u) => u.role === "client").length, vendor: users.filter((u) => u.role === "vendor").length, admin: users.filter((u) => u.role === "admin").length, suspended: users.filter((u) => u.suspended).length };
+    if (seg === "suspended") users = users.filter((u) => u.suspended); else if (seg !== "all") users = users.filter((u) => u.role === seg);
+    const segs = [["all", "Tous"], ["client", "Clients"], ["vendor", "Vendeurs"], ["admin", "Admins"], ["suspended", "Suspendus"]];
+    return `<div class="admin-toolbar flex-between wrap" style="gap:10px">
+        <input type="search" id="admUserSearch" class="ss-search" placeholder="Rechercher (nom, e-mail)…" />
+        <button class="btn btn-primary btn-sm" id="admUserCreate">+ Créer un compte</button>
+      </div>
+      <div class="seller-filterbar"><div class="tabs">${segs.map(([k, l]) => `<a href="#/admin?tab=users&seg=${k}" class="tab ${seg === k ? "active" : ""}">${l}<span class="tab-count">${counts[k]}</span></a>`).join("")}</div></div>
       <div class="table-wrap"><table class="data-table" id="admUsersTable">
         <thead><tr><th>Utilisateur</th><th>Rôle</th><th>Statut</th><th>Inscrit</th><th style="text-align:right">Actions</th></tr></thead>
         <tbody>${users.map((u) => `<tr data-urow="${UI.esc((u.name + " " + u.email).toLowerCase())}">
-          <td><strong>${UI.esc(u.name)}</strong><div class="text-muted" style="font-size:12px">${UI.esc(u.email)}</div></td>
+          <td><a href="#" data-udetail="${u.id}" style="font-weight:600">${UI.esc(u.name)}</a><div class="text-muted" style="font-size:12px">${UI.esc(u.email)}</div></td>
           <td><span class="tag" style="position:static">${roleLabel[u.role] || u.role}</span></td>
           <td>${u.suspended ? `<span class="status annulee">Suspendu</span>` : `<span class="status livree">Actif</span>`}</td>
           <td class="text-muted" style="font-size:12.5px">${u.createdAt ? UI.dateFR(u.createdAt) : "—"}</td>
           <td style="text-align:right"><div class="row-actions">
+            <button class="btn btn-ghost btn-sm" data-udetail="${u.id}">Voir</button>
             <select class="mini-select" data-urole="${u.id}"><option value="client" ${u.role === "client" ? "selected" : ""}>Client</option><option value="vendor" ${u.role === "vendor" ? "selected" : ""}>Vendeur</option><option value="admin" ${u.role === "admin" ? "selected" : ""}>Admin</option></select>
             <button class="btn btn-ghost btn-sm" data-ususpend="${u.id}">${u.suspended ? "Réactiver" : "Suspendre"}</button>
             <button class="icon-action danger" data-udel="${u.id}" title="Supprimer">${SICON.trash}</button>
@@ -5118,9 +5254,68 @@
       const id = b.getAttribute("data-udel");
       if (id === me.id) { UI.toast("Vous ne pouvez pas supprimer votre propre compte ici.", "error"); return; }
       if (!(await UI.confirm("Supprimer ce compte utilisateur ?", { danger: true, confirmLabel: "Supprimer" }))) return;
+      const u = DB.find(DB.KEYS.users, id);
       DB.removeItem(DB.KEYS.users, id);
+      logAudit("Compte supprimé", u ? u.email : id);
       UI.toast("Compte supprimé.", "info"); viewAdmin({ query: { tab: "users" } });
     }));
+    V().querySelectorAll("[data-udetail]").forEach((b) => b.addEventListener("click", (e) => { e.preventDefault(); openUserDetail(b.getAttribute("data-udetail")); }));
+    const create = document.getElementById("admUserCreate");
+    if (create) create.addEventListener("click", () => openCreateUserModal());
+  }
+
+  /** Fiche détail d'un utilisateur (commandes, avis, boutique). */
+  function openUserDetail(userId) {
+    const u = DB.find(DB.KEYS.users, userId);
+    if (!u) return;
+    const orders = Orders.byBuyer(u.id);
+    const reviews = DB.all(DB.KEYS.reviews).filter((r) => r.userId === u.id);
+    const store = Store.byOwner(u.id);
+    const spent = orders.filter((o) => o.status !== "annulee").reduce((s, o) => s + o.total, 0);
+    UI.modal({
+      title: "👤 " + u.name,
+      body: `<div class="text-muted" style="font-size:13px;margin-bottom:10px">${UI.esc(u.email)} · ${UI.esc(u.phone || "—")} · ${u.role}${u.suspended ? " · <span style='color:var(--danger)'>suspendu</span>" : ""}</div>
+        <div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">
+          ${statCard("ic-blue", "🧾", orders.length, "Commandes")}
+          ${statCard("ic-green", "💰", UI.fcfa(spent), "Total dépensé")}
+          ${statCard("ic-purple", "✍️", reviews.length, "Avis")}
+        </div>
+        ${store ? `<div class="card card-pad mt-12"><strong>🏪 Boutique :</strong> <a href="#/store/${store.id}">${UI.esc(store.name)}</a> — ${Products.byStore(store.id, true).length} article(s)</div>` : ""}
+        <div class="section-title" style="margin-top:14px">Dernières commandes</div>
+        ${orders.length ? `<div class="price-hist-rows">${orders.slice(0, 6).map((o) => `<div class="activity-row"><span>${UI.esc(o.number)} · ${UI.esc(o.storeName)}</span><span><span class="status ${o.status}">${Orders.STATUS[o.status]}</span> ${UI.fcfa(o.total)}</span></div>`).join("")}</div>` : `<p class="text-muted">Aucune commande.</p>`}`,
+      footer: `<button class="btn btn-primary btn-block" data-close>Fermer</button>`,
+    });
+  }
+
+  /** Création manuelle d'un compte par l'administrateur. */
+  function openCreateUserModal() {
+    UI.modal({
+      title: "Créer un compte",
+      body: `<div class="form-grid">
+        <div class="field"><label>Nom complet</label><input id="cuName" /></div>
+        <div class="field"><label>E-mail</label><input type="email" id="cuEmail" /></div>
+        <div class="field"><label>Téléphone (optionnel)</label><input id="cuPhone" placeholder="07 00 00 00 00" /></div>
+        <div class="field"><label>Mot de passe</label><input type="password" id="cuPass" placeholder="Min. 4 caractères" /></div>
+        <div class="field"><label>Rôle</label><select id="cuRole"><option value="client">Client</option><option value="vendor">Vendeur</option><option value="admin">Admin</option></select></div>
+      </div>`,
+      footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-primary" id="cuGo">Créer</button>`,
+      onMount(m, close) {
+        m.querySelector("#cuGo").addEventListener("click", () => {
+          const name = m.querySelector("#cuName").value.trim();
+          const email = m.querySelector("#cuEmail").value.trim();
+          const pass = m.querySelector("#cuPass").value;
+          const role = m.querySelector("#cuRole").value;
+          if (!name) { UI.toast("Nom requis.", "error"); return; }
+          if (!Auth.validEmail(email)) { UI.toast("E-mail invalide.", "error"); return; }
+          if (Auth.findByEmail(email)) { UI.toast("Cet e-mail est déjà utilisé.", "error"); return; }
+          if (!pass || pass.length < 4) { UI.toast("Mot de passe trop court.", "error"); return; }
+          const user = { id: DB.uid("usr"), name, email, phone: m.querySelector("#cuPhone").value.trim(), password: pass, role: role === "admin" ? "admin" : role === "vendor" ? "vendor" : "client", createdAt: Date.now(), commune: "", address: "" };
+          DB.insert(DB.KEYS.users, user);
+          logAudit("Compte créé", `${email} (${role})`);
+          close(); UI.toast("Compte créé ✓", "success"); viewAdmin({ query: { tab: "users" } });
+        });
+      },
+    });
   }
 
   /* ---------- Onglet : Boutiques ---------- */
@@ -5167,10 +5362,29 @@
   /* ---------- Onglet : Commandes ---------- */
   function adminOrders(params) {
     const q = (params && params.query) || {};
-    const orders = DB.all(DB.KEYS.orders).sort((a, b) => b.createdAt - a.createdAt);
-    return `<div class="table-wrap"><table class="data-table">
+    const statusFilter = Orders.STATUS[q.s] ? q.s : "all";
+    const period = ["7d", "30d"].includes(q.period) ? q.period : "all";
+    const search = (q.q || "").toLowerCase().trim();
+    const DAY = 86400000, now = Date.now();
+    let orders = DB.all(DB.KEYS.orders).sort((a, b) => b.createdAt - a.createdAt);
+    if (statusFilter !== "all") orders = orders.filter((o) => o.status === statusFilter);
+    if (period !== "all") orders = orders.filter((o) => now - o.createdAt < (period === "7d" ? 7 : 30) * DAY);
+    if (search) orders = orders.filter((o) => (o.number + " " + o.storeName + " " + o.buyerName).toLowerCase().includes(search));
+    const total = orders.filter((o) => o.status !== "annulee").reduce((s, o) => s + o.total, 0);
+    const statusTabs = [["all", "Tous"]].concat(Object.keys(Orders.STATUS).map((k) => [k, Orders.STATUS[k]]));
+    const qp = (extra) => { const p = new URLSearchParams(Object.assign({ tab: "orders" }, statusFilter !== "all" ? { s: statusFilter } : {}, period !== "all" ? { period } : {}, search ? { q: search } : {}, extra)); return "#/admin?" + p.toString(); };
+    return `<div class="admin-toolbar flex-between wrap" style="gap:10px">
+        <input type="search" id="admOrderSearch" class="ss-search" placeholder="N°, boutique, client…" value="${UI.esc(q.q || "")}" />
+        <div class="flex gap-8">
+          <select class="mini-select" id="admOrderPeriod"><option value="all" ${period === "all" ? "selected" : ""}>Toute période</option><option value="7d" ${period === "7d" ? "selected" : ""}>7 jours</option><option value="30d" ${period === "30d" ? "selected" : ""}>30 jours</option></select>
+          <button class="btn btn-ghost btn-sm" id="admOrderExport">${SICON.download} Export CSV</button>
+        </div>
+      </div>
+      <div class="seller-filterbar"><div class="tabs">${statusTabs.map(([k, l]) => `<a href="${qp({ s: k === "all" ? "" : k })}" class="tab ${statusFilter === k ? "active" : ""}">${l}</a>`).join("")}</div></div>
+      <div class="text-muted" style="font-size:13px;margin-bottom:8px">${orders.length} commande(s) · ${UI.fcfa(total)}</div>
+      <div class="table-wrap"><table class="data-table">
       <thead><tr><th>N°</th><th>Boutique</th><th>Client</th><th>Total</th><th>Statut</th><th>Date</th></tr></thead>
-      <tbody>${orders.length ? orders.slice(0, 100).map((o) => `<tr>
+      <tbody>${orders.length ? orders.slice(0, 200).map((o) => `<tr>
         <td><strong>${UI.esc(o.number)}</strong></td>
         <td><a href="#/store/${o.storeId}">${UI.esc(o.storeName)}</a></td>
         <td class="text-muted" style="font-size:12.5px">${UI.esc(o.buyerName)}</td>
@@ -5180,11 +5394,59 @@
       </tr>`).join("") : `<tr><td colspan="6" class="text-muted" style="text-align:center;padding:20px">Aucune commande.</td></tr>`}</tbody>
     </table></div>`;
   }
-  function wireAdminOrders() {}
+  function wireAdminOrders(params) {
+    const q = (params && params.query) || {};
+    const si = document.getElementById("admOrderSearch");
+    if (si) si.addEventListener("keydown", (e) => { if (e.key === "Enter") { const p = new URLSearchParams({ tab: "orders" }); if (q.s) p.set("s", q.s); if (q.period) p.set("period", q.period); if (si.value.trim()) p.set("q", si.value.trim()); Router.go("#/admin?" + p.toString()); } });
+    const per = document.getElementById("admOrderPeriod");
+    if (per) per.addEventListener("change", () => { const p = new URLSearchParams({ tab: "orders" }); if (q.s) p.set("s", q.s); if (per.value !== "all") p.set("period", per.value); if (q.q) p.set("q", q.q); Router.go("#/admin?" + p.toString()); });
+    const exp = document.getElementById("admOrderExport");
+    if (exp) exp.addEventListener("click", () => {
+      // Réapplique les mêmes filtres pour l'export.
+      const statusFilter = Orders.STATUS[q.s] ? q.s : "all";
+      const period = ["7d", "30d"].includes(q.period) ? q.period : "all";
+      const search = (q.q || "").toLowerCase().trim();
+      const DAY = 86400000, now = Date.now();
+      let orders = DB.all(DB.KEYS.orders).sort((a, b) => b.createdAt - a.createdAt);
+      if (statusFilter !== "all") orders = orders.filter((o) => o.status === statusFilter);
+      if (period !== "all") orders = orders.filter((o) => now - o.createdAt < (period === "7d" ? 7 : 30) * DAY);
+      if (search) orders = orders.filter((o) => (o.number + " " + o.storeName + " " + o.buyerName).toLowerCase().includes(search));
+      exportAdminOrdersCSV(orders);
+    });
+  }
+
+  function exportAdminOrdersCSV(orders) {
+    if (!orders.length) { UI.toast("Aucune commande à exporter.", "info"); return; }
+    const esc = (s) => `"${String(s == null ? "" : s).replace(/"/g, '""')}"`;
+    const header = ["N°", "Boutique", "Client", "Commune", "Total", "Statut", "Date"];
+    const lines = orders.map((o) => [o.number, o.storeName, o.buyerName, o.delivery && o.delivery.commune, o.total, Orders.STATUS[o.status], UI.dateFR(o.createdAt)].map(esc).join(","));
+    const csv = "﻿" + [header.map(esc).join(","), ...lines].join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "commandes-marketplace-" + new Date().toISOString().slice(0, 10) + ".csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    UI.toast("Export CSV téléchargé ✓", "success");
+  }
 
   /* ---------- Onglet : Données ---------- */
   function adminData() {
+    // Santé du stockage : estimation de l'utilisation du localStorage (quota ~5 Mo).
+    let bytes = 0;
+    try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.indexOf("marchesci_") === 0) bytes += (localStorage.getItem(k) || "").length + k.length; } } catch (e) {}
+    const QUOTA = 5 * 1024 * 1024;
+    const pct = Math.min(100, Math.round((bytes / QUOTA) * 100));
+    const mb = (bytes / (1024 * 1024)).toFixed(2);
+    const warn = pct >= 80;
     return `<div class="card card-pad" style="max-width:640px">
+      <h3 style="margin:0 0 6px">📦 Santé du stockage</h3>
+      <p class="text-muted" style="font-size:13.5px;margin:0 0 10px">Les données (dont les images base64) sont stockées dans le navigateur. Limite indicative : ~5 Mo.</p>
+      <div class="flex-between" style="font-size:13px;margin-bottom:6px"><span>${mb} Mo utilisés</span><strong style="color:${warn ? "var(--danger)" : "var(--accent)"}">${pct}%</strong></div>
+      <div class="goal-bar"><div class="goal-fill" style="width:${Math.max(3, pct)}%;background:${warn ? "var(--danger)" : "linear-gradient(90deg,var(--brand),var(--brand-dark))"}"></div></div>
+      ${warn ? `<div class="ci-alert alert-out" style="margin-top:10px">⚠️ Stockage presque plein — pensez à exporter une sauvegarde et à alléger les images.</div>` : ""}
+    </div>
+    <div class="card card-pad mt-16" style="max-width:640px">
       <h3 style="margin:0 0 6px">💾 Sauvegarde & restauration</h3>
       <p class="text-muted" style="font-size:13.5px;margin:0 0 14px">Exportez ou restaurez l'intégralité des données locales de la marketplace (JSON).</p>
       <div class="flex gap-8 wrap">
@@ -5207,6 +5469,159 @@
       if (await UI.confirm("Réinitialiser TOUTES les données de démonstration ? Cette action est irréversible.", { danger: true, confirmLabel: "Réinitialiser" })) {
         Seed.run(true); Auth.logout(); renderHeaderUser(); UI.refreshBadges(); UI.toast("Données réinitialisées.", "success"); Router.go("#/");
       }
+    });
+  }
+
+  /* ---------- Onglet : Coupons globaux ---------- */
+  function adminCoupons() {
+    const coupons = Coupons.globalCoupons();
+    return `<div class="card card-pad" style="max-width:680px">
+        <h3 style="margin:0 0 4px">Nouveau coupon global</h3>
+        <p class="text-muted" style="font-size:13px;margin:0 0 12px">Valable sur <strong>toutes les boutiques</strong> de la marketplace.</p>
+        <div class="form-grid form-2col">
+          <div class="field"><label>Code</label><input id="gcCode" placeholder="MARCHE2024" style="text-transform:uppercase" /></div>
+          <div class="field"><label>Type</label><select id="gcType"><option value="percent">Pourcentage (%)</option><option value="amount">Montant (FCFA)</option><option value="freeship">Livraison offerte</option></select></div>
+        </div>
+        <div class="form-grid form-2col">
+          <div class="field"><label>Valeur</label><input type="number" id="gcValue" min="0" placeholder="10" /></div>
+          <div class="field"><label>Achat minimum (FCFA)</label><input type="number" id="gcMin" min="0" placeholder="0" /></div>
+        </div>
+        <div class="form-grid form-2col">
+          <div class="field"><label>Nombre max d'utilisations <span class="hint">(0 = illimité)</span></label><input type="number" id="gcMax" min="0" value="0" /></div>
+          <div class="field"><label>Expire le <span class="hint">(optionnel)</span></label><input type="date" id="gcUntil" /></div>
+        </div>
+        <button class="btn btn-primary mt-8" id="gcCreate">Créer le coupon</button>
+      </div>
+      <div class="section-title">Coupons globaux actifs (${coupons.length})</div>
+      ${coupons.length ? `<div class="table-wrap"><table class="data-table">
+        <thead><tr><th>Code</th><th>Remise</th><th>Min.</th><th>Utilisations</th><th>Expire</th><th></th></tr></thead>
+        <tbody>${coupons.map((c) => `<tr>
+          <td><strong>${UI.esc(c.code)}</strong></td><td>${Coupons.label(c)}</td>
+          <td>${c.minTotal ? UI.fcfa(c.minTotal) : "—"}</td>
+          <td>${c.uses || 0}${c.maxUses ? " / " + c.maxUses : ""}</td>
+          <td class="text-muted" style="font-size:12.5px">${c.until ? UI.dateFR(c.until) : "—"}</td>
+          <td><button class="icon-action danger" data-gcdel="${c.id}" title="Supprimer">${SICON.trash}</button></td>
+        </tr>`).join("")}</tbody></table></div>` : `<div class="card card-pad"><p class="text-muted" style="text-align:center;margin:0">Aucun coupon global.</p></div>`}`;
+  }
+  function wireAdminCoupons() {
+    const btn = document.getElementById("gcCreate");
+    if (btn) btn.addEventListener("click", () => {
+      const r = Coupons.createGlobal({
+        code: document.getElementById("gcCode").value,
+        type: document.getElementById("gcType").value,
+        value: document.getElementById("gcValue").value,
+        minTotal: document.getElementById("gcMin").value,
+        maxUses: document.getElementById("gcMax").value,
+        until: document.getElementById("gcUntil").value ? new Date(document.getElementById("gcUntil").value).getTime() : 0,
+      });
+      if (!r.ok) { UI.toast(r.error, "error"); return; }
+      logAudit("Coupon global créé", r.coupon.code);
+      UI.toast("Coupon global créé ✓", "success"); viewAdmin({ query: { tab: "coupons" } });
+    });
+    V().querySelectorAll("[data-gcdel]").forEach((b) => b.addEventListener("click", async () => {
+      if (!(await UI.confirm("Supprimer ce coupon global ?", { danger: true, confirmLabel: "Supprimer" }))) return;
+      Coupons.remove(b.getAttribute("data-gcdel"));
+      UI.toast("Coupon supprimé.", "info"); viewAdmin({ query: { tab: "coupons" } });
+    }));
+  }
+
+  /* ---------- Onglet : Communication (broadcast) ---------- */
+  function adminComm() {
+    const users = DB.all(DB.KEYS.users);
+    const clients = users.filter((u) => u.role === "client").length;
+    const vendors = users.filter((u) => u.role === "vendor").length;
+    return `<div class="card card-pad" style="max-width:680px">
+      <h3 style="margin:0 0 4px">📣 Annonce globale</h3>
+      <p class="text-muted" style="font-size:13.5px;margin:0 0 14px">Envoyez une notification à un ensemble d'utilisateurs.</p>
+      <div class="field"><label>Destinataires</label>
+        <select id="bcSegment">
+          <option value="all">Tous les utilisateurs (${users.length})</option>
+          <option value="client">Tous les clients (${clients})</option>
+          <option value="vendor">Tous les vendeurs (${vendors})</option>
+        </select></div>
+      <div class="field mt-8"><label>Message</label><textarea id="bcMsg" rows="3" placeholder="Ex : Grande braderie ce week-end sur Marché CI !"></textarea></div>
+      <div class="field mt-8"><label>Lien (optionnel)</label>
+        <select id="bcLink"><option value="#/">Accueil</option><option value="#/deals">Bons plans</option><option value="#/stores">Boutiques</option></select></div>
+      <button class="btn btn-primary mt-8" id="bcSend">Envoyer l'annonce</button>
+    </div>`;
+  }
+  function wireAdminComm() {
+    const btn = document.getElementById("bcSend");
+    if (btn) btn.addEventListener("click", async () => {
+      const seg = document.getElementById("bcSegment").value;
+      const msg = document.getElementById("bcMsg").value.trim();
+      const link = document.getElementById("bcLink").value;
+      if (!msg) { UI.toast("Écrivez un message.", "error"); return; }
+      let recipients = DB.all(DB.KEYS.users);
+      if (seg !== "all") recipients = recipients.filter((u) => u.role === seg);
+      if (!(await UI.confirm(`Envoyer cette annonce à ${recipients.length} utilisateur(s) ?`, { confirmLabel: "Envoyer" }))) return;
+      recipients.forEach((u) => Notifications.push(u.id, { type: "info", message: "📣 " + msg, link }));
+      logAudit("Annonce globale envoyée", `${recipients.length} destinataire(s) — « ${msg.slice(0, 60)} »`);
+      UI.toast(`Annonce envoyée à ${recipients.length} utilisateur(s) ✓`, "success");
+      document.getElementById("bcMsg").value = "";
+    });
+  }
+
+  /* ---------- Onglet : Paramètres marketplace ---------- */
+  function adminSettingsTab() {
+    const s = adminSettings();
+    const stores = Store.all();
+    return `<div class="card card-pad" style="max-width:720px">
+      <h3 style="margin:0 0 12px">⚙️ Paramètres de la marketplace</h3>
+      <div class="field"><label>Bannière d'accueil <span class="hint">— message affiché en haut de l'accueil</span></label>
+        <input id="setBanner" value="${UI.esc(s.homeBanner)}" placeholder="Ex : 🎉 Soldes de fin d'année — jusqu'à -50% !" /></div>
+      <div class="field mt-8"><label>Message global <span class="hint">— bandeau d'information (toutes pages)</span></label>
+        <input id="setGlobalMsg" value="${UI.esc(s.globalMessage)}" placeholder="Ex : Livraison perturbée à Abidjan cette semaine." /></div>
+      <div class="divider" style="margin:14px 0"></div>
+      <label class="switch"><input type="checkbox" id="setMaint" ${s.maintenance.on ? "checked" : ""} /><span class="track"></span><span>Mode maintenance (bloque les commandes)</span></label>
+      <div class="field mt-8"><label>Message de maintenance</label><input id="setMaintMsg" value="${UI.esc(s.maintenance.msg)}" placeholder="La marketplace revient bientôt !" /></div>
+      <div class="divider" style="margin:14px 0"></div>
+      <label style="font-weight:700;font-size:13px">Catégories visibles</label>
+      <div class="zone-chips mt-8">${UI.CATEGORIES.map((c) => `<label class="zone-chip ${(s.hiddenCategories || []).includes(c.id) ? "" : "on"}"><input type="checkbox" data-cat="${c.id}" ${(s.hiddenCategories || []).includes(c.id) ? "" : "checked"} hidden/> ${c.icon} ${c.label}</label>`).join("")}</div>
+      <div class="divider" style="margin:14px 0"></div>
+      <label style="font-weight:700;font-size:13px">Boutiques à la une (accueil)</label>
+      <div class="mt-8" style="display:flex;flex-direction:column;gap:6px">${stores.map((st) => `<label class="radio-item"><input type="checkbox" data-feat="${st.id}" ${(s.featuredStores || []).includes(st.id) ? "checked" : ""}/> ${UI.esc(st.name)}</label>`).join("")}</div>
+      <button class="btn btn-primary mt-16" id="setSave">Enregistrer les paramètres</button>
+    </div>`;
+  }
+  function wireAdminSettings() {
+    // Bascule visuelle des chips catégories.
+    V().querySelectorAll(".zone-chip [data-cat]").forEach((cb) => cb.addEventListener("change", () => cb.closest(".zone-chip").classList.toggle("on", cb.checked)));
+    const btn = document.getElementById("setSave");
+    if (btn) btn.addEventListener("click", () => {
+      const hidden = Array.from(V().querySelectorAll(".zone-chip [data-cat]")).filter((c) => !c.checked).map((c) => c.getAttribute("data-cat"));
+      const featured = Array.from(V().querySelectorAll("[data-feat]")).filter((c) => c.checked).map((c) => c.getAttribute("data-feat"));
+      saveSettings({
+        homeBanner: document.getElementById("setBanner").value.trim(),
+        globalMessage: document.getElementById("setGlobalMsg").value.trim(),
+        maintenance: { on: document.getElementById("setMaint").checked, msg: document.getElementById("setMaintMsg").value.trim() },
+        hiddenCategories: hidden,
+        featuredStores: featured,
+      });
+      logAudit("Paramètres marketplace modifiés", "");
+      applyGlobalMessage();
+      UI.toast("Paramètres enregistrés ✓", "success");
+    });
+  }
+
+  /* ---------- Onglet : Journal d'audit ---------- */
+  function adminAudit() {
+    const log = DB.all(DB.KEYS.auditLog).sort((a, b) => b.at - a.at).slice(0, 200);
+    return `<div class="flex-between" style="margin-bottom:12px"><span class="text-muted" style="font-size:13px">${log.length} action(s) récente(s)</span>
+      ${log.length ? `<button class="btn btn-ghost btn-sm" id="auditClear">Vider le journal</button>` : ""}</div>
+      ${log.length ? `<div class="table-wrap"><table class="data-table">
+        <thead><tr><th>Date</th><th>Admin</th><th>Action</th><th>Détail</th></tr></thead>
+        <tbody>${log.map((a) => `<tr>
+          <td class="text-muted" style="font-size:12.5px">${UI.dateFR(a.at)} ${new Date(a.at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</td>
+          <td>${UI.esc(a.adminName)}</td><td><strong>${UI.esc(a.action)}</strong></td>
+          <td class="text-muted" style="font-size:12.5px">${UI.esc(a.detail || "—")}</td>
+        </tr>`).join("")}</tbody></table></div>` : emptyState("📋", "Journal vide", "Aucune action d'administration enregistrée pour le moment.")}`;
+  }
+  function wireAdminAudit() {
+    const c = document.getElementById("auditClear");
+    if (c) c.addEventListener("click", async () => {
+      if (!(await UI.confirm("Vider tout le journal d'audit ?", { danger: true, confirmLabel: "Vider" }))) return;
+      DB.set(DB.KEYS.auditLog, []); UI.toast("Journal vidé.", "info"); viewAdmin({ query: { tab: "audit" } });
     });
   }
 
@@ -5550,6 +5965,8 @@
     mountChatbot();
     // Bandeau confidentialité + tour de bienvenue (première visite).
     mountPrivacyBanner();
+    // Message global défini par l'administrateur.
+    applyGlobalMessage();
     // PWA : bouton d'installation.
     setupInstallPrompt();
     // Routeur.
@@ -5566,6 +5983,27 @@
   /* ============================================================
      Confidentialité + onboarding première visite
      ============================================================ */
+  /** Affiche/masque le bandeau de message global défini par l'admin (haut de page). */
+  function applyGlobalMessage() {
+    const msg = (adminSettings().globalMessage || "").trim();
+    let bar = document.getElementById("globalMsgBar");
+    if (!msg) { if (bar) bar.remove(); return; }
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.id = "globalMsgBar";
+      bar.className = "global-msg-bar";
+      const header = document.getElementById("appHeader");
+      header.parentNode.insertBefore(bar, header.nextSibling);
+    }
+    bar.textContent = "📢 " + msg;
+  }
+
+  /** Catégories visibles (hors catégories masquées par l'admin). */
+  function visibleCategories() {
+    const hidden = adminSettings().hiddenCategories || [];
+    return UI.CATEGORIES.filter((c) => !hidden.includes(c.id));
+  }
+
   function mountPrivacyBanner() {
     if (DB.get("privacyAck", false)) return;
     if (document.getElementById("privacyBanner")) return;

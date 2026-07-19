@@ -33,7 +33,9 @@ window.MP = window.MP || {};
     savedSearches: "savedsearch",// [ {id, userId, label, filters, createdAt} ]
     savedItems: "saveditems",    // { key: [ {productId, variant, savedAt} ] } — « gardé pour plus tard »
     wishlists: "wishlists",      // { userId: [ {id, name, items:[productId], createdAt} ] } — listes de souhaits
-    reports: "reports",          // [ {id, type:"product", targetId, reason, byUserId, status, createdAt} ] — modération
+    reports: "reports",          // [ {id, type:"product"|"store"|"question", targetId, reason, byUserId, status, createdAt} ] — modération
+    settings: "settings",        // { homeBanner, maintenance:{on,msg}, globalMessage, hiddenCategories:[], featuredStores:[] }
+    auditLog: "auditlog",        // [ {id, adminId, adminName, action, detail, at} ] — journal d'audit
     session: "session",          // { userId }
     theme: "theme",              // "light" | "dark"
     seeded: "seeded",            // bool

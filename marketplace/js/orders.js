@@ -58,6 +58,12 @@ window.MP = window.MP || {};
     const buyerId = user ? user.id : guestId();
     const buyerName = user ? user.name : (delivery.name || "Invité");
 
+    // Mode maintenance (paramétré par l'administrateur) : bloque les commandes.
+    const settings = DB.get("settings", {}) || {};
+    if (settings.maintenance && settings.maintenance.on) {
+      return { ok: false, error: settings.maintenance.msg || "La marketplace est en maintenance. Réessayez plus tard." };
+    }
+
     const err = validateDelivery(delivery);
     if (err) return { ok: false, error: err };
 
