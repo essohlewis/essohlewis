@@ -169,6 +169,8 @@ window.MP = window.MP || {};
 
     // Vide le panier.
     window.MP.Cart.clear();
+    // Enregistre la/les commande(s) en base côté serveur (si backend présent).
+    if (window.MP.Api) window.MP.Api.syncOrders(created);
     return { ok: true, orders: created };
   }
 

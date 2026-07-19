@@ -1,11 +1,19 @@
-# Backend Node.js (Express) — Vérification d'identité + reconnaissance faciale
+# Backend Node.js (Express) — Espace client en base + vérification d'identité
 
-Backend pour la **vérification d'identité des vendeurs** de Marché CI :
-pièce d'identité + selfie capturé en direct, **comparaison biométrique
-automatique** des deux visages, et back-office de revue **stylé avec Tailwind CSS**.
+Backend de Marché CI. Il apporte deux briques, sans toucher à la marketplace
+front (servie telle quelle) :
 
-La marketplace front existante reste inchangée : ce serveur la sert telle quelle
-et y ajoute l'API + deux nouvelles pages.
+1. **Espace client persisté en base de données SQLite** : comptes clients,
+   catalogue produits, panier et **commandes** (achats, paiement à la livraison).
+2. **Vérification d'identité des vendeurs** : pièce + selfie en direct,
+   **reconnaissance faciale** et **détection de vivacité** automatiques, avec un
+   back-office de revue **stylé Tailwind CSS**.
+
+La base client utilise le module **SQLite intégré à Node.js** (`node:sqlite`) :
+aucune dépendance à installer, aucun service externe — juste un fichier
+`data/marche.db`. Le front bascule automatiquement dessus quand le serveur est
+présent (écriture des inscriptions et commandes en base) ; en `file://`, tout
+reste en localStorage.
 
 ## Prérequis
 - **Node.js 18+** (testé sur Node 22).
@@ -56,6 +64,30 @@ la vérification retombe sur le mode 100 % local (localStorage).
 | GET | `/list?status=` | admin | file des vérifications |
 | POST | `/review` | admin | `approve` / `reject` (+ motif) |
 | GET | `/image/:id/:kind` | admin | sert une image (`id`/`selfie`) |
+
+## API de l'espace client (`/api/shop/…`) — base SQLite
+| Méthode | Route | Accès | Description |
+|---|---|---|---|
+| GET | `/health` | public | État de la base + nombre de produits |
+| POST | `/register` | public | Création de compte client → jeton de session |
+| POST | `/login` | public | Connexion → jeton de session |
+| POST | `/logout` | client | Fin de session |
+| GET | `/me` | client | Profil du client connecté |
+| GET | `/products` | public | Catalogue (`?category=`, `?q=`, `?storeId=`) |
+| GET | `/products/:id` | public | Détail d'un produit |
+| POST | `/products` | admin | Ajout / mise à jour de produit(s) |
+| GET / PUT | `/cart` | client | Panier du client |
+| POST | `/orders` | client/invité | **Passer commande** (total recalculé serveur) |
+| GET | `/orders` | client | Mes commandes |
+| GET | `/orders/:id` | client | Détail d'une commande |
+| GET | `/admin/orders` | admin | Toutes les commandes |
+| POST | `/admin/orders/:id/status` | admin | Change le statut (pending→…→delivered) |
+| GET | `/admin/stats` | admin | Comptes, produits, commandes, chiffre d'affaires |
+
+**Tables SQLite** : `users`, `products`, `carts`, `orders`, `order_items`,
+`sessions`. Mots de passe hachés (scrypt + sel). Le **total de commande est
+toujours recalculé côté serveur** à partir du catalogue (sécurité anti-fraude) ;
+le stock est décrémenté et le panier vidé dans une transaction.
 
 ## Résultats de référence (validés)
 - Reconnaissance faciale : même personne → `match:true`, score ~87 ;

@@ -11,6 +11,9 @@ const path = require("path");
 const fs = require("fs");
 const db = require("./db");
 const face = require("./face");
+const shopdb = require("./shopdb");
+const createShopRouter = require("./shop");
+const seedProducts = require("./seed");
 
 const PORT = process.env.PORT || 3000;
 const ADMIN_TOKEN = process.env.KYC_ADMIN_TOKEN || "admin-demo-token";
@@ -22,6 +25,15 @@ app.use(express.json({ limit: "16mb" }));
 
 let FACE_AVAILABLE = false;
 face.selfTest().then((ok) => { FACE_AVAILABLE = ok; console.log(`[face] reconnaissance faciale : ${ok ? "OPÉRATIONNELLE (dlib)" : "indisponible → revue admin manuelle"}`); });
+
+// Base de données SQLite de l'espace client (comptes, catalogue, panier, commandes).
+let SHOP_AVAILABLE = false;
+try {
+  SHOP_AVAILABLE = shopdb.init();
+  if (SHOP_AVAILABLE && shopdb.countProducts() === 0) { seedProducts.forEach((p) => shopdb.upsertProduct(p)); console.log(`[shop] catalogue initialisé (${seedProducts.length} produits)`); }
+  console.log(`[shop] base de données client : ${SHOP_AVAILABLE ? "SQLite prête (" + shopdb.countProducts() + " produits)" : "indisponible (node:sqlite absent)"}`);
+} catch (e) { console.log("[shop] base de données indisponible :", e.message); }
+if (SHOP_AVAILABLE) app.use("/api/shop", createShopRouter(shopdb, ADMIN_TOKEN));
 
 function requireAdmin(req, res, next) {
   const tok = req.get("X-Admin-Token") || req.query.token;

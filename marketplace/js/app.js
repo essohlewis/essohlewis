@@ -7054,6 +7054,8 @@
     applyBranding();
     // Détecte le backend de vérification (KYC) — sans bloquer le rendu.
     if (KYC) KYC.init();
+    // Détecte la base de données de l'espace client (comptes/commandes) — sans bloquer.
+    if (window.MP.Api) window.MP.Api.init();
     // Multi-langue.
     if (I18n) I18n.init();
     // Accessibilité : taille d'affichage + contraste mémorisés.

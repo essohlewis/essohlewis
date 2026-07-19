@@ -71,6 +71,8 @@ window.MP = window.MP || {};
     DB.insert(K, user);
     if (Sec) { Sec.recordRegistration(); Sec.log("Inscription", email, { userId: user.id, userName: name }); }
     _startSession(user.id);
+    // Écriture en base côté serveur (si backend présent) — sinon sans effet.
+    if (window.MP.Api) window.MP.Api.syncRegister(user, password);
     return { ok: true, user };
   }
 
@@ -90,6 +92,7 @@ window.MP = window.MP || {};
     if (user.suspended) return { ok: false, error: "Ce compte a été suspendu. Contactez l'assistance." };
     if (Sec) { Sec.clearLoginFails(email); Sec.log("Connexion réussie", "", { userId: user.id, userName: user.name }); }
     _startSession(user.id);
+    if (window.MP.Api) window.MP.Api.syncLogin(email, password);
     return { ok: true, user };
   }
 
@@ -99,6 +102,7 @@ window.MP = window.MP || {};
 
   function logout() {
     DB.remove(DB.KEYS.session);
+    if (window.MP.Api) window.MP.Api.logout();
   }
 
   /** Met à jour le profil de l'utilisateur courant. */

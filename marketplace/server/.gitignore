@@ -1,5 +1,8 @@
 node_modules/
 data/kyc.json
+data/marche.db
+data/marche.db-wal
+data/marche.db-shm
 data/uploads/*
 !data/uploads/.gitkeep
 npm-debug.log*
