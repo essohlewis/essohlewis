@@ -11,10 +11,21 @@ et décider de la correspondance. Deux implémentations, même contrat HTTP :
 
 ## Contrat HTTP (identique pour les deux)
 ```
-GET  /health  -> {"ok": true, ...}
+GET  /health  -> {"ok": true, "liveness": true, ...}
 POST /        {"idImage": "<dataURL|base64>", "selfie": "<dataURL|base64>"}
      -> {"match": true|false, "score": 0..100, ...}
+POST /liveness  {"frames": ["<b64>", ...], "challenge": "blink|turn|smile"}
+     -> {"live": true|false, "action": bool, "motion": float, ...}
 ```
+
+### Détection de vivacité (anti-photo / anti-deepfake)
+Le service `face_service.py` expose aussi `/liveness` : il reçoit une **rafale
+d'images** (capturée pendant que l'utilisateur suit une consigne aléatoire —
+cligner, tourner la tête, sourire) et détecte le mouvement facial via les
+points de repère dlib (EAR pour le clignement, déplacement du nez pour la
+rotation, MAR pour le sourire). Une **photo statique** présentée à la caméra
+donne un mouvement nul → `live: false` (rejetée). Résultats validés :
+photo statique → `live:false, motion:0` ; tête qui bouge → `live:true`.
 
 ## Option A — Local (dlib), recommandée pour l'auto-hébergement
 Reconnaissance faciale **100 % locale**, sans clé ni cloud. Les modèles dlib

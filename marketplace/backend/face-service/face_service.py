@@ -40,6 +40,22 @@ PORT = int(os.getenv("FACE_PORT", "5000"))
 # personne (0.6 = recommandation de dlib ; plus bas = plus strict).
 TOLERANCE = float(os.getenv("FACE_TOLERANCE", "0.6"))
 MAX_BYTES = int(os.getenv("FACE_MAX_BYTES", str(6 * 1024 * 1024)))
+# Détection de vivacité : seuils.
+EAR_CLOSED = float(os.getenv("LIVE_EAR_CLOSED", "0.20"))   # œil fermé
+EAR_OPEN = float(os.getenv("LIVE_EAR_OPEN", "0.26"))       # œil ouvert
+MOTION_MIN = float(os.getenv("LIVE_MOTION_MIN", "1.6"))    # mouvement mini (px)
+
+# Détecteur + prédicteur de points de repère (dlib) chargés à la demande.
+_DLIB = {"det": None, "pred": None}
+
+
+def _dlib():
+    if _DLIB["pred"] is None:
+        import dlib
+        import face_recognition_models as frm
+        _DLIB["det"] = dlib.get_frontal_face_detector()
+        _DLIB["pred"] = dlib.shape_predictor(frm.pose_predictor_model_location())
+    return _DLIB["det"], _DLIB["pred"]
 
 
 def _decode_image(data_url):
@@ -84,6 +100,74 @@ def compare(id_data, selfie_data):
     return result
 
 
+# ------------------------------------------------------------------ Vivacité
+def _ear(pts):
+    """Eye Aspect Ratio à partir de 6 points (x,y)."""
+    a = np.linalg.norm(pts[1] - pts[5])
+    b = np.linalg.norm(pts[2] - pts[4])
+    c = np.linalg.norm(pts[0] - pts[3])
+    return (a + b) / (2.0 * c) if c > 0 else 0.0
+
+
+def _mar(m):
+    """Mouth Aspect Ratio (ouverture/sourire) à partir de 6 points."""
+    a = np.linalg.norm(m[1] - m[5]); b = np.linalg.norm(m[2] - m[4])
+    c = np.linalg.norm(m[0] - m[3])
+    return (a + b) / (2.0 * c) if c > 0 else 0.0
+
+
+def _landmarks(img):
+    """Renvoie (points 68x2, boîte) du plus grand visage, ou (None, None)."""
+    import dlib
+    det, pred = _dlib()
+    rects = det(img, 1)
+    if not rects:
+        return None, None
+    rect = max(rects, key=lambda r: r.width() * r.height())
+    shp = pred(img, rect)
+    pts = np.array([[shp.part(i).x, shp.part(i).y] for i in range(68)], dtype="float64")
+    return pts, rect
+
+
+def liveness(frames, challenge):
+    """
+    Analyse une rafale d'images pour détecter la vivacité (anti-photo).
+    challenge : "blink" | "turn" | "smile". Renvoie {live, action, ...}.
+    """
+    ears, noses, mars, sizes, seen = [], [], [], [], 0
+    for f in frames[:20]:
+        try:
+            img = _decode_image(f)
+        except ValueError:
+            continue
+        pts, rect = _landmarks(img)
+        if pts is None:
+            continue
+        seen += 1
+        w = float(rect.width()) or 1.0
+        ear = (_ear(pts[36:42]) + _ear(pts[42:48])) / 2.0
+        ears.append(ear)
+        noses.append(pts[30][0] / w)          # nez normalisé par la largeur
+        mars.append(_mar(pts[[48, 51, 54, 57, 62, 66]]))
+        sizes.append(w)
+    if seen < 2:
+        return {"live": False, "faces": seen, "error": "not_enough_faces"}
+    # Mouvement global des repères entre trames (photo statique ≈ 0).
+    ear_range = (max(ears) - min(ears)) if ears else 0
+    nose_range = (max(noses) - min(noses)) if noses else 0
+    mar_range = (max(mars) - min(mars)) if mars else 0
+    motion = (ear_range * 100) + (nose_range * 100) + (mar_range * 60)
+    blink = (min(ears) < EAR_CLOSED and max(ears) > EAR_OPEN)
+    turn = nose_range > 0.06
+    smile = mar_range > 0.12
+    action_map = {"blink": blink, "turn": turn, "smile": smile}
+    action_ok = action_map.get(challenge, blink or turn or smile)
+    live = bool(action_ok or motion >= MOTION_MIN)
+    return {"live": live, "action": bool(action_ok), "faces": seen,
+            "challenge": challenge, "blink": bool(blink), "turn": bool(turn),
+            "smile": bool(smile), "motion": round(float(motion), 2)}
+
+
 class Handler(BaseHTTPRequestHandler):
     def _json(self, obj, code=200):
         body = json.dumps(obj).encode("utf-8")
@@ -95,7 +179,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path.startswith("/health"):
-            return self._json({"ok": True, "service": "face-match", "tolerance": TOLERANCE})
+            return self._json({"ok": True, "service": "face-match", "tolerance": TOLERANCE, "liveness": True})
         self._json({"error": "not_found"}, 404)
 
     def do_POST(self):
@@ -104,6 +188,15 @@ class Handler(BaseHTTPRequestHandler):
             data = json.loads(self.rfile.read(length) or b"{}")
         except Exception:
             return self._json({"error": "bad_json"}, 400)
+        # Détection de vivacité (rafale d'images).
+        if self.path.startswith("/liveness"):
+            frames = data.get("frames") or []
+            if not isinstance(frames, list) or not frames:
+                return self._json({"live": False, "error": "no_frames"}, 400)
+            try:
+                return self._json(liveness(frames, data.get("challenge", "blink")))
+            except Exception as e:
+                return self._json({"live": False, "error": "internal:" + str(e)}, 500)
         try:
             res = compare(data.get("idImage"), data.get("selfie"))
             self._json(res)

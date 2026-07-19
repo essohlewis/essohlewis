@@ -2914,7 +2914,14 @@
    */
   function openKycFlow(store, onDone) {
     const user = Auth.current();
-    const state = { idType: "CNI", idNumber: "", idImage: "", idImageBack: "", selfie: "", faceDetected: null };
+    // Défi de vivacité aléatoire (anti-photo / anti-deepfake).
+    const CHALLENGES = [
+      { code: "blink", label: "clignez des yeux" },
+      { code: "turn", label: "tournez lentement la tête à gauche puis à droite" },
+      { code: "smile", label: "souriez" },
+    ];
+    const challenge = CHALLENGES[Math.floor(Math.random() * CHALLENGES.length)];
+    const state = { idType: "CNI", idNumber: "", idImage: "", idImageBack: "", selfie: "", faceDetected: null, live: null, liveChallenge: challenge.code };
     const camAvailable = KYC && KYC.secureContextOk() && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
     UI.modal({
       title: "🪪 Vérification de votre identité",
@@ -2935,8 +2942,9 @@
         </div>
 
         <div data-step="2" hidden>
-          <p class="text-muted" style="font-size:13px;margin:0 0 10px">Placez votre visage dans l'ovale et prenez la photo. La capture se fait <strong>en direct</strong> pour garantir qu'il s'agit bien de vous.</p>
+          <p class="text-muted" style="font-size:13px;margin:0 0 10px">Placez votre visage dans l'ovale. Pendant la capture <strong>en direct</strong>, suivez la consigne — ceci prouve que vous êtes une vraie personne (anti-photo).</p>
           ${camAvailable ? `
+            <div class="kyc-challenge" id="kycChallenge">🟢 Consigne : <strong>${challenge.label}</strong></div>
             <div class="kyc-cam-wrap">
               <video id="kycVideo" playsinline muted></video>
               <img id="kycShot" alt="" hidden />
@@ -2945,7 +2953,7 @@
             <div id="kycFaceMsg" class="pw-hint" style="text-align:center"></div>
             <div class="flex gap-8 mt-8" style="justify-content:center">
               <button class="btn btn-ghost" id="kycCamStart">Démarrer la caméra</button>
-              <button class="btn btn-primary" id="kycCapture" hidden>📸 Prendre la photo</button>
+              <button class="btn btn-primary" id="kycCapture" hidden>▶️ Lancer la vérification</button>
               <button class="btn btn-ghost" id="kycRetake" hidden>↺ Reprendre</button>
             </div>` : `
             <div class="scam-warn">📷 La capture par la caméra nécessite d'ouvrir le site en <strong>http(s)</strong> ou <strong>localhost</strong> (elle est bloquée en ouverture de fichier « file:// »). Vous pouvez importer une photo récente en attendant.</div>
@@ -2982,28 +2990,37 @@
         bindDrop("#kycIdBack", (url) => { state.idImageBack = url; });
         $("#kycNext1").addEventListener("click", () => { state.idType = $("#kycIdType").value; state.idNumber = $("#kycIdNum").value.trim(); showStep(2); });
 
-        // Étape 2 : selfie (caméra en direct ou repli fichier).
+        // Étape 2 : selfie + vivacité (caméra en direct ou repli fichier).
+        const gateNext = () => { $("#kycNext2").disabled = !state.selfie || state.faceDetected === false || state.live === false; };
         const setSelfie = async (url) => {
           state.selfie = url;
           state.faceDetected = await KYC.detectFace(url);
-          const msg = $("#kycFaceMsg");
-          if (msg) msg.textContent = state.faceDetected === true ? "✅ Visage détecté" : state.faceDetected === false ? "⚠️ Aucun visage détecté — recadrez." : "";
-          $("#kycNext2").disabled = !url || state.faceDetected === false;
+          gateNext();
         };
         if (camAvailable) {
-          const video = $("#kycVideo"), shot = $("#kycShot");
+          const video = $("#kycVideo"), shot = $("#kycShot"), msg = $("#kycFaceMsg");
           $("#kycCamStart").addEventListener("click", async () => {
             try { await KYC.camera.start(video); video.hidden = false; shot.hidden = true; $("#kycCamStart").hidden = true; $("#kycCapture").hidden = false; }
             catch (e) { UI.toast("Impossible d'accéder à la caméra. Autorisez-la dans le navigateur.", "error"); }
           });
           $("#kycCapture").addEventListener("click", async () => {
-            const url = KYC.camera.capture(video);
+            $("#kycCapture").disabled = true;
+            // Rafale pendant que l'utilisateur suit la consigne (vivacité).
+            const frames = await KYC.camera.captureBurst(video, 10, 260, (i, n) => { msg.textContent = `Capture ${i}/${n} — ${challenge.label}…`; });
+            const url = KYC.camera.capture(video); // selfie pleine résolution
             shot.src = url; shot.hidden = false; video.hidden = true; KYC.camera.stop();
-            $("#kycCapture").hidden = true; $("#kycRetake").hidden = false;
+            $("#kycCapture").hidden = true; $("#kycCapture").disabled = false; $("#kycRetake").hidden = false;
+            msg.textContent = "Analyse de vivacité…";
+            const live = await KYC.checkLiveness(frames, challenge.code);
+            state.live = (live && typeof live.live === "boolean") ? live.live : null;
             await setSelfie(url);
+            if (state.live === false) msg.innerHTML = `⚠️ Vivacité non confirmée (photo/écran détecté ?). Reprenez et <strong>${challenge.label}</strong>.`;
+            else if (state.live === true) msg.textContent = "✅ Vivacité confirmée" + (state.faceDetected === false ? " (mais visage peu net)" : "");
+            else msg.textContent = state.faceDetected === false ? "⚠️ Aucun visage détecté — recadrez." : "Photo prise ✓";
+            gateNext();
           });
           $("#kycRetake").addEventListener("click", async () => {
-            state.selfie = ""; $("#kycNext2").disabled = true; $("#kycFaceMsg").textContent = "";
+            state.selfie = ""; state.live = null; $("#kycNext2").disabled = true; msg.textContent = "";
             try { await KYC.camera.start(video); video.hidden = false; shot.hidden = true; $("#kycRetake").hidden = true; $("#kycCapture").hidden = false; } catch (e) {}
           });
         } else {
@@ -3026,6 +3043,7 @@
               idType: state.idType, idNumber: state.idNumber,
               idImage: state.idImage, idImageBack: state.idImageBack, selfie: state.selfie,
               faceDetected: state.faceDetected === true, consent: true,
+              live: state.live, liveChallenge: state.liveChallenge,
             });
             if (res.ok) {
               if (window.MP.Security) Security.log("Vérification d'identité soumise", state.idType);
@@ -6448,7 +6466,7 @@
           <figure><figcaption>Pièce d'identité</figcaption><img src="${it.idImageUrl}" alt="pièce" data-zoom="${it.idImageUrl}" /></figure>
           <figure><figcaption>Selfie (capture live)</figcaption><img src="${it.selfieUrl}" alt="selfie" data-zoom="${it.selfieUrl}" /></figure>
         </div>
-        <div class="text-muted" style="font-size:12px;margin:4px 0 8px">Qualité : ${it.quality}/100 · ${bio ? "Score biométrique" : "Similarité (indicative)"} : ${it.similarity}% · Visage détecté : ${it.faceDetected ? "oui" : "non"}</div>
+        <div class="text-muted" style="font-size:12px;margin:4px 0 8px">Qualité : ${it.quality}/100 · ${bio ? "Score biométrique" : "Similarité (indicative)"} : ${it.similarity}% · Visage détecté : ${it.faceDetected ? "oui" : "non"} · Vivacité : ${it.live === 1 ? "<span style='color:var(--accent)'>✅ confirmée</span>" : it.live === 0 ? "<span style='color:var(--danger)'>❌ échouée (photo ?)</span>" : "non testée"}${it.liveChallenge ? " (" + UI.esc(it.liveChallenge) + ")" : ""}</div>
         <div class="flex gap-8"><button class="btn btn-accent btn-sm" data-kbok="${it.id}" data-vid="${it.vendorId}">✔️ Valider</button>
           <button class="btn btn-danger btn-sm" data-kbno="${it.id}" data-vid="${it.vendorId}">Refuser</button></div>
       </div>`).join("");

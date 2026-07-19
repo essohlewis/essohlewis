@@ -108,21 +108,45 @@ window.MP = window.MP || {};
       return KYC._stream;
     },
     /** Capture l'image courante de la vidéo → data URL (JPEG). */
-    capture(videoEl) {
+    capture(videoEl, size) {
+      size = size || 480;
       const w = videoEl.videoWidth || 480, h = videoEl.videoHeight || 480;
       const side = Math.min(w, h);
       const cv = document.createElement("canvas");
-      cv.width = 480; cv.height = 480;
+      cv.width = size; cv.height = size;
       const ctx = cv.getContext("2d");
       // Recadre au centre (carré) et effet miroir (comme un miroir).
       ctx.translate(cv.width, 0); ctx.scale(-1, 1);
-      ctx.drawImage(videoEl, (w - side) / 2, (h - side) / 2, side, side, 0, 0, 480, 480);
-      return cv.toDataURL("image/jpeg", 0.85);
+      ctx.drawImage(videoEl, (w - side) / 2, (h - side) / 2, side, side, 0, 0, size, size);
+      return cv.toDataURL("image/jpeg", size <= 260 ? 0.7 : 0.85);
+    },
+    /** Capture une rafale de N images (pour la vivacité), en basse résolution. */
+    async captureBurst(videoEl, count, intervalMs, onTick) {
+      count = count || 10; intervalMs = intervalMs || 260;
+      const frames = [];
+      for (let i = 0; i < count; i++) {
+        frames.push(this.capture(videoEl, 260));
+        if (onTick) onTick(i + 1, count);
+        await new Promise((r) => setTimeout(r, intervalMs));
+      }
+      return frames;
     },
     stop() {
       if (KYC._stream) { KYC._stream.getTracks().forEach((t) => t.stop()); KYC._stream = null; }
     },
   };
+
+  /** Envoie une rafale au backend pour analyse de vivacité (anti-photo). */
+  async function checkLiveness(frames, challenge) {
+    if (!KYC.enabled) return { live: null, skipped: true };
+    try {
+      const r = await fetch(apiBase() + "?action=liveness", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ frames, challenge }),
+      });
+      return await r.json();
+    } catch (e) { return { live: null, error: true }; }
+  }
 
   /** Détecte la présence d'un visage (FaceDetector). null = API indisponible. */
   async function detectFace(dataUrl) {
@@ -145,5 +169,6 @@ window.MP = window.MP || {};
   KYC.review = review;
   KYC.camera = camera;
   KYC.detectFace = detectFace;
+  KYC.checkLiveness = checkLiveness;
   window.MP.KYC = KYC;
 })();

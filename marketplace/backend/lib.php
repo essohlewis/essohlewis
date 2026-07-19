@@ -63,6 +63,8 @@ function db(): PDO {
         quality_score INTEGER DEFAULT 0,
         similarity INTEGER DEFAULT 0,
         auto_match INTEGER DEFAULT 0,
+        live INTEGER DEFAULT -1,
+        live_challenge TEXT DEFAULT "",
         status TEXT DEFAULT "pending",
         reason TEXT DEFAULT "",
         created_at INTEGER,
@@ -176,18 +178,36 @@ function image_similarity(string $a, string $b): int {
  */
 function external_face_match(string $idImage, string $selfie): ?array {
     if (FACE_MATCH_URL === '') return null;
-    $payload = json_encode(['idImage' => $idImage, 'selfie' => $selfie]);
-    $ch = curl_init(FACE_MATCH_URL);
+    $res = _post_json(FACE_MATCH_URL, ['idImage' => $idImage, 'selfie' => $selfie], 20);
+    if (!$res || !isset($res['score'])) return null;
+    return ['match' => !empty($res['match']), 'score' => intval($res['score'])];
+}
+
+/**
+ * Détection de vivacité : envoie une rafale d'images au microservice
+ * (endpoint /liveness) pour distinguer une personne réelle d'une photo.
+ * @return array|null  ['live'=>bool, ...] ou null si non configuré / échec.
+ */
+function external_liveness(array $frames, string $challenge): ?array {
+    if (FACE_MATCH_URL === '') return null;
+    $url = rtrim(FACE_MATCH_URL, '/') . '/liveness';
+    $res = _post_json($url, ['frames' => $frames, 'challenge' => $challenge], 30);
+    if (!$res || !array_key_exists('live', $res)) return null;
+    return $res;
+}
+
+/** POST JSON générique (cURL) → tableau décodé ou null. */
+function _post_json(string $url, array $payload, int $timeout = 20): ?array {
+    $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => $payload,
+        CURLOPT_POSTFIELDS => json_encode($payload),
         CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 15,
+        CURLOPT_TIMEOUT => $timeout,
     ]);
     $res = curl_exec($ch); curl_close($ch);
     if ($res === false) return null;
     $j = json_decode($res, true);
-    if (!is_array($j) || !isset($j['score'])) return null;
-    return ['match' => !empty($j['match']), 'score' => intval($j['score'])];
+    return is_array($j) ? $j : null;
 }

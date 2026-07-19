@@ -27,6 +27,16 @@ switch ($action) {
 case 'ping':
     json_out(['ok' => true, 'service' => 'kyc', 'faceMatch' => FACE_MATCH_URL !== '']);
 
+/* -------------------- Détection de vivacité (rafale) -------------------- */
+case 'liveness':
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') fail('POST requis.', 405);
+    $b = body();
+    $frames = $b['frames'] ?? [];
+    if (!is_array($frames) || !count($frames)) fail('Aucune image reçue.');
+    $r = external_liveness($frames, (string)($b['challenge'] ?? 'blink'));
+    if ($r === null) json_out(['ok' => true, 'live' => null, 'skipped' => true]); // service absent
+    json_out(['ok' => true] + $r);
+
 /* -------------------- Soumission d'une vérification -------------------- */
 case 'submit':
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') fail('POST requis.', 405);
@@ -63,14 +73,16 @@ case 'submit':
         fail('Ce vendeur est déjà vérifié.', 409);
     }
 
+    $live = array_key_exists('live', $b) ? ($b['live'] === null ? -1 : ($b['live'] ? 1 : 0)) : -1;
     $rid = uid();
-    $pdo->prepare('INSERT INTO kyc (id, vendor_id, vendor_name, store_id, id_type, id_number, id_image, id_image_back, selfie, face_detected, quality_score, similarity, auto_match, status, created_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,"pending",?)')
+    $pdo->prepare('INSERT INTO kyc (id, vendor_id, vendor_name, store_id, id_type, id_number, id_image, id_image_back, selfie, face_detected, quality_score, similarity, auto_match, live, live_challenge, status, created_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,"pending",?)')
         ->execute([
             $rid, $vendorId, (string)($b['vendorName'] ?? ''), (string)($b['storeId'] ?? ''),
             (string)($b['idType'] ?? ''), (string)($b['idNumber'] ?? ''),
             $idFile, $idBackFile, $selfieFile,
-            !empty($b['faceDetected']) ? 1 : 0, $quality, $similarity, $autoMatch, time(),
+            !empty($b['faceDetected']) ? 1 : 0, $quality, $similarity, $autoMatch,
+            $live, (string)($b['liveChallenge'] ?? ''), time(),
         ]);
 
     json_out(['ok' => true, 'id' => $rid, 'status' => 'pending',
@@ -103,6 +115,7 @@ case 'list':
             'storeId' => $r['store_id'], 'idType' => $r['id_type'], 'idNumber' => $r['id_number'],
             'faceDetected' => (bool)$r['face_detected'], 'quality' => (int)$r['quality_score'],
             'similarity' => (int)$r['similarity'], 'autoMatch' => (bool)$r['auto_match'],
+            'live' => (int)$r['live'], 'liveChallenge' => $r['live_challenge'],
             'status' => $r['status'], 'reason' => $r['reason'],
             'createdAt' => (int)$r['created_at'], 'reviewedAt' => (int)$r['reviewed_at'],
             'idImageUrl' => 'api.php?action=image&kind=id&id=' . $r['id'],
