@@ -54,6 +54,10 @@ window.MP = window.MP || {};
       freeShipThreshold: Number(data.freeShipThreshold) || 0, // livraison offerte dès X FCFA (0 = jamais)
       deliveryFees: data.deliveryFees || {},  // { commune: frais }
       zones: data.zones || [],                // communes desservies (vide = toutes)
+      schedule: data.schedule || null,        // horaires par jour { mon:{open,close,closed}, ... }
+      lowStockThreshold: data.lowStockThreshold != null ? Number(data.lowStockThreshold) : 3,
+      notifPrefs: data.notifPrefs || { newOrder: true, message: true, lowStock: true, review: true },
+      staff: data.staff || [],                // [ {userId, name, email, role} ]
       createdAt: Date.now(),
     };
     if (!DB.insert(K, store)) return { ok: false, error: "Espace de stockage plein : réduisez la taille des images." };
@@ -65,12 +69,42 @@ window.MP = window.MP || {};
   function update(id, patch) {
     const store = get(id);
     const user = window.MP.Auth.current();
-    if (!store || !user || (store.ownerId !== user.id && user.role !== "admin")) {
+    const isStaff = store && user && (store.staff || []).some((s) => s.userId === user.id);
+    if (!store || !user || (store.ownerId !== user.id && user.role !== "admin" && !isStaff)) {
       return { ok: false, error: "Non autorisé." };
     }
     const updated = DB.update(K, id, patch);
     if (!updated) return { ok: false, error: "Espace de stockage plein : réduisez le nombre ou la taille des images." };
     return { ok: true, store: updated };
+  }
+
+  /** Rôle d'un utilisateur pour une boutique : "owner" | "gerant" | "preparateur" | null. */
+  function roleFor(store, userId) {
+    if (!store) return null;
+    if (store.ownerId === userId) return "owner";
+    const s = (store.staff || []).find((x) => x.userId === userId);
+    return s ? s.role : null;
+  }
+
+  /** Boutique gérée par un utilisateur (propriétaire OU membre du staff). */
+  function managedBy(userId) {
+    return byOwner(userId) || all().find((st) => (st.staff || []).some((s) => s.userId === userId)) || null;
+  }
+
+  /** Indique si la boutique est ouverte maintenant selon ses horaires (fallback : ouverte). */
+  function isOpenNow(store) {
+    if (!store) return true;
+    if (store.closed) return false;
+    const sch = store.schedule;
+    if (!sch) return true;
+    const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+    const now = new Date();
+    const d = sch[days[now.getDay()]];
+    if (!d || d.closed) return false;
+    if (!d.open || !d.close) return true;
+    const cur = now.getHours() * 60 + now.getMinutes();
+    const toMin = (t) => { const [h, m] = String(t).split(":").map(Number); return (h || 0) * 60 + (m || 0); };
+    return cur >= toMin(d.open) && cur < toMin(d.close);
   }
 
   /** Frais de livraison d'une boutique pour une commune donnée. */
@@ -142,5 +176,6 @@ window.MP = window.MP || {};
     all, get, byOwner, create, update, remove,
     subscribers, subscriberCount, isSubscribed, toggleSubscribe,
     reviews, rating, deliveryFee, servesCommune,
+    roleFor, managedBy, isOpenNow,
   };
 })();

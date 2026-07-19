@@ -135,10 +135,12 @@ window.MP = window.MP || {};
       created.push(order);
       if (couponId) window.MP.Coupons.redeem(couponId);
 
-      // Décrémente le stock + notifie le vendeur en cas de stock faible/rupture.
+      const prefs = store.notifPrefs || {};
+      // Décrémente le stock (variante précise si suivi) + notifie le vendeur (selon préférences).
       g.lines.forEach((l) => {
-        window.MP.Products.decrementStock(l.product.id, l.qty);
+        window.MP.Products.decrementStock(l.product.id, l.qty, l.variant);
         const p = window.MP.Products.get(l.product.id);
+        if (prefs.lowStock === false) return;
         if (p && p.stock <= 0) {
           window.MP.Notifications.push(store.ownerId, { type: "info", message: `Rupture de stock : « ${p.title} ».`, link: "#/seller/products?status=published" });
         } else if (p && p.stock <= 3) {
@@ -149,8 +151,8 @@ window.MP = window.MP || {};
       // Simule le chiffre d'affaires (articles moins remise) — écriture système.
       DB.update(DB.KEYS.stores, g.store.id, { revenueSim: (store.revenueSim || 0) + Math.max(0, g.subtotal - discount) });
 
-      // Notifie le vendeur de la nouvelle commande.
-      window.MP.Notifications.push(g.store.ownerId, {
+      // Notifie le vendeur de la nouvelle commande (selon préférences).
+      if (prefs.newOrder !== false) window.MP.Notifications.push(g.store.ownerId, {
         type: "new_order",
         message: `Nouvelle commande ${order.number} (${window.MP.UI.fcfa(order.total)}) à livrer.`,
         link: "#/seller/orders",

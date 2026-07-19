@@ -40,7 +40,9 @@ window.MP = window.MP || {};
     qty = Math.max(1, qty || 1);
     const product = window.MP.Products.get(productId);
     if (!product) return { ok: false, error: "Article introuvable." };
-    if (product.stock <= 0) return { ok: false, error: "Article en rupture de stock." };
+    // Stock disponible pour la variante précise (ou stock global).
+    const avail = window.MP.Products.stockFor(product, variant);
+    if (avail <= 0) return { ok: false, error: window.MP.Products.effectiveStock(product) > 0 ? "Cette variante est en rupture." : "Article en rupture de stock." };
 
     const map = _all();
     const key = _key();
@@ -49,10 +51,10 @@ window.MP = window.MP || {};
     const line = map[key].find((i) => i.productId === productId && JSON.stringify(i.variant || {}) === vKey);
     const curPrice = window.MP.Products.effectivePrice(product);
     if (line) {
-      line.qty = Math.min(product.stock, line.qty + qty);
+      line.qty = Math.min(avail, line.qty + qty);
     } else {
       // addedPrice : prix au moment de l'ajout (détection de baisse de prix ultérieure).
-      map[key].push({ productId, qty: Math.min(product.stock, qty), variant: variant || {}, addedPrice: curPrice });
+      map[key].push({ productId, qty: Math.min(avail, qty), variant: variant || {}, addedPrice: curPrice });
     }
     _save(map);
     // Compteur d'ajouts au panier (statistiques de conversion).
@@ -67,7 +69,8 @@ window.MP = window.MP || {};
     const line = (map[key] || []).find((i) => i.productId === productId && JSON.stringify(i.variant || {}) === vKey);
     if (!line) return;
     const product = window.MP.Products.get(productId);
-    line.qty = Math.max(1, Math.min(product ? product.stock : qty, qty));
+    const avail = product ? window.MP.Products.stockFor(product, variant) : qty;
+    line.qty = Math.max(1, Math.min(avail, qty));
     _save(map);
   }
 

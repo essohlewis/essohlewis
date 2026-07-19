@@ -42,7 +42,7 @@ window.MP = window.MP || {};
     // Notifie le destinataire.
     const store = window.MP.Store.get(data.storeId);
     if (msg.from === "buyer" && store) {
-      window.MP.Notifications.push(store.ownerId, { type: "message", message: `Nouveau message de ${msg.buyerName || "un client"}.`, link: "#/seller/messages" });
+      if ((store.notifPrefs || {}).message !== false) window.MP.Notifications.push(store.ownerId, { type: "message", message: `Nouveau message de ${msg.buyerName || "un client"}.`, link: "#/seller/messages" });
     } else if (msg.from === "seller") {
       window.MP.Notifications.push(data.buyerId, { type: "message", message: `${store ? store.name : "Le vendeur"} vous a répondu.`, link: "#/messages" });
     }

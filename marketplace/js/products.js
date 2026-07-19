@@ -113,7 +113,10 @@ window.MP = window.MP || {};
       price: Math.round(Number(data.price) || 0),
       cost: Math.max(0, Math.round(Number(data.cost) || 0)), // coût d'achat (pour la marge)
       promoPrice: data.promoPrice ? Math.round(Number(data.promoPrice)) : 0,
-      stock: Math.max(0, Math.round(Number(data.stock) || 0)),
+      // Stock global : somme des variantes si suivi par variante, sinon valeur saisie.
+      stock: data.trackVariantStock
+        ? Object.values(data.variantStock || {}).reduce((s, n) => s + Math.max(0, Number(n) || 0), 0)
+        : Math.max(0, Math.round(Number(data.stock) || 0)),
       category: data.category || "mode",
       images: Array.isArray(data.images) && data.images.length ? data.images : [],
       condition: data.condition === "occasion" ? "occasion" : "neuf",
@@ -121,13 +124,38 @@ window.MP = window.MP || {};
         sizes: (data.variants && data.variants.sizes) || [],
         colors: (data.variants && data.variants.colors) || [],
       },
-      status: ["published", "draft", "unpublished"].includes(data.status) ? data.status : "draft",
+      trackVariantStock: !!data.trackVariantStock,     // stock géré par combinaison de variante
+      variantStock: data.variantStock || {},           // { "Taille|Couleur": qté }
+      tags: Array.isArray(data.tags) ? data.tags.map((t) => String(t).trim()).filter(Boolean).slice(0, 12) : [],
+      status: ["published", "draft", "unpublished", "scheduled"].includes(data.status) ? data.status : "draft",
+      publishAt: data.publishAt ? Number(data.publishAt) : 0, // publication programmée (timestamp)
       featured: !!data.featured,                       // article « à la une »
       negotiable: !!data.negotiable,                   // le client peut proposer un prix
       promoUntil: data.promoUntil ? Number(data.promoUntil) : 0, // fin de promo (timestamp, 0 = illimitée)
       restockDate: data.restockDate ? Number(data.restockDate) : 0, // date de réappro prévue (rupture)
       cartAdds: base.cartAdds || 0,                    // compteur d'ajouts au panier (conversion)
     });
+  }
+
+  /** Clé d'une variante pour le stock : "Taille|Couleur" (parties vides tolérées). */
+  function variantKey(variant) {
+    variant = variant || {};
+    return (variant.size || "") + "|" + (variant.color || "");
+  }
+
+  /** Stock disponible pour une variante précise (ou stock global si non suivi). */
+  function stockFor(product, variant) {
+    if (!product) return 0;
+    if (!product.trackVariantStock) return product.stock || 0;
+    const vs = product.variantStock || {};
+    return Math.max(0, Number(vs[variantKey(variant)]) || 0);
+  }
+
+  /** Stock total effectif (somme des variantes si suivi, sinon stock global). */
+  function effectiveStock(product) {
+    if (!product) return 0;
+    if (!product.trackVariantStock) return product.stock || 0;
+    return Object.values(product.variantStock || {}).reduce((s, n) => s + Math.max(0, Number(n) || 0), 0);
   }
 
   function remove(id) { DB.removeItem(K, id); }
@@ -138,10 +166,34 @@ window.MP = window.MP || {};
     if (p) DB.update(K, id, { views: (p.views || 0) + 1 });
   }
 
-  /** Décrémente le stock après commande. */
-  function decrementStock(id, qty) {
+  /** Décrémente le stock après commande (variante précise si stock par variante). */
+  function decrementStock(id, qty, variant) {
     const p = get(id);
-    if (p) DB.update(K, id, { stock: Math.max(0, (p.stock || 0) - qty) });
+    if (!p) return;
+    if (p.trackVariantStock) {
+      const vs = Object.assign({}, p.variantStock || {});
+      const key = variantKey(variant);
+      vs[key] = Math.max(0, (Number(vs[key]) || 0) - qty);
+      // Le stock global reflète la somme des variantes (rétro-compatibilité affichage).
+      const total = Object.values(vs).reduce((s, n) => s + Math.max(0, Number(n) || 0), 0);
+      DB.update(K, id, { variantStock: vs, stock: total });
+    } else {
+      DB.update(K, id, { stock: Math.max(0, (p.stock || 0) - qty) });
+    }
+  }
+
+  /** Publie les articles dont la date de programmation est atteinte (appelé au chargement). */
+  function processScheduled() {
+    let changed = false;
+    all().forEach((p) => {
+      if (p.status === "scheduled" && p.publishAt && p.publishAt <= Date.now()) {
+        DB.update(K, p.id, { status: "published" });
+        changed = true;
+        const store = window.MP.Store.get(p.storeId);
+        if (store) window.MP.Notifications.notifySubscribers(p.storeId, { type: "new_product", message: `${store.name} a publié un nouvel article : « ${p.title} »`, link: "#/product/" + p.id });
+      }
+    });
+    return changed;
   }
 
   /** Incrémente le compteur d'ajouts au panier (taux de conversion). */
@@ -323,7 +375,8 @@ window.MP = window.MP || {};
           p.title.toLowerCase().includes(q) ||
           p.description.toLowerCase().includes(q) ||
           (store && store.name.toLowerCase().includes(q)) ||
-          window.MP.UI.categoryLabel(p.category).toLowerCase().includes(q)
+          window.MP.UI.categoryLabel(p.category).toLowerCase().includes(q) ||
+          (p.tags || []).some((t) => t.toLowerCase().includes(q))
         );
       });
     }
@@ -383,5 +436,6 @@ window.MP = window.MP || {};
     all, get, byStore, published, create, update, remove,
     addView, decrementStock, addCartCount, effectivePrice, promoActive, quickSet, margin,
     reviews, rating, addReview, voteHelpful, replyReview, updateReview, removeReview, reportReview, search, priceHistory, boughtTogether,
+    variantKey, stockFor, effectiveStock, processScheduled,
   };
 })();

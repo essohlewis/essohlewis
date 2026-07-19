@@ -66,9 +66,14 @@
     return true;
   }
 
+  /** Boutique gérée par l'utilisateur courant (propriétaire ou staff). */
+  function sellerStore() { const u = Auth.current(); return u ? Store.managedBy(u.id) : null; }
+  /** Rôle de l'utilisateur courant dans sa boutique gérée. */
+  function sellerRole() { const s = sellerStore(); const u = Auth.current(); return s && u ? Store.roleFor(s, u.id) : null; }
+
   function requireVendor() {
     if (!requireAuth()) return false;
-    if (!Store.byOwner(Auth.current().id)) {
+    if (!sellerStore()) {
       Router.go("#/seller/store");
       return false;
     }
@@ -1018,7 +1023,7 @@
     const rt = Products.rating(p.id);
     const images = (p.images && p.images.length ? p.images : [UI.placeholder(p.title)]).map((s) => UI.safeImg(s, p.title));
     const closed = !!store.closed;
-    const out = p.stock <= 0 || closed;
+    const out = Products.effectiveStock(p) <= 0 || closed;
     const favActive = Fav.has(p.id) ? "active" : "";
     const isOwner = Auth.isLogged() && Auth.current().id === store.ownerId;
     // Vente flash : promo active se terminant dans moins de 3 jours.
@@ -1052,8 +1057,9 @@
             ${hasPromo && p.promoUntil && !isFlash ? `<span class="tag promo" style="position:static">Jusqu'au ${UI.dateFR(p.promoUntil)}</span>` : ""}
           </div>
           ${isFlash ? `<div class="flash-banner">⚡ <strong>Vente flash</strong> — se termine dans <span id="flashCountdown">…</span></div>` : ""}
-          <div class="text-muted" style="font-size:14px">${closed ? "🔒 Boutique fermée — commandes suspendues" : (p.stock <= 0 ? "❌ Rupture de stock" + (p.restockDate && p.restockDate > Date.now() ? ` — réappro prévu le ${UI.dateFR(p.restockDate)}` : "") : "✅ En stock : " + p.stock + " disponible(s)")}</div>
+          <div class="text-muted" id="pdStockLine" style="font-size:14px">${closed ? "🔒 Boutique fermée — commandes suspendues" : (Products.effectiveStock(p) <= 0 ? "❌ Rupture de stock" + (p.restockDate && p.restockDate > Date.now() ? ` — réappro prévu le ${UI.dateFR(p.restockDate)}` : "") : "✅ En stock : " + Products.effectiveStock(p) + " disponible(s)" + (p.trackVariantStock ? " (choisissez une variante)" : ""))}</div>
           <p class="pd-desc">${UI.esc(p.description)}</p>
+          ${(p.tags && p.tags.length) ? `<div class="pd-tags">${p.tags.map((t) => `<a href="#/search?q=${encodeURIComponent(t)}" class="tag-chip">#${UI.esc(t)}</a>`).join("")}</div>` : ""}
           ${sizeSel}${colorSel}
           <div class="variant-row"><label>Quantité</label>
             <div class="qty-box"><button id="qtyMinus">−</button><span id="qtyVal">1</span><button id="qtyPlus">+</button></div>
@@ -1115,34 +1121,53 @@
     );
 
     // --- Variantes ---
-    function wireVariant(containerId, attr) {
+    function currentVariant() {
+      const variant = {};
+      const sz = V().querySelector("#sizeOpts .chip.active");
+      const cl = V().querySelector("#colorOpts .chip.active");
+      if (sz) variant.size = sz.getAttribute("data-size");
+      if (cl) variant.color = cl.getAttribute("data-color");
+      return variant;
+    }
+    // Met à jour la dispo affichée + le bouton selon la variante choisie (stock par variante).
+    function updateAvailability() {
+      if (closed) return;
+      const avail = Products.stockFor(p, currentVariant());
+      const line = document.getElementById("pdStockLine");
+      const btn = document.getElementById("addCart");
+      if (p.trackVariantStock) {
+        line.textContent = avail > 0 ? "✅ En stock : " + avail + " disponible(s) pour cette variante" : "❌ Variante en rupture";
+      }
+      if (btn) btn.disabled = avail <= 0;
+      qty = Math.min(qty, Math.max(1, avail));
+      if (qtyVal) qtyVal.textContent = qty;
+    }
+    function wireVariant(containerId) {
       const c = document.getElementById(containerId);
       if (!c) return;
       c.querySelectorAll(".chip").forEach((b) =>
         b.addEventListener("click", () => {
           c.querySelectorAll(".chip").forEach((x) => x.classList.remove("active"));
           b.classList.add("active");
+          updateAvailability();
         })
       );
     }
-    wireVariant("sizeOpts", "data-size");
-    wireVariant("colorOpts", "data-color");
 
     // --- Quantité ---
     let qty = 1;
     const qtyVal = document.getElementById("qtyVal");
     document.getElementById("qtyMinus").addEventListener("click", () => { qty = Math.max(1, qty - 1); qtyVal.textContent = qty; });
-    document.getElementById("qtyPlus").addEventListener("click", () => { qty = Math.min(p.stock || 1, qty + 1); qtyVal.textContent = qty; });
+    document.getElementById("qtyPlus").addEventListener("click", () => { qty = Math.min(Products.stockFor(p, currentVariant()) || 1, qty + 1); qtyVal.textContent = qty; });
+
+    wireVariant("sizeOpts");
+    wireVariant("colorOpts");
+    updateAvailability();
 
     // --- Ajout panier ---
     document.getElementById("addCart").addEventListener("click", () => {
-      const variant = {};
-      const sz = V().querySelector("#sizeOpts .chip.active");
-      const cl = V().querySelector("#colorOpts .chip.active");
-      if (sz) variant.size = sz.getAttribute("data-size");
-      if (cl) variant.color = cl.getAttribute("data-color");
-      const res = Cart.add(p.id, qty, variant);
-      if (res.ok) UI.toast("Ajouté au panier ✓", "success");
+      const res = Cart.add(p.id, qty, currentVariant());
+      if (res.ok) { UI.toast("Ajouté au panier ✓", "success"); updateAvailability(); }
       else UI.toast(res.error, "error");
     });
 
@@ -1526,7 +1551,7 @@
     });
   }
 
-  function openReplyModal(reviewId, targetId, targetType) {
+  function openReplyModal(reviewId, targetId, targetType, after) {
     UI.modal({
       title: "Répondre à l'avis",
       body: `<div class="field"><label>Votre réponse</label><textarea id="replyText" placeholder="Répondez au client…"></textarea></div>`,
@@ -1537,7 +1562,7 @@
           if (!txt) { UI.toast("Réponse vide.", "error"); return; }
           Products.replyReview(reviewId, txt);
           UI.toast("Réponse envoyée.", "success");
-          close(); Router.resolve();
+          close(); if (after) after(); else Router.resolve();
         });
       },
     });
@@ -1576,6 +1601,7 @@
               <span>📍 ${UI.esc(store.commune)}</span>
               <span>🏷️ ${UI.esc(UI.categoryLabel(store.category))}</span>
               <span>🕒 ${UI.esc(store.hours)}</span>
+              ${store.schedule ? `<span class="open-badge ${Store.isOpenNow(store) ? "is-open" : "is-closed"}">${Store.isOpenNow(store) ? "🟢 Ouvert" : "🔴 Fermé"}</span>` : ""}
               <span>👥 ${subCount} abonné(s)</span>
               ${rt.count ? `<span>${UI.starsHTML(rt.avg)} (${rt.count})</span>` : ""}
               ${rel.orders >= 3 ? `<span title="Fiabilité">✅ ${rel.delivRate}% livrées${rel.avgHours ? ` · traitées en ~${rel.avgHours}h` : ""}</span>` : ""}
@@ -2657,11 +2683,23 @@
   /* ============================================================
      VENDEUR : Création / édition de boutique
      ============================================================ */
+  /** Liste des membres du staff d'une boutique (avec bouton retirer). */
+  function staffListHTML(store) {
+    const staff = (store && store.staff) || [];
+    if (!staff.length) return `<p class="text-muted" style="font-size:13px;margin:8px 0">Aucun membre pour le moment.</p>`;
+    const roleLabel = { gerant: "Gérant", preparateur: "Préparateur" };
+    return `<div class="staff-list">${staff.map((m) => `<div class="staff-row">
+      <div><strong>${UI.esc(m.name)}</strong> <span class="tag" style="position:static">${roleLabel[m.role] || m.role}</span><div class="text-muted" style="font-size:12px">${UI.esc(m.email)}</div></div>
+      <button type="button" class="btn btn-ghost btn-sm" data-staff-remove="${m.userId}">Retirer</button>
+    </div>`).join("")}</div>`;
+  }
+
   function viewStoreForm() {
     if (!requireAuth()) return;
     const user = Auth.current();
-    const store = Store.byOwner(user.id);
+    const store = Store.managedBy(user.id);
     const editing = !!store;
+    const isOwner = editing && store.ownerId === user.id;
     const s = store || {};
     const catOpts = UI.CATEGORIES.map((c) => `<option value="${c.id}" ${s.category === c.id ? "selected" : ""}>${c.icon} ${c.label}</option>`).join("");
     const communeOpts = UI.COMMUNES.map((c) => `<option value="${c}" ${s.commune === c ? "selected" : ""}>${c}</option>`).join("");
@@ -2702,6 +2740,21 @@
           <h3 style="margin:0;font-size:16px">Disponibilité & vitrine</h3>
           <label class="switch"><input type="checkbox" id="sClosed" ${s.closed ? "checked" : ""} /><span class="track"></span><span>Boutique fermée (mode vacances) — bloque les commandes</span></label>
           <div class="field"><label>Message d'indisponibilité</label><input id="sClosedMsg" value="${UI.esc(s.closedMsg || "")}" placeholder="Ex : De retour le 15 mars" /></div>
+          <div class="field">
+            <label class="switch"><input type="checkbox" id="sUseSchedule" ${s.schedule ? "checked" : ""} /><span class="track"></span><span>Définir des horaires d'ouverture (ouverture/fermeture automatique)</span></label>
+            <div id="scheduleBox" class="schedule-box" ${s.schedule ? "" : "hidden"}>
+              ${[["mon", "Lundi"], ["tue", "Mardi"], ["wed", "Mercredi"], ["thu", "Jeudi"], ["fri", "Vendredi"], ["sat", "Samedi"], ["sun", "Dimanche"]].map(([k, l]) => {
+                const d = (s.schedule && s.schedule[k]) || { open: "09:00", close: "19:00", closed: k === "sun" };
+                return `<div class="schedule-row" data-day="${k}">
+                  <span class="schedule-day">${l}</span>
+                  <label class="schedule-closed"><input type="checkbox" data-sch-closed ${d.closed ? "checked" : ""}/> Fermé</label>
+                  <input type="time" data-sch-open value="${d.open || "09:00"}" ${d.closed ? "disabled" : ""} />
+                  <span>→</span>
+                  <input type="time" data-sch-close value="${d.close || "19:00"}" ${d.closed ? "disabled" : ""} />
+                </div>`;
+              }).join("")}
+            </div>
+          </div>
           <div class="field"><label>Bandeau promotionnel de la vitrine <span class="hint">(optionnel)</span></label><input id="sPromoBanner" value="${UI.esc(s.promoBanner || "")}" placeholder="Ex : -20% sur tout le pagne ce week-end !" /></div>
           <div class="field"><label>Questions fréquentes (FAQ) <span class="hint">— une question/réponse par ligne, affichée en vitrine</span></label>
             <textarea id="sFaq" placeholder="Livrez-vous à Bouaké ? Oui, sous 48h.&#10;Peut-on payer par Wave ? Non, paiement à la livraison uniquement.">${UI.esc(s.faq || "")}</textarea></div>
@@ -2717,6 +2770,27 @@
               <input type="number" id="sFreeShip" min="0" value="${s.freeShipThreshold || ""}" placeholder="Ex : 25000 (0 = désactivé)" />
               <span class="hint">Au-delà de ce montant d'achat, la livraison est gratuite.</span></div>
           </div>
+
+          ${editing ? `
+          <div class="divider" style="margin:6px 0"></div>
+          <h3 style="margin:0;font-size:16px">🔔 Notifications vendeur</h3>
+          <p class="text-muted" style="font-size:12.5px;margin:0">Choisissez les événements pour lesquels vous voulez être notifié.</p>
+          <label class="radio-item"><input type="checkbox" id="snOrder" ${(s.notifPrefs || {}).newOrder !== false ? "checked" : ""}/> Nouvelles commandes</label>
+          <label class="radio-item"><input type="checkbox" id="snMsg" ${(s.notifPrefs || {}).message !== false ? "checked" : ""}/> Messages des clients</label>
+          <label class="radio-item"><input type="checkbox" id="snStock" ${(s.notifPrefs || {}).lowStock !== false ? "checked" : ""}/> Stock faible / ruptures</label>
+          <label class="radio-item"><input type="checkbox" id="snReview" ${(s.notifPrefs || {}).review !== false ? "checked" : ""}/> Nouveaux avis & questions</label>
+
+          ${isOwner ? `
+          <div class="divider" style="margin:6px 0"></div>
+          <h3 style="margin:0;font-size:16px">👥 Équipe (staff)</h3>
+          <p class="text-muted" style="font-size:12.5px;margin:0">Donnez accès à votre back-office à d'autres comptes. <strong>Gérant</strong> : accès complet. <strong>Préparateur</strong> : commandes & stock uniquement.</p>
+          <div id="staffList">${staffListHTML(s)}</div>
+          <div class="flex gap-8 wrap" style="align-items:flex-end">
+            <div class="field" style="flex:1;min-width:180px"><label>E-mail du membre (compte existant)</label><input type="email" id="staffEmail" placeholder="collegue@exemple.ci" /></div>
+            <div class="field"><label>Rôle</label><select id="staffRole"><option value="gerant">Gérant</option><option value="preparateur">Préparateur</option></select></div>
+            <button type="button" class="btn btn-ghost" id="staffAdd">+ Inviter</button>
+          </div>` : ""}
+          ` : ""}
 
           <div class="flex gap-12">
             <button class="btn btn-primary btn-lg" type="submit">${editing ? "Enregistrer les modifications" : "Créer ma boutique"}</button>
@@ -2749,6 +2823,46 @@
     const bannerUp = wireUploader("bannerUp", s.banner ? [s.banner] : [], false);
     const galUp = wireUploader("galUp", s.gallery || [], true);
 
+    // Horaires : affichage conditionnel + activer/désactiver les champs par jour.
+    const useSch = document.getElementById("sUseSchedule");
+    if (useSch) {
+      useSch.addEventListener("change", () => { document.getElementById("scheduleBox").hidden = !useSch.checked; });
+      V().querySelectorAll(".schedule-row [data-sch-closed]").forEach((cb) => cb.addEventListener("change", () => {
+        const row = cb.closest(".schedule-row");
+        row.querySelector("[data-sch-open]").disabled = cb.checked;
+        row.querySelector("[data-sch-close]").disabled = cb.checked;
+      }));
+    }
+
+    // Gestion du staff (propriétaire).
+    if (isOwner) {
+      const refreshStaff = () => { document.getElementById("staffList").innerHTML = staffListHTML(Store.get(s.id)); wireStaffRemove(); };
+      function wireStaffRemove() {
+        V().querySelectorAll("[data-staff-remove]").forEach((b) => b.addEventListener("click", () => {
+          const uid = b.getAttribute("data-staff-remove");
+          const st = Store.get(s.id);
+          Store.update(s.id, { staff: (st.staff || []).filter((x) => x.userId !== uid) });
+          UI.toast("Membre retiré.", "info"); refreshStaff();
+        }));
+      }
+      wireStaffRemove();
+      document.getElementById("staffAdd").addEventListener("click", () => {
+        const email = document.getElementById("staffEmail").value.trim();
+        const role = document.getElementById("staffRole").value;
+        if (!email) { UI.toast("Saisissez un e-mail.", "error"); return; }
+        const target = Auth.findByEmail(email);
+        if (!target) { UI.toast("Aucun compte avec cet e-mail. Le membre doit d'abord créer un compte.", "error"); return; }
+        if (target.id === user.id) { UI.toast("Vous êtes déjà propriétaire.", "info"); return; }
+        const st = Store.get(s.id);
+        const staff = (st.staff || []).filter((x) => x.userId !== target.id);
+        staff.push({ userId: target.id, name: target.name, email: target.email, role });
+        Store.update(s.id, { staff });
+        Notifications.push(target.id, { type: "info", message: `👥 Vous avez été ajouté à l'équipe de « ${st.name} » (${role}).`, link: "#/seller/dashboard" });
+        document.getElementById("staffEmail").value = "";
+        UI.toast("Membre ajouté ✓", "success"); refreshStaff();
+      });
+    }
+
     document.getElementById("storeForm").addEventListener("submit", (e) => {
       e.preventDefault();
       const data = {
@@ -2777,6 +2891,29 @@
           tiktok: document.getElementById("sTt").value.trim(),
         },
       };
+      // Horaires structurés.
+      if (document.getElementById("sUseSchedule").checked) {
+        const sch = {};
+        V().querySelectorAll(".schedule-row").forEach((row) => {
+          sch[row.getAttribute("data-day")] = {
+            closed: row.querySelector("[data-sch-closed]").checked,
+            open: row.querySelector("[data-sch-open]").value || "09:00",
+            close: row.querySelector("[data-sch-close]").value || "19:00",
+          };
+        });
+        data.schedule = sch;
+      } else {
+        data.schedule = null;
+      }
+      // Préférences de notification vendeur.
+      if (editing) {
+        data.notifPrefs = {
+          newOrder: document.getElementById("snOrder").checked,
+          message: document.getElementById("snMsg").checked,
+          lowStock: document.getElementById("snStock").checked,
+          review: document.getElementById("snReview").checked,
+        };
+      }
       if (editing) {
         const res = Store.update(s.id, data);
         if (res.ok) { UI.toast("Boutique mise à jour ✓", "success"); renderHeaderUser(); Router.go("#/seller/dashboard"); }
@@ -2794,7 +2931,7 @@
      ============================================================ */
   function viewSellerDashboard() {
     if (!requireVendor()) return;
-    const store = Store.byOwner(Auth.current().id);
+    const store = sellerStore();
     const products = Products.byStore(store.id, true);
     const publishedCount = products.filter((p) => p.status === "published").length;
     const orders = Orders.byStore(store.id);
@@ -2850,7 +2987,8 @@
       active: "dashboard",
       title: "Tableau de bord",
       subtitle: `Bonjour ${firstName} — voici l'activité de votre boutique.`,
-      actions: `<button class="btn btn-ghost" id="qrBtn">${SICON.store} QR code</button>
+      actions: `<button class="btn btn-ghost" id="announceBtn">📣 Annonce</button>
+                <button class="btn btn-ghost" id="qrBtn">${SICON.store} QR code</button>
                 <button class="btn wa-btn" id="shareStoreBtn"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.9.9-2.7-.2-.3A8 8 0 1 1 12 20z"/></svg>Partager</button>
                 <a href="#/seller/product/new" class="btn btn-primary">+ Article</a>`,
       body: `
@@ -2943,6 +3081,38 @@
     if (shareBtn) shareBtn.addEventListener("click", () => shareStore(store));
     const qrBtn = document.getElementById("qrBtn");
     if (qrBtn) qrBtn.addEventListener("click", () => showStoreQR(store));
+    const announceBtn = document.getElementById("announceBtn");
+    if (announceBtn) announceBtn.addEventListener("click", () => openAnnounceModal(store));
+  }
+
+  /** Envoi d'une annonce (notification) à tous les abonnés de la boutique. */
+  function openAnnounceModal(store) {
+    const subs = Store.subscriberCount(store.id);
+    const presets = [
+      ["🔥 Vente flash", "🔥 Vente flash chez " + store.name + " ! Profitez de nos promotions dès maintenant."],
+      ["✨ Nouveautés", "✨ De nouveaux articles viennent d'arriver chez " + store.name + ". Venez les découvrir !"],
+      ["📦 Réassort", "📦 Vos articles préférés sont de nouveau en stock chez " + store.name + " !"],
+    ];
+    UI.modal({
+      title: "📣 Annonce aux abonnés",
+      body: `<p class="text-muted" style="margin:0 0 12px;font-size:13.5px">Votre message sera envoyé en notification à vos <strong>${subs} abonné(s)</strong>.</p>
+        ${subs === 0 ? `<div class="ci-alert alert-out" style="margin-bottom:10px">Vous n'avez pas encore d'abonné. Partagez votre boutique pour en gagner.</div>` : ""}
+        <div class="chips-row" style="margin-bottom:10px">${presets.map((p, i) => `<button type="button" class="chip" data-preset="${i}">${p[0]}</button>`).join("")}</div>
+        <div class="field"><label>Message</label><textarea id="anMsg" rows="3" placeholder="Écrivez votre annonce…"></textarea></div>
+        <div class="field mt-8"><label>Lien (optionnel)</label>
+          <select id="anLink"><option value="#/store/${store.id}">Ma vitrine</option><option value="#/deals">Bons plans</option></select></div>`,
+      footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-primary" id="anGo" ${subs === 0 ? "disabled" : ""}>Envoyer l'annonce</button>`,
+      onMount(m, close) {
+        m.querySelectorAll("[data-preset]").forEach((b) => b.addEventListener("click", () => { m.querySelector("#anMsg").value = presets[Number(b.getAttribute("data-preset"))][1]; }));
+        m.querySelector("#anGo").addEventListener("click", () => {
+          const msg = m.querySelector("#anMsg").value.trim();
+          if (!msg) { UI.toast("Écrivez un message.", "error"); return; }
+          Notifications.notifySubscribers(store.id, { type: "new_product", message: "📣 " + msg, link: m.querySelector("#anLink").value });
+          close();
+          UI.toast(`Annonce envoyée à ${subs} abonné(s) ✓`, "success");
+        });
+      },
+    });
   }
 
   function statCard(ic, emoji, val, lbl) {
@@ -2970,6 +3140,7 @@
     users: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm-8 0a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-2.7 0-8 1.3-8 4v3h8v-3c0-1 .4-1.9 1-2.6A11 11 0 0 0 8 13zm8 0c-.5 0-1.1 0-1.7.1A5 5 0 0 1 18 17v3h6v-3c0-2.7-5.3-4-8-4z'/></svg>",
     tag: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M21.4 11.6 12.4 2.6A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 .6 1.4l9 9a2 2 0 0 0 2.8 0l7-7a2 2 0 0 0 0-2.8zM6.5 8A1.5 1.5 0 1 1 8 6.5 1.5 1.5 0 0 1 6.5 8z'/></svg>",
     chat: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM7 9h10v2H7zm0 4h7v2H7z'/></svg>",
+    star: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M12 17.3 6.2 21l1.5-6.6L2.5 9.9l6.7-.6L12 3l2.8 6.3 6.7.6-5.2 4.5L17.8 21z'/></svg>",
   };
 
   // Réponses rapides (modèles) pour la messagerie vendeur.
@@ -2990,7 +3161,7 @@
   function renderSellerBottomNav(active) {
     const el = document.getElementById("sellerBottomNav");
     if (!el) return;
-    const store = Store.byOwner(Auth.current().id);
+    const store = sellerStore();
     if (!store) { el.innerHTML = ""; return; }
     const pending = Orders.byStore(store.id).filter((o) => o.status === "en_attente").length;
     el.innerHTML = `
@@ -3005,14 +3176,16 @@
 
   /** Feuille « Menu » du vendeur : accès profil, vitrine, accueil, notifs… */
   function openSellerMenu() {
-    const store = Store.byOwner(Auth.current().id);
+    const store = sellerStore();
     const user = Auth.current();
     const items = [
       ["#/seller/store", "🏪", "Ma boutique (infos)"],
       ["#/store/" + store.id, "👁️", "Voir ma vitrine"],
       ["#/seller/product/new", "➕", "Ajouter un article"],
+      ["#/seller/inventory", "📊", "Inventaire"],
       ["#/seller/orders", "🧾", "Mes commandes"],
       ["#/seller/promos", "🏷️", "Codes promo"],
+      ["#/seller/reviews", "⭐", "Avis clients"],
       ["#/seller/messages", "💬", "Messages"],
       ["#/seller/stats", "📊", "Statistiques"],
       ["#/seller/clients", "👥", "Mes clients"],
@@ -3043,15 +3216,17 @@
    * @param {object} opts { active, title, subtitle, actions(HTML), body(HTML) }
    */
   function sellerLayout(opts) {
-    const store = Store.byOwner(Auth.current().id);
+    const store = sellerStore();
     const pending = store ? Orders.byStore(store.id).filter((o) => o.status === "en_attente").length : 0;
     const msgUnread = store ? Messages.unreadForSeller(store.id) : 0;
     const badges = { orders: pending, messages: msgUnread };
     const nav = [
       ["dashboard", "Tableau de bord", "#/seller/dashboard", SICON.dash],
       ["products", "Mes articles", "#/seller/products", SICON.box],
+      ["inventory", "Inventaire", "#/seller/inventory", SICON.chart],
       ["orders", "Commandes", "#/seller/orders", SICON.receipt],
       ["promos", "Promotions", "#/seller/promos", SICON.tag],
+      ["reviews", "Avis", "#/seller/reviews", SICON.star],
       ["messages", "Messages", "#/seller/messages", SICON.chat],
       ["stats", "Statistiques", "#/seller/stats", SICON.chart],
       ["clients", "Clients", "#/seller/clients", SICON.users],
@@ -3091,7 +3266,7 @@
   }
 
   function statusLabel(s) {
-    return { published: "Publié", draft: "Brouillon", unpublished: "Dépublié" }[s] || s;
+    return { published: "Publié", scheduled: "Programmé", draft: "Brouillon", unpublished: "Dépublié" }[s] || s;
   }
 
   /* ============================================================
@@ -3346,9 +3521,10 @@
   function openImportCatalog() {
     UI.modal({
       title: "Importer un catalogue",
-      body: `<p class="text-muted" style="margin:0 0 12px;font-size:13.5px">Importez des articles depuis un fichier <strong>.json</strong> (exporté depuis Marché CI) ou collez le contenu. Les articles sont ajoutés en <strong>brouillon</strong>.</p>
-        <div class="field"><label>Fichier JSON</label><input type="file" id="impFile" accept="application/json,.json" /></div>
-        <div class="field mt-8"><label>ou coller le JSON</label><textarea id="impText" placeholder='{"products":[…]}' style="min-height:120px;font-family:monospace;font-size:12px"></textarea></div>`,
+      body: `<p class="text-muted" style="margin:0 0 12px;font-size:13.5px">Importez des articles depuis un fichier <strong>.json</strong> (exporté depuis Marché CI) ou <strong>.csv</strong>, ou collez le contenu. Les articles sont ajoutés en <strong>brouillon</strong>.</p>
+        <div class="field"><label>Fichier (.json ou .csv)</label><input type="file" id="impFile" accept="application/json,.json,.csv,text/csv" /></div>
+        <div class="field mt-8"><label>ou coller le contenu</label><textarea id="impText" placeholder='JSON : {"products":[…]}  —  CSV : titre,prix,stock,categorie,description' style="min-height:120px;font-family:monospace;font-size:12px"></textarea></div>
+        <div class="text-muted" style="font-size:12px">CSV — colonnes reconnues : <code>titre, prix, stock, categorie, description, cout, etat, tags</code> (1re ligne = en-têtes).</div>`,
       footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-primary" id="impGo">Importer</button>`,
       onMount(m, close) {
         m.querySelector("#impFile").addEventListener("change", (e) => {
@@ -3356,10 +3532,16 @@
           const r = new FileReader(); r.onload = () => { m.querySelector("#impText").value = r.result; }; r.readAsText(f);
         });
         m.querySelector("#impGo").addEventListener("click", () => {
-          let data;
-          try { data = JSON.parse(m.querySelector("#impText").value); } catch (e) { UI.toast("JSON invalide.", "error"); return; }
-          const arr = Array.isArray(data) ? data : (data.products || []);
-          if (!arr.length) { UI.toast("Aucun article trouvé.", "error"); return; }
+          const raw = m.querySelector("#impText").value.trim();
+          if (!raw) { UI.toast("Aucun contenu à importer.", "error"); return; }
+          let arr;
+          if (raw[0] === "{" || raw[0] === "[") {
+            try { const data = JSON.parse(raw); arr = Array.isArray(data) ? data : (data.products || []); }
+            catch (e) { UI.toast("JSON invalide.", "error"); return; }
+          } else {
+            arr = parseCSVProducts(raw);
+          }
+          if (!arr || !arr.length) { UI.toast("Aucun article trouvé.", "error"); return; }
           let n = 0;
           arr.forEach((it) => {
             if (!it || !it.title) return;
@@ -3372,6 +3554,59 @@
         });
       },
     });
+  }
+
+  /** Parse un CSV simple en objets article (en-têtes FR tolérants). */
+  function parseCSVProducts(text) {
+    const rows = csvRows(text);
+    if (rows.length < 2) return [];
+    const norm = (s) => String(s || "").trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+    const headers = rows[0].map(norm);
+    const idx = (names) => headers.findIndex((h) => names.includes(h));
+    const iTitle = idx(["titre", "title", "nom"]);
+    const iPrice = idx(["prix", "price"]);
+    const iStock = idx(["stock", "quantite", "qte"]);
+    const iCat = idx(["categorie", "category", "cat"]);
+    const iDesc = idx(["description", "desc"]);
+    const iCost = idx(["cout", "cost", "prix achat"]);
+    const iCond = idx(["etat", "condition"]);
+    const iTags = idx(["tags", "mots-cles", "etiquettes"]);
+    const catByLabel = (v) => { const n = norm(v); const c = UI.CATEGORIES.find((x) => norm(x.label) === n || x.id === n); return c ? c.id : "mode"; };
+    const out = [];
+    for (let r = 1; r < rows.length; r++) {
+      const row = rows[r];
+      if (!row.length || (iTitle >= 0 && !String(row[iTitle] || "").trim())) continue;
+      out.push({
+        title: iTitle >= 0 ? row[iTitle] : row[0],
+        price: iPrice >= 0 ? row[iPrice] : 0,
+        stock: iStock >= 0 ? row[iStock] : 1,
+        category: iCat >= 0 ? catByLabel(row[iCat]) : "mode",
+        description: iDesc >= 0 ? row[iDesc] : "",
+        cost: iCost >= 0 ? row[iCost] : 0,
+        condition: iCond >= 0 && norm(row[iCond]) === "occasion" ? "occasion" : "neuf",
+        tags: iTags >= 0 ? String(row[iTags] || "").split(/[;|]/).map((t) => t.trim()).filter(Boolean) : [],
+      });
+    }
+    return out;
+  }
+
+  /** Découpe un CSV (gère les guillemets et séparateurs , ou ;). */
+  function csvRows(text) {
+    const firstLine = text.slice(0, text.indexOf("\n") < 0 ? text.length : text.indexOf("\n"));
+    const sep = (firstLine.split(";").length > firstLine.split(",").length) ? ";" : ",";
+    const rows = []; let row = [], cur = "", inQ = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (inQ) {
+        if (ch === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else inQ = false; }
+        else cur += ch;
+      } else if (ch === '"') inQ = true;
+      else if (ch === sep) { row.push(cur); cur = ""; }
+      else if (ch === "\n" || ch === "\r") { if (ch === "\r" && text[i + 1] === "\n") i++; row.push(cur); rows.push(row); row = []; cur = ""; }
+      else cur += ch;
+    }
+    if (cur.length || row.length) { row.push(cur); rows.push(row); }
+    return rows.filter((r) => r.some((c) => String(c).trim() !== ""));
   }
 
   /** Sauvegarde complète de toutes les données locales (JSON). */
@@ -3437,7 +3672,7 @@
      ============================================================ */
   function viewSellerProducts(params) {
     if (!requireVendor()) return;
-    const store = Store.byOwner(Auth.current().id);
+    const store = sellerStore();
     const q = (params && params.query) || {};
     const statusFilter = ["published", "draft", "unpublished"].includes(q.status) ? q.status : "all";
     const search = (q.q || "").toLowerCase().trim();
@@ -3446,6 +3681,7 @@
     const counts = {
       all: products.length,
       published: products.filter((p) => p.status === "published").length,
+      scheduled: products.filter((p) => p.status === "scheduled").length,
       draft: products.filter((p) => p.status === "draft").length,
       unpublished: products.filter((p) => p.status === "unpublished").length,
     };
@@ -3453,7 +3689,7 @@
     if (statusFilter !== "all") list = list.filter((p) => p.status === statusFilter);
     if (search) list = list.filter((p) => p.title.toLowerCase().includes(search));
 
-    const tabs = [["all", "Tous"], ["published", "Publiés"], ["draft", "Brouillons"], ["unpublished", "Dépubliés"]];
+    const tabs = [["all", "Tous"], ["published", "Publiés"], ["scheduled", "Programmés"], ["draft", "Brouillons"], ["unpublished", "Dépubliés"]];
     const qSuffix = search ? "&q=" + encodeURIComponent(search) : "";
     const filterbar = `<div class="seller-filterbar">
       <div class="tabs">${tabs.map(([k, l]) => `<a href="#/seller/products?status=${k}${qSuffix}" class="tab ${statusFilter === k ? "active" : ""}">${l}<span class="tab-count">${counts[k]}</span></a>`).join("")}</div>
@@ -3464,6 +3700,8 @@
       <strong id="bulkCount">0</strong> sélectionné(s)
       <button class="btn btn-sm btn-accent" data-bulk="published">Publier</button>
       <button class="btn btn-sm btn-ghost" data-bulk="unpublished">Dépublier</button>
+      <button class="btn btn-sm btn-ghost" data-bulk="promo">🏷️ Promo</button>
+      <button class="btn btn-sm btn-ghost" data-bulk="promo-clear">Retirer promo</button>
       <button class="btn btn-sm btn-danger" data-bulk="delete">Supprimer</button>
       <button class="btn btn-sm btn-ghost" id="bulkClear" style="margin-left:auto">Désélectionner</button>
     </div>`;
@@ -3546,6 +3784,143 @@
   }
 
   /** Sélection multiple + actions groupées sur les articles. */
+  /* ============================================================
+     VENDEUR : Inventaire (valeur du stock, alertes réappro)
+     ============================================================ */
+  function viewSellerInventory(params) {
+    if (!requireVendor()) return;
+    const store = sellerStore();
+    const q = (params && params.query) || {};
+    const threshold = store.lowStockThreshold != null ? store.lowStockThreshold : LOW_STOCK;
+    const products = Products.byStore(store.id, true);
+    const filter = ["all", "low", "out"].includes(q.f) ? q.f : "all";
+
+    const withStock = products.map((p) => ({ p, stock: Products.effectiveStock(p) }));
+    let list = withStock;
+    if (filter === "low") list = withStock.filter((x) => x.stock > 0 && x.stock <= threshold);
+    if (filter === "out") list = withStock.filter((x) => x.stock <= 0);
+    list.sort((a, b) => a.stock - b.stock);
+
+    const totalUnits = withStock.reduce((s, x) => s + x.stock, 0);
+    const valueCost = withStock.reduce((s, x) => s + x.stock * (x.p.cost || 0), 0);
+    const valuePrice = withStock.reduce((s, x) => s + x.stock * Products.effectivePrice(x.p), 0);
+    const outCount = withStock.filter((x) => x.stock <= 0).length;
+    const lowCount = withStock.filter((x) => x.stock > 0 && x.stock <= threshold).length;
+
+    const tabs = [["all", "Tous", products.length], ["low", "Stock faible", lowCount], ["out", "Ruptures", outCount]];
+
+    sellerLayout({
+      active: "inventory",
+      title: "Inventaire",
+      subtitle: `${products.length} article(s) · ${totalUnits} unité(s) en stock`,
+      actions: `<button class="btn btn-ghost" id="invExport">${SICON.download} Exporter (CSV)</button>`,
+      body: `
+        <div class="stat-grid">
+          ${statCard("ic-blue", "📦", totalUnits, "Unités en stock")}
+          ${statCard("ic-green", "💰", UI.fcfa(valueCost), "Valeur au coût d'achat")}
+          ${statCard("ic-orange", "🏷️", UI.fcfa(valuePrice), "Valeur au prix de vente")}
+          ${statCard("ic-purple", "⚠️", outCount + " / " + lowCount, "Ruptures / stock faible")}
+        </div>
+        <div class="card card-pad mt-16" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <label class="inline-field">Seuil d'alerte de stock faible
+            <input type="number" id="invThreshold" min="0" value="${threshold}" style="width:80px" /></label>
+          <button class="btn btn-ghost btn-sm" id="invSaveThreshold">Enregistrer le seuil</button>
+        </div>
+        <div class="seller-filterbar mt-16"><div class="tabs">${tabs.map(([k, l, c]) => `<a href="#/seller/inventory${k === "all" ? "" : "?f=" + k}" class="tab ${filter === k ? "active" : ""}">${l}<span class="tab-count">${c}</span></a>`).join("")}</div></div>
+        ${list.length ? `<div class="table-wrap"><table class="data-table">
+          <thead><tr><th>Article</th><th>Stock</th><th>Coût unit.</th><th>Valeur (coût)</th><th>Statut</th><th style="text-align:right">Action</th></tr></thead>
+          <tbody>${list.map(({ p, stock }) => {
+            const state = stock <= 0 ? `<span class="status annulee">Rupture</span>` : (stock <= threshold ? `<span class="tag" style="position:static;background:var(--warning);color:#fff">Faible</span>` : `<span class="status livree">OK</span>`);
+            return `<tr>
+              <td><div class="flex gap-8" style="align-items:center"><img class="mini-thumb" src="${UI.safeImg(p.images && p.images[0], p.title)}" alt=""/>
+                <div><a href="#/product/${p.id}" style="font-weight:600">${UI.esc(p.title)}</a>${p.trackVariantStock ? `<div class="text-muted" style="font-size:11.5px">stock par variante</div>` : ""}</div></div></td>
+              <td>${p.trackVariantStock ? `<strong>${stock}</strong>` : `<input type="number" min="0" class="stock-edit" data-invstock="${p.id}" value="${stock}" />`}</td>
+              <td>${p.cost ? UI.fcfa(p.cost) : "—"}</td>
+              <td>${UI.fcfa(stock * (p.cost || 0))}</td>
+              <td>${state}</td>
+              <td style="text-align:right"><a class="btn btn-ghost btn-sm" href="#/seller/product/${p.id}/edit">Réappro.</a></td>
+            </tr>`;
+          }).join("")}</tbody></table></div>`
+          : `<div class="card card-pad"><p class="text-muted" style="text-align:center;margin:0;padding:20px 0">Aucun article dans ce filtre.</p></div>`}`,
+    });
+
+    V().querySelectorAll("[data-invstock]").forEach((inp) => inp.addEventListener("change", () => {
+      Products.quickSet(inp.getAttribute("data-invstock"), { stock: Math.max(0, Math.round(Number(inp.value) || 0)) });
+      UI.toast("Stock mis à jour ✓", "success"); viewSellerInventory(params);
+    }));
+    const saveThr = document.getElementById("invSaveThreshold");
+    if (saveThr) saveThr.addEventListener("click", () => {
+      Store.update(store.id, { lowStockThreshold: Math.max(0, Math.round(Number(document.getElementById("invThreshold").value) || 0)) });
+      UI.toast("Seuil d'alerte enregistré ✓", "success"); viewSellerInventory(params);
+    });
+    const exp = document.getElementById("invExport");
+    if (exp) exp.addEventListener("click", () => exportInventoryCSV(store, withStock, threshold));
+  }
+
+  /** Export CSV de l'inventaire. */
+  function exportInventoryCSV(store, withStock, threshold) {
+    const esc = (s) => `"${String(s == null ? "" : s).replace(/"/g, '""')}"`;
+    const header = ["Article", "Stock", "Cout unitaire", "Valeur cout", "Prix vente", "Statut"];
+    const lines = withStock.map(({ p, stock }) => [p.title, stock, p.cost || 0, stock * (p.cost || 0), Products.effectivePrice(p), stock <= 0 ? "Rupture" : (stock <= threshold ? "Faible" : "OK")].map(esc).join(","));
+    const csv = "﻿" + [header.map(esc).join(","), ...lines].join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "inventaire-" + (slugify(store.name) || "boutique") + ".csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    UI.toast("Inventaire exporté ✓", "success");
+  }
+
+  /* ============================================================
+     VENDEUR : Avis (boutique + articles centralisés)
+     ============================================================ */
+  function viewSellerReviews(params) {
+    if (!requireVendor()) return;
+    const store = sellerStore();
+    const q = (params && params.query) || {};
+    const filter = ["all", "pending", "reported"].includes(q.f) ? q.f : "all";
+    const products = Products.byStore(store.id, true);
+
+    // Rassemble avis boutique + avis articles.
+    let all = Store.reviews(store.id).map((r) => Object.assign({ _type: "store", _targetId: store.id, _label: "Boutique" }, r));
+    products.forEach((p) => { Products.reviews(p.id).forEach((r) => all.push(Object.assign({ _type: "product", _targetId: p.id, _label: p.title }, r))); });
+    all.sort((a, b) => b.createdAt - a.createdAt);
+
+    const pendingCount = all.filter((r) => !r.reply).length;
+    const reportedCount = all.filter((r) => (r.reportedBy || []).length).length;
+    let list = all;
+    if (filter === "pending") list = all.filter((r) => !r.reply);
+    if (filter === "reported") list = all.filter((r) => (r.reportedBy || []).length);
+
+    const avg = all.length ? (all.reduce((s, r) => s + r.rating, 0) / all.length) : 0;
+    const tabs = [["all", "Tous", all.length], ["pending", "Sans réponse", pendingCount], ["reported", "Signalés", reportedCount]];
+
+    const card = (r) => `<div class="card card-pad mt-12">
+        <div class="flex-between wrap">
+          <div><strong>${UI.esc(r.userName || "Client")}</strong> ${UI.starsHTML(r.rating)}
+            <div class="text-muted" style="font-size:12px">${UI.timeAgo(r.createdAt)} · sur <a href="${r._type === "store" ? "#/store/" + r._targetId : "#/product/" + r._targetId}">${UI.esc(r._label)}</a></div></div>
+          ${(r.reportedBy || []).length ? `<span class="tag" style="position:static;background:var(--danger);color:#fff">⚑ Signalé (${r.reportedBy.length})</span>` : ""}
+        </div>
+        ${r.comment ? `<p style="margin:8px 0 0">${UI.esc(r.comment)}</p>` : ""}
+        ${r.photo ? `<img class="review-photo" src="${UI.safeImg(r.photo, "avis")}" alt="" style="max-width:120px;margin-top:8px;border-radius:8px" />` : ""}
+        ${r.reply ? `<div class="review-reply"><strong>Votre réponse :</strong> ${UI.esc(r.reply.text)}</div>`
+          : `<button class="btn btn-primary btn-sm mt-8" data-reply="${r.id}" data-tid="${r._targetId}" data-ttype="${r._type}">Répondre</button>`}
+      </div>`;
+
+    sellerLayout({
+      active: "reviews",
+      title: "Avis clients",
+      subtitle: all.length ? `Note moyenne ${avg.toFixed(1)}/5 · ${all.length} avis` : "Aucun avis pour le moment",
+      body: `<div class="seller-filterbar"><div class="tabs">${tabs.map(([k, l, c]) => `<a href="#/seller/reviews${k === "all" ? "" : "?f=" + k}" class="tab ${filter === k ? "active" : ""}">${l}<span class="tab-count">${c}</span></a>`).join("")}</div></div>
+        ${list.length ? list.map(card).join("") : emptyState("⭐", "Aucun avis", filter === "all" ? "Vos clients n'ont pas encore laissé d'avis." : "Rien dans ce filtre.")}`,
+    });
+
+    V().querySelectorAll("[data-reply]").forEach((b) => b.addEventListener("click", () =>
+      openReplyModal(b.getAttribute("data-reply"), b.getAttribute("data-tid"), b.getAttribute("data-ttype"), () => viewSellerReviews(params))
+    ));
+  }
+
   function wireProductBulk(params) {
     const bar = document.getElementById("bulkBar");
     if (!bar) return;
@@ -3571,12 +3946,47 @@
         if (!(await UI.confirm(`Supprimer ${ids.length} article(s) ?`, { danger: true, confirmLabel: "Supprimer" }))) return;
         ids.forEach((id) => Products.remove(id));
         UI.toast(`${ids.length} article(s) supprimé(s).`, "info");
+        viewSellerProducts(params);
+      } else if (action === "promo") {
+        openBulkPromoModal(ids, () => viewSellerProducts(params));
+      } else if (action === "promo-clear") {
+        ids.forEach((id) => { const p = Products.get(id); if (p) Products.update(id, Object.assign({}, p, { promoPrice: 0, promoUntil: 0 })); });
+        UI.toast(`Promo retirée sur ${ids.length} article(s).`, "info");
+        viewSellerProducts(params);
       } else {
         ids.forEach((id) => { const p = Products.get(id); if (p) Products.update(id, Object.assign({}, p, { status: action })); });
         UI.toast(`${ids.length} article(s) ${action === "published" ? "publié(s)" : "dépublié(s)"} ✓`, "success");
+        viewSellerProducts(params);
       }
-      viewSellerProducts(params);
     }));
+  }
+
+  /** Campagne promo groupée : applique une remise % (avec date de fin) à plusieurs articles. */
+  function openBulkPromoModal(ids, after) {
+    UI.modal({
+      title: `🏷️ Campagne promo (${ids.length} article${ids.length > 1 ? "s" : ""})`,
+      body: `<p class="text-muted" style="margin:0 0 12px;font-size:13.5px">Appliquez une réduction en pourcentage à tous les articles sélectionnés. Le prix promo est calculé à partir du prix normal de chaque article.</p>
+        <div class="field"><label>Réduction (%)</label><input type="number" id="bpPct" min="1" max="90" value="20" /></div>
+        <div class="field mt-8"><label>Fin de la promo (optionnel)</label><input type="date" id="bpUntil" /></div>`,
+      footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-primary" id="bpGo">Appliquer la promo</button>`,
+      onMount(m, close) {
+        m.querySelector("#bpGo").addEventListener("click", () => {
+          const pct = Number(m.querySelector("#bpPct").value);
+          if (!(pct > 0 && pct <= 90)) { UI.toast("Pourcentage invalide (1–90).", "error"); return; }
+          const until = m.querySelector("#bpUntil").value ? new Date(m.querySelector("#bpUntil").value).getTime() : 0;
+          let n = 0;
+          ids.forEach((id) => {
+            const p = Products.get(id); if (!p) return;
+            const promoPrice = Math.max(1, Math.round(p.price * (1 - pct / 100)));
+            Products.update(id, Object.assign({}, p, { promoPrice, promoUntil: until }));
+            n++;
+          });
+          close();
+          UI.toast(`Promo −${pct}% appliquée à ${n} article(s) ✓`, "success");
+          if (after) after();
+        });
+      },
+    });
   }
 
   /* ============================================================
@@ -3587,7 +3997,7 @@
     const editing = !!params.id;
     const p = editing ? Products.get(params.id) : null;
     if (editing && !p) { layout(emptyState("😕", "Article introuvable", "")); return; }
-    const store = Store.byOwner(Auth.current().id);
+    const store = sellerStore();
     if (editing && p.storeId !== store.id) { UI.toast("Non autorisé.", "error"); Router.go("#/seller/products"); return; }
 
     const d = p || {};
@@ -3618,7 +4028,7 @@
               <label class="switch" style="margin-top:8px"><input type="checkbox" id="pNegotiable" ${d.negotiable ? "checked" : ""} /><span class="track"></span><span>Prix négociable (le client peut faire une offre)</span></label></div>
           </div>
           <div class="form-grid form-2col">
-            <div class="field"><label>Stock</label><input type="number" id="pStock" value="${d.stock != null ? d.stock : 1}" min="0" /></div>
+            <div class="field"><label>Stock <span class="hint" id="stockHint">${d.trackVariantStock ? "(géré par variante ci-dessous)" : ""}</span></label><input type="number" id="pStock" value="${d.stock != null ? d.stock : 1}" min="0" ${d.trackVariantStock ? "disabled" : ""} /></div>
             <div class="field"><label>Catégorie</label><select id="pCat">${catOpts}</select></div>
           </div>
           <div class="field"><label>Réapprovisionnement prévu <span class="hint">(optionnel — affiché aux clients en cas de rupture)</span></label>
@@ -3630,13 +4040,24 @@
             </select></div>
             <div class="field"><label>Statut</label><select id="pStatus">
               <option value="published" ${d.status === "published" || !editing ? "selected" : ""}>Publié</option>
+              <option value="scheduled" ${d.status === "scheduled" ? "selected" : ""}>Programmé</option>
               <option value="draft" ${d.status === "draft" ? "selected" : ""}>Brouillon</option>
               <option value="unpublished" ${d.status === "unpublished" ? "selected" : ""}>Dépublié</option>
             </select></div>
           </div>
+          <div class="field" id="publishAtField" ${d.status === "scheduled" ? "" : "hidden"}>
+            <label>📅 Date de mise en ligne programmée</label>
+            <input type="datetime-local" id="pPublishAt" value="${d.publishAt ? new Date(d.publishAt - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ""}" />
+          </div>
           <div class="form-grid form-2col">
             <div class="field"><label>Tailles (séparées par des virgules)</label><input id="pSizes" value="${UI.esc((d.variants && d.variants.sizes || []).join(", "))}" placeholder="S, M, L, XL" /></div>
             <div class="field"><label>Couleurs (séparées par des virgules)</label><input id="pColors" value="${UI.esc((d.variants && d.variants.colors || []).join(", "))}" placeholder="Rouge, Bleu" /></div>
+          </div>
+          <div class="field"><label>Mots-clés / étiquettes <span class="hint">— améliorent la recherche (séparés par des virgules)</span></label>
+            <input id="pTags" value="${UI.esc((d.tags || []).join(", "))}" placeholder="wax, soirée, fait main…" /></div>
+          <div class="field">
+            <label class="switch"><input type="checkbox" id="pTrackVar" ${d.trackVariantStock ? "checked" : ""} /><span class="track"></span><span>Gérer le stock par variante (taille/couleur)</span></label>
+            <div id="variantStockBox" class="variant-stock-box" ${d.trackVariantStock ? "" : "hidden"}></div>
           </div>
           <div class="flex gap-12">
             <button class="btn btn-primary btn-lg" type="submit">${editing ? "Enregistrer" : "Publier l'article"}</button>
@@ -3653,10 +4074,51 @@
     });
 
     const up = wireUploader("prodImgs", d.images || [], true);
+    const parseList = (v) => v.split(",").map((x) => x.trim()).filter(Boolean);
+
+    // Statut « Programmé » → affiche le champ date de mise en ligne.
+    const statusSel = document.getElementById("pStatus");
+    statusSel.addEventListener("change", () => {
+      document.getElementById("publishAtField").hidden = statusSel.value !== "scheduled";
+    });
+
+    // --- Matrice de stock par variante ---
+    const existingVS = Object.assign({}, d.variantStock || {});
+    function variantCombos() {
+      const sizes = parseList(document.getElementById("pSizes").value);
+      const colors = parseList(document.getElementById("pColors").value);
+      if (sizes.length && colors.length) { const out = []; sizes.forEach((s) => colors.forEach((c) => out.push({ size: s, color: c }))); return out; }
+      if (sizes.length) return sizes.map((s) => ({ size: s, color: "" }));
+      if (colors.length) return colors.map((c) => ({ size: "", color: c }));
+      return [];
+    }
+    function renderVariantStock() {
+      const box = document.getElementById("variantStockBox");
+      const track = document.getElementById("pTrackVar").checked;
+      box.hidden = !track;
+      document.getElementById("pStock").disabled = track;
+      document.getElementById("stockHint").textContent = track ? "(géré par variante ci-dessous)" : "";
+      if (!track) return;
+      const combos = variantCombos();
+      if (!combos.length) { box.innerHTML = `<p class="text-muted" style="font-size:13px;margin:8px 0 0">Ajoutez d'abord des tailles et/ou des couleurs pour définir le stock par variante.</p>`; return; }
+      box.innerHTML = `<table class="variant-stock-table"><thead><tr><th>Variante</th><th>Stock</th></tr></thead><tbody>${combos.map((cb) => {
+        const key = Products.variantKey(cb);
+        const label = [cb.size, cb.color].filter(Boolean).join(" · ");
+        return `<tr><td>${UI.esc(label)}</td><td><input type="number" min="0" class="stock-edit" data-vskey="${UI.esc(key)}" value="${existingVS[key] != null ? existingVS[key] : 0}" style="width:90px" /></td></tr>`;
+      }).join("")}</tbody></table>`;
+    }
+    document.getElementById("pTrackVar").addEventListener("change", renderVariantStock);
+    document.getElementById("pSizes").addEventListener("input", () => { if (document.getElementById("pTrackVar").checked) renderVariantStock(); });
+    document.getElementById("pColors").addEventListener("input", () => { if (document.getElementById("pTrackVar").checked) renderVariantStock(); });
+    renderVariantStock();
 
     document.getElementById("prodForm").addEventListener("submit", (e) => {
       e.preventDefault();
-      const parseList = (v) => v.split(",").map((x) => x.trim()).filter(Boolean);
+      const track = document.getElementById("pTrackVar").checked;
+      const variantStock = {};
+      if (track) V().querySelectorAll("[data-vskey]").forEach((inp) => { variantStock[inp.getAttribute("data-vskey")] = Math.max(0, Number(inp.value) || 0); });
+      const status = document.getElementById("pStatus").value;
+      const publishAtVal = document.getElementById("pPublishAt").value;
       const data = {
         title: document.getElementById("pTitle").value,
         description: document.getElementById("pDesc").value,
@@ -3666,16 +4128,21 @@
         stock: document.getElementById("pStock").value,
         category: document.getElementById("pCat").value,
         condition: document.getElementById("pCond").value,
-        status: document.getElementById("pStatus").value,
+        status,
+        publishAt: status === "scheduled" && publishAtVal ? new Date(publishAtVal).getTime() : 0,
         featured: document.getElementById("pFeatured").checked,
         negotiable: document.getElementById("pNegotiable").checked,
         promoUntil: document.getElementById("pPromoUntil").value ? new Date(document.getElementById("pPromoUntil").value).getTime() : 0,
         restockDate: document.getElementById("pRestock").value ? new Date(document.getElementById("pRestock").value).getTime() : 0,
         images: up.get(),
         variants: { sizes: parseList(document.getElementById("pSizes").value), colors: parseList(document.getElementById("pColors").value) },
+        tags: parseList(document.getElementById("pTags").value),
+        trackVariantStock: track,
+        variantStock,
       };
+      if (status === "scheduled" && !data.publishAt) { UI.toast("Choisissez une date de mise en ligne.", "error"); return; }
       const res = editing ? Products.update(p.id, data) : Products.create(data);
-      if (res.ok) { UI.toast(editing ? "Article mis à jour ✓" : "Article publié ✓", "success"); Router.go("#/seller/products"); }
+      if (res.ok) { UI.toast(editing ? "Article mis à jour ✓" : (status === "scheduled" ? "Article programmé ✓" : "Article publié ✓"), "success"); Router.go("#/seller/products"); }
       else UI.toast(res.error, "error");
     });
   }
@@ -3685,7 +4152,7 @@
      ============================================================ */
   function viewSellerOrders(params) {
     if (!requireVendor()) return;
-    const store = Store.byOwner(Auth.current().id);
+    const store = sellerStore();
     const q = (params && params.query) || {};
     const filter = Orders.STATUS[q.status] ? q.status : "all";
     const period = ["today", "7d", "30d"].includes(q.period) ? q.period : "all";
@@ -3870,7 +4337,7 @@
      ============================================================ */
   function viewSellerStats(params) {
     if (!requireVendor()) return;
-    const store = Store.byOwner(Auth.current().id);
+    const store = sellerStore();
     const q = (params && params.query) || {};
     const period = ["7d", "30d", "month"].includes(q.p) ? q.p : "30d";
     const products = Products.byStore(store.id, true);
@@ -4049,7 +4516,7 @@
      ============================================================ */
   function viewSellerClients() {
     if (!requireVendor()) return;
-    const store = Store.byOwner(Auth.current().id);
+    const store = sellerStore();
     const orders = Orders.byStore(store.id);
 
     // Agrège les clients à partir des commandes.
@@ -4105,7 +4572,7 @@
      ============================================================ */
   function viewSellerCoupons() {
     if (!requireVendor()) return;
-    const store = Store.byOwner(Auth.current().id);
+    const store = sellerStore();
     const list = Coupons.byStore(store.id);
 
     sellerLayout({
@@ -4214,7 +4681,7 @@
   /** Vendeur : boîte de réception + conversations. */
   function viewSellerMessages(params) {
     if (!requireVendor()) return;
-    const store = Store.byOwner(Auth.current().id);
+    const store = sellerStore();
     const threads = Messages.threadsForStore(store.id);
     const activeBuyer = params && params.query && params.query.b;
 
@@ -4656,6 +5123,8 @@
     Router.on("#/seller/store", viewStoreForm);
     Router.on("#/seller/dashboard", viewSellerDashboard);
     Router.on("#/seller/products", viewSellerProducts);
+    Router.on("#/seller/inventory", viewSellerInventory);
+    Router.on("#/seller/reviews", viewSellerReviews);
     Router.on("#/seller/product/new", viewProductForm);
     Router.on("#/seller/product/:id/edit", viewProductForm);
     Router.on("#/seller/orders", viewSellerOrders);
@@ -4679,6 +5148,8 @@
   function init() {
     // Données de démo.
     Seed.run(false);
+    // Publie les articles programmés dont l'échéance est atteinte.
+    Products.processScheduled();
     // Thème persistant (ou préférence système).
     const savedTheme = DB.get(DB.KEYS.theme, null) || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
     applyTheme(savedTheme);

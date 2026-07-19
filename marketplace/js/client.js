@@ -128,7 +128,7 @@ window.MP = window.MP || {};
       if (!q.question) return { ok: false, error: "Question vide." };
       window.MP.DB.insert(window.MP.DB.KEYS.questions, q);
       const store = window.MP.Store.get(storeId);
-      if (store) window.MP.Notifications.push(store.ownerId, { type: "message", message: `Nouvelle question sur « ${window.MP.Products.get(productId).title} ».`, link: "#/product/" + productId });
+      if (store && (store.notifPrefs || {}).review !== false) window.MP.Notifications.push(store.ownerId, { type: "message", message: `Nouvelle question sur « ${window.MP.Products.get(productId).title} ».`, link: "#/product/" + productId });
       return { ok: true };
     },
     answer(questionId, text) {

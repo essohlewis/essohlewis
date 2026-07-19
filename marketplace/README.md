@@ -100,6 +100,19 @@ Données de démo : **4 boutiques**, **16 articles**, quelques avis, abonnements
 ### Vendeur — espace dédié (back-office)
 L'espace vendeur est un **véritable back-office distinct de l'espace client** : barre latérale sombre de navigation, en-tête « Espace Vendeur » (le chrome d'achat — recherche, panier, favoris, nav basse mobile — est masqué), et zone de travail professionnelle.
 
+#### 🆕 Lot d'améliorations vendeur (gestion avancée)
+- **Stock par variante** : gestion du stock par combinaison **taille/couleur** ; la fiche produit affiche la disponibilité par variante et le panier/checkout décrémentent la bonne combinaison.
+- **Annonce aux abonnés** : bouton « 📣 Annonce » (tableau de bord) pour **notifier tous les abonnés** (vente flash, nouveautés, réassort) avec messages pré-remplis.
+- **Campagnes / promos groupées** : sélection multiple d'articles → appliquer une **remise %** (avec date de fin) ou la retirer, en masse.
+- **Import d'articles** : depuis un fichier **JSON** (format export) ou **CSV** (colonnes titre, prix, stock, catégorie…).
+- **Page « Avis » dédiée** : tous les avis (boutique + articles) centralisés, filtres (sans réponse / signalés), réponse en un clic.
+- **Horaires structurés** : ouverture/fermeture par jour → badge **🟢 Ouvert / 🔴 Fermé** automatique sur la vitrine.
+- **Vue inventaire** : valeur du stock (au coût et au prix), unités totales, **alertes de réappro** avec seuil personnalisable, export CSV.
+- **Publication programmée** : mise en ligne automatique d'un article à une date/heure choisie.
+- **Préférences de notifications vendeur** (nouvelles commandes, messages, stock faible, avis).
+- **Comptes staff / multi-utilisateurs** : inviter des membres (**gérant** = accès complet, **préparateur** = commandes & stock) par e-mail.
+- **Étiquettes / mots-clés** produits, pris en compte dans la recherche.
+
 - Inscription vendeur / activation « Ouvrir ma boutique » depuis un compte client, avec **écran d'accueil (onboarding)**.
 - **Création de boutique** : nom, logo, bannière, description, catégorie, commune, horaires, WhatsApp, réseaux sociaux.
 - **Tableau de bord** : chiffre d'affaires simulé, articles publiés, commandes reçues, abonnés, articles les plus vus + dernières commandes.

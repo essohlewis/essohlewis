@@ -997,3 +997,34 @@ body.seller-mode #chatbotRoot { display: none; }
 .install-fab { position: fixed; left: 18px; bottom: 20px; z-index: 899; display: inline-flex; align-items: center; gap: 10px; background: var(--brand); color: var(--text-on-brand); border: none; border-radius: var(--r-full); padding: 12px 18px; font-weight: 700; font-size: 13.5px; cursor: pointer; box-shadow: var(--shadow-brand); }
 .install-fab .install-close { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: rgba(255,255,255,.25); font-size: 12px; }
 @media (max-width: 760px) { .install-fab { bottom: calc(var(--bottomnav-h) + 14px); left: 14px; } }
+
+/* =========================================================================
+   Espace vendeur — nouvelles fonctionnalités (variantes, horaires, staff…)
+   ========================================================================= */
+
+/* Étiquettes / mots-clés produit */
+.pd-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; }
+.tag-chip { font-size: 12px; font-weight: 600; color: var(--text-2); background: var(--surface-3); border-radius: var(--r-full); padding: 3px 10px; }
+.tag-chip:hover { background: var(--brand-soft); color: var(--brand-dark); }
+
+/* Matrice de stock par variante (formulaire article) */
+.variant-stock-box { margin-top: 10px; }
+.variant-stock-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.variant-stock-table th, .variant-stock-table td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); }
+.variant-stock-table th { font-size: 12px; color: var(--text-3); text-transform: uppercase; letter-spacing: .03em; }
+
+/* Horaires structurés */
+.schedule-box { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.schedule-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.schedule-day { width: 90px; font-weight: 600; font-size: 13.5px; }
+.schedule-closed { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--text-2); }
+.schedule-row input[type="time"] { padding: 6px 8px; border-radius: var(--r-sm); border: 1.5px solid var(--border-strong); background: var(--surface); color: var(--text); }
+
+/* Badge ouvert/fermé sur la vitrine */
+.open-badge { font-weight: 700; font-size: 12.5px; padding: 2px 8px; border-radius: var(--r-full); }
+.open-badge.is-open { background: var(--accent-soft); color: var(--accent); }
+.open-badge.is-closed { background: var(--danger-soft); color: var(--danger); }
+
+/* Liste du staff */
+.staff-list { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
+.staff-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface-2); }
