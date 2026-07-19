@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mes ventes — Marché CI</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="/tailwind.css" />
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center gap-2">
+      <a href="/" class="flex items-center gap-2"><span class="text-2xl">🛒</span><span class="font-extrabold text-lg">Marché<span class="text-brand">CI</span></span></a>
+      <span class="ml-auto pill bg-brand/10 text-brand" style="background:rgba(234,88,12,.12)">Espace vendeur</span>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 py-6">
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-2xl font-extrabold">📈 Mes ventes</h1>
+      <button id="refresh" class="btn btn-ghost !py-1.5 !px-4 text-sm">↻ Rafraîchir</button>
+    </div>
+
+    <div id="noauth" class="card hidden text-center">
+      <p class="text-slate-600">Connectez-vous sur la marketplace et créez votre boutique pour suivre vos ventes.</p>
+      <a href="/" class="btn btn-brand mt-3">Aller à la marketplace</a>
+    </div>
+
+    <div id="app" class="hidden">
+      <div id="storehead" class="card mb-4"></div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5" id="stats"></div>
+      <h2 class="font-bold mb-2">Articles vendus</h2>
+      <div id="lines" class="space-y-2"></div>
+      <p id="empty" class="text-center text-slate-400 py-10 hidden">Aucune vente pour l'instant.</p>
+    </div>
+    <a href="/" class="btn btn-ghost mt-6">← Retour à la marketplace</a>
+  </main>
+
+  <script>
+    const TOKEN_KEY = "marchesci_shopToken";
+    const $ = (s) => document.querySelector(s);
+    const fcfa = (n) => (n || 0).toLocaleString("fr-FR") + " FCFA";
+    const token = () => { try { return localStorage.getItem(TOKEN_KEY) || ""; } catch (e) { return ""; } };
+    const STATUS = { pending: ["En attente", "bg-amber-100 text-amber-700"], confirmed: ["Confirmée", "bg-sky-100 text-sky-700"],
+      shipped: ["Expédiée", "bg-indigo-100 text-indigo-700"], delivered: ["Livrée", "bg-accent-soft text-accent"], cancelled: ["Annulée", "bg-red-100 text-red-700"] };
+    const STORE_STATUS = { pending: ["⏳ En attente de validation", "bg-amber-100 text-amber-700"], approved: ["✅ Boutique approuvée", "bg-accent-soft text-accent"], suspended: ["⛔ Suspendue", "bg-red-100 text-red-700"] };
+
+    async function load() {
+      const t = token();
+      if (!t) { $("#noauth").classList.remove("hidden"); $("#app").classList.add("hidden"); return; }
+      const r = await fetch("/api/shop/vendor/sales", { headers: { Authorization: "Bearer " + t } });
+      if (r.status === 401) { $("#noauth").classList.remove("hidden"); $("#app").classList.add("hidden"); return; }
+      const j = await r.json();
+      if (!j.store) { $("#noauth").classList.remove("hidden"); $("#noauth").querySelector("p").textContent = "Vous n'avez pas encore de boutique enregistrée en base."; $("#app").classList.add("hidden"); return; }
+      $("#noauth").classList.add("hidden"); $("#app").classList.remove("hidden");
+
+      const st = STORE_STATUS[j.store.status] || ["", "bg-slate-200 text-slate-600"];
+      $("#storehead").innerHTML = `<div class="flex items-center justify-between flex-wrap gap-2">
+        <div><div class="text-lg font-extrabold">${j.store.name}</div>
+          <div class="text-xs text-slate-500">${j.store.category || ""}${j.store.commune ? " · " + j.store.commune : ""}</div></div>
+        <span class="pill ${st[1]}">${st[0]}</span></div>`;
+
+      const s = j.summary || {};
+      const card = (icon, label, val) => `<div class="card !p-4"><div class="text-2xl">${icon}</div><div class="text-xl font-extrabold mt-1">${val}</div><div class="text-xs text-slate-500">${label}</div></div>`;
+      $("#stats").innerHTML = card("🧾", "Commandes", s.orders || 0) + card("📦", "Articles vendus", s.units || 0)
+        + card("💰", "Revenu encaissé", fcfa(s.revenue)) + card("⏳", "En attente", fcfa(s.pending));
+
+      const lines = j.lines || [];
+      $("#empty").classList.toggle("hidden", lines.length > 0);
+      $("#lines").innerHTML = lines.map((l) => {
+        const stt = STATUS[l.status] || [l.status, "bg-slate-200 text-slate-600"];
+        return `<div class="card !py-3 flex items-center justify-between flex-wrap gap-2">
+          <div><div class="font-semibold">${l.name} <span class="text-slate-400">×${l.qty}</span></div>
+            <div class="text-xs text-slate-500">${l.customerName || "Client"}${l.city ? " · " + l.city : ""} · ${new Date(l.createdAt).toLocaleDateString("fr-FR")}</div></div>
+          <div class="flex items-center gap-3"><span class="pill ${stt[1]}">${stt[0]}</span><span class="font-extrabold">${fcfa(l.price * l.qty)}</span></div>
+        </div>`;
+      }).join("");
+    }
+    $("#refresh").addEventListener("click", load);
+    load();
+  </script>
+</body>
+</html>

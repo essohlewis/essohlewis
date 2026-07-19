@@ -104,6 +104,7 @@ window.MP = window.MP || {};
         items: (o.items || []).map((i) => ({
           productId: i.productId, name: i.title, price: i.unit, qty: i.qty,
           variant: i.variant && Object.keys(i.variant).length ? JSON.stringify(i.variant) : "",
+          storeId: o.storeId || "", storeName: o.storeName || "",
         })),
         customerName: o.delivery ? o.delivery.name : o.buyerName,
         phone: o.delivery ? o.delivery.phone : "",
@@ -116,6 +117,19 @@ window.MP = window.MP || {};
       };
       try { await post("/orders", body); } catch (e) {}
     }
+  }
+
+  /* -------------------------- Boutique (write-through) ---------------------------- */
+  async function syncStore(store) {
+    if (!API.enabled || !store) return;
+    try {
+      await authOp;
+      if (!token()) return;
+      await post("/stores", {
+        id: store.id, name: store.name, description: store.description,
+        category: store.category, commune: store.commune, logo: store.logo, approved: !!store.approved,
+      });
+    } catch (e) {}
   }
 
   /* ---------------------------- Avis (write-through) ------------------------------ */
@@ -183,6 +197,8 @@ window.MP = window.MP || {};
   API.logout = logout;
   API.syncOrders = syncOrders;
   API.syncReview = syncReview;
+  API.syncStore = syncStore;
+  API.salesUrl = function () { return "/mes-ventes"; };
   API.syncCollection = syncCollection;
   API.pullCollections = pullCollections;
   API.reviewsFor = reviewsFor;

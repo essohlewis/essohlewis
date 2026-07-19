@@ -51,8 +51,14 @@ function init() {
     );
     CREATE TABLE IF NOT EXISTS order_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT, orderId TEXT, productId TEXT,
-      name TEXT, price INTEGER, qty INTEGER, variant TEXT
+      name TEXT, price INTEGER, qty INTEGER, variant TEXT, storeId TEXT, storeName TEXT
     );
+    CREATE TABLE IF NOT EXISTS stores (
+      id TEXT PRIMARY KEY, ownerId TEXT, name TEXT, description TEXT, category TEXT,
+      commune TEXT, logo TEXT, status TEXT DEFAULT 'pending', createdAt INTEGER, updatedAt INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_items_store ON order_items(storeId);
+    CREATE INDEX IF NOT EXISTS idx_stores_owner ON stores(ownerId);
     CREATE TABLE IF NOT EXISTS sessions (
       token TEXT PRIMARY KEY, userId TEXT, createdAt INTEGER
     );
@@ -73,6 +79,9 @@ function init() {
   // Migrations légères pour les bases créées avant l'ajout de ces colonnes.
   for (const col of ["itemsTotal INTEGER DEFAULT 0", "deliveryFee INTEGER DEFAULT 0", "discount INTEGER DEFAULT 0"]) {
     try { db.exec(`ALTER TABLE orders ADD COLUMN ${col}`); } catch (e) { /* colonne déjà présente */ }
+  }
+  for (const col of ["storeId TEXT", "storeName TEXT"]) {
+    try { db.exec(`ALTER TABLE order_items ADD COLUMN ${col}`); } catch (e) { /* déjà présente */ }
   }
   return true;
 }
@@ -147,7 +156,7 @@ function listProducts({ category, q, storeId, limit } = {}) {
   sql += " ORDER BY createdAt DESC LIMIT @limit"; args.limit = Math.min(parseInt(limit, 10) || 200, 500);
   return db.prepare(sql).all(args);
 }
-function getProduct(id) { return db.prepare("SELECT * FROM products WHERE id=?").get(id) || null; }
+function getProduct(id) { if (id == null || id === "") return null; return db.prepare("SELECT * FROM products WHERE id=?").get(String(id)) || null; }
 function countProducts() { return db.prepare("SELECT COUNT(*) c FROM products").get().c; }
 
 /* --------------------------------- Carts --------------------------------- */
@@ -170,12 +179,13 @@ function createOrder(userId, payload) {
   let itemsTotal = 0;
   const resolved = [];
   for (const it of items) {
-    const prod = getProduct(it.productId);
+    const prod = it.productId ? getProduct(it.productId) : null;
     const price = prod ? prod.price : Math.max(0, parseInt(it.price, 10) || 0);
     const name = prod ? prod.name : (it.name || "Article");
     const qty = Math.max(1, parseInt(it.qty, 10) || 1);
     itemsTotal += price * qty;
-    resolved.push({ productId: it.productId || "", name, price, qty, variant: it.variant || "" });
+    resolved.push({ productId: it.productId || "", name, price, qty, variant: it.variant || "",
+      storeId: (prod && prod.storeId) || it.storeId || "", storeName: (prod && prod.storeName) || it.storeName || "" });
   }
   const deliveryFee = Math.max(0, parseInt(payload.deliveryFee, 10) || 0);
   const discount = Math.max(0, parseInt(payload.discount, 10) || 0);
@@ -188,13 +198,13 @@ function createOrder(userId, payload) {
   };
   const insertOrder = db.prepare(`INSERT INTO orders (id,userId,customerName,phone,address,city,itemsTotal,deliveryFee,discount,total,currency,payment,status,note,createdAt,updatedAt)
     VALUES (@id,@userId,@customerName,@phone,@address,@city,@itemsTotal,@deliveryFee,@discount,@total,@currency,@payment,@status,@note,@createdAt,@updatedAt)`);
-  const insertItem = db.prepare("INSERT INTO order_items (orderId,productId,name,price,qty,variant) VALUES (?,?,?,?,?,?)");
+  const insertItem = db.prepare("INSERT INTO order_items (orderId,productId,name,price,qty,variant,storeId,storeName) VALUES (?,?,?,?,?,?,?,?)");
   const decStock = db.prepare("UPDATE products SET stock = MAX(0, stock - ?) WHERE id=? AND stock > 0");
   // node:sqlite n'a pas de helper transaction() → BEGIN/COMMIT manuels.
   db.exec("BEGIN");
   try {
     insertOrder.run(o);
-    for (const r of resolved) { insertItem.run(o.id, r.productId, r.name, r.price, r.qty, r.variant); if (r.productId) decStock.run(r.qty, r.productId); }
+    for (const r of resolved) { insertItem.run(o.id, r.productId, r.name, r.price, r.qty, r.variant, r.storeId, r.storeName); if (r.productId) decStock.run(r.qty, r.productId); }
     db.exec("COMMIT");
   } catch (e) { db.exec("ROLLBACK"); return { error: "Échec de l'enregistrement de la commande." }; }
   if (userId) setCart(userId, []); // vide le panier après achat
@@ -230,6 +240,7 @@ function stats() {
     revenue: db.prepare("SELECT COALESCE(SUM(total),0) s FROM orders WHERE status IN ('confirmed','shipped','delivered')").get().s,
     reviews: db.prepare("SELECT COUNT(*) c FROM reviews").get().c,
     documents: db.prepare("SELECT COUNT(*) c FROM documents").get().c,
+    stores: db.prepare("SELECT COUNT(*) c FROM stores").get().c,
   };
 }
 
@@ -264,6 +275,47 @@ function setReviewStatus(id, status) {
   if (!["visible", "hidden"].includes(status)) return null;
   db.prepare("UPDATE reviews SET status=? WHERE id=?").run(status, id);
   return db.prepare("SELECT * FROM reviews WHERE id=?").get(id) || null;
+}
+
+/* ------------------------------ Boutiques -------------------------------- */
+function upsertStore(ownerId, p) {
+  if (!p || !p.name) return { error: "Nom de boutique requis." };
+  const existing = p.id ? db.prepare("SELECT * FROM stores WHERE id=?").get(p.id)
+                        : db.prepare("SELECT * FROM stores WHERE ownerId=?").get(ownerId);
+  const s = {
+    id: (existing && existing.id) || p.id || uid("sto"),
+    ownerId: ownerId || (existing && existing.ownerId) || null,
+    name: p.name, description: p.description || "", category: p.category || "",
+    commune: p.commune || "", logo: p.logo || "",
+    status: (existing && existing.status) || (p.approved ? "approved" : "pending"),
+    createdAt: (existing && existing.createdAt) || now(), updatedAt: now(),
+  };
+  db.prepare(`INSERT INTO stores (id,ownerId,name,description,category,commune,logo,status,createdAt,updatedAt)
+    VALUES (@id,@ownerId,@name,@description,@category,@commune,@logo,@status,@createdAt,@updatedAt)
+    ON CONFLICT(id) DO UPDATE SET name=@name,description=@description,category=@category,commune=@commune,logo=@logo,updatedAt=@updatedAt`).run(s);
+  return { store: s };
+}
+function getStoreById(id) { return db.prepare("SELECT * FROM stores WHERE id=?").get(id) || null; }
+function getStoreByOwner(ownerId) { return db.prepare("SELECT * FROM stores WHERE ownerId=? ORDER BY createdAt DESC").get(ownerId) || null; }
+function listStores({ status } = {}) {
+  let sql = "SELECT * FROM stores", args = {};
+  if (status && status !== "all") { sql += " WHERE status=@status"; args.status = status; }
+  return db.prepare(sql + " ORDER BY createdAt DESC LIMIT 500").all(args);
+}
+function setStoreStatus(id, status) {
+  if (!["pending", "approved", "suspended"].includes(status)) return null;
+  db.prepare("UPDATE stores SET status=?,updatedAt=? WHERE id=?").run(status, now(), id);
+  return getStoreById(id);
+}
+function vendorSales(storeId) {
+  const s = db.prepare(`SELECT COUNT(DISTINCT oi.orderId) orders, COALESCE(SUM(oi.qty),0) units,
+      COALESCE(SUM(oi.price*oi.qty),0) gross,
+      COALESCE(SUM(CASE WHEN o.status IN('confirmed','shipped','delivered') THEN oi.price*oi.qty ELSE 0 END),0) revenue,
+      COALESCE(SUM(CASE WHEN o.status='pending' THEN oi.price*oi.qty ELSE 0 END),0) pending
+    FROM order_items oi JOIN orders o ON o.id=oi.orderId WHERE oi.storeId=?`).get(storeId);
+  const lines = db.prepare(`SELECT oi.name,oi.price,oi.qty,oi.variant,o.id orderId,o.customerName,o.city,o.status,o.createdAt
+    FROM order_items oi JOIN orders o ON o.id=oi.orderId WHERE oi.storeId=? ORDER BY o.createdAt DESC LIMIT 200`).all(storeId);
+  return { summary: s, lines };
 }
 
 /* ---------- Collections génériques (favoris, souhaits, coupons, …) -------- */
@@ -305,4 +357,5 @@ module.exports = {
   getCart, setCart,
   createOrder, getOrder, listOrders, setOrderStatus, stats,
   addReview, listReviews, ratingFor, setReviewStatus,
+  upsertStore, getStoreById, getStoreByOwner, listStores, setStoreStatus, vendorSales,
 };

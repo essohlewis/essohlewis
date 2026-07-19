@@ -75,6 +75,8 @@ window.MP = window.MP || {};
     if (!DB.insert(K, store)) return { ok: false, error: "Espace de stockage plein : réduisez la taille des images." };
     // L'utilisateur devient vendeur.
     window.MP.Auth.becomeVendor();
+    // Enregistre la boutique comme entité en base (si backend présent).
+    if (window.MP.Api) window.MP.Api.syncStore(store);
     return { ok: true, store };
   }
 

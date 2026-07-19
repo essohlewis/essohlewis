@@ -102,6 +102,29 @@ module.exports = function createShopRouter(shopdb, adminToken) {
     res.json({ ok: true, items: shopdb.listReviews({ targetType, targetId, status: "visible" }), rating: targetId ? shopdb.ratingFor(targetType || "product", targetId) : null });
   });
 
+  /* ------------------------------ Boutiques ---------------------------- */
+  router.get("/stores", (req, res) => res.json({ ok: true, items: shopdb.listStores({ status: "approved" }) }));
+  router.get("/stores/:id", (req, res) => {
+    const s = shopdb.getStoreById(req.params.id);
+    if (!s) return res.status(404).json({ ok: false, error: "Boutique introuvable." });
+    res.json({ ok: true, store: s });
+  });
+  // Enregistrement / mise à jour de sa boutique (le compte connecté devient vendeur).
+  router.post("/stores", auth, (req, res) => {
+    const r = shopdb.upsertStore(req.userId, req.body || {});
+    if (r.error) return res.status(400).json({ ok: false, error: r.error });
+    res.json({ ok: true, store: r.store });
+  });
+
+  /* ---------------------------- Espace vendeur ------------------------- */
+  router.get("/vendor/store", auth, (req, res) => res.json({ ok: true, store: shopdb.getStoreByOwner(req.userId) }));
+  router.get("/vendor/sales", auth, (req, res) => {
+    const s = shopdb.getStoreByOwner(req.userId);
+    if (!s) return res.json({ ok: true, store: null, summary: null, lines: [] });
+    const sales = shopdb.vendorSales(s.id);
+    res.json({ ok: true, store: s, summary: sales.summary, lines: sales.lines });
+  });
+
   /* ------------------- Collections génériques (données client) ------------------- */
   // Mirroring des collections localStorage (favoris, souhaits, coupons, …) par compte.
   router.get("/data", auth, (req, res) => res.json({ ok: true, collections: shopdb.getAllDocs(req.userId) }));
@@ -116,6 +139,12 @@ module.exports = function createShopRouter(shopdb, adminToken) {
   });
 
   /* ------------------------------- Admin ------------------------------- */
+  router.get("/admin/stores", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.listStores({ status: req.query.status }) }));
+  router.post("/admin/stores/:id/status", requireAdmin, (req, res) => {
+    const s = shopdb.setStoreStatus(req.params.id, (req.body || {}).status);
+    if (!s) return res.status(400).json({ ok: false, error: "Statut invalide ou boutique introuvable." });
+    res.json({ ok: true, store: s });
+  });
   router.get("/admin/data", requireAdmin, (req, res) => res.json({ ok: true, collections: shopdb.listCollections() }));
   router.get("/admin/data/:collection", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.listDocs(req.params.collection) }));
   router.get("/admin/reviews", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.listReviews({ status: req.query.status }) }));

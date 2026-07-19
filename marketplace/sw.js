@@ -50,7 +50,7 @@ self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   const url = e.request.url;
   // Réseau direct (jamais de cache) pour l'API et les pages back-office Node.
-  if (url.indexOf("/api/") !== -1 || url.indexOf("/verify") !== -1 || url.indexOf("/admin/") !== -1 || url.indexOf("/mes-commandes") !== -1) return;
+  if (url.indexOf("/api/") !== -1 || url.indexOf("/verify") !== -1 || url.indexOf("/admin/") !== -1 || url.indexOf("/mes-commandes") !== -1 || url.indexOf("/mes-ventes") !== -1) return;
   // Scripts & styles : réseau d'abord (évite de servir une version périmée), cache en repli.
   if (/\.(?:js|css)(?:\?|$)/.test(url)) {
     e.respondWith(

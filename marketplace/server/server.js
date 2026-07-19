@@ -152,6 +152,7 @@ app.get("/verify", (req, res) => res.sendFile(path.join(__dirname, "public", "ve
 app.get("/admin/kyc", (req, res) => res.sendFile(path.join(__dirname, "public", "admin-kyc.html")));
 app.get("/admin/shop", (req, res) => res.sendFile(path.join(__dirname, "public", "admin-shop.html")));
 app.get("/mes-commandes", (req, res) => res.sendFile(path.join(__dirname, "public", "mes-commandes.html")));
+app.get("/mes-ventes", (req, res) => res.sendFile(path.join(__dirname, "public", "mes-ventes.html")));
 
 // Assets du back-office (tailwind.css, etc.).
 app.use(express.static(path.join(__dirname, "public")));

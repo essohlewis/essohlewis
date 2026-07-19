@@ -3385,6 +3385,7 @@
       subtitle: `Bonjour ${firstName} — voici l'activité de votre boutique.`,
       actions: `${sellerCan("announce") ? `<button class="btn btn-ghost" id="announceBtn">📣 Annonce</button>` : ""}
                 <button class="btn btn-ghost" id="qrBtn">${SICON.store} QR code</button>
+                ${(window.MP.Api && window.MP.Api.enabled && window.MP.Api.hasSession()) ? `<a href="${window.MP.Api.salesUrl()}" target="_blank" rel="noopener" class="btn btn-ghost">📈 Mes ventes en ligne</a>` : ""}
                 <button class="btn wa-btn" id="shareStoreBtn"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.9.9-2.7-.2-.3A8 8 0 1 1 12 20z"/></svg>Partager</button>
                 ${sellerCan("products") ? `<a href="#/seller/product/new" class="btn btn-primary">+ Article</a>` : ""}`,
       body: `
