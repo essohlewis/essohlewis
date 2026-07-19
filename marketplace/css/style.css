@@ -646,11 +646,20 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
   background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff; font-weight: 700; font-size: 13px; margin-left: 4px; white-space: nowrap; }
 .seller-flag svg { width: 16px; height: 16px; }
 body.seller-mode .seller-flag { display: inline-flex; }
-/* En mode vendeur : on masque le chrome orienté achat, on garde thème/notifs/compte */
+/* Drapeau "Administration" (visible uniquement en mode admin) */
+.admin-flag { display: none; align-items: center; gap: 7px; padding: 6px 13px; border-radius: var(--r-full);
+  background: linear-gradient(135deg, #0f766e, #0891b2); color: #fff; font-weight: 700; font-size: 13px; margin-left: 4px; white-space: nowrap; }
+body.admin-mode .admin-flag { display: inline-flex; }
+/* En mode vendeur ou admin : on masque le chrome orienté achat, on garde thème/notifs/compte */
 body.seller-mode .header-search,
 body.seller-mode #navCart,
-body.seller-mode #navFavorites { display: none; }
-body.seller-mode .bottom-nav { display: none !important; }
+body.seller-mode #navFavorites,
+body.admin-mode .header-search,
+body.admin-mode #navCart,
+body.admin-mode #navFavorites { display: none; }
+body.seller-mode .bottom-nav,
+body.admin-mode .bottom-nav { display: none !important; }
+body.admin-mode #chatbotRoot { display: none; }
 
 /* Coquille du back-office : sidebar sombre + zone de travail */
 .seller-shell { display: flex; gap: 20px; align-items: flex-start; }
@@ -667,6 +676,8 @@ body.seller-mode .bottom-nav { display: none !important; }
 }
 .ss-brand { display: flex; align-items: center; gap: 11px; padding: 8px 8px 16px; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,.08); }
 .ss-brand img { width: 44px; height: 44px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
+.ss-brand-ico { width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0ea5a4, #0d9488); color: #fff; }
+.ss-brand-ico svg { width: 26px; height: 26px; }
 .ss-name { font-weight: 800; color: #fff; font-size: 15px; line-height: 1.2; }
 .ss-role { font-size: 11px; color: #8b93b0; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
 .ss-nav { display: flex; flex-direction: column; gap: 3px; }

@@ -3312,6 +3312,8 @@
     tag: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M21.4 11.6 12.4 2.6A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 .6 1.4l9 9a2 2 0 0 0 2.8 0l7-7a2 2 0 0 0 0-2.8zM6.5 8A1.5 1.5 0 1 1 8 6.5 1.5 1.5 0 0 1 6.5 8z'/></svg>",
     chat: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM7 9h10v2H7zm0 4h7v2H7z'/></svg>",
     star: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M12 17.3 6.2 21l1.5-6.6L2.5 9.9l6.7-.6L12 3l2.8 6.3 6.7.6-5.2 4.5L17.8 21z'/></svg>",
+    gear: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.3 7.3 0 0 0-1.7-1l-.4-2.5h-4l-.4 2.5a7.3 7.3 0 0 0-1.7 1l-2.4-1-2 3.4L4.6 11a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.3 7.3 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7.3 7.3 0 0 0 1.7-1l2.4 1 2-3.4zM12 15a3 3 0 1 1 0-6 3 3 0 0 1 0 6z'/></svg>",
+    shield: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M12 1 3 5v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V5z'/></svg>",
   };
 
   // Réponses rapides (modèles) pour la messagerie vendeur.
@@ -3443,6 +3445,92 @@
     clearPageTimers();
     renderSellerBottomNav(opts.active);
     renderCompareBar();
+  }
+
+  // Navigation de l'espace administration.
+  const ADMIN_NAV = [
+    ["overview", "Vue d'ensemble", "#/admin", SICON.chart],
+    ["moderation", "Modération", "#/admin?tab=moderation", SICON.star],
+    ["users", "Utilisateurs", "#/admin?tab=users", SICON.users],
+    ["stores", "Boutiques", "#/admin?tab=stores", SICON.store],
+    ["orders", "Commandes", "#/admin?tab=orders", SICON.receipt],
+    ["coupons", "Coupons", "#/admin?tab=coupons", SICON.tag],
+    ["comm", "Communication", "#/admin?tab=comm", SICON.chat],
+    ["settings", "Paramètres", "#/admin?tab=settings", SICON.gear],
+    ["audit", "Journal", "#/admin?tab=audit", SICON.copy],
+    ["data", "Données", "#/admin?tab=data", SICON.download],
+  ];
+
+  /**
+   * Coquille dédiée à l'espace administration : sidebar (desktop) + nav basse
+   * (mobile). Réutilise le châssis back-office (seller-shell) — distinct du client.
+   */
+  function adminLayout(opts) {
+    const modCount = moderationQueue().total;
+    const badges = { moderation: modCount };
+    const navHTML = ADMIN_NAV.map(([k, l, h, ic]) => `
+      <a href="${h}" class="ss-item ${opts.active === k ? "active" : ""}">
+        <span class="ss-ico">${ic}</span><span>${l}</span>
+        ${badges[k] ? `<span class="ss-badge">${badges[k]}</span>` : ""}
+      </a>`).join("");
+    V().innerHTML = `
+      <div class="seller-shell">
+        <aside class="seller-sidebar">
+          <div class="ss-brand">
+            <div class="ss-brand-ico">${SICON.shield}</div>
+            <div><div class="ss-name">Administration</div><div class="ss-role">Marché CI</div></div>
+          </div>
+          <nav class="ss-nav">${navHTML}</nav>
+          <div class="ss-foot">
+            <a href="#/" class="ss-link">${SICON.back}<span>Retour à la marketplace</span></a>
+          </div>
+        </aside>
+        <div class="seller-main">
+          <header class="seller-topbar">
+            <div><h1 class="st-title">${UI.esc(opts.title)}</h1>${opts.subtitle ? `<div class="st-sub">${opts.subtitle}</div>` : ""}</div>
+            <div class="st-actions">${opts.actions || ""}</div>
+          </header>
+          <div class="seller-content">${opts.body}</div>
+        </div>
+      </div>`;
+    SB().innerHTML = "";
+    clearPageTimers();
+    renderAdminBottomNav(opts.active);
+    const root = document.getElementById("compareBarRoot"); if (root) root.innerHTML = "";
+  }
+
+  /** Nav basse de l'admin (mobile) : sections principales + « Menu ». */
+  function renderAdminBottomNav(active) {
+    const el = document.getElementById("sellerBottomNav");
+    if (!el) return;
+    const modCount = moderationQueue().total;
+    el.innerHTML = `
+      <a class="sbn-item ${active === "overview" ? "active" : ""}" href="#/admin">${SICON.chart}<span>Accueil</span></a>
+      <a class="sbn-item ${active === "moderation" ? "active" : ""}" href="#/admin?tab=moderation">${SICON.star}<span>Modération</span>${modCount ? `<span class="badge">${modCount > 99 ? "99+" : modCount}</span>` : ""}</a>
+      <a class="sbn-item ${active === "users" ? "active" : ""}" href="#/admin?tab=users">${SICON.users}<span>Users</span></a>
+      <a class="sbn-item ${active === "stores" ? "active" : ""}" href="#/admin?tab=stores">${SICON.store}<span>Boutiques</span></a>
+      <button class="sbn-item" id="abnMore" type="button">${SICON.menu}<span>Menu</span></button>`;
+    const more = document.getElementById("abnMore");
+    if (more) more.addEventListener("click", openAdminMenu);
+  }
+
+  /** Feuille « Menu » de l'admin : sections restantes + retour + déconnexion. */
+  function openAdminMenu() {
+    const emo = { overview: "📊", moderation: "🚩", users: "👤", stores: "🏪", orders: "🧾", coupons: "🏷️", comm: "📣", settings: "⚙️", audit: "📋", data: "💾" };
+    const items = ADMIN_NAV.map(([k, l, h]) => [h, emo[k] || "•", l]).concat([["#/", "🛒", "Retour à la marketplace"], ["#/notifications", "🔔", "Notifications"]]);
+    UI.modal({
+      title: "Menu administration",
+      body: `<div class="menu-sheet">
+        ${items.map(([h, e, l]) => `<button class="dd-item" data-go="${h}"><span class="em">${e}</span> ${UI.esc(l)}</button>`).join("")}
+        <div class="divider" style="margin:6px 0"></div>
+        <button class="dd-item danger" id="amLogout"><span class="em">↪</span> Se déconnecter</button>
+      </div>`,
+      onMount(m, close) {
+        m.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => { close(); Router.go(b.getAttribute("data-go")); }));
+        const lo = m.querySelector("#amLogout");
+        if (lo) lo.addEventListener("click", () => { close(); Auth.logout(); renderHeaderUser(); UI.refreshBadges(); UI.toast("Déconnecté.", "info"); Router.go("#/"); });
+      },
+    });
   }
 
   function statusLabel(s) {
@@ -5016,17 +5104,8 @@
     const RENDER = { overview: adminOverview, moderation: adminModeration, users: adminUsers, stores: adminStores, orders: adminOrders, coupons: adminCoupons, comm: adminComm, settings: adminSettingsTab, audit: adminAudit, data: adminData };
     const WIRE = { overview: wireAdminOverview, moderation: wireAdminModeration, users: wireAdminUsers, stores: wireAdminStores, orders: wireAdminOrders, coupons: wireAdminCoupons, comm: wireAdminComm, settings: wireAdminSettings, audit: wireAdminAudit, data: wireAdminData };
     const tab = RENDER[q.tab] ? q.tab : "overview";
-    const modCount = moderationQueue().total;
-    const tabs = [
-      ["overview", "Vue d'ensemble"], ["moderation", "Modération" + (modCount ? ` (${modCount})` : "")],
-      ["users", "Utilisateurs"], ["stores", "Boutiques"], ["orders", "Commandes"],
-      ["coupons", "Coupons"], ["comm", "Communication"], ["settings", "Paramètres"], ["audit", "Journal"], ["data", "Données"],
-    ];
-    layout(`
-      <div class="page-head"><div><div class="page-title">🛡️ Administration</div>
-        <div class="page-sub">Console de gestion de la marketplace</div></div></div>
-      <div class="filter-bar admin-tabs">${tabs.map(([k, l]) => `<a href="#/admin${k === "overview" ? "" : "?tab=" + k}" class="chip ${tab === k ? "active" : ""}">${l}</a>`).join("")}</div>
-      ${RENDER[tab](params)}`);
+    const TITLES = { overview: "Vue d'ensemble", moderation: "Modération", users: "Utilisateurs", stores: "Boutiques", orders: "Commandes", coupons: "Coupons globaux", comm: "Communication", settings: "Paramètres", audit: "Journal d'audit", data: "Données" };
+    adminLayout({ active: tab, title: TITLES[tab], subtitle: "Console de gestion de la marketplace", body: RENDER[tab](params) });
     WIRE[tab](params);
   }
 
@@ -5692,11 +5771,26 @@
         <a href="#/login?mode=register" class="dd-item">📝 ${T("menu.register")}</a>
         <div class="divider" style="margin:6px 0"></div>
         <a href="#/login?mode=register" class="dd-item">🏪 ${T("menu.becomeSeller")}</a>`;
+    } else if (user.role === "admin") {
+      // Menu réduit pour l'administrateur : uniquement l'espace d'administration.
+      dd.innerHTML = `
+        <div class="dd-head"><div class="dd-name">${UI.esc(user.name)}</div><div class="dd-mail">${UI.esc(user.email)}</div>
+          <span class="dd-role">Admin</span></div>
+        <a href="#/admin" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 1 3 5v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V5z"/></svg>${T("menu.admin")}</a>
+        <a href="#/admin?tab=moderation" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 17.3 6.2 21l1.5-6.6L2.5 9.9l6.7-.6L12 3l2.8 6.3 6.7.6-5.2 4.5L17.8 21z"/></svg>Modération</a>
+        <a href="#/notifications" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 22a2.1 2.1 0 0 0 2.1-2H9.9A2.1 2.1 0 0 0 12 22zm6.3-6v-5a6.3 6.3 0 0 0-4.8-6.12V4a1.5 1.5 0 1 0-3 0v.88A6.3 6.3 0 0 0 5.7 11v5l-1.7 1.7v.8h16v-.8z"/></svg>Notifications</a>
+        <a href="#/profile" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-4 0-8 2-8 5v1h16v-1c0-3-4-5-8-5z"/></svg>Mon compte</a>
+        <div class="divider" style="margin:6px 0"></div>
+        <button class="dd-item danger" id="ddLogout"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M16 13v-2H7V8l-5 4 5 4v-3zM20 3h-8v2h8v14h-8v2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/></svg>${T("menu.logout")}</button>`;
+      const lo0 = document.getElementById("ddLogout");
+      if (lo0) lo0.addEventListener("click", () => { Auth.logout(); renderHeaderUser(); UI.refreshBadges(); UI.toast("Déconnecté.", "info"); Router.go("#/"); });
+      dd.querySelectorAll("a").forEach((a) => a.addEventListener("click", () => (dd.hidden = true)));
+      return;
     } else {
       const store = Store.byOwner(user.id);
       dd.innerHTML = `
         <div class="dd-head"><div class="dd-name">${UI.esc(user.name)}</div><div class="dd-mail">${UI.esc(user.email)}</div>
-          <span class="dd-role">${user.role === "admin" ? "Admin" : user.role === "vendor" ? "Vendeur" : "Client"}</span></div>
+          <span class="dd-role">${user.role === "vendor" ? "Vendeur" : "Client"}</span></div>
         <a href="#/profile" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-4 0-8 2-8 5v1h16v-1c0-3-4-5-8-5z"/></svg>${T("menu.profile")}</a>
         <a href="#/orders" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M7 4V2h10v2h4v2h-2v14H5V6H3V4z"/></svg>${T("menu.orders")}</a>
         <a href="#/favorites" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 21s-6.7-4.35-9.33-8.36C.9 9.7 2.1 6 5.4 6a4.3 4.3 0 0 1 3.6 2 4.3 4.3 0 0 1 3.6-2c3.3 0 4.5 3.7 2.73 6.64C18.7 16.65 12 21 12 21z"/></svg>${T("menu.favorites")}</a>
@@ -5704,7 +5798,6 @@
         ${store
           ? `<a href="#/seller/dashboard" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 3h8v8H3zm10 0h8v5h-8zM3 13h8v8H3zm10 3h8v5h-8z"/></svg>${T("menu.sellerSpace")}</a>`
           : `<a href="#/seller/store" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 4h16l1 5-2 1v10H5V10L3 9zm3 8v6h4v-4h2v4h4v-6z"/></svg>${T("menu.openShop")}</a>`}
-        ${user.role === "admin" ? `<a href="#/admin" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 1 3 5v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V5z"/></svg>${T("menu.admin")}</a>` : ""}
         <div class="divider" style="margin:6px 0"></div>
         <button class="dd-item danger" id="ddLogout"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M16 13v-2H7V8l-5 4 5 4v-3zM20 3h-8v2h8v14h-8v2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/></svg>${T("menu.logout")}</button>`;
       const lo = document.getElementById("ddLogout");
@@ -5928,9 +6021,10 @@
     Router.on("#/messages", viewBuyerMessages);
     Router.on("#/admin", viewAdmin);
     Router.setNotFound(() => layout(emptyState("🧭", "Page introuvable", "Le lien demandé n'existe pas.", `<a href="#/" class="btn btn-primary">Retour à l'accueil</a>`)));
-    // Bascule le corps en « mode vendeur » sur les routes /seller (chrome dédié).
+    // Bascule le corps en « mode vendeur » / « mode admin » (chrome dédié).
     Router.setBeforeEach((path) => {
       document.body.classList.toggle("seller-mode", path.indexOf("#/seller") === 0);
+      document.body.classList.toggle("admin-mode", path.indexOf("#/admin") === 0);
       return true;
     });
   }

@@ -15,16 +15,18 @@
 /* ---------- Espace vendeur en mobile : barre de menu basse dédiée ---------- */
 @media (max-width: 760px) {
   .seller-shell { flex-direction: column; gap: 0; }
-  /* La barre latérale disparaît : remplacée par une nav basse propre au vendeur. */
-  body.seller-mode .seller-sidebar { display: none; }
+  /* La barre latérale disparaît : remplacée par une nav basse propre au back-office. */
+  body.seller-mode .seller-sidebar,
+  body.admin-mode .seller-sidebar { display: none; }
 
   .seller-topbar { margin-bottom: 14px; padding-bottom: 14px; }
   .st-title { font-size: 21px; }
   .seller-filterbar { gap: 10px; }
   .ss-search { min-width: 0; width: 100%; }
 
-  /* Nav basse vendeur : fond sombre = clairement différente de la nav client. */
-  body.seller-mode .seller-bottom-nav {
+  /* Nav basse back-office : fond sombre = clairement différente de la nav client. */
+  body.seller-mode .seller-bottom-nav,
+  body.admin-mode .seller-bottom-nav {
     display: flex;
     position: fixed; bottom: 0; left: 0; right: 0;
     height: calc(var(--bottomnav-h) + env(safe-area-inset-bottom, 0px));
