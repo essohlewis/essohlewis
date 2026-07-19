@@ -268,13 +268,15 @@ window.MP = window.MP || {};
   }
 
   /* ---------- Communes d'Abidjan / CI (données de référence) ---------- */
-  const COMMUNES = [
+  // Communes par défaut (l'admin peut personnaliser la liste desservie).
+  const COMMUNES_DEFAULT = [
     "Cocody", "Yopougon", "Plateau", "Marcory", "Treichville", "Adjamé",
     "Abobo", "Koumassi", "Port-Bouët", "Attécoubé", "Bingerville", "Songon",
     "Bouaké", "Yamoussoukro", "San-Pédro", "Daloa",
   ];
 
-  const CATEGORIES = [
+  // Catégories par défaut (l'admin peut ajouter / renommer / réordonner).
+  const CATEGORIES_DEFAULT = [
     { id: "mode", label: "Mode & Vêtements", icon: "👗" },
     { id: "electronique", label: "Électronique", icon: "📱" },
     { id: "maison", label: "Maison & Déco", icon: "🛋️" },
@@ -285,14 +287,37 @@ window.MP = window.MP || {};
     { id: "sport", label: "Sport & Loisirs", icon: "⚽" },
   ];
 
+  /** Lit les paramètres marketplace (personnalisations admin) sans dépendre de DB. */
+  function _settings() {
+    try { return JSON.parse(localStorage.getItem("marchesci_settings") || "{}") || {}; }
+    catch (e) { return {}; }
+  }
+
+  /** Catégories effectives : personnalisées par l'admin sinon défaut. */
+  function categories() {
+    const c = _settings().categories;
+    return Array.isArray(c) && c.length ? c : CATEGORIES_DEFAULT;
+  }
+
+  /** Communes effectives : personnalisées par l'admin sinon défaut. */
+  function communes() {
+    const c = _settings().communes;
+    return Array.isArray(c) && c.length ? c : COMMUNES_DEFAULT;
+  }
+
   function categoryLabel(id) {
-    const c = CATEGORIES.find((x) => x.id === id);
+    const c = categories().find((x) => x.id === id);
     return c ? c.label : id;
   }
 
+  // Accès rétro-compatible : CATEGORIES / COMMUNES restent des propriétés
+  // (getters) reflétant la configuration admin en vigueur.
   window.MP.UI = {
     fcfa, timeAgo, dateFR, esc, safeImg, placeholder, starsHTML,
     toast, modal, confirm, fileToDataURL,
-    setBadge, refreshBadges, COMMUNES, CATEGORIES, categoryLabel,
+    setBadge, refreshBadges, categories, communes, categoryLabel,
+    CATEGORIES_DEFAULT, COMMUNES_DEFAULT,
+    get CATEGORIES() { return categories(); },
+    get COMMUNES() { return communes(); },
   };
 })();

@@ -22,10 +22,10 @@ window.MP = window.MP || {};
 
   /** Tous les articles publiés (fil d'accueil). */
   function published() {
-    // Exclut les articles des boutiques suspendues (modération admin).
-    const suspended = {};
-    DB.all(DB.KEYS.stores).forEach((s) => { if (s.suspended) suspended[s.id] = true; });
-    return DB.all(K).filter((p) => p.status === "published" && !suspended[p.storeId]);
+    // Exclut les articles des boutiques suspendues ou en attente d'approbation.
+    const hidden = {};
+    DB.all(DB.KEYS.stores).forEach((s) => { if (s.suspended || s.approved === false) hidden[s.id] = true; });
+    return DB.all(K).filter((p) => p.status === "published" && !hidden[p.storeId]);
   }
 
   /**

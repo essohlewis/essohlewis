@@ -13,6 +13,17 @@ window.MP = window.MP || {};
   function all() { return DB.all(K); }
   function get(id) { return DB.find(K, id); }
 
+  /** L'admin exige-t-il l'approbation des nouvelles boutiques ? */
+  function _needsApproval() {
+    try { return !!(JSON.parse(localStorage.getItem("marchesci_settings") || "{}") || {}).requireStoreApproval; }
+    catch (e) { return false; }
+  }
+
+  /** Boutique « active » : ni suspendue ni en attente d'approbation. */
+  function isActive(store) {
+    return !!store && !store.suspended && store.approved !== false;
+  }
+
   /** Boutique appartenant à un utilisateur (un vendeur = une boutique ici). */
   function byOwner(ownerId) {
     return DB.all(K).find((s) => s.ownerId === ownerId) || null;
@@ -58,6 +69,7 @@ window.MP = window.MP || {};
       lowStockThreshold: data.lowStockThreshold != null ? Number(data.lowStockThreshold) : 3,
       notifPrefs: data.notifPrefs || { newOrder: true, message: true, lowStock: true, review: true },
       staff: data.staff || [],                // [ {userId, name, email, role} ]
+      approved: !_needsApproval(),            // false = en attente de validation admin
       createdAt: Date.now(),
     };
     if (!DB.insert(K, store)) return { ok: false, error: "Espace de stockage plein : réduisez la taille des images." };
@@ -176,6 +188,6 @@ window.MP = window.MP || {};
     all, get, byOwner, create, update, remove,
     subscribers, subscriberCount, isSubscribed, toggleSubscribe,
     reviews, rating, deliveryFee, servesCommune,
-    roleFor, managedBy, isOpenNow,
+    roleFor, managedBy, isOpenNow, isActive,
   };
 })();

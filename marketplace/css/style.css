@@ -1048,6 +1048,20 @@ body.seller-mode #chatbotRoot { display: none; }
 .admin-toolbar .ss-search { max-width: 340px; width: 100%; }
 .mod-card { border-left: 3px solid var(--warning); }
 .mini-select { padding: 5px 8px; border-radius: var(--r-sm); border: 1.5px solid var(--border-strong); background: var(--surface); color: var(--text); font-size: 12.5px; }
+.mini-input { padding: 6px 8px; border-radius: var(--r-sm); border: 1.5px solid var(--border-strong); background: var(--surface); color: var(--text); font-size: 13px; }
+.link-btn { background: none; border: 0; color: var(--brand); font: inherit; font-size: 12.5px; cursor: pointer; padding: 0; text-decoration: underline; }
+.data-table tr.row-click { cursor: pointer; }
+.data-table tr.row-click:hover td { background: var(--bg-elev); }
+.data-table tfoot td { border-top: 2px solid var(--border-strong); }
+.cat-row .icon-action { width: 30px; height: 30px; }
+
+/* Pied de page public (pages éditoriales) */
+.app-footer { max-width: 1080px; margin: 40px auto 0; padding: 22px 16px; border-top: 1px solid var(--border); text-align: center; }
+.foot-links { display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: center; margin-bottom: 12px; }
+.foot-links a { color: var(--text-2); font-size: 13.5px; font-weight: 600; }
+.foot-links a:hover { color: var(--brand); }
+.foot-copy { color: var(--text-3); font-size: 12.5px; }
+.page-content p { margin: 0 0 12px; }
 
 /* Console admin v2 : segments, message global, featured, analytics */
 .global-msg-bar { background: var(--brand-dark); color: #fff; text-align: center; padding: 8px 16px; font-size: 13.5px; font-weight: 600; }

@@ -49,12 +49,36 @@
 
   function layout(mainHTML, sidebarHTML) {
     clearPageTimers();
-    V().innerHTML = mainHTML;
+    V().innerHTML = mainHTML + pageFooterHTML();
     SB().innerHTML = sidebarHTML || "";
     // Vide la nav basse vendeur hors des vues back-office (onboarding, client…).
     const sbn = document.getElementById("sellerBottomNav");
     if (sbn) sbn.innerHTML = "";
     renderCompareBar();
+  }
+
+  /** Pied de page public : liens vers les pages éditoriales. */
+  function pageFooterHTML() {
+    const pages = adminPages();
+    const links = [["about", pages.about.title], ["faq", pages.faq.title], ["contact", pages.contact.title], ["cgu", pages.cgu.title], ["confidentialite", pages.confidentialite.title]];
+    return `<footer class="app-footer">
+      <div class="foot-links">${links.map(([sl, t]) => `<a href="#/page/${sl}">${UI.esc(t)}</a>`).join("")}</div>
+      <div class="foot-copy">© ${new Date().getFullYear()} Marché CI — Marketplace multi-vendeurs · Paiement à la livraison</div>
+    </footer>`;
+  }
+
+  /** Page éditoriale (FAQ, CGU, etc.). */
+  function viewPage(params) {
+    const slug = params.id;
+    const pages = adminPages();
+    const p = pages[slug];
+    if (!p) { layout(emptyState("📄", "Page introuvable", "Cette page n'existe pas.", `<a href="#/" class="btn btn-primary">Accueil</a>`)); return; }
+    const body = UI.esc(p.body).replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>");
+    layout(`<div class="breadcrumb"><a href="#/">Accueil</a> › <span>${UI.esc(p.title)}</span></div>
+      <div class="card card-pad" style="max-width:760px;margin:0 auto">
+        <h1 class="page-title" style="margin-top:0">${UI.esc(p.title)}</h1>
+        <div class="page-content" style="line-height:1.7;color:var(--text-2)"><p>${body}</p></div>
+      </div>`);
   }
 
   function requireAuth() {
@@ -439,7 +463,7 @@
     if (!hasFilters) {
       // Boutiques à la une (mises en avant par l'administrateur).
       const featIds = adminSettings().featuredStores || [];
-      const feat = featIds.map((id) => Store.get(id)).filter((s) => s && !s.suspended);
+      const feat = featIds.map((id) => Store.get(id)).filter((s) => Store.isActive(s));
       if (feat.length) sections += `<div class="section-title">⭐ Boutiques à la une</div><div class="scroll-row">${feat.map((s) => {
         const rt = Store.rating(s.id);
         return `<a href="#/store/${s.id}" class="feat-store-card"><div class="feat-store-banner" style="${s.banner ? `background-image:url('${UI.esc(s.banner)}')` : (s.themeColor ? `background:${UI.esc(s.themeColor)}` : "")}"></div>
@@ -901,7 +925,7 @@
     const q = params.query || {};
     const sort = q.sort || "note";
     const commune = q.commune || "";
-    let stores = Store.all().filter((s) => !s.suspended);
+    let stores = Store.all().filter((s) => Store.isActive(s));
     if (commune) stores = stores.filter((s) => s.commune === commune);
     const meta = stores.map((s) => {
       const rt = Store.rating(s.id);
@@ -1584,6 +1608,8 @@
         });
         m.querySelector("#submitReview").addEventListener("click", () => {
           if (!rating) { UI.toast("Sélectionnez une note.", "error"); return; }
+          const bad = bannedWordIn(m.querySelector("#revComment").value);
+          if (bad) { UI.toast(`Avis refusé : le mot « ${bad} » n'est pas autorisé.`, "error"); return; }
           const res = Products.addReview({ targetType, targetId, rating, comment: m.querySelector("#revComment").value, photo });
           if (res.ok) { UI.toast("Merci pour votre avis !", "success"); close(); Router.resolve(); }
           else UI.toast(res.error, "error");
@@ -1659,6 +1685,7 @@
         </div>
       </div>
       ${store.suspended ? `<div class="store-ribbon closed">⛔ Boutique suspendue par la modération. Les commandes sont indisponibles.</div>` : ""}
+      ${store.approved === false ? `<div class="store-ribbon closed">🕓 Boutique en attente de validation par l'administration.</div>` : ""}
       ${store.closed ? `<div class="store-ribbon closed">🔒 Boutique momentanément fermée${store.closedMsg ? " — " + UI.esc(store.closedMsg) : ""}. Les commandes sont suspendues.</div>` : ""}
       ${store.promoBanner ? `<div class="store-ribbon promo">📣 ${UI.esc(store.promoBanner)}</div>` : ""}
       <p class="text-muted" style="max-width:720px">${UI.esc(store.description)}</p>
@@ -3083,7 +3110,7 @@
         else UI.toast(res.error, "error");
       } else {
         const res = Store.create(data);
-        if (res.ok) { UI.toast("Boutique créée ✓ Bienvenue parmi les vendeurs !", "success"); renderHeaderUser(); Router.go("#/seller/dashboard"); }
+        if (res.ok) { UI.toast(res.store.approved === false ? "Boutique créée ✓ En attente de validation par l'administration." : "Boutique créée ✓ Bienvenue parmi les vendeurs !", "success"); renderHeaderUser(); Router.go("#/seller/dashboard"); }
         else UI.toast(res.error, "error");
       }
     });
@@ -3156,6 +3183,7 @@
                 <button class="btn wa-btn" id="shareStoreBtn"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.9.9-2.7-.2-.3A8 8 0 1 1 12 20z"/></svg>Partager</button>
                 ${sellerCan("products") ? `<a href="#/seller/product/new" class="btn btn-primary">+ Article</a>` : ""}`,
       body: `
+        ${store.approved === false ? `<div class="ci-alert alert-out" style="margin-bottom:14px">🕓 Votre boutique est <strong>en attente de validation</strong> par l'administration. Vos articles ne seront visibles qu'après approbation.</div>` : ""}
         <div class="stat-grid">
           ${canFin
             ? statCard("ic-green", "💰", UI.fcfa(store.revenueSim || 0), "Chiffre d'affaires")
@@ -3314,6 +3342,8 @@
     star: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M12 17.3 6.2 21l1.5-6.6L2.5 9.9l6.7-.6L12 3l2.8 6.3 6.7.6-5.2 4.5L17.8 21z'/></svg>",
     gear: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.3 7.3 0 0 0-1.7-1l-.4-2.5h-4l-.4 2.5a7.3 7.3 0 0 0-1.7 1l-2.4-1-2 3.4L4.6 11a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.3 7.3 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7.3 7.3 0 0 0 1.7-1l2.4 1 2-3.4zM12 15a3 3 0 1 1 0-6 3 3 0 0 1 0 6z'/></svg>",
     shield: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M12 1 3 5v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V5z'/></svg>",
+    coin: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15v1.5h-2V17a3 3 0 0 1-2-2.8h2a1 1 0 0 0 2 0c0-.6-.4-.9-1.6-1.2C10.1 12.6 9 12 9 10.3A2.8 2.8 0 0 1 11 7.6V6h2v1.6a2.9 2.9 0 0 1 2 2.7h-2a1 1 0 0 0-2 0c0 .5.4.8 1.6 1.1 1.3.4 2.4 1 2.4 2.8A2.9 2.9 0 0 1 13 17z'/></svg>",
+    doc: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M6 2h8l4 4v16H6zm7 1.5V7h3.5zM8 12h8v1.6H8zm0 3.2h8v1.6H8zm0 3.2h5v1.6H8z'/></svg>",
   };
 
   // Réponses rapides (modèles) pour la messagerie vendeur.
@@ -3448,18 +3478,23 @@
   }
 
   // Navigation de l'espace administration.
-  const ADMIN_NAV = [
-    ["overview", "Vue d'ensemble", "#/admin", SICON.chart],
-    ["moderation", "Modération", "#/admin?tab=moderation", SICON.star],
-    ["users", "Utilisateurs", "#/admin?tab=users", SICON.users],
-    ["stores", "Boutiques", "#/admin?tab=stores", SICON.store],
-    ["orders", "Commandes", "#/admin?tab=orders", SICON.receipt],
-    ["coupons", "Coupons", "#/admin?tab=coupons", SICON.tag],
-    ["comm", "Communication", "#/admin?tab=comm", SICON.chat],
-    ["settings", "Paramètres", "#/admin?tab=settings", SICON.gear],
-    ["audit", "Journal", "#/admin?tab=audit", SICON.copy],
-    ["data", "Données", "#/admin?tab=data", SICON.download],
-  ];
+  // Navigation admin (filtrée selon le rôle : le modérateur voit moins de sections).
+  function adminNav() {
+    return [
+      ["overview", "Vue d'ensemble", "#/admin", SICON.chart],
+      ["moderation", "Modération", "#/admin?tab=moderation", SICON.star],
+      ["users", "Utilisateurs", "#/admin?tab=users", SICON.users],
+      ["stores", "Boutiques", "#/admin?tab=stores", SICON.store],
+      ["orders", "Commandes", "#/admin?tab=orders", SICON.receipt],
+      ["finance", "Finances", "#/admin?tab=finance", SICON.coin],
+      ["coupons", "Coupons", "#/admin?tab=coupons", SICON.tag],
+      ["content", "Contenu", "#/admin?tab=content", SICON.doc],
+      ["comm", "Communication", "#/admin?tab=comm", SICON.chat],
+      ["settings", "Paramètres", "#/admin?tab=settings", SICON.gear],
+      ["audit", "Journal", "#/admin?tab=audit", SICON.copy],
+      ["data", "Données", "#/admin?tab=data", SICON.download],
+    ].filter(([k]) => adminCan(k));
+  }
 
   /**
    * Coquille dédiée à l'espace administration : sidebar (desktop) + nav basse
@@ -3468,7 +3503,7 @@
   function adminLayout(opts) {
     const modCount = moderationQueue().total;
     const badges = { moderation: modCount };
-    const navHTML = ADMIN_NAV.map(([k, l, h, ic]) => `
+    const navHTML = adminNav().map(([k, l, h, ic]) => `
       <a href="${h}" class="ss-item ${opts.active === k ? "active" : ""}">
         <span class="ss-ico">${ic}</span><span>${l}</span>
         ${badges[k] ? `<span class="ss-badge">${badges[k]}</span>` : ""}
@@ -3516,8 +3551,8 @@
 
   /** Feuille « Menu » de l'admin : sections restantes + retour + déconnexion. */
   function openAdminMenu() {
-    const emo = { overview: "📊", moderation: "🚩", users: "👤", stores: "🏪", orders: "🧾", coupons: "🏷️", comm: "📣", settings: "⚙️", audit: "📋", data: "💾" };
-    const items = ADMIN_NAV.map(([k, l, h]) => [h, emo[k] || "•", l]).concat([["#/", "🛒", "Retour à la marketplace"], ["#/notifications", "🔔", "Notifications"]]);
+    const emo = { overview: "📊", moderation: "🚩", users: "👤", stores: "🏪", orders: "🧾", finance: "💰", coupons: "🏷️", content: "📄", comm: "📣", settings: "⚙️", audit: "📋", data: "💾" };
+    const items = adminNav().map(([k, l, h]) => [h, emo[k] || "•", l]).concat([["#/", "🛒", "Retour à la marketplace"], ["#/notifications", "🔔", "Notifications"]]);
     UI.modal({
       title: "Menu administration",
       body: `<div class="menu-sheet">
@@ -4449,6 +4484,8 @@
         variantStock,
       };
       if (status === "scheduled" && !data.publishAt) { UI.toast("Choisissez une date de mise en ligne.", "error"); return; }
+      const bad = bannedWordIn(data.title + " " + data.description);
+      if (bad) { UI.toast(`Contenu interdit : le mot « ${bad} » n'est pas autorisé.`, "error"); return; }
       const res = editing ? Products.update(p.id, data) : Products.create(data);
       if (res.ok) { UI.toast(editing ? "Article mis à jour ✓" : (status === "scheduled" ? "Article programmé ✓" : "Article publié ✓"), "success"); Router.go("#/seller/products"); }
       else UI.toast(res.error, "error");
@@ -5080,9 +5117,55 @@
      ADMIN : Console de modération
      ============================================================ */
   /* ---------- Paramètres marketplace & journal d'audit ---------- */
-  const SETTINGS_DEFAULT = { homeBanner: "", maintenance: { on: false, msg: "" }, globalMessage: "", hiddenCategories: [], featuredStores: [] };
+  const SETTINGS_DEFAULT = {
+    homeBanner: "", maintenance: { on: false, msg: "" }, globalMessage: "",
+    hiddenCategories: [], featuredStores: [],
+    categories: null,            // catégories personnalisées (null = défaut)
+    communes: null,              // communes desservies (null = défaut)
+    commissionRate: 5,           // commission marketplace globale (%)
+    storeCommission: {},         // surcharge par boutique { storeId: taux }
+    defaultDeliveryFee: 0,       // frais de livraison suggérés par défaut (FCFA)
+    bannedWords: [],             // mots interdits (titres d'articles, avis)
+    pages: null,                 // pages éditoriales { slug: {title, body} } (null = défaut)
+    requireStoreApproval: false, // exiger l'approbation admin des nouvelles boutiques
+  };
   function adminSettings() { return Object.assign({}, SETTINGS_DEFAULT, DB.get(DB.KEYS.settings, {}) || {}); }
   function saveSettings(patch) { DB.set(DB.KEYS.settings, Object.assign({}, adminSettings(), patch)); }
+
+  /* ---------- Rôles d'administration (super-admin vs modérateur) ---------- */
+  // Sections accessibles au modérateur (le super-admin a tout).
+  const MOD_SECTIONS = ["overview", "moderation", "orders", "stores"];
+  /** Rôle admin de l'utilisateur courant : "super" (défaut) ou "mod". */
+  function adminRoleOf(user) {
+    user = user || Auth.current();
+    return user && user.adminRole === "mod" ? "mod" : "super";
+  }
+  /** L'admin courant peut-il accéder à une section de la console ? */
+  function adminCan(section) {
+    return adminRoleOf() === "super" || MOD_SECTIONS.includes(section);
+  }
+
+  /* ---------- Commissions marketplace ---------- */
+  /** Taux de commission applicable à une boutique (surcharge sinon taux global). */
+  function commissionRateFor(storeId) {
+    const s = adminSettings();
+    const over = s.storeCommission || {};
+    const r = over[storeId] != null && over[storeId] !== "" ? Number(over[storeId]) : Number(s.commissionRate);
+    return isNaN(r) ? 0 : Math.max(0, Math.min(100, r));
+  }
+  /** CA encaissé d'une boutique (commandes livrées). */
+  function storeRevenue(storeId) {
+    return DB.all(DB.KEYS.orders).filter((o) => o.storeId === storeId && o.status === "livree").reduce((a, o) => a + o.total, 0);
+  }
+
+  /* ---------- Mots interdits (modération proactive) ---------- */
+  /** Renvoie le premier mot interdit trouvé dans un texte, sinon null. */
+  function bannedWordIn(text) {
+    const words = (adminSettings().bannedWords || []).filter(Boolean);
+    if (!words.length || !text) return null;
+    const low = String(text).toLowerCase();
+    return words.find((w) => low.includes(String(w).toLowerCase())) || null;
+  }
   /** Journalise une action d'administration (audit). */
   function logAudit(action, detail) {
     const u = Auth.current();
@@ -5094,17 +5177,20 @@
     const reports = DB.all(DB.KEYS.reports).filter((r) => r.status === "pending");
     const reportedReviews = DB.all(DB.KEYS.reviews).filter((r) => (r.reportedBy || []).length);
     const litiges = DB.all(DB.KEYS.orders).filter((o) => o.problem && !o.problem.resolved);
-    return { reports, reportedReviews, litiges, total: reports.length + reportedReviews.length + litiges.length };
+    const pendingStores = DB.all(DB.KEYS.stores).filter((s) => s.approved === false);
+    return { reports, reportedReviews, litiges, pendingStores, total: reports.length + reportedReviews.length + litiges.length + pendingStores.length };
   }
 
   function viewAdmin(params) {
     if (!requireAuth()) return;
     if (!Auth.isAdmin()) { UI.toast("Accès réservé à l'administrateur.", "error"); Router.go("#/"); return; }
     const q = (params && params.query) || {};
-    const RENDER = { overview: adminOverview, moderation: adminModeration, users: adminUsers, stores: adminStores, orders: adminOrders, coupons: adminCoupons, comm: adminComm, settings: adminSettingsTab, audit: adminAudit, data: adminData };
-    const WIRE = { overview: wireAdminOverview, moderation: wireAdminModeration, users: wireAdminUsers, stores: wireAdminStores, orders: wireAdminOrders, coupons: wireAdminCoupons, comm: wireAdminComm, settings: wireAdminSettings, audit: wireAdminAudit, data: wireAdminData };
-    const tab = RENDER[q.tab] ? q.tab : "overview";
-    const TITLES = { overview: "Vue d'ensemble", moderation: "Modération", users: "Utilisateurs", stores: "Boutiques", orders: "Commandes", coupons: "Coupons globaux", comm: "Communication", settings: "Paramètres", audit: "Journal d'audit", data: "Données" };
+    const RENDER = { overview: adminOverview, moderation: adminModeration, users: adminUsers, stores: adminStores, orders: adminOrders, finance: adminFinance, coupons: adminCoupons, content: adminContent, comm: adminComm, settings: adminSettingsTab, audit: adminAudit, data: adminData };
+    const WIRE = { overview: wireAdminOverview, moderation: wireAdminModeration, users: wireAdminUsers, stores: wireAdminStores, orders: wireAdminOrders, finance: wireAdminFinance, coupons: wireAdminCoupons, content: wireAdminContent, comm: wireAdminComm, settings: wireAdminSettings, audit: wireAdminAudit, data: wireAdminData };
+    let tab = RENDER[q.tab] ? q.tab : "overview";
+    // Contrôle d'accès par rôle (modérateur restreint à certaines sections).
+    if (!adminCan(tab)) { UI.toast("Section réservée au super-administrateur.", "error"); tab = "overview"; }
+    const TITLES = { overview: "Vue d'ensemble", moderation: "Modération", users: "Utilisateurs", stores: "Boutiques", orders: "Commandes", finance: "Finances & commissions", coupons: "Coupons globaux", content: "Contenu & catégories", comm: "Communication", settings: "Paramètres", audit: "Journal d'audit", data: "Données" };
     adminLayout({ active: tab, title: TITLES[tab], subtitle: "Console de gestion de la marketplace", body: RENDER[tab](params) });
     WIRE[tab](params);
   }
@@ -5146,6 +5232,7 @@
 
     const pTabs = [["7d", "7 jours"], ["30d", "30 jours"], ["all", "Tout"]];
     return `
+      ${adminAlertsHTML()}
       <div class="flex-between wrap" style="margin-bottom:14px">
         <div class="seg-toggle">${pTabs.map(([k, l]) => `<a href="#/admin?p=${k}" class="seg ${period === k ? "active" : ""}">${l}</a>`).join("")}</div>
         <button class="btn btn-ghost btn-sm" id="admReport">${SICON.printer} Rapport imprimable</button>
@@ -5195,13 +5282,40 @@
     if (rep) rep.addEventListener("click", () => window.print());
   }
 
+  /** Alertes automatiques affichées en haut de la vue d'ensemble. */
+  function adminAlertsHTML() {
+    const alerts = [];
+    const mq = moderationQueue();
+    if (mq.pendingStores.length) alerts.push({ href: "#/admin?tab=moderation", txt: `🕓 ${mq.pendingStores.length} boutique(s) en attente d'approbation.` });
+    if (mq.litiges.length) alerts.push({ href: "#/admin?tab=moderation", txt: `⚠️ ${mq.litiges.length} litige(s) commande(s) ouvert(s).` });
+    if (mq.reports.length || mq.reportedReviews.length) alerts.push({ href: "#/admin?tab=moderation", txt: `⚑ ${mq.reports.length + mq.reportedReviews.length} signalement(s) à traiter.` });
+    // Boutiques à fort taux d'annulation.
+    Store.all().forEach((st) => {
+      const os = Orders.byStore(st.id);
+      if (os.length >= 4) { const cx = os.filter((o) => o.status === "annulee").length; if (cx / os.length >= 0.4) alerts.push({ href: "#/admin?tab=stores", txt: `🏪 « ${st.name} » : ${Math.round(cx / os.length * 100)}% de commandes annulées.` }); }
+    });
+    // Stockage presque plein.
+    let bytes = 0; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.indexOf("marchesci_") === 0) bytes += (localStorage.getItem(k) || "").length; } } catch (e) {}
+    if (bytes / (5 * 1024 * 1024) >= 0.8) alerts.push({ href: "#/admin?tab=data", txt: `💾 Stockage local presque plein — pensez à exporter une sauvegarde.` });
+    if (!alerts.length) return "";
+    return `<div class="card card-pad" style="margin-bottom:14px;border-left:4px solid var(--warn,#f59e0b)">
+      <strong style="font-size:14px">🔔 Alertes (${alerts.length})</strong>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:5px">${alerts.map((a) => `<a href="${a.href}" style="font-size:13.5px">${a.txt}</a>`).join("")}</div>
+    </div>`;
+  }
+
   /* ---------- Onglet : Modération ---------- */
   function adminModeration() {
-    const { reports, reportedReviews, litiges } = moderationQueue();
-    if (!reports.length && !reportedReviews.length && !litiges.length) {
-      return emptyState("✅", "Rien à modérer", "Aucun signalement ni litige en attente. Tout est en ordre !");
+    const { reports, reportedReviews, litiges, pendingStores } = moderationQueue();
+    if (!reports.length && !reportedReviews.length && !litiges.length && !pendingStores.length) {
+      return emptyState("✅", "Rien à modérer", "Aucun signalement, litige ni boutique en attente. Tout est en ordre !");
     }
     const section = (title, items) => items.length ? `<div class="section-title">${title} (${items.length})</div>${items.join("")}` : "";
+    const pendingCards = pendingStores.map((st) => { const owner = DB.find(DB.KEYS.users, st.ownerId); return `<div class="card card-pad mt-12 mod-card">
+      <div class="flex-between wrap"><div><strong>🕓 Boutique en attente</strong> — <a href="#" data-asdetail="${st.id}">${UI.esc(st.name)}</a>
+        <div class="text-muted" style="font-size:12.5px">${UI.esc(st.commune || "")} · ${owner ? UI.esc(owner.name) : "—"} · ${UI.timeAgo(st.createdAt || Date.now())}</div></div>
+        <div class="flex gap-8"><button class="btn btn-accent btn-sm" data-approvestore="${st.id}">✔️ Approuver</button>
+          <button class="btn btn-danger btn-sm" data-rejectstore="${st.id}">Refuser</button></div></div></div>`; });
     const prodReports = reports.filter((r) => !r.type || r.type === "product");
     const storeReports = reports.filter((r) => r.type === "store");
     const qReports = reports.filter((r) => r.type === "question");
@@ -5231,7 +5345,7 @@
       <div class="flex-between wrap"><div><strong>⚠️ Litige commande</strong> N° ${UI.esc(o.number)} — ${UI.esc(o.storeName)}
         <div class="text-muted" style="font-size:12.5px">${UI.esc(o.problem.reason)} · ${UI.timeAgo(o.problem.at || o.createdAt)}</div></div>
         <div class="flex gap-8"><button class="btn btn-primary btn-sm" data-litresolve="${o.id}">Marquer résolu</button></div></div></div>`);
-    return section("Articles signalés", repCards) + section("Boutiques signalées", storeCards) + section("Questions signalées", qCards) + section("Avis signalés", revCards) + section("Litiges commandes", litCards);
+    return section("Boutiques en attente d'approbation", pendingCards) + section("Articles signalés", repCards) + section("Boutiques signalées", storeCards) + section("Questions signalées", qCards) + section("Avis signalés", revCards) + section("Litiges commandes", litCards);
   }
   function wireAdminModeration() {
     V().querySelectorAll("[data-modremoveprod]").forEach((b) => b.addEventListener("click", async () => {
@@ -5277,6 +5391,21 @@
       Notifications.push(o.buyerId, { type: "order_status", message: `✅ Le litige sur votre commande ${o.number} a été traité par la modération.`, link: "#/orders" });
       UI.toast("Litige marqué résolu.", "success"); viewAdmin({ query: { tab: "moderation" } });
     }));
+    V().querySelectorAll("[data-approvestore]").forEach((b) => b.addEventListener("click", () => {
+      const st = Store.get(b.getAttribute("data-approvestore"));
+      DB.update(DB.KEYS.stores, st.id, { approved: true });
+      Notifications.push(st.ownerId, { type: "info", message: `✅ Votre boutique « ${st.name} » a été approuvée et est maintenant en ligne.`, link: "#/seller/dashboard" });
+      logAudit("Boutique approuvée", st.name);
+      UI.toast("Boutique approuvée ✓", "success"); viewAdmin({ query: { tab: "moderation" } });
+    }));
+    V().querySelectorAll("[data-rejectstore]").forEach((b) => b.addEventListener("click", async () => {
+      if (!(await UI.confirm("Refuser et supprimer cette boutique en attente ?", { danger: true, confirmLabel: "Refuser" }))) return;
+      const st = Store.get(b.getAttribute("data-rejectstore"));
+      Notifications.push(st.ownerId, { type: "info", message: `❌ Votre demande d'ouverture de boutique « ${st.name} » a été refusée.`, link: "#/" });
+      Store.remove(st.id); logAudit("Boutique refusée", st.name);
+      UI.toast("Boutique refusée.", "info"); viewAdmin({ query: { tab: "moderation" } });
+    }));
+    V().querySelectorAll("[data-asdetail]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); openAdminStoreDetail(a.getAttribute("data-asdetail")); }));
   }
 
   /* ---------- Onglet : Utilisateurs ---------- */
@@ -5360,9 +5489,25 @@
           ${statCard("ic-purple", "✍️", reviews.length, "Avis")}
         </div>
         ${store ? `<div class="card card-pad mt-12"><strong>🏪 Boutique :</strong> <a href="#/store/${store.id}">${UI.esc(store.name)}</a> — ${Products.byStore(store.id, true).length} article(s)</div>` : ""}
+        ${u.role === "admin" ? `<div class="card card-pad mt-12"><label style="font-weight:700;font-size:13px">Niveau d'administration</label>
+          <div class="flex gap-8 mt-8" style="align-items:center">
+            <select id="udAdminRole" class="mini-select"><option value="super" ${adminRoleOf(u) === "super" ? "selected" : ""}>Super-administrateur (accès total)</option><option value="mod" ${adminRoleOf(u) === "mod" ? "selected" : ""}>Modérateur (accès limité)</option></select>
+            <button class="btn btn-primary btn-sm" id="udAdminRoleSave">Appliquer</button>
+          </div></div>` : ""}
         <div class="section-title" style="margin-top:14px">Dernières commandes</div>
         ${orders.length ? `<div class="price-hist-rows">${orders.slice(0, 6).map((o) => `<div class="activity-row"><span>${UI.esc(o.number)} · ${UI.esc(o.storeName)}</span><span><span class="status ${o.status}">${Orders.STATUS[o.status]}</span> ${UI.fcfa(o.total)}</span></div>`).join("")}</div>` : `<p class="text-muted">Aucune commande.</p>`}`,
       footer: `<button class="btn btn-primary btn-block" data-close>Fermer</button>`,
+      onMount(m, close) {
+        const rs = m.querySelector("#udAdminRoleSave");
+        if (rs) rs.addEventListener("click", () => {
+          const val = m.querySelector("#udAdminRole").value;
+          const me = Auth.current();
+          if (u.id === me.id && val !== "super") { UI.toast("Vous ne pouvez pas réduire votre propre niveau.", "error"); return; }
+          DB.update(DB.KEYS.users, u.id, { adminRole: val });
+          logAudit("Niveau admin modifié", u.email + " → " + val);
+          close(); UI.toast("Niveau d'administration mis à jour ✓", "success");
+        });
+      },
     });
   }
 
@@ -5410,8 +5555,10 @@
           <td class="text-muted" style="font-size:12.5px">${owner ? UI.esc(owner.name) : "—"}</td>
           <td>${Products.byStore(s.id, true).length}</td>
           <td>${Orders.byStore(s.id).length}</td>
-          <td>${s.suspended ? `<span class="status annulee">Suspendue</span>` : `<span class="status livree">Active</span>`}</td>
+          <td>${s.suspended ? `<span class="status annulee">Suspendue</span>` : s.approved === false ? `<span class="status en_attente">En attente</span>` : `<span class="status livree">Active</span>`}</td>
           <td style="text-align:right"><div class="row-actions">
+            <button class="btn btn-ghost btn-sm" data-sdetail="${s.id}">Voir</button>
+            ${s.approved === false ? `<button class="btn btn-accent btn-sm" data-sapprove="${s.id}">Approuver</button>` : ""}
             <button class="btn btn-ghost btn-sm" data-sverify="${s.id}">${s.verified ? "Retirer badge" : "✔️ Vérifier"}</button>
             <button class="btn btn-ghost btn-sm" data-ssuspend="${s.id}">${s.suspended ? "Réactiver" : "Suspendre"}</button>
             <button class="icon-action danger" data-sdel="${s.id}" title="Supprimer">${SICON.trash}</button>
@@ -5421,6 +5568,14 @@
     </table></div>`;
   }
   function wireAdminStores() {
+    V().querySelectorAll("[data-sdetail]").forEach((b) => b.addEventListener("click", () => openAdminStoreDetail(b.getAttribute("data-sdetail"))));
+    V().querySelectorAll("[data-sapprove]").forEach((b) => b.addEventListener("click", () => {
+      const s = Store.get(b.getAttribute("data-sapprove"));
+      DB.update(DB.KEYS.stores, s.id, { approved: true });
+      Notifications.push(s.ownerId, { type: "info", message: `✅ Votre boutique « ${s.name} » a été approuvée et est maintenant en ligne.`, link: "#/seller/dashboard" });
+      logAudit("Boutique approuvée", s.name);
+      UI.toast("Boutique approuvée ✓", "success"); viewAdmin({ query: { tab: "stores" } });
+    }));
     V().querySelectorAll("[data-sverify]").forEach((b) => b.addEventListener("click", () => {
       const s = Store.get(b.getAttribute("data-sverify"));
       DB.update(DB.KEYS.stores, s.id, { verified: !s.verified });
@@ -5463,9 +5618,9 @@
       <div class="text-muted" style="font-size:13px;margin-bottom:8px">${orders.length} commande(s) · ${UI.fcfa(total)}</div>
       <div class="table-wrap"><table class="data-table">
       <thead><tr><th>N°</th><th>Boutique</th><th>Client</th><th>Total</th><th>Statut</th><th>Date</th></tr></thead>
-      <tbody>${orders.length ? orders.slice(0, 200).map((o) => `<tr>
+      <tbody>${orders.length ? orders.slice(0, 200).map((o) => `<tr class="row-click" data-aorder="${o.id}">
         <td><strong>${UI.esc(o.number)}</strong></td>
-        <td><a href="#/store/${o.storeId}">${UI.esc(o.storeName)}</a></td>
+        <td>${UI.esc(o.storeName)}</td>
         <td class="text-muted" style="font-size:12.5px">${UI.esc(o.buyerName)}</td>
         <td>${UI.fcfa(o.total)}</td>
         <td><span class="status ${o.status}">${Orders.STATUS[o.status]}</span>${o.problem && !o.problem.resolved ? ` <span class="tag" style="position:static;background:var(--danger);color:#fff">Litige</span>` : ""}</td>
@@ -5475,6 +5630,7 @@
   }
   function wireAdminOrders(params) {
     const q = (params && params.query) || {};
+    V().querySelectorAll("[data-aorder]").forEach((r) => r.addEventListener("click", () => openAdminOrderDetail(r.getAttribute("data-aorder"))));
     const si = document.getElementById("admOrderSearch");
     if (si) si.addEventListener("keydown", (e) => { if (e.key === "Enter") { const p = new URLSearchParams({ tab: "orders" }); if (q.s) p.set("s", q.s); if (q.period) p.set("period", q.period); if (si.value.trim()) p.set("q", si.value.trim()); Router.go("#/admin?" + p.toString()); } });
     const per = document.getElementById("admOrderPeriod");
@@ -5551,6 +5707,273 @@
     });
   }
 
+  /* ---------- Onglet : Finances & commissions ---------- */
+  function adminFinance(params) {
+    const q = (params && params.query) || {};
+    const s = adminSettings();
+    const rows = Store.all().map((st) => {
+      const rev = storeRevenue(st.id);
+      const rate = commissionRateFor(st.id);
+      const commission = Math.round(rev * rate / 100);
+      return { st, rev, rate, commission, net: rev - commission, override: (s.storeCommission || {})[st.id] };
+    }).sort((a, b) => b.rev - a.rev);
+    const totalRev = rows.reduce((a, r) => a + r.rev, 0);
+    const totalComm = rows.reduce((a, r) => a + r.commission, 0);
+    const totalNet = totalRev - totalComm;
+    return `<div class="ci-alert" style="background:var(--bg-elev);border:1px dashed var(--border);margin-bottom:14px">ℹ️ Calculs indicatifs basés sur les commandes <strong>livrées</strong> (paiement à la livraison, sans back-end : aucun virement réel n'est effectué).</div>
+      <div class="stat-grid">
+        ${statCard("ic-green", "💰", UI.fcfa(totalRev), "Volume livré (total)")}
+        ${statCard("ic-orange", "🏦", UI.fcfa(totalComm), "Commissions marketplace")}
+        ${statCard("ic-blue", "🤝", UI.fcfa(totalNet), "Net dû aux vendeurs")}
+      </div>
+      <div class="card card-pad mt-16" style="max-width:520px">
+        <h3 style="margin:0 0 8px">Commission globale</h3>
+        <div class="flex gap-8" style="align-items:flex-end">
+          <div class="field" style="margin:0"><label>Taux appliqué par défaut (%)</label><input type="number" id="finRate" min="0" max="100" step="0.5" value="${s.commissionRate}" style="max-width:140px" /></div>
+          <button class="btn btn-primary" id="finSaveRate">Enregistrer</button>
+        </div>
+      </div>
+      <div class="flex-between wrap mt-16" style="gap:10px">
+        <div class="section-title" style="margin:0">Par boutique</div>
+        <button class="btn btn-ghost btn-sm" id="finExport">${SICON.download} Export CSV</button>
+      </div>
+      <div class="table-wrap"><table class="data-table">
+        <thead><tr><th>Boutique</th><th>CA livré</th><th>Taux</th><th>Commission</th><th>Net vendeur</th></tr></thead>
+        <tbody>${rows.map((r) => `<tr>
+          <td><a href="#" data-fstore="${r.st.id}" style="font-weight:600">${UI.esc(r.st.name)}</a></td>
+          <td>${UI.fcfa(r.rev)}</td>
+          <td><input type="number" class="mini-input" data-frate="${r.st.id}" min="0" max="100" step="0.5" value="${r.override != null && r.override !== "" ? r.override : ""}" placeholder="${s.commissionRate}" style="width:66px" /></td>
+          <td>${UI.fcfa(r.commission)}</td>
+          <td><strong>${UI.fcfa(r.net)}</strong></td>
+        </tr>`).join("")}</tbody>
+        <tfoot><tr style="font-weight:800"><td>Total</td><td>${UI.fcfa(totalRev)}</td><td>—</td><td>${UI.fcfa(totalComm)}</td><td>${UI.fcfa(totalNet)}</td></tr></tfoot>
+      </table></div>
+      <p class="text-muted" style="font-size:12.5px;margin-top:8px">Laissez le taux vide pour appliquer la commission globale ; saisissez une valeur pour surcharger une boutique.</p>`;
+  }
+  function wireAdminFinance() {
+    const sr = document.getElementById("finSaveRate");
+    if (sr) sr.addEventListener("click", () => {
+      const v = Math.max(0, Math.min(100, Number(document.getElementById("finRate").value) || 0));
+      saveSettings({ commissionRate: v });
+      logAudit("Commission globale modifiée", v + " %");
+      UI.toast("Commission globale enregistrée ✓", "success"); viewAdmin({ query: { tab: "finance" } });
+    });
+    V().querySelectorAll("[data-frate]").forEach((inp) => inp.addEventListener("change", () => {
+      const id = inp.getAttribute("data-frate");
+      const over = Object.assign({}, adminSettings().storeCommission || {});
+      if (inp.value === "") delete over[id]; else over[id] = Math.max(0, Math.min(100, Number(inp.value) || 0));
+      saveSettings({ storeCommission: over });
+      UI.toast("Taux boutique mis à jour ✓", "success"); viewAdmin({ query: { tab: "finance" } });
+    }));
+    V().querySelectorAll("[data-fstore]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); openAdminStoreDetail(a.getAttribute("data-fstore")); }));
+    const exp = document.getElementById("finExport");
+    if (exp) exp.addEventListener("click", () => {
+      const s = adminSettings();
+      const rows = Store.all().map((st) => { const rev = storeRevenue(st.id); const rate = commissionRateFor(st.id); const c = Math.round(rev * rate / 100); return [st.name, rev, rate + "%", c, rev - c]; });
+      const esc = (x) => `"${String(x == null ? "" : x).replace(/"/g, '""')}"`;
+      const csv = "﻿" + [["Boutique", "CA livré", "Taux", "Commission", "Net vendeur"].map(esc).join(","), ...rows.map((r) => r.map(esc).join(","))].join("\r\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" }); const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = "commissions-marketplace-" + new Date().toISOString().slice(0, 10) + ".csv";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(() => URL.revokeObjectURL(url), 2000);
+      UI.toast("Export CSV téléchargé ✓", "success");
+    });
+  }
+
+  /* ---------- Onglet : Contenu (catégories, pages, mots interdits) ---------- */
+  const PAGES_DEFAULT = {
+    faq: { title: "Foire aux questions", body: "Comment commander ?\nAjoutez des articles au panier puis validez : le paiement se fait à la livraison.\n\nComment devenir vendeur ?\nCréez un compte puis ouvrez votre boutique depuis votre profil." },
+    cgu: { title: "Conditions générales d'utilisation", body: "Bienvenue sur Marché CI. En utilisant la plateforme, vous acceptez de respecter les règles de bonne conduite et la législation en vigueur en Côte d'Ivoire." },
+    confidentialite: { title: "Politique de confidentialité", body: "Marché CI fonctionne sans serveur : vos données (compte, panier, commandes) sont stockées uniquement sur votre appareil. Aucune information n'est envoyée en ligne." },
+    about: { title: "À propos", body: "Marché CI est une marketplace multi-vendeurs dédiée à la Côte d'Ivoire : achetez auprès de boutiques locales, payez à la livraison." },
+    contact: { title: "Nous contacter", body: "Une question ? Écrivez-nous à contact@marche-ci.example ou via WhatsApp au 07 00 00 00 00." },
+  };
+  function adminPages() { return Object.assign({}, PAGES_DEFAULT, adminSettings().pages || {}); }
+  function adminContent() {
+    const cats = UI.categories();
+    const pages = adminPages();
+    const banned = (adminSettings().bannedWords || []).join(", ");
+    const slugs = Object.keys(PAGES_DEFAULT);
+    return `<div class="card card-pad" style="max-width:760px">
+        <h3 style="margin:0 0 4px">🗂️ Catégories</h3>
+        <p class="text-muted" style="font-size:13px;margin:0 0 12px">Ajoutez, renommez ou réordonnez les catégories affichées dans toute la marketplace.</p>
+        <div id="catEditor">${cats.map((c, i) => catRowHTML(c, i, cats.length)).join("")}</div>
+        <button class="btn btn-ghost btn-sm mt-8" id="catAdd">+ Ajouter une catégorie</button>
+        <div class="flex gap-8 mt-12"><button class="btn btn-primary" id="catSave">Enregistrer les catégories</button>
+          <button class="btn btn-ghost" id="catReset">Rétablir par défaut</button></div>
+      </div>
+      <div class="card card-pad mt-16" style="max-width:760px">
+        <h3 style="margin:0 0 4px">📄 Pages d'information</h3>
+        <p class="text-muted" style="font-size:13px;margin:0 0 12px">Contenu éditable des pages publiques (accessibles via le pied de page).</p>
+        <div class="field"><label>Page</label><select id="pgSelect">${slugs.map((sl) => `<option value="${sl}">${UI.esc(pages[sl].title)}</option>`).join("")}</select></div>
+        <div class="field mt-8"><label>Titre</label><input id="pgTitle" value="${UI.esc(pages[slugs[0]].title)}" /></div>
+        <div class="field mt-8"><label>Contenu</label><textarea id="pgBody" rows="7">${UI.esc(pages[slugs[0]].body)}</textarea></div>
+        <div class="flex gap-8 mt-8"><button class="btn btn-primary" id="pgSave">Enregistrer la page</button>
+          <a class="btn btn-ghost" href="#/page/${slugs[0]}" id="pgPreview" target="_self">Aperçu</a></div>
+      </div>
+      <div class="card card-pad mt-16" style="max-width:760px">
+        <h3 style="margin:0 0 4px">🚫 Mots interdits</h3>
+        <p class="text-muted" style="font-size:13px;margin:0 0 12px">Bloque la publication d'articles et d'avis contenant ces mots (séparés par des virgules).</p>
+        <textarea id="bwList" rows="3" placeholder="arnaque, contrefaçon, …">${UI.esc(banned)}</textarea>
+        <div class="flex gap-8 mt-8"><button class="btn btn-primary" id="bwSave">Enregistrer</button>
+          <button class="btn btn-ghost" id="bwScan">Analyser le contenu existant</button></div>
+        <div id="bwScanRes"></div>
+      </div>`;
+  }
+  function catRowHTML(c, i, total) {
+    return `<div class="flex gap-8 cat-row" data-catrow style="align-items:center;margin-bottom:7px">
+      <input class="mini-input" data-cicon value="${UI.esc(c.icon || "")}" style="width:52px;text-align:center" maxlength="2" />
+      <input class="mini-input" data-cid value="${UI.esc(c.id)}" placeholder="identifiant" style="width:130px" />
+      <input class="mini-input" data-clabel value="${UI.esc(c.label)}" placeholder="Libellé" style="flex:1" />
+      <button class="icon-action" data-cup ${i === 0 ? "disabled" : ""} title="Monter">▲</button>
+      <button class="icon-action" data-cdown ${i === total - 1 ? "disabled" : ""} title="Descendre">▼</button>
+      <button class="icon-action danger" data-cremove title="Supprimer">${SICON.trash}</button>
+    </div>`;
+  }
+  function readCatEditor() {
+    return Array.from(V().querySelectorAll("[data-catrow]")).map((row) => ({
+      id: (row.querySelector("[data-cid]").value || "").trim().toLowerCase().replace(/\s+/g, "-"),
+      label: (row.querySelector("[data-clabel]").value || "").trim(),
+      icon: (row.querySelector("[data-cicon]").value || "").trim(),
+    })).filter((c) => c.id && c.label);
+  }
+  function wireAdminContent() {
+    const editor = document.getElementById("catEditor");
+    const rewire = () => {
+      editor.querySelectorAll("[data-cremove]").forEach((b) => b.onclick = () => { b.closest("[data-catrow]").remove(); });
+      editor.querySelectorAll("[data-cup]").forEach((b) => b.onclick = () => { const r = b.closest("[data-catrow]"); if (r.previousElementSibling) r.parentNode.insertBefore(r, r.previousElementSibling); });
+      editor.querySelectorAll("[data-cdown]").forEach((b) => b.onclick = () => { const r = b.closest("[data-catrow]"); if (r.nextElementSibling) r.parentNode.insertBefore(r.nextElementSibling, r); });
+    };
+    rewire();
+    const add = document.getElementById("catAdd");
+    if (add) add.addEventListener("click", () => { editor.insertAdjacentHTML("beforeend", catRowHTML({ id: "", label: "", icon: "🏷️" }, 1, 99)); rewire(); });
+    const save = document.getElementById("catSave");
+    if (save) save.addEventListener("click", () => {
+      const cats = readCatEditor();
+      if (!cats.length) { UI.toast("Au moins une catégorie est requise.", "error"); return; }
+      const ids = cats.map((c) => c.id); if (new Set(ids).size !== ids.length) { UI.toast("Identifiants en double.", "error"); return; }
+      saveSettings({ categories: cats });
+      logAudit("Catégories modifiées", cats.length + " catégorie(s)");
+      UI.toast("Catégories enregistrées ✓", "success"); viewAdmin({ query: { tab: "content" } });
+    });
+    const reset = document.getElementById("catReset");
+    if (reset) reset.addEventListener("click", async () => {
+      if (!(await UI.confirm("Rétablir les catégories par défaut ?", { confirmLabel: "Rétablir" }))) return;
+      saveSettings({ categories: null }); UI.toast("Catégories réinitialisées.", "info"); viewAdmin({ query: { tab: "content" } });
+    });
+    // Pages éditoriales.
+    const pages = adminPages();
+    const sel = document.getElementById("pgSelect"), pgT = document.getElementById("pgTitle"), pgB = document.getElementById("pgBody"), pgP = document.getElementById("pgPreview");
+    if (sel) sel.addEventListener("change", () => { const p = pages[sel.value]; pgT.value = p.title; pgB.value = p.body; pgP.setAttribute("href", "#/page/" + sel.value); });
+    const pgSave = document.getElementById("pgSave");
+    if (pgSave) pgSave.addEventListener("click", () => {
+      const cur = Object.assign({}, adminSettings().pages || {});
+      cur[sel.value] = { title: pgT.value.trim() || pages[sel.value].title, body: pgB.value.trim() };
+      saveSettings({ pages: cur }); logAudit("Page éditée", sel.value);
+      UI.toast("Page enregistrée ✓", "success");
+    });
+    // Mots interdits.
+    const bwSave = document.getElementById("bwSave");
+    if (bwSave) bwSave.addEventListener("click", () => {
+      const list = (document.getElementById("bwList").value || "").split(",").map((w) => w.trim()).filter(Boolean);
+      saveSettings({ bannedWords: list }); logAudit("Mots interdits mis à jour", list.length + " mot(s)");
+      UI.toast("Liste enregistrée ✓", "success");
+    });
+    const bwScan = document.getElementById("bwScan");
+    if (bwScan) bwScan.addEventListener("click", () => {
+      const list = (document.getElementById("bwList").value || "").split(",").map((w) => w.trim().toLowerCase()).filter(Boolean);
+      const res = document.getElementById("bwScanRes");
+      if (!list.length) { res.innerHTML = `<p class="text-muted" style="font-size:13px;margin-top:8px">Aucun mot interdit défini.</p>`; return; }
+      const hit = (t) => t && list.some((w) => t.toLowerCase().includes(w));
+      const prods = Products.all().filter((p) => hit(p.title) || hit(p.description));
+      const revs = DB.all(DB.KEYS.reviews).filter((r) => hit(r.comment));
+      res.innerHTML = (prods.length || revs.length)
+        ? `<div class="ci-alert alert-out" style="margin-top:10px">⚠️ ${prods.length} article(s) et ${revs.length} avis contiennent un mot interdit.
+            ${prods.slice(0, 8).map((p) => `<div style="font-size:12.5px">• <a href="#/product/${p.id}">${UI.esc(p.title)}</a></div>`).join("")}</div>`
+        : `<div class="ci-alert" style="margin-top:10px;background:var(--bg-elev)">✅ Aucun contenu existant ne contient de mot interdit.</div>`;
+    });
+  }
+
+  /* ---------- Modale : détail d'une commande (admin) ---------- */
+  function openAdminOrderDetail(orderId) {
+    const o = Orders.get(orderId);
+    if (!o) return;
+    const d = o.delivery || {};
+    const statusOpts = Object.keys(Orders.STATUS).map((k) => `<option value="${k}" ${o.status === k ? "selected" : ""}>${Orders.STATUS[k]}</option>`).join("");
+    const hist = (o.history || []).slice().sort((a, b) => a.at - b.at);
+    UI.modal({
+      title: "Commande " + o.number,
+      body: `<div class="text-muted" style="font-size:12.5px;margin-bottom:8px">${UI.dateFR(o.createdAt)} · <a href="#/store/${o.storeId}">${UI.esc(o.storeName)}</a> · <span class="status ${o.status}">${Orders.STATUS[o.status]}</span>${o.paid ? ` · <span style="color:var(--accent)">payée</span>` : ""}</div>
+        <div class="card card-pad" style="margin-bottom:10px">
+          <strong>👤 ${UI.esc(o.buyerName || d.name || "Client")}</strong>
+          <div class="text-muted" style="font-size:12.5px">${UI.esc(d.phone || "—")} · ${UI.esc(d.commune || "")} · ${UI.esc(d.address || "")}</div>
+          ${d.geo ? `<div style="font-size:12.5px"><a href="https://maps.google.com/?q=${d.geo.lat},${d.geo.lng}" target="_blank" rel="noopener">📍 Position GPS partagée</a></div>` : ""}
+        </div>
+        <div class="section-title" style="margin-top:0">Articles</div>
+        ${(o.items || []).map((it) => `<div class="activity-row"><span>${it.qty}× ${UI.esc(it.title)}</span><span>${UI.fcfa((it.price || 0) * it.qty)}</span></div>`).join("")}
+        <div class="activity-row" style="font-weight:800"><span>Total${o.deliveryFee ? " (dont livraison " + UI.fcfa(o.deliveryFee) + ")" : ""}</span><span>${UI.fcfa(o.total)}</span></div>
+        ${o.problem ? `<div class="ci-alert alert-out" style="margin-top:10px">⚠️ Litige : ${UI.esc(o.problem.reason)}${o.problem.resolved ? " — <em>résolu</em>" : ""}</div>` : ""}
+        ${hist.length ? `<div class="section-title">Historique</div>${hist.map((h) => `<div class="activity-row"><span>${Orders.STATUS[h.status] || h.status}</span><span class="text-muted" style="font-size:12px">${UI.dateFR(h.at)}</span></div>`).join("")}` : ""}
+        <div class="section-title">Intervention admin</div>
+        <div class="field"><label>Changer le statut</label><select id="aodStatus">${statusOpts}</select></div>
+        <div class="flex gap-8 mt-8 wrap">
+          <button class="btn btn-primary btn-sm" id="aodApply">Appliquer</button>
+          <button class="btn btn-ghost btn-sm" id="aodPaid">${o.paid ? "Marquer non payée" : "Marquer payée"}</button>
+          ${o.status !== "annulee" && o.status !== "livree" ? `<button class="btn btn-danger btn-sm" id="aodCancel">Forcer l'annulation</button>` : ""}
+          ${o.problem && !o.problem.resolved ? `<button class="btn btn-accent btn-sm" id="aodResolve">Résoudre le litige</button>` : ""}
+        </div>`,
+      footer: `<button class="btn btn-ghost btn-block" data-close>Fermer</button>`,
+      onMount(m, close) {
+        m.querySelector("#aodApply").addEventListener("click", () => { Orders.setStatus(o.id, m.querySelector("#aodStatus").value); logAudit("Statut commande modifié", o.number + " → " + Orders.STATUS[m.querySelector("#aodStatus").value]); close(); UI.toast("Statut mis à jour ✓", "success"); viewAdmin({ query: { tab: "orders" } }); });
+        m.querySelector("#aodPaid").addEventListener("click", () => { Orders.setPaid(o.id, !o.paid); close(); UI.toast("Paiement mis à jour ✓", "success"); viewAdmin({ query: { tab: "orders" } }); });
+        const cx = m.querySelector("#aodCancel");
+        if (cx) cx.addEventListener("click", async () => { if (!(await UI.confirm("Forcer l'annulation de cette commande ?", { danger: true, confirmLabel: "Annuler la commande" }))) return; Orders.cancel(o.id, "Annulée par l'administration", "seller"); logAudit("Commande annulée (admin)", o.number); close(); UI.toast("Commande annulée.", "info"); viewAdmin({ query: { tab: "orders" } }); });
+        const rz = m.querySelector("#aodResolve");
+        if (rz) rz.addEventListener("click", () => { DB.update(DB.KEYS.orders, o.id, { problem: Object.assign({}, o.problem, { resolved: true }) }); Notifications.push(o.buyerId, { type: "order_status", message: `✅ Le litige sur votre commande ${o.number} a été traité.`, link: "#/orders" }); logAudit("Litige résolu", o.number); close(); UI.toast("Litige résolu ✓", "success"); viewAdmin({ query: { tab: "orders" } }); });
+      },
+    });
+  }
+
+  /* ---------- Modale : détail d'une boutique (admin) ---------- */
+  function openAdminStoreDetail(storeId) {
+    const st = Store.get(storeId);
+    if (!st) return;
+    const owner = DB.find(DB.KEYS.users, st.ownerId);
+    const orders = Orders.byStore(st.id);
+    const rev = storeRevenue(st.id);
+    const litiges = orders.filter((o) => o.problem && !o.problem.resolved).length;
+    const rating = Store.rating(st.id);
+    UI.modal({
+      title: "🏪 " + st.name,
+      body: `<div class="text-muted" style="font-size:12.5px;margin-bottom:10px">${UI.esc(st.commune || "")} · Propriétaire : ${owner ? UI.esc(owner.name) : "—"}
+          ${st.suspended ? ` · <span style="color:var(--danger)">suspendue</span>` : st.approved === false ? ` · <span style="color:var(--warn,#f59e0b)">en attente</span>` : ` · <span style="color:var(--accent)">active</span>`}</div>
+        <div class="stat-grid" style="grid-template-columns:repeat(2,1fr)">
+          ${statCard("ic-blue", "📦", Products.byStore(st.id, true).length, "Articles")}
+          ${statCard("ic-green", "💰", UI.fcfa(rev), "CA livré")}
+          ${statCard("ic-orange", "🧾", orders.length, "Commandes")}
+          ${statCard(litiges ? "ic-orange" : "ic-purple", "⚠️", litiges, "Litiges ouverts")}
+        </div>
+        <div class="card card-pad mt-12" style="font-size:13px">⭐ Note : ${rating.count ? rating.avg.toFixed(1) + "/5 (" + rating.count + " avis)" : "aucun avis"}
+          ${owner && owner.phone ? ` · 📞 <a href="tel:${UI.esc(owner.phone)}">${UI.esc(owner.phone)}</a>` : ""}
+          ${st.whatsapp ? ` · <a href="https://wa.me/${String(st.whatsapp).replace(/\\D/g, "")}" target="_blank" rel="noopener">WhatsApp</a>` : ""}</div>
+        <div class="section-title">Dernières commandes</div>
+        ${orders.length ? orders.slice(0, 6).map((o) => `<div class="activity-row"><a href="#" data-aod="${o.id}">${UI.esc(o.number)}</a><span><span class="status ${o.status}">${Orders.STATUS[o.status]}</span> ${UI.fcfa(o.total)}</span></div>`).join("") : `<p class="text-muted">Aucune commande.</p>`}
+        <div class="flex gap-8 wrap mt-12">
+          <a class="btn btn-ghost btn-sm" href="#/store/${st.id}" data-close>Voir la vitrine</a>
+          ${st.approved === false ? `<button class="btn btn-accent btn-sm" id="asdApprove">✔️ Approuver</button>` : ""}
+          <button class="btn btn-ghost btn-sm" id="asdVerify">${st.verified ? "Retirer badge vérifié" : "✔️ Vérifier"}</button>
+          <button class="btn btn-ghost btn-sm" id="asdSuspend">${st.suspended ? "Réactiver" : "Suspendre"}</button>
+        </div>`,
+      footer: `<button class="btn btn-primary btn-block" data-close>Fermer</button>`,
+      onMount(m, close) {
+        m.querySelectorAll("[data-aod]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); close(); openAdminOrderDetail(a.getAttribute("data-aod")); }));
+        const ap = m.querySelector("#asdApprove");
+        if (ap) ap.addEventListener("click", () => { DB.update(DB.KEYS.stores, st.id, { approved: true }); Notifications.push(st.ownerId, { type: "info", message: `✅ Votre boutique « ${st.name} » a été approuvée et est maintenant en ligne.`, link: "#/seller/dashboard" }); logAudit("Boutique approuvée", st.name); close(); UI.toast("Boutique approuvée ✓", "success"); viewAdmin({ query: { tab: "stores" } }); });
+        m.querySelector("#asdVerify").addEventListener("click", () => { DB.update(DB.KEYS.stores, st.id, { verified: !st.verified }); close(); UI.toast(!st.verified ? "Boutique vérifiée ✔️" : "Badge retiré.", "success"); viewAdmin({ query: { tab: "stores" } }); });
+        m.querySelector("#asdSuspend").addEventListener("click", () => { DB.update(DB.KEYS.stores, st.id, { suspended: !st.suspended }); if (!st.suspended) Notifications.push(st.ownerId, { type: "info", message: `⛔ Votre boutique « ${st.name} » a été suspendue.`, link: "#/seller/dashboard" }); close(); UI.toast(!st.suspended ? "Boutique suspendue." : "Boutique réactivée.", "info"); viewAdmin({ query: { tab: "stores" } }); });
+      },
+    });
+  }
+
   /* ---------- Onglet : Coupons globaux ---------- */
   function adminCoupons() {
     const coupons = Coupons.globalCoupons();
@@ -5610,14 +6033,20 @@
     const clients = users.filter((u) => u.role === "client").length;
     const vendors = users.filter((u) => u.role === "vendor").length;
     return `<div class="card card-pad" style="max-width:680px">
-      <h3 style="margin:0 0 4px">📣 Annonce globale</h3>
+      <h3 style="margin:0 0 4px">📣 Annonce ciblée</h3>
       <p class="text-muted" style="font-size:13.5px;margin:0 0 14px">Envoyez une notification à un ensemble d'utilisateurs.</p>
-      <div class="field"><label>Destinataires</label>
+      <div class="field"><label>Cibler</label>
         <select id="bcSegment">
           <option value="all">Tous les utilisateurs (${users.length})</option>
           <option value="client">Tous les clients (${clients})</option>
           <option value="vendor">Tous les vendeurs (${vendors})</option>
+          <option value="commune">Par commune</option>
+          <option value="user">Un utilisateur précis</option>
         </select></div>
+      <div class="field mt-8" id="bcCommuneWrap" hidden><label>Commune</label>
+        <select id="bcCommune">${UI.communes().map((c) => `<option value="${UI.esc(c)}">${UI.esc(c)}</option>`).join("")}</select></div>
+      <div class="field mt-8" id="bcUserWrap" hidden><label>E-mail de l'utilisateur</label>
+        <input id="bcUser" type="email" placeholder="client@test.ci" /></div>
       <div class="field mt-8"><label>Message</label><textarea id="bcMsg" rows="3" placeholder="Ex : Grande braderie ce week-end sur Marché CI !"></textarea></div>
       <div class="field mt-8"><label>Lien (optionnel)</label>
         <select id="bcLink"><option value="#/">Accueil</option><option value="#/deals">Bons plans</option><option value="#/stores">Boutiques</option></select></div>
@@ -5625,17 +6054,33 @@
     </div>`;
   }
   function wireAdminComm() {
+    const seg = document.getElementById("bcSegment");
+    const communeWrap = document.getElementById("bcCommuneWrap");
+    const userWrap = document.getElementById("bcUserWrap");
+    if (seg) seg.addEventListener("change", () => {
+      communeWrap.hidden = seg.value !== "commune";
+      userWrap.hidden = seg.value !== "user";
+    });
     const btn = document.getElementById("bcSend");
     if (btn) btn.addEventListener("click", async () => {
-      const seg = document.getElementById("bcSegment").value;
+      const mode = seg.value;
       const msg = document.getElementById("bcMsg").value.trim();
       const link = document.getElementById("bcLink").value;
       if (!msg) { UI.toast("Écrivez un message.", "error"); return; }
       let recipients = DB.all(DB.KEYS.users);
-      if (seg !== "all") recipients = recipients.filter((u) => u.role === seg);
+      let label = "tous";
+      if (mode === "client" || mode === "vendor") { recipients = recipients.filter((u) => u.role === mode); label = mode; }
+      else if (mode === "commune") { const c = document.getElementById("bcCommune").value; recipients = recipients.filter((u) => u.commune === c); label = "commune " + c; }
+      else if (mode === "user") {
+        const email = (document.getElementById("bcUser").value || "").trim().toLowerCase();
+        recipients = recipients.filter((u) => (u.email || "").toLowerCase() === email);
+        if (!recipients.length) { UI.toast("Aucun utilisateur avec cet e-mail.", "error"); return; }
+        label = email;
+      }
+      if (!recipients.length) { UI.toast("Aucun destinataire pour cette cible.", "info"); return; }
       if (!(await UI.confirm(`Envoyer cette annonce à ${recipients.length} utilisateur(s) ?`, { confirmLabel: "Envoyer" }))) return;
       recipients.forEach((u) => Notifications.push(u.id, { type: "info", message: "📣 " + msg, link }));
-      logAudit("Annonce globale envoyée", `${recipients.length} destinataire(s) — « ${msg.slice(0, 60)} »`);
+      logAudit("Annonce envoyée", `${recipients.length} destinataire(s) [${label}] — « ${msg.slice(0, 60)} »`);
       UI.toast(`Annonce envoyée à ${recipients.length} utilisateur(s) ✓`, "success");
       document.getElementById("bcMsg").value = "";
     });
@@ -5660,22 +6105,38 @@
       <div class="divider" style="margin:14px 0"></div>
       <label style="font-weight:700;font-size:13px">Boutiques à la une (accueil)</label>
       <div class="mt-8" style="display:flex;flex-direction:column;gap:6px">${stores.map((st) => `<label class="radio-item"><input type="checkbox" data-feat="${st.id}" ${(s.featuredStores || []).includes(st.id) ? "checked" : ""}/> ${UI.esc(st.name)}</label>`).join("")}</div>
+      <div class="divider" style="margin:14px 0"></div>
+      <label class="switch"><input type="checkbox" id="setApproval" ${s.requireStoreApproval ? "checked" : ""} /><span class="track"></span><span>Exiger l'approbation admin des nouvelles boutiques</span></label>
+      <div class="divider" style="margin:14px 0"></div>
+      <label style="font-weight:700;font-size:13px">Livraison</label>
+      <div class="field mt-8"><label>Frais de livraison suggérés par défaut (FCFA) <span class="hint">— proposé aux nouvelles boutiques</span></label>
+        <input type="number" id="setDefFee" min="0" value="${s.defaultDeliveryFee || 0}" style="max-width:180px" /></div>
+      <div class="field mt-8"><label>Communes desservies <span class="hint">— séparées par des virgules</span></label>
+        <textarea id="setCommunes" rows="3" placeholder="Cocody, Yopougon, …">${UI.esc(UI.communes().join(", "))}</textarea>
+        <div class="hint" style="margin-top:4px"><button type="button" class="link-btn" id="setCommunesReset">Rétablir la liste par défaut</button></div></div>
       <button class="btn btn-primary mt-16" id="setSave">Enregistrer les paramètres</button>
     </div>`;
   }
   function wireAdminSettings() {
     // Bascule visuelle des chips catégories.
     V().querySelectorAll(".zone-chip [data-cat]").forEach((cb) => cb.addEventListener("change", () => cb.closest(".zone-chip").classList.toggle("on", cb.checked)));
+    const cr = document.getElementById("setCommunesReset");
+    if (cr) cr.addEventListener("click", () => { document.getElementById("setCommunes").value = UI.COMMUNES_DEFAULT.join(", "); });
     const btn = document.getElementById("setSave");
     if (btn) btn.addEventListener("click", () => {
       const hidden = Array.from(V().querySelectorAll(".zone-chip [data-cat]")).filter((c) => !c.checked).map((c) => c.getAttribute("data-cat"));
       const featured = Array.from(V().querySelectorAll("[data-feat]")).filter((c) => c.checked).map((c) => c.getAttribute("data-feat"));
+      const communesRaw = (document.getElementById("setCommunes").value || "").split(",").map((x) => x.trim()).filter(Boolean);
+      const sameAsDefault = communesRaw.join("|") === UI.COMMUNES_DEFAULT.join("|");
       saveSettings({
         homeBanner: document.getElementById("setBanner").value.trim(),
         globalMessage: document.getElementById("setGlobalMsg").value.trim(),
         maintenance: { on: document.getElementById("setMaint").checked, msg: document.getElementById("setMaintMsg").value.trim() },
         hiddenCategories: hidden,
         featuredStores: featured,
+        requireStoreApproval: document.getElementById("setApproval").checked,
+        defaultDeliveryFee: Math.max(0, Number(document.getElementById("setDefFee").value) || 0),
+        communes: sameAsDefault || !communesRaw.length ? null : communesRaw,
       });
       logAudit("Paramètres marketplace modifiés", "");
       applyGlobalMessage();
@@ -5995,6 +6456,7 @@
     Router.on("#/category/:id", viewCategory);
     Router.on("#/activity", viewActivity);
     Router.on("#/help", viewHelp);
+    Router.on("#/page/:id", viewPage);
     Router.on("#/product/:id", viewProduct);
     Router.on("#/store/:id", viewStore);
     Router.on("#/cart", viewCart);

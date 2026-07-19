@@ -203,18 +203,22 @@ L'espace vendeur est un **véritable back-office distinct de l'espace client** :
 - **Mini-CRM clients** : historique, total dépensé, badge « fidèle », contact WhatsApp.
 - **Sauvegarde / restauration** complète des données (JSON).
 
-### Admin — console d'administration (à onglets)
-Console complète accessible via `#/admin` (compte admin), organisée en **10 onglets** :
-- **Vue d'ensemble (analytique)** : **filtre de période** (7j / 30j / tout), **courbe temporelle du volume commandé**, **donut des statuts**, panier moyen, croissance, **top articles vendus**, **top communes**, **top boutiques** + **rapport imprimable**.
-- **Modération** : file centralisée — **articles**, **boutiques** et **questions** signalés, **avis signalés**, **litiges commandes** — retirer/supprimer/suspendre, marquer résolu ou ignorer.
-- **Utilisateurs** : **segments** (clients/vendeurs/admins/suspendus), recherche, **fiche détail** (commandes, dépenses, avis, boutique), changement de rôle, suspension, suppression, **création manuelle** d'un compte — avec garde-fous sur son propre compte.
-- **Boutiques** : **badge « Vérifiée »**, suspension/réactivation (masque la boutique + bloque les commandes), suppression.
-- **Commandes** : **filtres** (statut / période / recherche) + **export CSV global**.
+### Admin — console d'administration dédiée (back-office)
+Espace **entièrement séparé** du parcours client/vendeur (chrome propre : sidebar sombre sur ordinateur, **navigation basse type application mobile** sur téléphone, drapeau « Administration »). Accessible via `#/admin` (compte admin), organisé en **12 onglets** :
+- **Vue d'ensemble (analytique)** : **alertes automatiques** (boutiques en attente, litiges ouverts, signalements, boutiques à fort taux d'annulation, stockage presque plein), **filtre de période** (7j / 30j / tout), **courbe temporelle du volume commandé**, **donut des statuts**, panier moyen, croissance, **top articles vendus**, **top communes**, **top boutiques** + **rapport imprimable**.
+- **Modération** : file centralisée — **boutiques en attente d'approbation**, **articles / boutiques / questions** signalés, **avis signalés**, **litiges commandes** — approuver/refuser, retirer/supprimer/suspendre, marquer résolu ou ignorer.
+- **Utilisateurs** : **segments** (clients/vendeurs/admins/suspendus), recherche, **fiche détail** (commandes, dépenses, avis, boutique), changement de rôle, **niveau d'administration** (super-admin / modérateur), suspension, suppression, **création manuelle** d'un compte — avec garde-fous sur son propre compte.
+- **Boutiques** : **fiche détail** (articles, CA, commandes, litiges, contact propriétaire), **approbation**, **badge « Vérifiée »**, suspension/réactivation, suppression.
+- **Commandes** : **filtres** (statut / période / recherche), **détail commande** cliquable (articles, livraison, GPS, historique) avec **interventions admin** (changer le statut, forcer l'annulation, marquer payée, résoudre le litige) + **export CSV global**.
+- **Finances & commissions** : **taux de commission** global + surcharge **par boutique**, **CA livré / commission / net vendeur** par boutique, gains marketplace, **export CSV comptable** (calculs indicatifs — paiement à la livraison, sans back-end).
 - **Coupons** : création et gestion de **codes promo globaux** valables sur toute la marketplace.
-- **Communication** : **annonce globale** (broadcast) vers tous les utilisateurs ou un segment (clients / vendeurs).
-- **Paramètres** : **bannière d'accueil**, **message global**, **mode maintenance** (bloque les commandes), **visibilité des catégories**, **boutiques à la une** (mises en avant sur l'accueil).
+- **Contenu** : **gestion des catégories** (ajout / renommage / icône / réordonnancement / suppression), **mini-CMS** des pages publiques (FAQ, CGU, Confidentialité, À propos, Contact — accessibles via le **pied de page**), **liste de mots interdits** appliquée aux titres d'articles et aux avis + analyse du contenu existant.
+- **Communication** : **annonces ciblées** — tous, clients, vendeurs, **par commune**, ou **un utilisateur précis** (par e-mail).
+- **Paramètres** : **bannière d'accueil**, **message global**, **mode maintenance**, **visibilité des catégories**, **boutiques à la une**, **exiger l'approbation** des nouvelles boutiques, **frais de livraison par défaut**, **communes desservies**.
 - **Journal** : **audit** horodaté des actions d'administration (qui, quoi, quand).
 - **Données** : **santé du stockage** (jauge localStorage + alerte quota), sauvegarde/restauration JSON, réinitialisation démo.
+
+**Rôles admin** : le **super-administrateur** a accès à tout ; le **modérateur** est restreint aux sections vue d'ensemble, modération, commandes et boutiques.
 
 ### Notifications (client-side)
 - Cloche avec badge de non-lus.
