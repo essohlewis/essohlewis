@@ -36,6 +36,9 @@ window.MP = window.MP || {};
     reports: "reports",          // [ {id, type:"product"|"store"|"question", targetId, reason, byUserId, status, createdAt} ] — modération
     settings: "settings",        // { homeBanner, maintenance:{on,msg}, globalMessage, hiddenCategories:[], featuredStores:[] }
     auditLog: "auditlog",        // [ {id, adminId, adminName, action, detail, at} ] — journal d'audit
+    securityLog: "seclog",       // [ {id, userId, userName, event, detail, level, at} ] — journal de sécurité
+    loginAttempts: "loginatt",   // { email: {fails, lockedUntil, last} } — anti-force brute
+    regLog: "reglog",            // [ timestamps ] — anti-création massive de comptes (par navigateur)
     session: "session",          // { userId }
     theme: "theme",              // "light" | "dark"
     seeded: "seeded",            // bool

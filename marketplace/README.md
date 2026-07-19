@@ -204,11 +204,12 @@ L'espace vendeur est un **véritable back-office distinct de l'espace client** :
 - **Sauvegarde / restauration** complète des données (JSON).
 
 ### Admin — console d'administration dédiée (back-office)
-Espace **entièrement séparé** du parcours client/vendeur (chrome propre : sidebar sombre sur ordinateur, **navigation basse type application mobile** sur téléphone, drapeau « Administration »). Accessible via `#/admin` (compte admin), organisé en **13 onglets** :
+Espace **entièrement séparé** du parcours client/vendeur (chrome propre : sidebar sombre sur ordinateur, **navigation basse type application mobile** sur téléphone, drapeau « Administration »). Accessible via `#/admin` (compte admin), organisé en **14 onglets** :
 - **Vue d'ensemble (analytique)** : **alertes automatiques** (boutiques en attente, litiges ouverts, signalements, boutiques à fort taux d'annulation, stockage presque plein), **filtre de période** (7j / 30j / tout), **courbe temporelle du volume commandé**, **donut des statuts**, panier moyen, croissance, **top articles vendus**, **top communes**, **top boutiques** + **rapport imprimable**.
 - **Modération** : file centralisée — **boutiques en attente d'approbation**, **articles / boutiques / questions** signalés, **avis signalés**, **litiges commandes** — approuver/refuser, retirer/supprimer/suspendre, marquer résolu ou ignorer.
 - **Utilisateurs** : **segments** (clients/vendeurs/admins/suspendus), recherche, **fiche détail** (commandes, dépenses, avis, boutique), changement de rôle, **niveau d'administration** (super-admin / modérateur), suspension, suppression, **création manuelle** d'un compte — avec garde-fous sur son propre compte.
 - **Boutiques** : **fiche détail** (articles, CA, commandes, litiges, contact propriétaire), **approbation**, **badge « Vérifiée »**, suspension/réactivation, suppression.
+- **Sécurité & anti-fraude** : **tableau de bord** des signaux de risque + **file KYC** (validation des pièces d'identité). Voir la section « Sécurité » ci-dessous.
 - **Commandes** : **filtres** (statut / période / recherche), **détail commande** cliquable (articles, livraison, GPS, historique) avec **interventions admin** (changer le statut, forcer l'annulation, marquer payée, résoudre le litige) + **export CSV global**.
 - **Finances & commissions** : **taux de commission** global + surcharge **par boutique**, **CA livré / commission / net vendeur** par boutique, gains marketplace, **export CSV comptable** (calculs indicatifs — paiement à la livraison, sans back-end).
 - **Coupons** : création et gestion de **codes promo globaux** valables sur toute la marketplace.
@@ -219,7 +220,21 @@ Espace **entièrement séparé** du parcours client/vendeur (chrome propre : sid
 - **Journal** : **audit** horodaté des actions d'administration (qui, quoi, quand).
 - **Données** : **santé du stockage** (jauge localStorage + alerte quota), sauvegarde/restauration JSON, réinitialisation démo.
 
-**Rôles admin** : le **super-administrateur** a accès à tout ; le **modérateur** est restreint aux sections vue d'ensemble, modération, commandes et boutiques.
+**Rôles admin** : le **super-administrateur** a accès à tout ; le **modérateur** est restreint aux sections vue d'ensemble, modération, sécurité, commandes et boutiques.
+
+### 🛡️ Sécurité & anti-fraude (`js/security.js`)
+Algorithme heuristique **100 % front** qui protège la crédibilité de la plateforme :
+- **Score de confiance (Trust Score)** par boutique (0–100 : fiable / à surveiller / risque) calculé sur l'ancienneté, la vérification/KYC, les avis, le taux d'annulation, les litiges et les annonces à risque. Affiché en **badges publics** sur la vitrine et dans la console admin.
+- **Détection d'arnaque sur les annonces** : sollicitation de paiement à l'avance (Western Union, Orange Money, « payez d'avance »…), prix anormalement bas vs médiane de la catégorie, liens externes, contenu dupliqué entre boutiques → marquées `riskFlags` et remontées à l'admin.
+- **Anti-fraude messagerie** : les messages sollicitant un paiement hors plateforme sont **signalés** (avertissement à l'acheteur + alerte admin).
+- **Faux comptes** : blocage des **e-mails jetables**, détection des doublons (téléphone/nom), **limitation de création** de comptes, signaux dans le tableau de bord.
+- **Faux avis** : détection des rafales, commentaires dupliqués et notes extrêmes sans achat vérifié.
+- **KYC vendeur (simulé)** : dépôt d'une pièce d'identité → **file de validation admin** → badge « Vérifié ».
+- **Mots de passe** : politique de robustesse (6+ car., lettres + chiffres, rejet des mots courants) + **jauge en direct** + **verrouillage temporaire** après 5 échecs de connexion (anti-force brute).
+- **Centre de sécurité client** : activité récente du compte, conseils anti-arnaque, changement de mot de passe.
+- **Journal de sécurité** : connexions, échecs, actions sensibles horodatés.
+
+> ⚠️ **Sans back-end**, ces contrôles sont des **heuristiques côté navigateur** : efficaces pour détecter/alerter/bloquer, mais contournables. En production, les doubler d'une validation serveur (vraie vérification d'identité, analyse réseau, captcha).
 
 ### Notifications (client-side)
 - Cloche avec badge de non-lus.

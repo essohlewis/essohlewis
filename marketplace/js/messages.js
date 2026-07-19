@@ -26,6 +26,10 @@ window.MP = window.MP || {};
   function send(data) {
     const text = String(data.text || "").trim();
     if (!text) return { ok: false };
+    // Anti-fraude : détecte les sollicitations de paiement / arnaque.
+    const Sec = window.MP.Security;
+    const flags = Sec ? Sec.scanText(text) : [];
+    const risky = flags.some((f) => f.level === "high");
     const msg = {
       id: DB.uid("msg"),
       storeId: data.storeId,
@@ -35,9 +39,16 @@ window.MP = window.MP || {};
       text,
       productId: data.productId || "",
       read: false,
+      flagged: risky,
+      flags: flags,
       createdAt: Date.now(),
     };
     DB.insert(K, msg);
+    if (risky && Sec) {
+      Sec.log("Message à risque détecté", (flags[0] && flags[0].msg) || "", { level: "warn" });
+      // Alerte les administrateurs.
+      DB.all(DB.KEYS.users).filter((u) => u.role === "admin").forEach((a) => window.MP.Notifications.push(a.id, { type: "info", message: `🛡️ Message suspect détecté (arnaque possible).`, link: "#/admin?tab=security" }));
+    }
 
     // Notifie le destinataire.
     const store = window.MP.Store.get(data.storeId);

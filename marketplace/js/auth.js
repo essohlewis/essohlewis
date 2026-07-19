@@ -45,10 +45,16 @@ window.MP = window.MP || {};
   function register({ name, email, phone, password, role }) {
     name = String(name || "").trim();
     email = String(email || "").trim();
+    const Sec = window.MP.Security;
     if (!name) return { ok: false, error: "Le nom est requis." };
     if (!validEmail(email)) return { ok: false, error: "Adresse e-mail invalide." };
+    // Anti-fraude : e-mail jetable + création massive de comptes.
+    if (Sec && Sec.isDisposableEmail(email)) return { ok: false, error: "Les adresses e-mail temporaires ne sont pas acceptées." };
+    if (Sec && Sec.registrationRateLimited()) return { ok: false, error: "Trop de comptes créés récemment depuis cet appareil. Réessayez plus tard." };
     if (phone && !validPhone(phone)) return { ok: false, error: "Numéro de téléphone invalide." };
-    if (!password || password.length < 4) return { ok: false, error: "Mot de passe trop court (min. 4)." };
+    // Politique de mot de passe renforcée.
+    const pwErr = Sec ? Sec.passwordPolicyError(password) : (!password || password.length < 4 ? "Mot de passe trop court." : null);
+    if (pwErr) return { ok: false, error: pwErr };
     if (findByEmail(email)) return { ok: false, error: "Cet e-mail est déjà utilisé." };
 
     const user = {
@@ -63,17 +69,26 @@ window.MP = window.MP || {};
       address: "",
     };
     DB.insert(K, user);
+    if (Sec) { Sec.recordRegistration(); Sec.log("Inscription", email, { userId: user.id, userName: name }); }
     _startSession(user.id);
     return { ok: true, user };
   }
 
-  /** Connexion par e-mail + mot de passe. */
+  /** Connexion par e-mail + mot de passe (avec anti-force brute). */
   function login(email, password) {
+    const Sec = window.MP.Security;
+    // Verrouillage temporaire après trop d'échecs.
+    if (Sec) {
+      const rem = Sec.loginLockRemaining(email);
+      if (rem > 0) return { ok: false, error: `Trop de tentatives. Compte temporairement bloqué (${Math.ceil(rem / 60000)} min).` };
+    }
     const user = findByEmail(email);
     if (!user || user.password !== password) {
+      if (Sec) { Sec.recordLoginFail(email); Sec.log("Échec de connexion", email, { level: "warn" }); }
       return { ok: false, error: "E-mail ou mot de passe incorrect." };
     }
     if (user.suspended) return { ok: false, error: "Ce compte a été suspendu. Contactez l'assistance." };
+    if (Sec) { Sec.clearLoginFails(email); Sec.log("Connexion réussie", "", { userId: user.id, userName: user.name }); }
     _startSession(user.id);
     return { ok: true, user };
   }
@@ -100,9 +115,12 @@ window.MP = window.MP || {};
     const user = current();
     if (!user) return { ok: false, error: "Non connecté." };
     if (user.password !== currentPw) return { ok: false, error: "Mot de passe actuel incorrect." };
-    if (!newPw || newPw.length < 4) return { ok: false, error: "Nouveau mot de passe trop court (min. 4)." };
+    const Sec = window.MP.Security;
+    const pwErr = Sec ? Sec.passwordPolicyError(newPw) : (!newPw || newPw.length < 4 ? "Nouveau mot de passe trop court." : null);
+    if (pwErr) return { ok: false, error: pwErr };
     if (newPw === currentPw) return { ok: false, error: "Le nouveau mot de passe doit être différent." };
     DB.update(K, user.id, { password: newPw });
+    if (Sec) Sec.log("Mot de passe modifié", "", { userId: user.id, userName: user.name });
     return { ok: true };
   }
 

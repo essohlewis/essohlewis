@@ -7,7 +7,7 @@
   "use strict";
 
   const { DB, UI, Auth, Store, Products, Cart, Orders, Notifications, Router, Seed, Coupons, Messages, Expenses,
-    Recent, SearchHist, Alerts, Compare, Loyalty, Questions, SavedSearches, Wishlists, I18n } = window.MP;
+    Recent, SearchHist, Alerts, Compare, Loyalty, Questions, SavedSearches, Wishlists, I18n, Security } = window.MP;
 
   const V = () => document.getElementById("view");
   const SB = () => document.getElementById("sidebar");
@@ -1689,6 +1689,7 @@
       ${store.closed ? `<div class="store-ribbon closed">🔒 Boutique momentanément fermée${store.closedMsg ? " — " + UI.esc(store.closedMsg) : ""}. Les commandes sont suspendues.</div>` : ""}
       ${store.promoBanner ? `<div class="store-ribbon promo">📣 ${UI.esc(store.promoBanner)}</div>` : ""}
       <p class="text-muted" style="max-width:720px">${UI.esc(store.description)}</p>
+      ${publicTrustBadges(store)}
       ${socialLinksHTML(store)}
       ${gallery.length ? (() => {
         const MAX = 6; // aperçu limité pour ne pas noyer les articles
@@ -2568,12 +2569,21 @@
             <div class="field"><label>Nom complet</label><input id="rName" placeholder="Votre nom" required /></div>
             <div class="field"><label>E-mail</label><input type="email" id="rEmail" placeholder="vous@exemple.ci" required /></div>
             <div class="field"><label>Téléphone</label><input id="rPhone" placeholder="07 00 00 00 00" /></div>
-            <div class="field"><label>Mot de passe</label><input type="password" id="rPass" placeholder="Min. 4 caractères" required /></div>
+            <div class="field"><label>Mot de passe</label><input type="password" id="rPass" placeholder="6+ caractères, lettres et chiffres" required />
+              <div class="pw-meter"><span id="rPwBar"></span></div><div class="pw-hint" id="rPwHint">Choisissez un mot de passe robuste.</div></div>
             <label class="radio-item" style="border:1.5px solid var(--border);border-radius:var(--r-sm)">
               <input type="checkbox" id="rVendor" /> <span>Je veux vendre (ouvrir une boutique)</span>
             </label>
             <button class="btn btn-primary btn-block btn-lg" type="submit">Créer mon compte</button>
           </form>`;
+        const rp = document.getElementById("rPass");
+        if (rp && window.MP.Security) rp.addEventListener("input", () => {
+          const st = Security.passwordStrength(rp.value);
+          const bar = document.getElementById("rPwBar"), hint = document.getElementById("rPwHint");
+          const colors = ["#e11d48", "#e11d48", "#f59e0b", "#f59e0b", "#0f9d58", "#0f9d58"];
+          bar.style.width = Math.min(100, st.score * 20) + "%"; bar.style.background = colors[st.score] || "#e11d48";
+          hint.textContent = rp.value ? "Robustesse : " + st.label : "Choisissez un mot de passe robuste.";
+        });
         document.getElementById("regForm").addEventListener("submit", (e) => {
           e.preventDefault();
           const res = Auth.register({
@@ -2701,6 +2711,9 @@
           <button class="btn btn-ghost btn-sm" id="changePwBtn">🔑 Changer mon mot de passe</button>
           <button class="btn btn-ghost btn-sm" id="exportDataBtn">⬇️ Exporter mes données</button>
         </div>
+        ${(() => { const logs = window.MP.Security ? Security.logsFor(user.id).slice(0, 5) : []; return logs.length ? `<div><div style="font-weight:700;font-size:13px;margin-bottom:6px">Activité récente du compte</div>
+          <div class="price-hist-rows">${logs.map((e) => `<div class="activity-row"><span>${e.level === "warn" ? "⚠️ " : ""}${UI.esc(e.event)}</span><span class="text-muted" style="font-size:12px">${UI.timeAgo(e.at)}</span></div>`).join("")}</div></div>` : ""; })()}
+        <div class="scam-warn" style="margin:0">🛡️ <strong>Conseils anti-arnaque :</strong> ne payez <strong>jamais</strong> à l'avance ni hors de la plateforme (Western Union, transfert d'argent…). Le paiement se fait <strong>à la livraison</strong>. Signalez tout vendeur ou message suspect.</div>
         <div class="account-danger">
           <div><strong>Supprimer mon compte</strong><div class="text-muted" style="font-size:13px">Action définitive : vos données personnelles seront effacées.</div></div>
           <button class="btn btn-danger btn-sm" id="deleteAccBtn">Supprimer</button>
@@ -2882,6 +2895,28 @@
     </div>`).join("")}</div>`;
   }
 
+  /** Badges de confiance publics affichés sur la vitrine d'une boutique. */
+  function publicTrustBadges(store) {
+    const badges = [`<span class="trust-badge ok">🔒 Paiement à la livraison</span>`];
+    if (store.kyc && store.kyc.status === "approved") badges.push(`<span class="trust-badge ok">🪪 Identité vérifiée</span>`);
+    if (store.verified) badges.push(`<span class="trust-badge ok">✔️ Vendeur vérifié</span>`);
+    const months = Math.floor((Date.now() - (store.createdAt || Date.now())) / (30 * 86400000));
+    if (months >= 1) badges.push(`<span class="trust-badge">📅 Membre depuis ${months} mois</span>`);
+    const rt = Store.rating(store.id);
+    if (rt.count >= 3) { const pct = Math.round(DB.all(DB.KEYS.reviews).filter((r) => r.targetType === "store" && r.targetId === store.id && r.rating >= 4).length / rt.count * 100); badges.push(`<span class="trust-badge ${pct >= 70 ? "ok" : ""}">👍 ${pct}% d'avis positifs</span>`); }
+    if (window.MP.Security) { const t = Security.trustScore(store); if (t.level !== "low") badges.push(`<span class="trust-badge ${t.level === "high" ? "ok" : ""}">🛡️ ${Security.trustLabel(t.level)}</span>`); }
+    return `<div class="trust-badges">${badges.join("")}</div>`;
+  }
+
+  /** Libellé d'état de la vérification d'identité (KYC) d'une boutique. */
+  function kycStatusHTML(s) {
+    const st = s.kyc && s.kyc.status;
+    if (st === "approved") return `<span class="risk-pill trust-high">✔️ Identité vérifiée</span>`;
+    if (st === "pending") return `<span class="risk-pill risk-med">⏳ En attente de validation</span>`;
+    if (st === "rejected") return `<span class="risk-pill risk-high">❌ Refusée — soumettez une nouvelle pièce</span>`;
+    return `<span class="risk-pill risk-low">Non vérifiée</span>`;
+  }
+
   function viewStoreForm() {
     if (!requireAuth()) return;
     const user = Auth.current();
@@ -2961,6 +2996,13 @@
               <span class="hint">Au-delà de ce montant d'achat, la livraison est gratuite.</span></div>
           </div>
 
+          ${editing && isOwner ? `
+          <div class="divider" style="margin:6px 0"></div>
+          <h3 style="margin:0;font-size:16px">🪪 Vérification d'identité (KYC)</h3>
+          <p class="text-muted" style="font-size:12.5px;margin:0">Transmettez une pièce d'identité pour obtenir le badge <strong>Vérifié</strong> et rassurer vos clients. ${kycStatusHTML(s)}</p>
+          ${(s.kyc && s.kyc.status === "approved") ? "" : `<div class="field"><label>Pièce d'identité (photo)</label>${uploaderHTML("kycUp", s.kyc && s.kyc.doc ? [s.kyc.doc] : [], false)}</div>`}
+          ` : ""}
+
           ${editing ? `
           <div class="divider" style="margin:6px 0"></div>
           <h3 style="margin:0;font-size:16px">🔔 Notifications vendeur</h3>
@@ -3012,6 +3054,7 @@
     const logoUp = wireUploader("logoUp", s.logo ? [s.logo] : [], false);
     const bannerUp = wireUploader("bannerUp", s.banner ? [s.banner] : [], false);
     const galUp = wireUploader("galUp", s.gallery || [], true);
+    const kycUp = document.getElementById("kycUp_zone") ? wireUploader("kycUp", s.kyc && s.kyc.doc ? [s.kyc.doc] : [], false) : null;
 
     // Horaires : affichage conditionnel + activer/désactiver les champs par jour.
     const useSch = document.getElementById("sUseSchedule");
@@ -3104,9 +3147,25 @@
           review: document.getElementById("snReview").checked,
         };
       }
+      // Vérification d'identité (KYC) : nouvelle pièce → statut « en attente ».
+      if (kycUp && isOwner) {
+        const doc = kycUp.get()[0] || "";
+        const prev = s.kyc || {};
+        if (prev.status !== "approved") {
+          if (doc && doc !== prev.doc) data.kyc = { status: "pending", doc, submittedAt: Date.now() };
+          else if (doc) data.kyc = Object.assign({ status: "pending" }, prev, { doc });
+          else data.kyc = prev.doc ? prev : null;
+        }
+      }
       if (editing) {
         const res = Store.update(s.id, data);
-        if (res.ok) { UI.toast("Boutique mise à jour ✓", "success"); renderHeaderUser(); Router.go("#/seller/dashboard"); }
+        if (res.ok) {
+          if (data.kyc && data.kyc.status === "pending" && (!s.kyc || s.kyc.doc !== data.kyc.doc)) {
+            DB.all(DB.KEYS.users).filter((u) => u.role === "admin").forEach((a) => Notifications.push(a.id, { type: "info", message: `🪪 Nouvelle vérification d'identité à valider : « ${data.name} ».`, link: "#/admin?tab=security" }));
+            if (window.MP.Security) Security.log("Pièce d'identité soumise (KYC)", data.name);
+          }
+          UI.toast(data.kyc && data.kyc.status === "pending" ? "Boutique mise à jour ✓ Pièce transmise, en attente de validation." : "Boutique mise à jour ✓", "success"); renderHeaderUser(); Router.go("#/seller/dashboard");
+        }
         else UI.toast(res.error, "error");
       } else {
         const res = Store.create(data);
@@ -3345,6 +3404,7 @@
     coin: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15v1.5h-2V17a3 3 0 0 1-2-2.8h2a1 1 0 0 0 2 0c0-.6-.4-.9-1.6-1.2C10.1 12.6 9 12 9 10.3A2.8 2.8 0 0 1 11 7.6V6h2v1.6a2.9 2.9 0 0 1 2 2.7h-2a1 1 0 0 0-2 0c0 .5.4.8 1.6 1.1 1.3.4 2.4 1 2.4 2.8A2.9 2.9 0 0 1 13 17z'/></svg>",
     doc: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M6 2h8l4 4v16H6zm7 1.5V7h3.5zM8 12h8v1.6H8zm0 3.2h8v1.6H8zm0 3.2h5v1.6H8z'/></svg>",
     brush: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M7 14a3 3 0 0 0-3 3c0 1.3-1 1.7-2 1.7A4.9 4.9 0 0 0 6 21a4 4 0 0 0 4-4 3 3 0 0 0-3-3zm13.7-9.9a1.5 1.5 0 0 0-2.1 0l-8 8 2.3 2.3 8-8a1.5 1.5 0 0 0-.2-2.3z'/></svg>",
+    lock: "<svg viewBox='0 0 24 24'><path fill='currentColor' d='M12 1a5 5 0 0 0-5 5v3H5v13h14V9h-2V6a5 5 0 0 0-5-5zm3 8H9V6a3 3 0 0 1 6 0zm-3 4a2 2 0 0 1 1 3.7V19h-2v-2.3A2 2 0 0 1 12 13z'/></svg>",
   };
 
   // Réponses rapides (modèles) pour la messagerie vendeur.
@@ -3486,6 +3546,7 @@
       ["moderation", "Modération", "#/admin?tab=moderation", SICON.star],
       ["users", "Utilisateurs", "#/admin?tab=users", SICON.users],
       ["stores", "Boutiques", "#/admin?tab=stores", SICON.store],
+      ["security", "Sécurité", "#/admin?tab=security", SICON.lock],
       ["orders", "Commandes", "#/admin?tab=orders", SICON.receipt],
       ["finance", "Finances", "#/admin?tab=finance", SICON.coin],
       ["coupons", "Coupons", "#/admin?tab=coupons", SICON.tag],
@@ -3553,7 +3614,7 @@
 
   /** Feuille « Menu » de l'admin : sections restantes + retour + déconnexion. */
   function openAdminMenu() {
-    const emo = { overview: "📊", moderation: "🚩", users: "👤", stores: "🏪", orders: "🧾", finance: "💰", coupons: "🏷️", content: "📄", branding: "🎨", comm: "📣", settings: "⚙️", audit: "📋", data: "💾" };
+    const emo = { overview: "📊", moderation: "🚩", users: "👤", stores: "🏪", security: "🛡️", orders: "🧾", finance: "💰", coupons: "🏷️", content: "📄", branding: "🎨", comm: "📣", settings: "⚙️", audit: "📋", data: "💾" };
     const items = adminNav().map(([k, l, h]) => [h, emo[k] || "•", l]).concat([["#/", "🛒", "Retour à la marketplace"], ["#/notifications", "🔔", "Notifications"]]);
     UI.modal({
       title: "Menu administration",
@@ -4489,7 +4550,17 @@
       const bad = bannedWordIn(data.title + " " + data.description);
       if (bad) { UI.toast(`Contenu interdit : le mot « ${bad} » n'est pas autorisé.`, "error"); return; }
       const res = editing ? Products.update(p.id, data) : Products.create(data);
-      if (res.ok) { UI.toast(editing ? "Article mis à jour ✓" : (status === "scheduled" ? "Article programmé ✓" : "Article publié ✓"), "success"); Router.go("#/seller/products"); }
+      if (res.ok) {
+        // Anti-fraude : analyse l'annonce et mémorise les signaux de risque.
+        if (window.MP.Security && res.product) {
+          const flags = Security.scanProduct(res.product);
+          Products.quickSet(res.product.id, { riskFlags: flags });
+          if (flags.some((f) => f.level === "high")) {
+            DB.all(DB.KEYS.users).filter((u) => u.role === "admin").forEach((a) => Notifications.push(a.id, { type: "info", message: `🛡️ Annonce à risque publiée : « ${res.product.title} ».`, link: "#/admin?tab=security" }));
+          }
+        }
+        UI.toast(editing ? "Article mis à jour ✓" : (status === "scheduled" ? "Article programmé ✓" : "Article publié ✓"), "success"); Router.go("#/seller/products");
+      }
       else UI.toast(res.error, "error");
     });
   }
@@ -5097,7 +5168,8 @@
         e.preventDefault();
         const t = document.getElementById("bmsgText").value;
         if (!t.trim()) return;
-        Messages.send({ storeId: store.id, buyerId: user.id, buyerName: user.name, from: "buyer", text: t });
+        const r = Messages.send({ storeId: store.id, buyerId: user.id, buyerName: user.name, from: "buyer", text: t });
+        if (r.msg && r.msg.flagged) UI.toast("⚠️ Attention : ne payez jamais à l'avance. Le paiement se fait à la livraison.", "info");
         viewBuyerMessages(params);
       });
       const thread = V().querySelector(".msg-thread"); if (thread) thread.scrollTop = thread.scrollHeight;
@@ -5200,7 +5272,7 @@
 
   /* ---------- Rôles d'administration (super-admin vs modérateur) ---------- */
   // Sections accessibles au modérateur (le super-admin a tout).
-  const MOD_SECTIONS = ["overview", "moderation", "orders", "stores"];
+  const MOD_SECTIONS = ["overview", "moderation", "orders", "stores", "security"];
   /** Rôle admin de l'utilisateur courant : "super" (défaut) ou "mod". */
   function adminRoleOf(user) {
     user = user || Auth.current();
@@ -5251,12 +5323,12 @@
     if (!requireAuth()) return;
     if (!Auth.isAdmin()) { UI.toast("Accès réservé à l'administrateur.", "error"); Router.go("#/"); return; }
     const q = (params && params.query) || {};
-    const RENDER = { overview: adminOverview, moderation: adminModeration, users: adminUsers, stores: adminStores, orders: adminOrders, finance: adminFinance, coupons: adminCoupons, content: adminContent, branding: adminBranding, comm: adminComm, settings: adminSettingsTab, audit: adminAudit, data: adminData };
-    const WIRE = { overview: wireAdminOverview, moderation: wireAdminModeration, users: wireAdminUsers, stores: wireAdminStores, orders: wireAdminOrders, finance: wireAdminFinance, coupons: wireAdminCoupons, content: wireAdminContent, branding: wireAdminBranding, comm: wireAdminComm, settings: wireAdminSettings, audit: wireAdminAudit, data: wireAdminData };
+    const RENDER = { overview: adminOverview, moderation: adminModeration, users: adminUsers, stores: adminStores, security: adminSecurity, orders: adminOrders, finance: adminFinance, coupons: adminCoupons, content: adminContent, branding: adminBranding, comm: adminComm, settings: adminSettingsTab, audit: adminAudit, data: adminData };
+    const WIRE = { overview: wireAdminOverview, moderation: wireAdminModeration, users: wireAdminUsers, stores: wireAdminStores, security: wireAdminSecurity, orders: wireAdminOrders, finance: wireAdminFinance, coupons: wireAdminCoupons, content: wireAdminContent, branding: wireAdminBranding, comm: wireAdminComm, settings: wireAdminSettings, audit: wireAdminAudit, data: wireAdminData };
     let tab = RENDER[q.tab] ? q.tab : "overview";
     // Contrôle d'accès par rôle (modérateur restreint à certaines sections).
     if (!adminCan(tab)) { UI.toast("Section réservée au super-administrateur.", "error"); tab = "overview"; }
-    const TITLES = { overview: "Vue d'ensemble", moderation: "Modération", users: "Utilisateurs", stores: "Boutiques", orders: "Commandes", finance: "Finances & commissions", coupons: "Coupons globaux", content: "Contenu & catégories", branding: "Identité & personnalisation", comm: "Communication", settings: "Paramètres", audit: "Journal d'audit", data: "Données" };
+    const TITLES = { overview: "Vue d'ensemble", moderation: "Modération", users: "Utilisateurs", stores: "Boutiques", security: "Sécurité & anti-fraude", orders: "Commandes", finance: "Finances & commissions", coupons: "Coupons globaux", content: "Contenu & catégories", branding: "Identité & personnalisation", comm: "Communication", settings: "Paramètres", audit: "Journal d'audit", data: "Données" };
     adminLayout({ active: tab, title: TITLES[tab], subtitle: "Console de gestion de la marketplace", body: RENDER[tab](params) });
     WIRE[tab](params);
   }
@@ -6084,6 +6156,110 @@
     });
   }
 
+  /* ---------- Onglet : Sécurité & anti-fraude ---------- */
+  const RISK_BADGE = { high: `<span class="risk-pill risk-high">Élevé</span>`, medium: `<span class="risk-pill risk-med">Moyen</span>`, low: `<span class="risk-pill risk-low">Faible</span>` };
+  function flagsHTML(flags) { return (flags || []).map((f) => `<div class="sig-line">${RISK_BADGE[f.level] || ""} ${UI.esc(f.msg)}</div>`).join(""); }
+  function adminSecurity() {
+    const Sec = window.MP.Security;
+    const sig = Sec.fraudSignals();
+    const kyc = Store.all().filter((s) => s.kyc && s.kyc.status === "pending");
+    const secLog = DB.all(DB.KEYS.securityLog).sort((a, b) => b.at - a.at).slice(0, 25);
+    const section = (title, count, inner) => `<div class="section-title">${title}${count != null ? ` (${count})` : ""}</div>${inner}`;
+    return `<div class="stat-grid">
+        ${statCard(sig.stores.length ? "ic-orange" : "ic-green", "🏪", sig.stores.length, "Boutiques à risque")}
+        ${statCard(sig.products.length ? "ic-orange" : "ic-green", "📦", sig.products.length, "Annonces à risque")}
+        ${statCard(sig.messages.length ? "ic-orange" : "ic-green", "💬", sig.messages.length, "Messages suspects")}
+        ${statCard((sig.accounts.length || sig.reviews.length) ? "ic-orange" : "ic-green", "👤", sig.accounts.length + sig.reviews.length, "Comptes / avis suspects")}
+      </div>
+      ${kyc.length ? section("🪪 Vérifications d'identité (KYC) en attente", kyc.length, kyc.map((s) => `<div class="card card-pad mt-12 mod-card">
+        <div class="flex-between wrap"><div><strong><a href="#" data-secstore="${s.id}">${UI.esc(s.name)}</a></strong>
+          <div class="text-muted" style="font-size:12.5px">Pièce transmise ${UI.timeAgo(s.kyc.submittedAt || s.createdAt)}</div></div>
+          <div class="flex gap-8">
+            ${s.kyc.doc ? `<button class="btn btn-ghost btn-sm" data-kycview="${s.id}">Voir la pièce</button>` : ""}
+            <button class="btn btn-accent btn-sm" data-kycok="${s.id}">✔️ Valider</button>
+            <button class="btn btn-danger btn-sm" data-kycno="${s.id}">Refuser</button>
+          </div></div></div>`).join("")) : ""}
+      ${sig.stores.length ? section("🏪 Boutiques à risque (score de confiance faible)", sig.stores.length, sig.stores.map((x) => `<div class="card card-pad mt-12 mod-card">
+        <div class="flex-between wrap"><div><strong><a href="#" data-secstore="${x.store.id}">${UI.esc(x.store.name)}</a></strong> ${trustBadgeHTML(x.trust)}
+          <div class="text-muted" style="font-size:12.5px">${x.trust.factors.filter((f) => f.delta < 0).map((f) => UI.esc(f.msg)).join(" · ") || "Score faible"}</div></div>
+          <button class="btn btn-ghost btn-sm" data-secstore="${x.store.id}">Examiner</button></div></div>`).join("")) : ""}
+      ${sig.products.length ? section("📦 Annonces à risque", sig.products.length, sig.products.slice(0, 20).map((x) => `<div class="card card-pad mt-12 mod-card">
+        <div class="flex-between wrap"><div><strong><a href="#/product/${x.product.id}">${UI.esc(x.product.title)}</a></strong>
+          <div style="margin-top:4px">${flagsHTML(x.flags)}</div></div>
+          <div class="flex gap-8"><button class="btn btn-danger btn-sm" data-secdelprod="${x.product.id}">Retirer</button></div></div></div>`).join("")) : ""}
+      ${sig.messages.length ? section("💬 Messages suspects", sig.messages.length, sig.messages.slice(0, 15).map((m) => `<div class="card card-pad mt-12 mod-card">
+        <div><strong>${UI.esc(m.buyerName || "Message")}</strong> ${flagsHTML(m.flags)}
+        <div style="font-size:13px;margin-top:4px;color:var(--text-2)">« ${UI.esc((m.text || "").slice(0, 140))} »</div>
+        <div class="flex gap-8 mt-8"><button class="btn btn-ghost btn-sm" data-secmsgok="${m.id}">Marquer traité</button></div></div></div>`).join("")) : ""}
+      ${sig.accounts.length ? section("👤 Comptes suspects", sig.accounts.length, sig.accounts.slice(0, 15).map((x) => `<div class="card card-pad mt-12 mod-card">
+        <div class="flex-between wrap"><div><strong><a href="#" data-secuser="${x.user.id}">${UI.esc(x.user.name)}</a></strong> <span class="text-muted" style="font-size:12px">${UI.esc(x.user.email)}</span>
+          <div style="margin-top:4px">${flagsHTML(x.flags)}</div></div>
+          <button class="btn btn-ghost btn-sm" data-secsuspend="${x.user.id}">${x.user.suspended ? "Réactiver" : "Suspendre"}</button></div></div>`).join("")) : ""}
+      ${sig.reviews.length ? section("⭐ Avis suspects", sig.reviews.length, sig.reviews.slice(0, 15).map((x) => `<div class="card card-pad mt-12 mod-card">
+        <div class="flex-between wrap"><div>${UI.starsHTML(x.review.rating)} <span class="text-muted" style="font-size:12px">${UI.esc(x.review.userName || "")}</span>
+          <div style="font-size:13px;margin-top:2px">« ${UI.esc((x.review.comment || "").slice(0, 120))} »</div>
+          <div class="text-muted" style="font-size:12px;margin-top:3px">⚠️ ${x.reasons.map(UI.esc).join(" · ")}</div></div>
+          <button class="btn btn-danger btn-sm" data-secdelrev="${x.review.id}">Supprimer</button></div></div>`).join("")) : ""}
+      ${!sig.total && !kyc.length ? emptyState("🛡️", "Aucun signal", "Aucune activité suspecte détectée. La plateforme est saine.") : ""}
+      <div class="section-title">🔒 Journal de sécurité</div>
+      ${secLog.length ? `<div class="table-wrap"><table class="data-table"><thead><tr><th>Date</th><th>Utilisateur</th><th>Événement</th><th>Détail</th></tr></thead>
+        <tbody>${secLog.map((e) => `<tr><td class="text-muted" style="font-size:12px">${UI.dateFR(e.at)} ${new Date(e.at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</td>
+          <td>${UI.esc(e.userName || "—")}</td><td>${e.level === "warn" ? "⚠️ " : ""}<strong>${UI.esc(e.event)}</strong></td><td class="text-muted" style="font-size:12px">${UI.esc(e.detail || "")}</td></tr>`).join("")}</tbody></table></div>`
+        : `<div class="card card-pad"><p class="text-muted" style="text-align:center;margin:0">Journal vide.</p></div>`}`;
+  }
+  function trustBadgeHTML(trust) {
+    const cls = { high: "trust-high", medium: "trust-med", low: "trust-low" }[trust.level];
+    return `<span class="trust-pill ${cls}">🛡️ ${window.MP.Security.trustLabel(trust.level)} · ${trust.score}/100</span>`;
+  }
+  function wireAdminSecurity() {
+    const reload = () => viewAdmin({ query: { tab: "security" } });
+    V().querySelectorAll("[data-secstore]").forEach((b) => b.addEventListener("click", (e) => { e.preventDefault(); openAdminStoreDetail(b.getAttribute("data-secstore")); }));
+    V().querySelectorAll("[data-secuser]").forEach((b) => b.addEventListener("click", (e) => { e.preventDefault(); openUserDetail(b.getAttribute("data-secuser")); }));
+    V().querySelectorAll("[data-kycview]").forEach((b) => b.addEventListener("click", () => {
+      const s = Store.get(b.getAttribute("data-kycview"));
+      UI.modal({ title: "Pièce d'identité — " + s.name, body: `<img src="${UI.safeImg(s.kyc.doc, "pièce")}" alt="pièce d'identité" style="width:100%;border-radius:8px" />`, footer: `<button class="btn btn-primary btn-block" data-close>Fermer</button>` });
+    }));
+    V().querySelectorAll("[data-kycok]").forEach((b) => b.addEventListener("click", () => {
+      const s = Store.get(b.getAttribute("data-kycok"));
+      DB.update(DB.KEYS.stores, s.id, { kyc: Object.assign({}, s.kyc, { status: "approved", reviewedAt: Date.now() }), verified: true });
+      Notifications.push(s.ownerId, { type: "info", message: `✅ Votre identité a été vérifiée : votre boutique « ${s.name} » est désormais certifiée.`, link: "#/seller/dashboard" });
+      Security.log("KYC validé", s.name); logAudit("KYC validé", s.name);
+      UI.toast("Identité validée ✓", "success"); reload();
+    }));
+    V().querySelectorAll("[data-kycno]").forEach((b) => b.addEventListener("click", async () => {
+      const s = Store.get(b.getAttribute("data-kycno"));
+      if (!(await UI.confirm("Refuser la vérification d'identité de cette boutique ?", { danger: true, confirmLabel: "Refuser" }))) return;
+      DB.update(DB.KEYS.stores, s.id, { kyc: Object.assign({}, s.kyc, { status: "rejected", reviewedAt: Date.now() }) });
+      Notifications.push(s.ownerId, { type: "info", message: `❌ Votre vérification d'identité a été refusée. Vous pouvez soumettre une nouvelle pièce.`, link: "#/seller/store" });
+      Security.log("KYC refusé", s.name); reload();
+      UI.toast("Vérification refusée.", "info");
+    }));
+    V().querySelectorAll("[data-secdelprod]").forEach((b) => b.addEventListener("click", async () => {
+      if (!(await UI.confirm("Retirer cette annonce à risque ?", { danger: true, confirmLabel: "Retirer" }))) return;
+      const p = Products.get(b.getAttribute("data-secdelprod"));
+      Products.remove(b.getAttribute("data-secdelprod"));
+      Security.log("Annonce à risque retirée", p ? p.title : ""); logAudit("Annonce retirée (sécurité)", p ? p.title : "");
+      UI.toast("Annonce retirée.", "info"); reload();
+    }));
+    V().querySelectorAll("[data-secmsgok]").forEach((b) => b.addEventListener("click", () => {
+      const list = DB.all(DB.KEYS.messages); const m = list.find((x) => x.id === b.getAttribute("data-secmsgok"));
+      if (m) { m.flagged = false; DB.set(DB.KEYS.messages, list); }
+      UI.toast("Message marqué traité.", "info"); reload();
+    }));
+    V().querySelectorAll("[data-secsuspend]").forEach((b) => b.addEventListener("click", () => {
+      const u = DB.find(DB.KEYS.users, b.getAttribute("data-secsuspend"));
+      const me = Auth.current(); if (u.id === me.id) { UI.toast("Action impossible sur votre propre compte.", "error"); return; }
+      DB.update(DB.KEYS.users, u.id, { suspended: !u.suspended });
+      Security.log(!u.suspended ? "Compte suspendu (sécurité)" : "Compte réactivé", u.email);
+      UI.toast(!u.suspended ? "Compte suspendu." : "Compte réactivé.", "info"); reload();
+    }));
+    V().querySelectorAll("[data-secdelrev]").forEach((b) => b.addEventListener("click", async () => {
+      if (!(await UI.confirm("Supprimer cet avis suspect ?", { danger: true, confirmLabel: "Supprimer" }))) return;
+      DB.removeItem(DB.KEYS.reviews, b.getAttribute("data-secdelrev"));
+      Security.log("Avis suspect supprimé", ""); UI.toast("Avis supprimé.", "info"); reload();
+    }));
+  }
+
   /* ---------- Modale : détail d'une commande (admin) ---------- */
   function openAdminOrderDetail(orderId) {
     const o = Orders.get(orderId);
@@ -6135,8 +6311,9 @@
     const rating = Store.rating(st.id);
     UI.modal({
       title: "🏪 " + st.name,
-      body: `<div class="text-muted" style="font-size:12.5px;margin-bottom:10px">${UI.esc(st.commune || "")} · Propriétaire : ${owner ? UI.esc(owner.name) : "—"}
+      body: `<div class="text-muted" style="font-size:12.5px;margin-bottom:8px">${UI.esc(st.commune || "")} · Propriétaire : ${owner ? UI.esc(owner.name) : "—"}
           ${st.suspended ? ` · <span style="color:var(--danger)">suspendue</span>` : st.approved === false ? ` · <span style="color:var(--warn,#f59e0b)">en attente</span>` : ` · <span style="color:var(--accent)">active</span>`}</div>
+        <div style="margin-bottom:10px">${window.MP.Security ? trustBadgeHTML(Security.trustScore(st)) + ` ${kycStatusHTML(st)}` : ""}</div>
         <div class="stat-grid" style="grid-template-columns:repeat(2,1fr)">
           ${statCard("ic-blue", "📦", Products.byStore(st.id, true).length, "Articles")}
           ${statCard("ic-green", "💰", UI.fcfa(rev), "CA livré")}
@@ -6373,6 +6550,7 @@
     logoUp: { maxSize: 400, maxBytes: 45 * 1024 },
     bannerUp: { maxSize: 1280, maxBytes: 150 * 1024 },
     galUp: { maxSize: 1000, maxBytes: 85 * 1024 },
+    kycUp: { maxSize: 900, maxBytes: 90 * 1024 },
     prodImgs: { maxSize: 1100, maxBytes: 120 * 1024 },
   };
 
