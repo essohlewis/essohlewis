@@ -12,8 +12,9 @@ window.MP = window.MP || {};
 (function () {
   "use strict";
 
-  const API = { enabled: false, ready: null, productCount: 0 };
+  const API = { enabled: false, ready: null, productCount: 0, adminToken: "admin-demo-token" };
   const TOKEN_KEY = "marchesci_shopToken";
+  function adminUrl() { return "/admin/shop?token=" + encodeURIComponent(API.adminToken); }
 
   function base() {
     if (location.protocol !== "http:" && location.protocol !== "https:") return null;
@@ -122,5 +123,6 @@ window.MP = window.MP || {};
   API.products = products;      // fonction (le nombre est dans API.productCount)
   API.myOrders = myOrders;
   API.token = token;
+  API.adminUrl = adminUrl;
   window.MP.Api = API;
 })();

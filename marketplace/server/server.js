@@ -150,6 +150,7 @@ app.get("/api/kyc/image/:id/:kind", requireAdmin, (req, res) => {
 /* ------------------------- Pages Tailwind -------------------------- */
 app.get("/verify", (req, res) => res.sendFile(path.join(__dirname, "public", "verify.html")));
 app.get("/admin/kyc", (req, res) => res.sendFile(path.join(__dirname, "public", "admin-kyc.html")));
+app.get("/admin/shop", (req, res) => res.sendFile(path.join(__dirname, "public", "admin-shop.html")));
 
 // Assets du back-office (tailwind.css, etc.).
 app.use(express.static(path.join(__dirname, "public")));

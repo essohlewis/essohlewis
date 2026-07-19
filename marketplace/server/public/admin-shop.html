@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Base client — Admin Marché CI</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="/tailwind.css" />
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+  <header class="bg-slate-900 text-white">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-2">
+      <span class="text-xl">🗄️</span><span class="font-extrabold">Administration — Base de données client</span>
+      <span id="dbState" class="ml-auto pill bg-slate-700 text-slate-200">…</span>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    <div id="auth" class="card max-w-md mx-auto">
+      <h1 class="text-lg font-bold mb-2">Accès administrateur</h1>
+      <p class="text-sm text-slate-500 mb-3">Saisissez le jeton d'administration.</p>
+      <input id="token" type="password" class="w-full rounded-lg border border-slate-300 px-3 py-2" placeholder="Jeton admin" />
+      <button id="login" class="btn btn-brand mt-3 w-full">Accéder</button>
+      <p id="authErr" class="text-sm text-red-600 mt-2 hidden">Jeton incorrect.</p>
+    </div>
+
+    <div id="app" class="hidden">
+      <!-- Statistiques -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6" id="stats"></div>
+
+      <div class="flex items-center gap-2 mb-4">
+        <div class="flex gap-1 text-sm" id="tabs">
+          <button data-t="orders" class="btn btn-brand !py-1.5 !px-4">Commandes</button>
+          <button data-t="catalog" class="btn btn-ghost !py-1.5 !px-4">Catalogue</button>
+        </div>
+        <button id="refresh" class="btn btn-ghost !py-1.5 !px-4 ml-auto">↻ Rafraîchir</button>
+      </div>
+
+      <!-- Commandes -->
+      <section id="pane-orders">
+        <div class="flex gap-1 text-xs mb-3" id="ofilters">
+          <button data-f="all" class="btn btn-brand !py-1 !px-3">Toutes</button>
+          <button data-f="pending" class="btn btn-ghost !py-1 !px-3">En attente</button>
+          <button data-f="confirmed" class="btn btn-ghost !py-1 !px-3">Confirmées</button>
+          <button data-f="shipped" class="btn btn-ghost !py-1 !px-3">Expédiées</button>
+          <button data-f="delivered" class="btn btn-ghost !py-1 !px-3">Livrées</button>
+          <button data-f="cancelled" class="btn btn-ghost !py-1 !px-3">Annulées</button>
+        </div>
+        <div id="orders" class="space-y-3"></div>
+        <p id="ordersEmpty" class="text-center text-slate-400 py-10 hidden">Aucune commande.</p>
+      </section>
+
+      <!-- Catalogue -->
+      <section id="pane-catalog" class="hidden">
+        <div class="card mb-4">
+          <h2 class="font-bold mb-2">Ajouter un produit</h2>
+          <div class="grid sm:grid-cols-2 md:grid-cols-4 gap-2">
+            <input id="np_name" class="rounded-lg border border-slate-300 px-3 py-2 md:col-span-2" placeholder="Nom du produit" />
+            <input id="np_price" type="number" class="rounded-lg border border-slate-300 px-3 py-2" placeholder="Prix (FCFA)" />
+            <input id="np_category" class="rounded-lg border border-slate-300 px-3 py-2" placeholder="Catégorie" />
+            <input id="np_store" class="rounded-lg border border-slate-300 px-3 py-2 md:col-span-2" placeholder="Boutique" />
+            <input id="np_stock" type="number" class="rounded-lg border border-slate-300 px-3 py-2" placeholder="Stock" />
+            <button id="np_add" class="btn btn-accent">+ Ajouter</button>
+          </div>
+        </div>
+        <div id="catalog" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    let TOKEN = new URLSearchParams(location.search).get("token") || "";
+    let TAB = "orders", OFILTER = "all";
+    const $ = (s) => document.querySelector(s);
+    const H = () => ({ "X-Admin-Token": TOKEN });
+    const fcfa = (n) => (n || 0).toLocaleString("fr-FR") + " FCFA";
+    const STATUS = { pending: "En attente", confirmed: "Confirmée", shipped: "Expédiée", delivered: "Livrée", cancelled: "Annulée" };
+    const STATUS_CLS = { pending: "bg-amber-100 text-amber-700", confirmed: "bg-sky-100 text-sky-700", shipped: "bg-indigo-100 text-indigo-700", delivered: "bg-accent-soft text-accent", cancelled: "bg-red-100 text-red-700" };
+    const NEXT = { pending: "confirmed", confirmed: "shipped", shipped: "delivered" };
+
+    async function health() {
+      try { const j = await (await fetch("/api/shop/health")).json();
+        $("#dbState").textContent = j.db ? "🗄️ SQLite · " + j.products + " produits" : "Base indisponible";
+      } catch (e) {}
+    }
+    async function login() {
+      TOKEN = $("#token").value.trim() || TOKEN;
+      const r = await fetch("/api/shop/admin/stats", { headers: H() });
+      if (r.status === 401) { $("#authErr").classList.remove("hidden"); return; }
+      $("#auth").classList.add("hidden"); $("#app").classList.remove("hidden"); loadAll();
+    }
+    async function loadAll() { await Promise.all([loadStats(), loadOrders(), loadCatalog()]); }
+
+    async function loadStats() {
+      const j = await (await fetch("/api/shop/admin/stats", { headers: H() })).json();
+      const s = j.stats || {};
+      const card = (icon, label, val) => `<div class="card !p-4"><div class="text-2xl">${icon}</div><div class="text-2xl font-extrabold mt-1">${val}</div><div class="text-xs text-slate-500">${label}</div></div>`;
+      $("#stats").innerHTML = card("👤", "Clients", s.users || 0) + card("📦", "Produits", s.products || 0) + card("🧾", "Commandes", s.orders || 0) + card("💰", "Chiffre d'affaires", fcfa(s.revenue));
+    }
+
+    async function loadOrders() {
+      const q = OFILTER === "all" ? "" : "?status=" + OFILTER;
+      const j = await (await fetch("/api/shop/admin/orders" + q, { headers: H() })).json();
+      const items = j.items || [];
+      $("#ordersEmpty").classList.toggle("hidden", items.length > 0);
+      $("#orders").innerHTML = items.map(orderCard).join("");
+      $("#orders").querySelectorAll("[data-adv]").forEach((b) => b.addEventListener("click", () => setStatus(b.dataset.adv, b.dataset.to)));
+      $("#orders").querySelectorAll("[data-cancel]").forEach((b) => b.addEventListener("click", () => setStatus(b.dataset.cancel, "cancelled")));
+    }
+    function orderCard(o) {
+      const lines = (o.items || []).map((i) => `<li class="flex justify-between gap-2"><span>${i.name} <span class="text-slate-400">×${i.qty}</span></span><span class="text-slate-500">${fcfa(i.price * i.qty)}</span></li>`).join("");
+      const next = NEXT[o.status];
+      const actions = [];
+      if (next) actions.push(`<button class="btn btn-accent !py-1 !px-3 text-sm" data-adv="${o.id}" data-to="${next}">→ ${STATUS[next]}</button>`);
+      if (o.status !== "delivered" && o.status !== "cancelled") actions.push(`<button class="btn btn-ghost !py-1 !px-3 text-sm !text-red-600 !border-red-200" data-cancel="${o.id}">Annuler</button>`);
+      const detail = (o.deliveryFee || o.discount)
+        ? `<div class="text-xs text-slate-400 mt-1">Articles ${fcfa(o.itemsTotal)}${o.discount ? " · remise −" + fcfa(o.discount) : ""}${o.deliveryFee ? " · livraison " + fcfa(o.deliveryFee) : ""}</div>` : "";
+      return `<div class="card">
+        <div class="flex items-start justify-between flex-wrap gap-2">
+          <div>
+            <div class="font-bold">${o.customerName || "Client"} <span class="pill ${STATUS_CLS[o.status] || ""}">${STATUS[o.status] || o.status}</span></div>
+            <div class="text-xs text-slate-500">${o.phone || ""}${o.city ? " · " + o.city : ""}${o.address ? " · " + o.address : ""}</div>
+            <div class="text-xs text-slate-400">${new Date(o.createdAt).toLocaleString("fr-FR")}${o.note ? " · " + o.note : ""}</div>
+          </div>
+          <div class="text-right"><div class="text-lg font-extrabold">${fcfa(o.total)}</div><div class="text-xs text-slate-400">paiement à la livraison</div></div>
+        </div>
+        <ul class="text-sm mt-2 border-t border-slate-100 pt-2 space-y-1">${lines}</ul>${detail}
+        <div class="flex gap-2 mt-3">${actions.join("")}</div>
+      </div>`;
+    }
+    async function setStatus(id, status) {
+      await fetch("/api/shop/admin/orders/" + id + "/status", { method: "POST", headers: Object.assign({ "Content-Type": "application/json" }, H()), body: JSON.stringify({ status }) });
+      loadStats(); loadOrders();
+    }
+
+    async function loadCatalog() {
+      const j = await (await fetch("/api/shop/products?limit=500")).json();
+      const items = j.items || [];
+      $("#catalog").innerHTML = items.map((p) => `<div class="card !p-4">
+        <div class="font-bold">${p.name}</div>
+        <div class="text-xs text-slate-500">${p.category || "—"}${p.storeName ? " · " + p.storeName : ""}</div>
+        <div class="flex items-center justify-between mt-2"><span class="text-lg font-extrabold">${fcfa(p.price)}</span><span class="pill ${p.stock > 0 ? "bg-accent-soft text-accent" : "bg-red-100 text-red-700"}">Stock ${p.stock}</span></div>
+      </div>`).join("");
+    }
+    async function addProduct() {
+      const body = { name: $("#np_name").value.trim(), price: $("#np_price").value, category: $("#np_category").value.trim(), storeName: $("#np_store").value.trim(), stock: $("#np_stock").value };
+      if (!body.name || !body.price) return;
+      await fetch("/api/shop/products", { method: "POST", headers: Object.assign({ "Content-Type": "application/json" }, H()), body: JSON.stringify(body) });
+      ["np_name", "np_price", "np_category", "np_store", "np_stock"].forEach((id) => ($("#" + id).value = ""));
+      loadStats(); loadCatalog();
+    }
+
+    function switchTab(t) {
+      TAB = t;
+      $("#pane-orders").classList.toggle("hidden", t !== "orders");
+      $("#pane-catalog").classList.toggle("hidden", t !== "catalog");
+      document.querySelectorAll("#tabs [data-t]").forEach((b) => b.className = "btn btn-ghost !py-1.5 !px-4");
+      document.querySelector(`#tabs [data-t="${t}"]`).className = "btn btn-brand !py-1.5 !px-4";
+    }
+
+    $("#login").addEventListener("click", login);
+    $("#token").addEventListener("keydown", (e) => { if (e.key === "Enter") login(); });
+    $("#refresh").addEventListener("click", loadAll);
+    $("#np_add").addEventListener("click", addProduct);
+    document.querySelectorAll("#tabs [data-t]").forEach((b) => b.addEventListener("click", () => switchTab(b.dataset.t)));
+    document.querySelectorAll("#ofilters [data-f]").forEach((b) => b.addEventListener("click", () => {
+      OFILTER = b.dataset.f;
+      document.querySelectorAll("#ofilters [data-f]").forEach((x) => x.className = "btn btn-ghost !py-1 !px-3");
+      b.className = "btn btn-brand !py-1 !px-3"; loadOrders();
+    }));
+    health();
+    if (TOKEN) login();
+  </script>
+</body>
+</html>

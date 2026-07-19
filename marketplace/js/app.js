@@ -6346,6 +6346,10 @@
         <div class="flex-between wrap" style="gap:10px"><div><strong>🤖 Reconnaissance faciale ${KYC.faceMatch ? "active" : "(revue manuelle)"}</strong>
           <div class="text-muted" style="font-size:12.5px">Les vérifications passent par le back-office dédié (pièce + selfie, comparaison automatique des visages).</div></div>
           <a href="${KYC.adminUrl()}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Ouvrir la revue des vérifications →</a></div></div>` : ""}
+      ${(window.MP.Api && window.MP.Api.enabled) ? `<div class="card card-pad mt-16" style="border-left:4px solid var(--primary)">
+        <div class="flex-between wrap" style="gap:10px"><div><strong>🗄️ Base de données client active</strong>
+          <div class="text-muted" style="font-size:12.5px">Comptes, catalogue et commandes sont enregistrés en base (SQLite). Gérez les commandes et le catalogue depuis le back-office dédié.</div></div>
+          <a href="${window.MP.Api.adminUrl()}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Ouvrir la base client →</a></div></div>` : ""}
       ${kyc.length ? section("🪪 Vérifications d'identité (KYC) en attente", kyc.length, kyc.map((s) => `<div class="card card-pad mt-12 mod-card">
         <div class="flex-between wrap" style="margin-bottom:8px"><div><strong><a href="#" data-secstore="${s.id}">${UI.esc(s.name)}</a></strong>
           <div class="text-muted" style="font-size:12.5px">${UI.esc(s.kyc.idType || "Pièce")}${s.kyc.idNumber ? " · N° " + UI.esc(s.kyc.idNumber) : ""} · transmise ${UI.timeAgo(s.kyc.submittedAt || s.createdAt)}</div></div></div>
