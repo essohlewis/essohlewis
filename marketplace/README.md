@@ -110,7 +110,9 @@ L'espace vendeur est un **véritable back-office distinct de l'espace client** :
 - **Vue inventaire** : valeur du stock (au coût et au prix), unités totales, **alertes de réappro** avec seuil personnalisable, export CSV.
 - **Publication programmée** : mise en ligne automatique d'un article à une date/heure choisie.
 - **Préférences de notifications vendeur** (nouvelles commandes, messages, stock faible, avis).
-- **Comptes staff / multi-utilisateurs** : inviter des membres (**gérant** = accès complet, **préparateur** = commandes & stock) par e-mail.
+- **Comptes staff / multi-utilisateurs** avec **permissions cloisonnées** : inviter des membres par e-mail.
+  - **Gérant** : accès complet au back-office (sauf la gestion de l'équipe, réservée au propriétaire).
+  - **Préparateur** : accès limité au **tableau de bord opérationnel** (sans données financières), aux **commandes** et à l'**inventaire/stock** (réappro. via modale, y compris stock par variante). Les autres sections (articles, promos, avis, messages, statistiques, clients, paramètres boutique) sont masquées **et** protégées côté route (redirection).
 - **Étiquettes / mots-clés** produits, pris en compte dans la recherche.
 
 - Inscription vendeur / activation « Ouvrir ma boutique » depuis un compte client, avec **écran d'accueil (onboarding)**.

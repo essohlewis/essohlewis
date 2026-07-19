@@ -71,10 +71,37 @@
   /** Rôle de l'utilisateur courant dans sa boutique gérée. */
   function sellerRole() { const s = sellerStore(); const u = Auth.current(); return s && u ? Store.roleFor(s, u.id) : null; }
 
-  function requireVendor() {
+  // Capacités (permissions) par rôle. Le préparateur est limité aux commandes et au stock.
+  const SELLER_CAPS = {
+    preparateur: ["dashboard", "orders", "inventory"],
+    // owner & gérant : accès complet ("*").
+  };
+  /** L'utilisateur courant a-t-il la capacité demandée dans sa boutique ? */
+  function sellerCan(cap) {
+    const role = sellerRole();
+    if (role === "owner" || role === "gerant" || role === "admin") return true;
+    const caps = SELLER_CAPS[role];
+    return !!caps && caps.indexOf(cap) !== -1;
+  }
+  /** Première page autorisée pour le rôle courant (pour les redirections). */
+  function sellerHome() {
+    if (sellerCan("dashboard")) return "#/seller/dashboard";
+    if (sellerCan("orders")) return "#/seller/orders";
+    return "#/seller/inventory";
+  }
+
+  /**
+   * Garde d'accès vendeur. @param {string} [cap] capacité requise (sinon accès de base).
+   */
+  function requireVendor(cap) {
     if (!requireAuth()) return false;
     if (!sellerStore()) {
       Router.go("#/seller/store");
+      return false;
+    }
+    if (cap && !sellerCan(cap)) {
+      UI.toast("Accès réservé — votre rôle ne permet pas cette section.", "info");
+      Router.go(sellerHome());
       return false;
     }
     return true;
@@ -2699,6 +2726,8 @@
     const user = Auth.current();
     const store = Store.managedBy(user.id);
     const editing = !!store;
+    // Le préparateur ne peut pas modifier les paramètres de la boutique.
+    if (editing && !sellerCan("store")) { UI.toast("Accès réservé — votre rôle ne permet pas cette section.", "info"); Router.go(sellerHome()); return; }
     const isOwner = editing && store.ownerId === user.id;
     const s = store || {};
     const catOpts = UI.CATEGORIES.map((c) => `<option value="${c.id}" ${s.category === c.id ? "selected" : ""}>${c.icon} ${c.label}</option>`).join("");
@@ -2931,6 +2960,7 @@
      ============================================================ */
   function viewSellerDashboard() {
     if (!requireVendor()) return;
+    const canFin = sellerCan("stats"); // masque les données financières pour le préparateur
     const store = sellerStore();
     const products = Products.byStore(store.id, true);
     const publishedCount = products.filter((p) => p.status === "published").length;
@@ -2987,13 +3017,15 @@
       active: "dashboard",
       title: "Tableau de bord",
       subtitle: `Bonjour ${firstName} — voici l'activité de votre boutique.`,
-      actions: `<button class="btn btn-ghost" id="announceBtn">📣 Annonce</button>
+      actions: `${sellerCan("announce") ? `<button class="btn btn-ghost" id="announceBtn">📣 Annonce</button>` : ""}
                 <button class="btn btn-ghost" id="qrBtn">${SICON.store} QR code</button>
                 <button class="btn wa-btn" id="shareStoreBtn"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.9.9-2.7-.2-.3A8 8 0 1 1 12 20z"/></svg>Partager</button>
-                <a href="#/seller/product/new" class="btn btn-primary">+ Article</a>`,
+                ${sellerCan("products") ? `<a href="#/seller/product/new" class="btn btn-primary">+ Article</a>` : ""}`,
       body: `
         <div class="stat-grid">
-          ${statCard("ic-green", "💰", UI.fcfa(store.revenueSim || 0), "Chiffre d'affaires")}
+          ${canFin
+            ? statCard("ic-green", "💰", UI.fcfa(store.revenueSim || 0), "Chiffre d'affaires")
+            : statCard("ic-orange", "⚠️", outStock.length + " / " + lowStock.length, "Ruptures / stock faible")}
           ${statCard("ic-orange", "📦", publishedCount + " / " + products.length, "Articles publiés")}
           ${statCard("ic-blue", "🧾", orders.length, "Commandes reçues")}
           ${statCard("ic-purple", "👥", Store.subscriberCount(store.id), "Abonnés")}
@@ -3002,25 +3034,30 @@
           <span><strong>${pending} commande(s) en attente</strong> — <a href="#/seller/orders" style="color:var(--brand);font-weight:700">à traiter maintenant</a>.</span></div>` : ""}
 
         <div class="seller-cols mt-16">
-          <div class="card card-pad">
+          ${canFin ? `<div class="card card-pad">
             <div class="panel-head"><h3>Ventes des 7 derniers jours</h3><span class="text-muted" style="font-size:13px">${UI.fcfa(sales7.reduce((s, d) => s + d.value, 0))}</span></div>
             ${barChartHTML(sales7)}
-          </div>
+          </div>` : `<div class="card card-pad">
+            <div class="panel-head"><h3>⚠️ Alertes de stock</h3><a href="#/seller/inventory" class="text-muted" style="font-size:13px">Gérer</a></div>
+            ${(outStock.length || lowStock.length)
+              ? [...outStock.map((p) => [p, "Rupture"]), ...lowStock.map((p) => [p, "Faible (" + Products.effectiveStock(p) + ")"])].slice(0, 8).map(([p, s]) => `<div class="flex-between" style="padding:7px 0;border-bottom:1px solid var(--border)"><a href="#/seller/product/${p.id}/edit" style="font-weight:600">${UI.esc(p.title)}</a><span class="text-muted" style="font-size:12.5px">${s}</span></div>`).join("")
+              : `<p class="text-muted" style="text-align:center;padding:14px 0">Tout est en stock ✅</p>`}
+          </div>`}
           <div class="card card-pad">
             <div class="panel-head"><h3>Commandes par statut</h3></div>
             ${donutHTML(donutSegs, orders.length, "commandes")}
           </div>
         </div>
 
-        <div class="card card-pad mt-16">
+        ${canFin ? `<div class="card card-pad mt-16">
           <div class="panel-head"><h3>Objectif de vente du mois</h3>
             ${goal > 0 ? `<span class="text-muted" style="font-size:13px">${UI.fcfa(mSales)} / ${UI.fcfa(goal)}</span>` : `<a href="#/seller/store" style="font-size:13px;color:var(--brand);font-weight:700">Définir un objectif →</a>`}</div>
           ${goal > 0 ? `<div class="goal-bar"><div class="goal-fill" style="width:${goalPct}%">${goalPct >= 12 ? goalPct + "%" : ""}</div></div>
             <div class="text-muted" style="font-size:13px;margin-top:8px">${goalPct >= 100 ? "🎉 Objectif atteint, bravo !" : `Encore ${UI.fcfa(Math.max(0, goal - mSales))} pour atteindre votre objectif.`}</div>`
             : `<p class="text-muted" style="margin:0">Fixez un objectif mensuel pour suivre votre progression.</p>`}
-        </div>
+        </div>` : ""}
 
-        <div class="seller-cols mt-16">
+        ${canFin ? `<div class="seller-cols mt-16">
           <div class="card card-pad">
             <div class="panel-head"><h3>Complétude de la boutique</h3><strong style="color:${completeness >= 100 ? "var(--accent)" : "var(--brand)"}">${completeness}%</strong></div>
             <div class="goal-bar" style="margin-bottom:14px"><div class="goal-fill" style="width:${completeness}%;background:${completeness >= 100 ? "linear-gradient(90deg,var(--accent),#0bbf6a)" : "linear-gradient(90deg,var(--brand),var(--brand-dark))"}">${completeness >= 12 ? completeness + "%" : ""}</div></div>
@@ -3039,9 +3076,9 @@
               </div>`).join("")
               : `<p class="text-muted" style="text-align:center;padding:16px 0">✅ Vous avez répondu à tous les avis.</p>`}
           </div>
-        </div>
+        </div>` : ""}
 
-        ${(outStock.length || lowStock.length) ? `<div class="card card-pad mt-16" style="border-color:var(--warning)">
+        ${canFin && (outStock.length || lowStock.length) ? `<div class="card card-pad mt-16" style="border-color:var(--warning)">
           <div class="panel-head"><h3>⚠️ Alertes de stock</h3><a href="#/seller/products">Gérer →</a></div>
           ${outStock.map((p) => `<div class="flex-between" style="padding:8px 0;border-bottom:1px solid var(--border)">
             <a href="#/seller/product/${p.id}/edit" style="font-weight:600">${UI.esc(p.title)}</a><span class="status annulee">Rupture</span></div>`).join("")}
@@ -3049,7 +3086,7 @@
             <a href="#/seller/product/${p.id}/edit" style="font-weight:600">${UI.esc(p.title)}</a><span class="status unpublished">Stock faible : ${p.stock}</span></div>`).join("")}
         </div>` : ""}
 
-        ${tips.length ? `<div class="card card-pad mt-16">
+        ${canFin && tips.length ? `<div class="card card-pad mt-16">
           <div class="panel-head"><h3>💡 Conseils pour booster votre boutique</h3></div>
           ${tips.slice(0, 4).map(([emo, txt, link]) => `<a href="${link}" class="tip-row"><span class="tip-emo">${emo}</span><span>${UI.esc(txt)}</span><span class="tip-arrow">→</span></a>`).join("")}
         </div>` : ""}
@@ -3164,10 +3201,18 @@
     const store = sellerStore();
     if (!store) { el.innerHTML = ""; return; }
     const pending = Orders.byStore(store.id).filter((o) => o.status === "en_attente").length;
+    // Le préparateur (pas d'accès articles) voit Inventaire à la place, sans bouton « + ».
+    const canProducts = sellerCan("products");
+    const secondItem = canProducts
+      ? `<a class="sbn-item ${active === "products" ? "active" : ""}" href="#/seller/products">${SICON.box}<span>Articles</span></a>`
+      : `<a class="sbn-item ${active === "inventory" ? "active" : ""}" href="#/seller/inventory">${SICON.chart}<span>Stock</span></a>`;
+    const fab = canProducts
+      ? `<a class="sbn-fab" href="#/seller/product/new" aria-label="Nouvel article">${SICON.plus}</a>`
+      : `<a class="sbn-fab" href="#/seller/orders" aria-label="Commandes">${SICON.receipt}</a>`;
     el.innerHTML = `
       <a class="sbn-item ${active === "dashboard" ? "active" : ""}" href="#/seller/dashboard">${SICON.dash}<span>Tableau</span></a>
-      <a class="sbn-item ${active === "products" ? "active" : ""}" href="#/seller/products">${SICON.box}<span>Articles</span></a>
-      <a class="sbn-fab" href="#/seller/product/new" aria-label="Nouvel article">${SICON.plus}</a>
+      ${secondItem}
+      ${fab}
       <a class="sbn-item ${active === "orders" ? "active" : ""}" href="#/seller/orders">${SICON.receipt}<span>Commandes</span>${pending ? `<span class="badge">${pending > 99 ? "99+" : pending}</span>` : ""}</a>
       <button class="sbn-item" id="sbnMore" type="button">${SICON.menu}<span>Menu</span></button>`;
     const more = document.getElementById("sbnMore");
@@ -3178,21 +3223,22 @@
   function openSellerMenu() {
     const store = sellerStore();
     const user = Auth.current();
+    // Chaque entrée gérée par une capacité (cap null = toujours visible).
     const items = [
-      ["#/seller/store", "🏪", "Ma boutique (infos)"],
-      ["#/store/" + store.id, "👁️", "Voir ma vitrine"],
-      ["#/seller/product/new", "➕", "Ajouter un article"],
-      ["#/seller/inventory", "📊", "Inventaire"],
-      ["#/seller/orders", "🧾", "Mes commandes"],
-      ["#/seller/promos", "🏷️", "Codes promo"],
-      ["#/seller/reviews", "⭐", "Avis clients"],
-      ["#/seller/messages", "💬", "Messages"],
-      ["#/seller/stats", "📊", "Statistiques"],
-      ["#/seller/clients", "👥", "Mes clients"],
-      ["#/", "🛒", "Accueil de la marketplace"],
-      ["#/profile", "👤", "Mon profil"],
-      ["#/notifications", "🔔", "Notifications"],
-    ];
+      ["#/seller/store", "🏪", "Ma boutique (infos)", "store"],
+      ["#/store/" + store.id, "👁️", "Voir ma vitrine", null],
+      ["#/seller/product/new", "➕", "Ajouter un article", "products"],
+      ["#/seller/inventory", "📊", "Inventaire", "inventory"],
+      ["#/seller/orders", "🧾", "Mes commandes", "orders"],
+      ["#/seller/promos", "🏷️", "Codes promo", "promos"],
+      ["#/seller/reviews", "⭐", "Avis clients", "reviews"],
+      ["#/seller/messages", "💬", "Messages", "messages"],
+      ["#/seller/stats", "📊", "Statistiques", "stats"],
+      ["#/seller/clients", "👥", "Mes clients", "clients"],
+      ["#/", "🛒", "Accueil de la marketplace", null],
+      ["#/profile", "👤", "Mon profil", null],
+      ["#/notifications", "🔔", "Notifications", null],
+    ].filter(([, , , cap]) => !cap || sellerCan(cap));
     UI.modal({
       title: "Menu vendeur",
       body: `<div class="menu-sheet">
@@ -3231,7 +3277,7 @@
       ["stats", "Statistiques", "#/seller/stats", SICON.chart],
       ["clients", "Clients", "#/seller/clients", SICON.users],
       ["store", "Ma boutique", "#/seller/store", SICON.store],
-    ];
+    ].filter(([k]) => sellerCan(k)); // masque les sections non autorisées (préparateur)
     const navHTML = nav.map(([k, l, h, ic]) => `
       <a href="${h}" class="ss-item ${opts.active === k ? "active" : ""}">
         <span class="ss-ico">${ic}</span><span>${l}</span>
@@ -3671,7 +3717,7 @@
      VENDEUR : Gestion des articles
      ============================================================ */
   function viewSellerProducts(params) {
-    if (!requireVendor()) return;
+    if (!requireVendor("products")) return;
     const store = sellerStore();
     const q = (params && params.query) || {};
     const statusFilter = ["published", "draft", "unpublished"].includes(q.status) ? q.status : "all";
@@ -3788,7 +3834,7 @@
      VENDEUR : Inventaire (valeur du stock, alertes réappro)
      ============================================================ */
   function viewSellerInventory(params) {
-    if (!requireVendor()) return;
+    if (!requireVendor("inventory")) return;
     const store = sellerStore();
     const q = (params && params.query) || {};
     const threshold = store.lowStockThreshold != null ? store.lowStockThreshold : LOW_STOCK;
@@ -3838,7 +3884,7 @@
               <td>${p.cost ? UI.fcfa(p.cost) : "—"}</td>
               <td>${UI.fcfa(stock * (p.cost || 0))}</td>
               <td>${state}</td>
-              <td style="text-align:right"><a class="btn btn-ghost btn-sm" href="#/seller/product/${p.id}/edit">Réappro.</a></td>
+              <td style="text-align:right"><button class="btn btn-ghost btn-sm" data-restock="${p.id}">Réappro.</button></td>
             </tr>`;
           }).join("")}</tbody></table></div>`
           : `<div class="card card-pad"><p class="text-muted" style="text-align:center;margin:0;padding:20px 0">Aucun article dans ce filtre.</p></div>`}`,
@@ -3853,8 +3899,44 @@
       Store.update(store.id, { lowStockThreshold: Math.max(0, Math.round(Number(document.getElementById("invThreshold").value) || 0)) });
       UI.toast("Seuil d'alerte enregistré ✓", "success"); viewSellerInventory(params);
     });
+    V().querySelectorAll("[data-restock]").forEach((b) => b.addEventListener("click", () => openStockModal(b.getAttribute("data-restock"), () => viewSellerInventory(params))));
     const exp = document.getElementById("invExport");
     if (exp) exp.addEventListener("click", () => exportInventoryCSV(store, withStock, threshold));
+  }
+
+  /** Modale de réapprovisionnement : stock simple ou par variante (self-contained). */
+  function openStockModal(productId, after) {
+    const p = Products.get(productId);
+    if (!p) return;
+    let body;
+    if (p.trackVariantStock) {
+      const combos = Object.keys(p.variantStock || {});
+      body = `<p class="text-muted" style="margin:0 0 10px;font-size:13.5px">Stock par variante de « ${UI.esc(p.title)} ».</p>
+        <table class="variant-stock-table"><thead><tr><th>Variante</th><th>Stock</th></tr></thead><tbody>
+        ${combos.map((key) => { const label = key.split("|").filter(Boolean).join(" · "); return `<tr><td>${UI.esc(label || "—")}</td><td><input type="number" min="0" class="stock-edit" data-vk="${UI.esc(key)}" value="${p.variantStock[key] || 0}" style="width:90px" /></td></tr>`; }).join("")}
+        </tbody></table>`;
+    } else {
+      body = `<p class="text-muted" style="margin:0 0 10px;font-size:13.5px">Réapprovisionner « ${UI.esc(p.title)} ».</p>
+        <div class="field"><label>Stock disponible</label><input type="number" id="rsStock" min="0" value="${p.stock || 0}" /></div>`;
+    }
+    UI.modal({
+      title: "📦 Réapprovisionnement",
+      body,
+      footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-primary" id="rsGo">Enregistrer</button>`,
+      onMount(m, close) {
+        m.querySelector("#rsGo").addEventListener("click", () => {
+          if (p.trackVariantStock) {
+            const vs = {};
+            m.querySelectorAll("[data-vk]").forEach((inp) => { vs[inp.getAttribute("data-vk")] = Math.max(0, Math.round(Number(inp.value) || 0)); });
+            const total = Object.values(vs).reduce((s, n) => s + n, 0);
+            Products.update(p.id, Object.assign({}, p, { variantStock: vs, stock: total }));
+          } else {
+            Products.quickSet(p.id, { stock: Math.max(0, Math.round(Number(m.querySelector("#rsStock").value) || 0)) });
+          }
+          UI.toast("Stock mis à jour ✓", "success"); close(); if (after) after();
+        });
+      },
+    });
   }
 
   /** Export CSV de l'inventaire. */
@@ -3876,7 +3958,7 @@
      VENDEUR : Avis (boutique + articles centralisés)
      ============================================================ */
   function viewSellerReviews(params) {
-    if (!requireVendor()) return;
+    if (!requireVendor("reviews")) return;
     const store = sellerStore();
     const q = (params && params.query) || {};
     const filter = ["all", "pending", "reported"].includes(q.f) ? q.f : "all";
@@ -3993,7 +4075,7 @@
      VENDEUR : Formulaire article (création / édition)
      ============================================================ */
   function viewProductForm(params) {
-    if (!requireVendor()) return;
+    if (!requireVendor("products")) return;
     const editing = !!params.id;
     const p = editing ? Products.get(params.id) : null;
     if (editing && !p) { layout(emptyState("😕", "Article introuvable", "")); return; }
@@ -4151,7 +4233,7 @@
      VENDEUR : Commandes reçues
      ============================================================ */
   function viewSellerOrders(params) {
-    if (!requireVendor()) return;
+    if (!requireVendor("orders")) return;
     const store = sellerStore();
     const q = (params && params.query) || {};
     const filter = Orders.STATUS[q.status] ? q.status : "all";
@@ -4336,7 +4418,7 @@
      VENDEUR : Statistiques dédiées
      ============================================================ */
   function viewSellerStats(params) {
-    if (!requireVendor()) return;
+    if (!requireVendor("stats")) return;
     const store = sellerStore();
     const q = (params && params.query) || {};
     const period = ["7d", "30d", "month"].includes(q.p) ? q.p : "30d";
@@ -4515,7 +4597,7 @@
      VENDEUR : Mes clients (mini-CRM)
      ============================================================ */
   function viewSellerClients() {
-    if (!requireVendor()) return;
+    if (!requireVendor("clients")) return;
     const store = sellerStore();
     const orders = Orders.byStore(store.id);
 
@@ -4571,7 +4653,7 @@
      VENDEUR : Codes promo (coupons)
      ============================================================ */
   function viewSellerCoupons() {
-    if (!requireVendor()) return;
+    if (!requireVendor("promos")) return;
     const store = sellerStore();
     const list = Coupons.byStore(store.id);
 
@@ -4680,7 +4762,7 @@
 
   /** Vendeur : boîte de réception + conversations. */
   function viewSellerMessages(params) {
-    if (!requireVendor()) return;
+    if (!requireVendor("messages")) return;
     const store = sellerStore();
     const threads = Messages.threadsForStore(store.id);
     const activeBuyer = params && params.query && params.query.b;
