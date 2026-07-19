@@ -14,6 +14,7 @@ const path = require("path");
 
 const PYTHON = process.env.PYTHON_BIN || "python3";
 const SCRIPT = path.join(__dirname, "face_match.py");
+const LIVENESS_SCRIPT = path.join(__dirname, "liveness.py");
 
 /** Écrit une data-URL/base64 dans un fichier temporaire ; renvoie le chemin. */
 function writeTemp(dataUrl, prefix) {
@@ -59,6 +60,40 @@ function compare(idImage, selfie) {
   });
 }
 
+/**
+ * Détection de vivacité active sur une rafale d'images (clignement + mouvement).
+ * `frames` : tableau de data-URL/base64. Résout avec l'objet du helper Python
+ * { live, blink, motion, ... } ou { available:false } si indisponible.
+ */
+function checkLiveness(frames) {
+  return new Promise((resolve) => {
+    const list = Array.isArray(frames) ? frames.filter(Boolean) : [];
+    if (list.length < 2) return resolve({ available: false, error: "frames_insuffisantes" });
+    let paths = [];
+    try { paths = list.slice(0, 12).map((f, i) => writeTemp(f, "live" + i)); }
+    catch (e) { cleanup(); return resolve({ available: false, error: "bad_image" }); }
+
+    let out = "", err = "", child;
+    try { child = spawn(PYTHON, [LIVENESS_SCRIPT, ...paths], { timeout: 45000 }); }
+    catch (e) { cleanup(); return resolve({ available: false, error: "spawn_failed" }); }
+
+    child.stdout.on("data", (d) => (out += d));
+    child.stderr.on("data", (d) => (err += d));
+    child.on("error", () => { cleanup(); resolve({ available: false, error: "python_missing" }); });
+    child.on("close", (code) => {
+      cleanup();
+      if (code !== 0 && !out) return resolve({ available: false, error: err.slice(0, 200) || "exit_" + code });
+      try {
+        const j = JSON.parse(out.trim());
+        if (j.error && String(j.error).startsWith("internal:")) return resolve({ available: false, error: j.error });
+        resolve(Object.assign({ available: true }, j));
+      } catch (e) { resolve({ available: false, error: "bad_output" }); }
+    });
+
+    function cleanup() { paths.forEach((p) => { try { fs.unlinkSync(p); } catch (e) {} }); }
+  });
+}
+
 /** Teste si le service de reconnaissance faciale est opérationnel. */
 async function selfTest() {
   return new Promise((resolve) => {
@@ -70,4 +105,4 @@ async function selfTest() {
   });
 }
 
-module.exports = { compare, selfTest };
+module.exports = { compare, checkLiveness, selfTest };

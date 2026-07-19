@@ -39,24 +39,34 @@ la vérification retombe sur le mode 100 % local (localStorage).
 - **Tailwind CSS** (`src/input.css` → `public/tailwind.css`) : nouvelles pages.
 - **Reconnaissance faciale** : `face.js` délègue à `face_match.py`
   (dlib/ResNet, embeddings 128-D, modèles fournis par PyPI — aucun CDN).
+- **Détection de vivacité (anti-photo)** : `face.js` délègue à `liveness.py`
+  (68 repères dlib). Le vendeur capture une **rafale** pendant qu'il cligne des
+  yeux et bouge la tête ; on mesure le clignement (Eye Aspect Ratio) et le
+  mouvement du visage. Une photo imprimée ou un écran figé **échoue** au test.
 - **Stockage** : fichier JSON (`data/kyc.json`) + images sur disque
   (`data/uploads/`, ignorés par Git).
 
 ## Endpoints (`/api/kyc/…`)
 | Méthode | Route | Rôle | Description |
 |---|---|---|---|
-| GET | `/health` | public | État du service + reconnaissance faciale |
-| POST | `/submit` | vendeur | pièce + selfie → comparaison + statut `pending` |
+| GET | `/health` | public | État du service + reconnaissance faciale + vivacité |
+| POST | `/liveness` | vendeur | rafale d'images → présence en direct (anti-photo) |
+| POST | `/submit` | vendeur | pièce + selfie (+ rafale) → comparaison + vivacité + statut `pending` |
 | GET | `/status?vendorId=` | vendeur | statut d'un vendeur |
 | GET | `/list?status=` | admin | file des vérifications |
 | POST | `/review` | admin | `approve` / `reject` (+ motif) |
 | GET | `/image/:id/:kind` | admin | sert une image (`id`/`selfie`) |
 
 ## Résultats de référence (validés)
-Même personne → `match:true`, score ~87 ; personnes différentes → `match:false`,
-score ~19 ; absence de visage → rejet.
+- Reconnaissance faciale : même personne → `match:true`, score ~87 ;
+  personnes différentes → `match:false`, score ~19 ; absence de visage → rejet.
+- Vivacité : rafale figée (photo/écran) → `live:false` ; visage qui cligne des
+  yeux / bouge → `live:true`. La page vendeur **bloque** la suite tant que la
+  présence n'est pas confirmée.
 
 ## Sécurité / production
 - Servez en **HTTPS**, changez `KYC_ADMIN_TOKEN`, restreignez le CORS.
 - **Chiffrez** et **purgez** les pièces d'identité après décision (RGPD).
-- Ajoutez une **détection de vivacité** (anti-photo) pour un usage réel.
+- La détection de vivacité incluse est **active** (défi-réponse) : elle stoppe
+  les photos et captures d'écran. Pour un usage à fort risque, ajoutez en plus
+  un modèle **anti-deepfake vidéo** (texture / rPPG) côté serveur.

@@ -32,12 +32,23 @@ const publicRow = (r) => ({
   id: r.id, vendorId: r.vendorId, vendorName: r.vendorName, storeId: r.storeId,
   idType: r.idType, idNumber: r.idNumber, faceDetected: r.faceDetected,
   match: r.match, score: r.score, distance: r.distance, faceAvailable: r.faceAvailable,
+  liveness: r.liveness || null,
   status: r.status, reason: r.reason, createdAt: r.createdAt, reviewedAt: r.reviewedAt,
   idImageUrl: `/api/kyc/image/${r.id}/id`, selfieUrl: `/api/kyc/image/${r.id}/selfie`,
 });
 
 /* ------------------------------- API ------------------------------- */
-app.get("/api/kyc/health", (req, res) => res.json({ ok: true, service: "kyc", face: FACE_AVAILABLE }));
+app.get("/api/kyc/health", (req, res) => res.json({ ok: true, service: "kyc", face: FACE_AVAILABLE, liveness: FACE_AVAILABLE }));
+
+// Vérification de vivacité (anti-photo) — appelée pendant la capture, avant l'envoi.
+app.post("/api/kyc/liveness", async (req, res) => {
+  const frames = (req.body || {}).frames;
+  if (!FACE_AVAILABLE) return res.json({ ok: true, available: false });
+  if (!Array.isArray(frames) || frames.length < 2) return res.status(400).json({ ok: false, error: "Rafale d'images requise." });
+  let lv = { available: false };
+  try { lv = await face.checkLiveness(frames); } catch (e) { lv = { available: false }; }
+  res.json({ ok: true, available: !!lv.available, live: !!lv.live, blink: !!lv.blink, motion: !!lv.motion, reason: lv.reason || null });
+});
 
 // Soumission d'une vérification (vendeur).
 app.post("/api/kyc/submit", async (req, res) => {
@@ -51,6 +62,15 @@ app.post("/api/kyc/submit", async (req, res) => {
   // Reconnaissance faciale (si disponible).
   let fr = { available: false };
   if (FACE_AVAILABLE) { try { fr = await face.compare(b.idImage, b.selfie); } catch (e) { fr = { available: false }; } }
+
+  // Vivacité : re-vérifiée côté serveur à partir de la rafale (jamais faite confiance au client).
+  let lv = { available: false };
+  if (FACE_AVAILABLE && Array.isArray(b.frames) && b.frames.length >= 2) {
+    try { lv = await face.checkLiveness(b.frames); } catch (e) { lv = { available: false }; }
+  }
+  const liveness = lv.available
+    ? { available: true, live: !!lv.live, blink: !!lv.blink, motion: !!lv.motion, reason: lv.reason || null }
+    : { available: false };
 
   const rows = db.all();
   // Une seule vérification active par vendeur (remplace la non approuvée).
@@ -68,10 +88,11 @@ app.post("/api/kyc/submit", async (req, res) => {
     score: fr.available ? fr.score : null,
     distance: fr.available ? (fr.distance ?? null) : null,
     faceError: fr.available ? (fr.error || null) : (fr.error || null),
+    liveness,
     status: "pending", reason: "", createdAt: Date.now(), reviewedAt: 0,
   };
   kept.push(row); db.saveAll(kept);
-  res.json({ ok: true, id: row.id, status: "pending", faceAvailable: row.faceAvailable, match: row.match, score: row.score });
+  res.json({ ok: true, id: row.id, status: "pending", faceAvailable: row.faceAvailable, match: row.match, score: row.score, liveness: row.liveness });
 });
 
 // Statut d'un vendeur.

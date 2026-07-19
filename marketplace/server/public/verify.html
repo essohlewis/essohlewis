@@ -47,19 +47,21 @@
       <div class="flex justify-end mt-4"><button id="next1" class="btn btn-brand" disabled>Suivant →</button></div>
     </section>
 
-    <!-- Étape 2 : selfie -->
+    <!-- Étape 2 : selfie + vivacité -->
     <section data-step="2" class="card hidden">
-      <p class="text-sm text-slate-500 mb-3">Placez votre visage dans l'ovale et prenez la photo. La capture est faite <strong>en direct</strong> par votre caméra.</p>
+      <p class="text-sm text-slate-500 mb-3">Placez votre visage dans l'ovale. La plateforme vérifie que vous êtes <strong>bien présent en direct</strong> (anti-photo) : suivez la consigne à l'écran.</p>
       <div id="camWrap" class="relative w-64 h-64 mx-auto rounded-full overflow-hidden bg-slate-900">
         <video id="video" playsinline muted class="w-full h-full object-cover"></video>
         <img id="shot" class="w-full h-full object-cover hidden" alt="" />
         <div class="absolute inset-0 rounded-full border-[3px] border-dashed border-white/70 pointer-events-none"></div>
+        <div id="camOverlay" class="absolute inset-x-0 bottom-0 bg-black/55 text-white text-center text-sm font-semibold py-2 hidden"></div>
       </div>
+      <div id="liveBar" class="hidden mt-3 h-1.5 rounded-full bg-slate-200 overflow-hidden"><div id="liveFill" class="h-full w-0 bg-brand transition-all"></div></div>
       <p id="camMsg" class="text-center text-sm text-slate-500 mt-2"></p>
       <div id="camNoSecure" class="hidden mt-3 rounded-lg bg-amber-100 text-amber-800 text-sm p-3">📷 La caméra nécessite <strong>http(s)/localhost</strong>. Importez une photo à défaut : <input type="file" accept="image/*" id="selfieFile" class="mt-2 block" /></div>
       <div class="flex justify-center gap-2 mt-3" id="camBtns">
         <button id="camStart" class="btn btn-ghost">Démarrer la caméra</button>
-        <button id="capture" class="btn btn-brand hidden">📸 Prendre la photo</button>
+        <button id="capture" class="btn btn-brand hidden">📸 Vérifier ma présence</button>
         <button id="retake" class="btn btn-ghost hidden">↺ Reprendre</button>
       </div>
       <div class="flex justify-between mt-4"><button data-back="1" class="btn btn-ghost">← Retour</button><button id="next2" class="btn btn-brand" disabled>Suivant →</button></div>
@@ -80,9 +82,11 @@
   <script>
     const qs = new URLSearchParams(location.search);
     const ctx = { vendorId: qs.get("vendorId") || "", vendorName: qs.get("vendorName") || "", storeId: qs.get("storeId") || "" };
-    const state = { idType: "CNI", idNumber: "", idImage: "", selfie: "", faceDetected: null };
+    const state = { idType: "CNI", idNumber: "", idImage: "", selfie: "", faceDetected: null, frames: [], liveness: null };
     let stream = null;
+    let LIVENESS = false; // renseigné par /api/kyc/health
     const $ = (s) => document.querySelector(s);
+    (async () => { try { const j = await (await fetch("/api/kyc/health", { cache: "no-store" })).json(); LIVENESS = !!(j && j.liveness); } catch (e) {} })();
 
     function showStep(n) {
       document.querySelectorAll("[data-step]").forEach((el) => el.classList.toggle("hidden", el.getAttribute("data-step") !== String(n)));
@@ -123,44 +127,101 @@
       $("#next1").addEventListener("click", () => { state.idType = $("#idType").value; state.idNumber = $("#idNumber").value.trim(); showStep(2); });
     })();
 
-    // Étape 2 : caméra
+    // Étape 2 : caméra + vivacité (anti-photo)
     (function () {
       const secure = window.isSecureContext || location.hostname === "localhost" || location.hostname === "127.0.0.1";
       const canCam = secure && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
       if (!canCam) { $("#camWrap").classList.add("hidden"); $("#camBtns").classList.add("hidden"); $("#camNoSecure").classList.remove("hidden"); }
       const video = $("#video"), shot = $("#shot"), msg = $("#camMsg");
+      const overlay = $("#camOverlay"), bar = $("#liveBar"), fill = $("#liveFill");
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
       async function detectFace(dataUrl) {
         if (!("FaceDetector" in window)) return null;
         try { const img = new Image(); await new Promise((r, j) => { img.onload = r; img.onerror = j; img.src = dataUrl; });
           const fd = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 1 }); const f = await fd.detect(img); return f && f.length > 0; }
         catch (e) { return null; }
       }
-      async function setSelfie(url) {
-        state.selfie = url; state.faceDetected = await detectFace(url);
-        msg.textContent = state.faceDetected === true ? "✅ Visage détecté" : state.faceDetected === false ? "⚠️ Aucun visage détecté — recadrez." : "Photo prise ✓";
-        $("#next2").disabled = !url || state.faceDetected === false;
-      }
-      $("#camStart") && $("#camStart").addEventListener("click", async () => {
-        try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: 640, height: 640 }, audio: false });
-          video.srcObject = stream; await video.play(); video.classList.remove("hidden"); shot.classList.add("hidden");
-          $("#camStart").classList.add("hidden"); $("#capture").classList.remove("hidden"); }
-        catch (e) { msg.textContent = "Impossible d'accéder à la caméra."; }
-      });
-      $("#capture") && $("#capture").addEventListener("click", () => {
+      function grab() { // capture une image carrée (miroir) depuis le flux vidéo
         const w = video.videoWidth || 480, h = video.videoHeight || 480, side = Math.min(w, h);
         const c = document.createElement("canvas"); c.width = 480; c.height = 480; const g = c.getContext("2d");
         g.translate(480, 0); g.scale(-1, 1); g.drawImage(video, (w - side) / 2, (h - side) / 2, side, side, 0, 0, 480, 480);
-        const url = c.toDataURL("image/jpeg", 0.85);
-        shot.src = url; shot.classList.remove("hidden"); video.classList.add("hidden"); stream && stream.getTracks().forEach((t) => t.stop());
-        $("#capture").classList.add("hidden"); $("#retake").classList.remove("hidden"); setSelfie(url);
+        return c.toDataURL("image/jpeg", 0.82);
+      }
+      async function setSelfie(url) {
+        state.selfie = url; state.faceDetected = await detectFace(url);
+        shot.src = url; shot.classList.remove("hidden"); video.classList.add("hidden");
+        $("#capture").classList.add("hidden"); $("#retake").classList.remove("hidden");
+      }
+      async function startCam() {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: 640, height: 640 }, audio: false });
+        video.srcObject = stream; await video.play(); video.classList.remove("hidden"); shot.classList.add("hidden");
+      }
+
+      $("#camStart") && $("#camStart").addEventListener("click", async () => {
+        try { await startCam(); $("#camStart").classList.add("hidden"); $("#capture").classList.remove("hidden");
+          msg.textContent = LIVENESS ? "Appuyez, puis clignez des yeux et bougez un peu la tête." : "Placez votre visage dans l'ovale, puis prenez la photo.";
+        } catch (e) { msg.textContent = "Impossible d'accéder à la caméra."; }
       });
+
+      // Rafale de vivacité : capture ~8 images en ~3,5 s pendant que l'utilisateur cligne des yeux.
+      async function runLiveness() {
+        $("#capture").disabled = true; $("#next2").disabled = true;
+        bar.classList.remove("hidden"); overlay.classList.remove("hidden");
+        const N = 8, frames = [];
+        for (let i = 0; i < N; i++) {
+          overlay.textContent = i < 3 ? "Regardez l'objectif…" : i < 6 ? "👁️ Clignez des yeux" : "Tournez un peu la tête";
+          fill.style.width = Math.round(((i + 1) / N) * 100) + "%";
+          frames.push(grab());
+          await sleep(420);
+        }
+        overlay.textContent = "Analyse…";
+        // La dernière image nette sert de selfie de référence.
+        const selfie = frames[3] || frames[frames.length - 1];
+        state.frames = frames;
+        try {
+          const r = await fetch("/api/kyc/liveness", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ frames }) });
+          const j = await r.json();
+          state.liveness = j && j.available ? { live: !!j.live, blink: !!j.blink, motion: !!j.motion } : null;
+          overlay.classList.add("hidden"); bar.classList.add("hidden");
+          stream && stream.getTracks().forEach((t) => t.stop());
+          await setSelfie(selfie);
+          if (j && j.available && !j.live) {
+            msg.innerHTML = "⚠️ <strong>Présence non confirmée</strong> — on dirait une photo. Clignez des yeux et bougez légèrement, puis reprenez.";
+            $("#next2").disabled = true;
+          } else if (j && j.available && j.live) {
+            msg.innerHTML = "✅ <strong>Présence confirmée en direct</strong>" + (j.blink ? " · clignement détecté" : "") + (j.motion ? " · mouvement détecté" : "");
+            $("#next2").disabled = state.faceDetected === false;
+          } else {
+            msg.textContent = state.faceDetected === false ? "⚠️ Aucun visage détecté — recadrez." : "Photo prise ✓";
+            $("#next2").disabled = state.faceDetected === false;
+          }
+        } catch (e) {
+          overlay.classList.add("hidden"); bar.classList.add("hidden");
+          stream && stream.getTracks().forEach((t) => t.stop());
+          await setSelfie(selfie);
+          msg.textContent = "Photo prise ✓ (vérification de vivacité indisponible)";
+          $("#next2").disabled = state.faceDetected === false;
+        }
+        $("#capture").disabled = false;
+      }
+
+      // Capture simple (fallback si vivacité indisponible / caméra non sécurisée gérée ailleurs).
+      async function simpleShot() {
+        const url = grab(); stream && stream.getTracks().forEach((t) => t.stop());
+        await setSelfie(url);
+        msg.textContent = state.faceDetected === true ? "✅ Visage détecté" : state.faceDetected === false ? "⚠️ Aucun visage détecté — recadrez." : "Photo prise ✓";
+        $("#next2").disabled = state.faceDetected === false;
+      }
+
+      $("#capture") && $("#capture").addEventListener("click", () => { LIVENESS ? runLiveness() : simpleShot(); });
+
       $("#retake") && $("#retake").addEventListener("click", async () => {
-        state.selfie = ""; $("#next2").disabled = true; msg.textContent = "";
-        try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
-          video.srcObject = stream; await video.play(); video.classList.remove("hidden"); shot.classList.add("hidden");
-          $("#retake").classList.add("hidden"); $("#capture").classList.remove("hidden"); } catch (e) {}
+        state.selfie = ""; state.frames = []; state.liveness = null; $("#next2").disabled = true; msg.textContent = "";
+        try { await startCam(); $("#retake").classList.add("hidden"); $("#capture").classList.remove("hidden"); } catch (e) {}
       });
-      const sf = $("#selfieFile"); if (sf) sf.addEventListener("change", async () => { const f = sf.files[0]; if (f) setSelfie(await fileToDataURL(f, 640)); });
+
+      const sf = $("#selfieFile"); if (sf) sf.addEventListener("change", async () => { const f = sf.files[0]; if (f) { await setSelfie(await fileToDataURL(f, 640)); msg.textContent = state.faceDetected === false ? "⚠️ Aucun visage détecté — recadrez." : "Photo importée ✓"; $("#next2").disabled = state.faceDetected === false; } });
       $("#next2").addEventListener("click", () => { $("#revId").src = state.idImage; $("#revSelfie").src = state.selfie; showStep(3); });
     })();
 
@@ -172,11 +233,12 @@
       $("#submit").disabled = true; $("#result").innerHTML = `<p class="text-sm text-slate-500">Analyse en cours…</p>`;
       try {
         const r = await fetch("/api/kyc/submit", { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ vendorId: ctx.vendorId, vendorName: ctx.vendorName, storeId: ctx.storeId, idType: state.idType, idNumber: state.idNumber, idImage: state.idImage, selfie: state.selfie, faceDetected: state.faceDetected === true, consent: true }) });
+          body: JSON.stringify({ vendorId: ctx.vendorId, vendorName: ctx.vendorName, storeId: ctx.storeId, idType: state.idType, idNumber: state.idNumber, idImage: state.idImage, selfie: state.selfie, frames: state.frames, faceDetected: state.faceDetected === true, consent: true }) });
         const j = await r.json();
         if (!j.ok) { $("#result").innerHTML = `<div class="rounded-lg bg-red-100 text-red-700 p-3 text-sm">${j.error || "Échec."}</div>`; $("#submit").disabled = false; return; }
         let bio = "";
         if (j.faceAvailable) bio = j.match ? `<div class="mt-2 pill bg-accent-soft text-accent">✅ Visages concordants (score ${j.score})</div>` : `<div class="mt-2 pill bg-red-100 text-red-700">⚠️ Visages non concordants (score ${j.score}) — un admin vérifiera</div>`;
+        if (j.liveness && j.liveness.available) bio += j.liveness.live ? `<div class="mt-2 pill bg-accent-soft text-accent">🎥 Présence en direct confirmée</div>` : `<div class="mt-2 pill bg-red-100 text-red-700">⚠️ Vivacité non confirmée — un admin vérifiera</div>`;
         $("#result").innerHTML = `<div class="rounded-lg bg-accent-soft text-accent p-3 text-sm">✅ Vérification envoyée ! Un administrateur la validera.${bio}</div>
           <a href="/" class="btn btn-ghost mt-3">Retour à la marketplace</a>`;
       } catch (e) { $("#result").innerHTML = `<div class="rounded-lg bg-red-100 text-red-700 p-3 text-sm">Erreur réseau.</div>`; $("#submit").disabled = false; }

@@ -60,6 +60,13 @@
       return it.match ? `<span class="pill bg-accent-soft text-accent">✅ Visages concordants · ${it.score}</span>`
                       : `<span class="pill bg-red-100 text-red-700">⚠️ Non concordants · ${it.score}</span>`;
     }
+    function liveBadge(it) {
+      const lv = it.liveness;
+      if (!lv || !lv.available) return "";
+      return lv.live
+        ? `<span class="pill bg-accent-soft text-accent">🎥 Présence en direct${lv.blink ? " · clignement" : ""}${lv.motion ? " · mouvement" : ""}</span>`
+        : `<span class="pill bg-red-100 text-red-700">🚫 Vivacité non confirmée (photo ?)</span>`;
+    }
     function card(it) {
       const img = (u, cap) => `<figure class="m-0"><figcaption class="text-xs font-bold text-slate-500 mb-1">${cap}</figcaption>
         <img src="${u}?token=${encodeURIComponent(TOKEN)}" class="w-full aspect-square object-cover rounded-lg border border-slate-200 cursor-zoom-in" onclick="window.open(this.src)" alt="" /></figure>`;
@@ -71,7 +78,7 @@
         <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
           <div><strong>${it.vendorName || it.vendorId}</strong>
             <div class="text-xs text-slate-500">${it.idType || "Pièce"}${it.idNumber ? " · N° " + it.idNumber : ""} · ${new Date(it.createdAt).toLocaleString("fr-FR")}</div></div>
-          ${badge(it)}
+          <div class="flex flex-wrap gap-1.5">${badge(it)}${liveBadge(it)}</div>
         </div>
         <div class="grid grid-cols-2 gap-3">${img(it.idImageUrl, "Pièce d'identité")}${img(it.selfieUrl, "Selfie (live)")}</div>
         <div class="text-xs text-slate-500 mt-2">Visage détecté (client) : ${it.faceDetected ? "oui" : "non"}${it.distance != null ? " · distance biométrique : " + it.distance : ""}</div>
