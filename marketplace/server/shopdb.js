@@ -62,6 +62,10 @@ function init() {
       status TEXT DEFAULT 'visible', createdAt INTEGER
     );
     CREATE INDEX IF NOT EXISTS idx_reviews_target ON reviews(targetType, targetId);
+    CREATE TABLE IF NOT EXISTS documents (
+      collection TEXT, userId TEXT, data TEXT, updatedAt INTEGER,
+      PRIMARY KEY (collection, userId)
+    );
     CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(userId);
     CREATE INDEX IF NOT EXISTS idx_items_order ON order_items(orderId);
     CREATE INDEX IF NOT EXISTS idx_products_cat ON products(category);
@@ -225,6 +229,7 @@ function stats() {
     orders: db.prepare("SELECT COUNT(*) c FROM orders").get().c,
     revenue: db.prepare("SELECT COALESCE(SUM(total),0) s FROM orders WHERE status IN ('confirmed','shipped','delivered')").get().s,
     reviews: db.prepare("SELECT COUNT(*) c FROM reviews").get().c,
+    documents: db.prepare("SELECT COUNT(*) c FROM documents").get().c,
   };
 }
 
@@ -261,8 +266,39 @@ function setReviewStatus(id, status) {
   return db.prepare("SELECT * FROM reviews WHERE id=?").get(id) || null;
 }
 
+/* ---------- Collections génériques (favoris, souhaits, coupons, …) -------- */
+// Collections autorisées au mirroring (une par ligne, propre à chaque compte).
+const SYNC_COLLECTIONS = ["favorites", "subs", "wishlists", "notifs", "messages", "coupons", "questions", "alerts", "stores", "expenses", "reports"];
+function isSyncCollection(c) { return SYNC_COLLECTIONS.includes(c); }
+
+function putDoc(userId, collection, data) {
+  if (!userId || !isSyncCollection(collection)) return { error: "cible invalide" };
+  db.prepare("INSERT INTO documents (collection,userId,data,updatedAt) VALUES (?,?,?,?) ON CONFLICT(collection,userId) DO UPDATE SET data=excluded.data,updatedAt=excluded.updatedAt")
+    .run(collection, userId, JSON.stringify(data == null ? null : data), now());
+  return { ok: true };
+}
+function getDoc(userId, collection) {
+  const r = db.prepare("SELECT data FROM documents WHERE collection=? AND userId=?").get(collection, userId);
+  if (!r) return null;
+  try { return JSON.parse(r.data); } catch (e) { return null; }
+}
+function getAllDocs(userId) {
+  const out = {};
+  for (const r of db.prepare("SELECT collection,data FROM documents WHERE userId=?").all(userId)) {
+    try { out[r.collection] = JSON.parse(r.data); } catch (e) {}
+  }
+  return out;
+}
+function listCollections() {
+  return db.prepare("SELECT collection, COUNT(*) accounts, COALESCE(SUM(LENGTH(data)),0) bytes, MAX(updatedAt) updatedAt FROM documents GROUP BY collection ORDER BY collection").all();
+}
+function listDocs(collection) {
+  return db.prepare("SELECT userId, LENGTH(data) bytes, updatedAt FROM documents WHERE collection=? ORDER BY updatedAt DESC").all(collection);
+}
+
 module.exports = {
-  init, available, uid,
+  init, available, uid, isSyncCollection, SYNC_COLLECTIONS,
+  putDoc, getDoc, getAllDocs, listCollections, listDocs,
   createUser, authUser, getUser, publicUser,
   createSession, userIdForToken, destroySession,
   upsertProduct, listProducts, getProduct, countProducts,

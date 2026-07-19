@@ -12,6 +12,13 @@ window.MP = window.MP || {};
   // Préfixe des clés localStorage pour éviter les collisions.
   const PREFIX = "marchesci_";
 
+  // Collections mirrorées vers la base serveur (si backend présent + compte connecté).
+  // Un seul point de synchronisation : toute écriture passe par set().
+  const SYNC_KEYS = new Set([
+    "favorites", "subs", "wishlists", "notifs", "messages",
+    "coupons", "questions", "alerts", "stores", "expenses", "reports",
+  ]);
+
   // Clés de stockage utilisées dans toute l'application.
   const KEYS = {
     users: "users",
@@ -67,6 +74,10 @@ window.MP = window.MP || {};
   function set(key, value) {
     try {
       localStorage.setItem(PREFIX + key, JSON.stringify(value));
+      // Mirroring serveur (non bloquant, sans effet en file:// ou hors connexion).
+      if (SYNC_KEYS.has(key) && window.MP.Api && window.MP.Api.syncCollection) {
+        window.MP.Api.syncCollection(key, value);
+      }
       return true;
     } catch (e) {
       console.error("DB.set échec pour", key, e);

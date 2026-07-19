@@ -102,7 +102,22 @@ module.exports = function createShopRouter(shopdb, adminToken) {
     res.json({ ok: true, items: shopdb.listReviews({ targetType, targetId, status: "visible" }), rating: targetId ? shopdb.ratingFor(targetType || "product", targetId) : null });
   });
 
+  /* ------------------- Collections génériques (données client) ------------------- */
+  // Mirroring des collections localStorage (favoris, souhaits, coupons, …) par compte.
+  router.get("/data", auth, (req, res) => res.json({ ok: true, collections: shopdb.getAllDocs(req.userId) }));
+  router.get("/data/:collection", auth, (req, res) => {
+    if (!shopdb.isSyncCollection(req.params.collection)) return res.status(400).json({ ok: false, error: "Collection inconnue." });
+    res.json({ ok: true, data: shopdb.getDoc(req.userId, req.params.collection) });
+  });
+  router.put("/data/:collection", auth, (req, res) => {
+    const r = shopdb.putDoc(req.userId, req.params.collection, (req.body || {}).data);
+    if (r.error) return res.status(400).json({ ok: false, error: r.error });
+    res.json({ ok: true });
+  });
+
   /* ------------------------------- Admin ------------------------------- */
+  router.get("/admin/data", requireAdmin, (req, res) => res.json({ ok: true, collections: shopdb.listCollections() }));
+  router.get("/admin/data/:collection", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.listDocs(req.params.collection) }));
   router.get("/admin/reviews", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.listReviews({ status: req.query.status }) }));
   router.post("/admin/reviews/:id/status", requireAdmin, (req, res) => {
     const r = shopdb.setReviewStatus(req.params.id, (req.body || {}).status);

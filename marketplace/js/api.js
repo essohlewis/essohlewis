@@ -51,6 +51,7 @@ window.MP = window.MP || {};
         const j = await (await fetch(b + "/health", { cache: "no-store" })).json();
         API.enabled = !!(j && j.ok && j.db);
         API.productCount = (j && j.products) || 0;
+        if (API.enabled && token()) { try { await pullCollections(); } catch (e) {} }
       } catch (e) { API.enabled = false; }
     })();
     return API.ready;
@@ -81,11 +82,13 @@ window.MP = window.MP || {};
   function syncRegister(user, password) {
     if (!API.enabled || !user || !password) return authOp;
     authOp = _register(user, password);
+    authOp.then(() => pullCollections());   // restaure les collections du compte
     return authOp;
   }
   function syncLogin(email, password) {
     if (!API.enabled) return authOp;
     authOp = _login(email, password);
+    authOp.then(() => pullCollections());
     return authOp;
   }
   function logout() { if (API.enabled) { post("/logout", {}).catch(() => {}); } setToken(""); authOp = Promise.resolve(); }
@@ -128,6 +131,34 @@ window.MP = window.MP || {};
     } catch (e) {}
   }
 
+  /* --------------- Collections génériques (favoris, souhaits, coupons, …) --------- */
+  // Mirroring d'une collection localStorage vers la base (par compte connecté).
+  async function syncCollection(collection, value) {
+    if (!API.enabled) return;
+    try {
+      await authOp;
+      if (!token()) return;                 // réservé aux comptes connectés
+      await put("/data/" + encodeURIComponent(collection), { data: value });
+    } catch (e) {}
+  }
+  // Restaure depuis la base les collections localement absentes (non destructif).
+  // Appelé une fois la session établie (n'attend pas authOp, pour éviter tout blocage).
+  async function pullCollections() {
+    if (!API.enabled || !token()) return {};
+    try {
+      const j = await get("/data");
+      const cols = (j && j.collections) || {};
+      const DB = window.MP.DB;
+      if (DB) Object.keys(cols).forEach((k) => {
+        const local = DB.get(k, null);
+        const empty = local == null || (Array.isArray(local) && !local.length) ||
+          (typeof local === "object" && !Array.isArray(local) && !Object.keys(local).length);
+        if (empty && cols[k] != null) DB.set(k, cols[k]);   // remplit seulement si vide
+      });
+      return cols;
+    } catch (e) { return {}; }
+  }
+
   /* --------------------------- Consultations (lecture) ---------------------------- */
   async function reviewsFor(targetType, targetId) {
     if (!API.enabled) return { items: [], rating: null };
@@ -152,6 +183,8 @@ window.MP = window.MP || {};
   API.logout = logout;
   API.syncOrders = syncOrders;
   API.syncReview = syncReview;
+  API.syncCollection = syncCollection;
+  API.pullCollections = pullCollections;
   API.reviewsFor = reviewsFor;
   API.products = products;      // fonction (le nombre est dans API.productCount)
   API.myOrders = myOrders;
