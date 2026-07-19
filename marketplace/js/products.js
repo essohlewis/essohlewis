@@ -22,7 +22,10 @@ window.MP = window.MP || {};
 
   /** Tous les articles publiés (fil d'accueil). */
   function published() {
-    return DB.all(K).filter((p) => p.status === "published");
+    // Exclut les articles des boutiques suspendues (modération admin).
+    const suspended = {};
+    DB.all(DB.KEYS.stores).forEach((s) => { if (s.suspended) suspended[s.id] = true; });
+    return DB.all(K).filter((p) => p.status === "published" && !suspended[p.storeId]);
   }
 
   /**

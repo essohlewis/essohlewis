@@ -67,6 +67,7 @@ window.MP = window.MP || {};
     // Vérifie la disponibilité de chaque boutique (mode fermé / zone desservie).
     for (const g of groups) {
       const store = window.MP.Store.get(g.store.id);
+      if (store && store.suspended) return { ok: false, error: `La boutique « ${store.name} » est momentanément indisponible.` };
       if (store && store.closed) return { ok: false, error: `La boutique « ${store.name} » est actuellement fermée.` };
       if (store && !window.MP.Store.servesCommune(store, delivery.commune)) {
         return { ok: false, error: `« ${store.name} » ne livre pas encore à ${delivery.commune}.` };

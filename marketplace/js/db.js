@@ -33,6 +33,7 @@ window.MP = window.MP || {};
     savedSearches: "savedsearch",// [ {id, userId, label, filters, createdAt} ]
     savedItems: "saveditems",    // { key: [ {productId, variant, savedAt} ] } — « gardé pour plus tard »
     wishlists: "wishlists",      // { userId: [ {id, name, items:[productId], createdAt} ] } — listes de souhaits
+    reports: "reports",          // [ {id, type:"product", targetId, reason, byUserId, status, createdAt} ] — modération
     session: "session",          // { userId }
     theme: "theme",              // "light" | "dark"
     seeded: "seeded",            // bool

@@ -201,8 +201,14 @@ L'espace vendeur est un **véritable back-office distinct de l'espace client** :
 - **Mini-CRM clients** : historique, total dépensé, badge « fidèle », contact WhatsApp.
 - **Sauvegarde / restauration** complète des données (JSON).
 
-### Admin
-- Console de modération : statistiques globales, suppression de boutiques/articles, réinitialisation des données de démo.
+### Admin — console d'administration (à onglets)
+Console complète accessible via `#/admin` (compte admin), organisée en 6 onglets :
+- **Vue d'ensemble** : indicateurs clés (boutiques, articles, utilisateurs, volume commandé), **croissance 7 jours**, file de modération, **répartition par catégorie** et **top boutiques par CA**.
+- **Modération** : file centralisée des **articles signalés**, **avis signalés** et **litiges commandes** — retirer le contenu, supprimer un avis, marquer un litige résolu, ou ignorer.
+- **Utilisateurs** : recherche, **changement de rôle** (client/vendeur/admin), **suspension/réactivation** (un compte suspendu ne peut plus se connecter), suppression — avec garde-fous sur son propre compte.
+- **Boutiques** : **badge « Vérifiée »**, **suspension/réactivation** (masque la boutique et bloque les commandes), suppression.
+- **Commandes** : vue globale de toutes les commandes avec repérage des **litiges**.
+- **Données** : export/restauration d'une **sauvegarde JSON complète** et réinitialisation des données de démonstration.
 
 ### Notifications (client-side)
 - Cloche avec badge de non-lus.

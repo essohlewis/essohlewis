@@ -200,8 +200,10 @@
       onMount(m, close) {
         m.querySelector("#rpGo").addEventListener("click", () => {
           const reason = m.querySelector("#rpReason").value + (m.querySelector("#rpNote").value.trim() ? " — " + m.querySelector("#rpNote").value.trim() : "");
-          // Notifie les administrateurs.
-          DB.all(DB.KEYS.users).filter((u) => u.role === "admin").forEach((a) => Notifications.push(a.id, { type: "info", message: `⚑ Article signalé : « ${p.title} » (${reason}).`, link: "#/product/" + p.id }));
+          const me = Auth.current();
+          // Enregistre le signalement (file de modération) + notifie les administrateurs.
+          DB.insert(DB.KEYS.reports, { id: DB.uid("rep"), type: "product", targetId: p.id, storeId: p.storeId, title: p.title, reason, byUserId: me ? me.id : "guest", byName: me ? me.name : "Invité", status: "pending", createdAt: Date.now() });
+          DB.all(DB.KEYS.users).filter((u) => u.role === "admin").forEach((a) => Notifications.push(a.id, { type: "info", message: `⚑ Article signalé : « ${p.title} » (${reason}).`, link: "#/admin?tab=moderation" }));
           UI.toast("Merci, votre signalement a été transmis à la modération.", "success"); close();
         });
       },
@@ -1622,7 +1624,7 @@
         <div class="store-hero-body">
           <img class="store-logo" src="${UI.safeImg(store.logo, store.name)}" alt="${UI.esc(store.name)}" />
           <div class="store-hero-info">
-            <h1>${UI.esc(store.name)}</h1>
+            <h1>${UI.esc(store.name)}${store.verified ? ` <span class="verified-badge" title="Boutique vérifiée par Marché CI">✔️ Vérifiée</span>` : ""}</h1>
             ${store.slogan ? `<div class="store-slogan">“${UI.esc(store.slogan)}”</div>` : ""}
             <div class="store-hero-meta">
               <span>📍 ${UI.esc(store.commune)}</span>
@@ -1643,6 +1645,7 @@
           </div>
         </div>
       </div>
+      ${store.suspended ? `<div class="store-ribbon closed">⛔ Boutique suspendue par la modération. Les commandes sont indisponibles.</div>` : ""}
       ${store.closed ? `<div class="store-ribbon closed">🔒 Boutique momentanément fermée${store.closedMsg ? " — " + UI.esc(store.closedMsg) : ""}. Les commandes sont suspendues.</div>` : ""}
       ${store.promoBanner ? `<div class="store-ribbon promo">📣 ${UI.esc(store.promoBanner)}</div>` : ""}
       <p class="text-muted" style="max-width:720px">${UI.esc(store.description)}</p>
@@ -4853,62 +4856,257 @@
   /* ============================================================
      ADMIN : Console de modération
      ============================================================ */
-  function viewAdmin() {
+  /** Éléments en attente de modération (signalements, avis signalés, litiges). */
+  function moderationQueue() {
+    const reports = DB.all(DB.KEYS.reports).filter((r) => r.status === "pending");
+    const reportedReviews = DB.all(DB.KEYS.reviews).filter((r) => (r.reportedBy || []).length);
+    const litiges = DB.all(DB.KEYS.orders).filter((o) => o.problem && !o.problem.resolved);
+    return { reports, reportedReviews, litiges, total: reports.length + reportedReviews.length + litiges.length };
+  }
+
+  function viewAdmin(params) {
     if (!requireAuth()) return;
     if (!Auth.isAdmin()) { UI.toast("Accès réservé à l'administrateur.", "error"); Router.go("#/"); return; }
-    const stores = Store.all();
-    const products = Products.all();
-    const orders = DB.all(DB.KEYS.orders);
-    const users = DB.all(DB.KEYS.users);
-    const revenue = orders.reduce((s, o) => s + o.total, 0);
-
+    const q = (params && params.query) || {};
+    const tab = ["overview", "moderation", "users", "stores", "orders", "data"].includes(q.tab) ? q.tab : "overview";
+    const modCount = moderationQueue().total;
+    const tabs = [
+      ["overview", "Vue d'ensemble"], ["moderation", "Modération" + (modCount ? ` (${modCount})` : "")],
+      ["users", "Utilisateurs"], ["stores", "Boutiques"], ["orders", "Commandes"], ["data", "Données"],
+    ];
+    const body = { overview: adminOverview, moderation: adminModeration, users: adminUsers, stores: adminStores, orders: adminOrders, data: adminData }[tab]();
     layout(`
-      <div class="page-head"><div><div class="page-title">Administration</div>
-        <div class="page-sub">Vue d'ensemble de la marketplace</div></div>
-        <button class="btn btn-ghost" id="reseedBtn">Réinitialiser les données démo</button></div>
+      <div class="page-head"><div><div class="page-title">🛡️ Administration</div>
+        <div class="page-sub">Console de gestion de la marketplace</div></div></div>
+      <div class="filter-bar admin-tabs">${tabs.map(([k, l]) => `<a href="#/admin${k === "overview" ? "" : "?tab=" + k}" class="chip ${tab === k ? "active" : ""}">${l}</a>`).join("")}</div>
+      ${body}`);
+    ({ overview: wireAdminOverview, moderation: wireAdminModeration, users: wireAdminUsers, stores: wireAdminStores, orders: wireAdminOrders, data: wireAdminData }[tab])();
+  }
+
+  /* ---------- Onglet : Vue d'ensemble ---------- */
+  function adminOverview() {
+    const stores = Store.all(), products = Products.all(), orders = DB.all(DB.KEYS.orders), users = DB.all(DB.KEYS.users);
+    const revenue = orders.filter((o) => o.status !== "annulee").reduce((s, o) => s + o.total, 0);
+    const DAY = 86400000, now = Date.now();
+    const newUsers7 = users.filter((u) => now - (u.createdAt || 0) < 7 * DAY).length;
+    const newOrders7 = orders.filter((o) => now - o.createdAt < 7 * DAY).length;
+    // Répartition par catégorie.
+    const byCat = {}; products.forEach((p) => { byCat[p.category] = (byCat[p.category] || 0) + 1; });
+    const cats = UI.CATEGORIES.map((c) => ({ c, n: byCat[c.id] || 0 })).filter((x) => x.n).sort((a, b) => b.n - a.n);
+    const maxCat = Math.max(1, ...cats.map((x) => x.n));
+    // Top boutiques par CA.
+    const topStores = stores.slice().sort((a, b) => (b.revenueSim || 0) - (a.revenueSim || 0)).slice(0, 5);
+    return `
       <div class="stat-grid">
         ${statCard("ic-orange", "🏪", stores.length, "Boutiques")}
         ${statCard("ic-blue", "📦", products.length, "Articles")}
         ${statCard("ic-purple", "👤", users.length, "Utilisateurs")}
         ${statCard("ic-green", "💰", UI.fcfa(revenue), "Volume commandé")}
       </div>
+      <div class="stat-grid mt-16">
+        ${statCard("ic-blue", "🧾", orders.length, "Commandes totales")}
+        ${statCard("ic-green", "📈", "+" + newUsers7, "Nouveaux users (7j)")}
+        ${statCard("ic-orange", "🛒", "+" + newOrders7, "Commandes (7j)")}
+        ${statCard(moderationQueue().total ? "ic-orange" : "ic-green", "🚩", moderationQueue().total, "À modérer")}
+      </div>
+      <div class="seller-cols mt-16">
+        <div class="card card-pad">
+          <div class="panel-head"><h3>Répartition par catégorie</h3></div>
+          ${cats.length ? cats.map((x) => `<div style="margin-bottom:10px"><div class="flex-between" style="font-size:13px"><span>${x.c.icon} ${UI.esc(x.c.label)}</span><strong>${x.n}</strong></div>
+            <div class="goal-bar" style="height:8px"><div class="goal-fill" style="width:${Math.round(x.n / maxCat * 100)}%"></div></div></div>`).join("") : `<p class="text-muted">Aucun article.</p>`}
+        </div>
+        <div class="card card-pad">
+          <div class="panel-head"><h3>Top boutiques (CA)</h3></div>
+          ${topStores.length ? `<table class="data-table"><tbody>${topStores.map((s, i) => `<tr>
+            <td>${i + 1}. <a href="#/store/${s.id}" style="font-weight:600">${UI.esc(s.name)}</a></td>
+            <td style="text-align:right"><strong>${UI.fcfa(s.revenueSim || 0)}</strong></td></tr>`).join("")}</tbody></table>` : `<p class="text-muted">Aucune boutique.</p>`}
+        </div>
+      </div>`;
+  }
+  function wireAdminOverview() {}
 
-      <div class="section-title">Boutiques</div>
-      <div class="table-wrap"><table class="data-table">
-        <thead><tr><th>Boutique</th><th>Commune</th><th>Articles</th><th>Commandes</th><th></th></tr></thead>
-        <tbody>${stores.map((s) => `<tr>
+  /* ---------- Onglet : Modération ---------- */
+  function adminModeration() {
+    const { reports, reportedReviews, litiges } = moderationQueue();
+    if (!reports.length && !reportedReviews.length && !litiges.length) {
+      return emptyState("✅", "Rien à modérer", "Aucun signalement ni litige en attente. Tout est en ordre !");
+    }
+    const section = (title, items) => items.length ? `<div class="section-title">${title} (${items.length})</div>${items.join("")}` : "";
+    const repCards = reports.map((r) => `<div class="card card-pad mt-12 mod-card">
+      <div class="flex-between wrap"><div><strong>⚑ Article signalé</strong> — <a href="#/product/${r.targetId}">${UI.esc(r.title || "article")}</a>
+        <div class="text-muted" style="font-size:12.5px">Motif : ${UI.esc(r.reason)} · par ${UI.esc(r.byName)} · ${UI.timeAgo(r.createdAt)}</div></div>
+        <div class="flex gap-8"><button class="btn btn-danger btn-sm" data-modremoveprod="${r.targetId}" data-repid="${r.id}">Retirer l'article</button>
+          <button class="btn btn-ghost btn-sm" data-repdismiss="${r.id}">Ignorer</button></div></div></div>`);
+    const revCards = reportedReviews.map((r) => `<div class="card card-pad mt-12 mod-card">
+      <div class="flex-between wrap"><div><strong>⚑ Avis signalé</strong> (${(r.reportedBy || []).length}×) — ${UI.starsHTML(r.rating)}
+        <div class="text-muted" style="font-size:12.5px">${UI.esc(r.userName)} · ${UI.timeAgo(r.createdAt)}</div>
+        ${r.comment ? `<div style="font-size:13.5px;margin-top:4px">« ${UI.esc(r.comment)} »</div>` : ""}</div>
+        <div class="flex gap-8"><button class="btn btn-danger btn-sm" data-moddelrev="${r.id}">Supprimer l'avis</button>
+          <button class="btn btn-ghost btn-sm" data-revclear="${r.id}">Ignorer</button></div></div></div>`);
+    const litCards = litiges.map((o) => `<div class="card card-pad mt-12 mod-card">
+      <div class="flex-between wrap"><div><strong>⚠️ Litige commande</strong> N° ${UI.esc(o.number)} — ${UI.esc(o.storeName)}
+        <div class="text-muted" style="font-size:12.5px">${UI.esc(o.problem.reason)} · ${UI.timeAgo(o.problem.at || o.createdAt)}</div></div>
+        <div class="flex gap-8"><button class="btn btn-primary btn-sm" data-litresolve="${o.id}">Marquer résolu</button></div></div></div>`);
+    return section("Articles signalés", repCards) + section("Avis signalés", revCards) + section("Litiges commandes", litCards);
+  }
+  function wireAdminModeration() {
+    V().querySelectorAll("[data-modremoveprod]").forEach((b) => b.addEventListener("click", async () => {
+      if (!(await UI.confirm("Retirer définitivement cet article ?", { danger: true, confirmLabel: "Retirer" }))) return;
+      Products.remove(b.getAttribute("data-modremoveprod"));
+      DB.update(DB.KEYS.reports, b.getAttribute("data-repid"), { status: "resolved" });
+      UI.toast("Article retiré.", "info"); viewAdmin({ query: { tab: "moderation" } });
+    }));
+    V().querySelectorAll("[data-repdismiss]").forEach((b) => b.addEventListener("click", () => {
+      DB.update(DB.KEYS.reports, b.getAttribute("data-repdismiss"), { status: "dismissed" });
+      UI.toast("Signalement ignoré.", "info"); viewAdmin({ query: { tab: "moderation" } });
+    }));
+    V().querySelectorAll("[data-moddelrev]").forEach((b) => b.addEventListener("click", async () => {
+      if (!(await UI.confirm("Supprimer cet avis ?", { danger: true, confirmLabel: "Supprimer" }))) return;
+      DB.removeItem(DB.KEYS.reviews, b.getAttribute("data-moddelrev"));
+      UI.toast("Avis supprimé.", "info"); viewAdmin({ query: { tab: "moderation" } });
+    }));
+    V().querySelectorAll("[data-revclear]").forEach((b) => b.addEventListener("click", () => {
+      DB.update(DB.KEYS.reviews, b.getAttribute("data-revclear"), { reportedBy: [] });
+      UI.toast("Signalement ignoré.", "info"); viewAdmin({ query: { tab: "moderation" } });
+    }));
+    V().querySelectorAll("[data-litresolve]").forEach((b) => b.addEventListener("click", () => {
+      const o = Orders.get(b.getAttribute("data-litresolve"));
+      DB.update(DB.KEYS.orders, o.id, { problem: Object.assign({}, o.problem, { resolved: true }) });
+      Notifications.push(o.buyerId, { type: "order_status", message: `✅ Le litige sur votre commande ${o.number} a été traité par la modération.`, link: "#/orders" });
+      UI.toast("Litige marqué résolu.", "success"); viewAdmin({ query: { tab: "moderation" } });
+    }));
+  }
+
+  /* ---------- Onglet : Utilisateurs ---------- */
+  function adminUsers() {
+    const users = DB.all(DB.KEYS.users).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    const roleLabel = { admin: "Admin", vendor: "Vendeur", client: "Client" };
+    return `<div class="admin-toolbar"><input type="search" id="admUserSearch" class="ss-search" placeholder="Rechercher (nom, e-mail)…" /></div>
+      <div class="table-wrap"><table class="data-table" id="admUsersTable">
+        <thead><tr><th>Utilisateur</th><th>Rôle</th><th>Statut</th><th>Inscrit</th><th style="text-align:right">Actions</th></tr></thead>
+        <tbody>${users.map((u) => `<tr data-urow="${UI.esc((u.name + " " + u.email).toLowerCase())}">
+          <td><strong>${UI.esc(u.name)}</strong><div class="text-muted" style="font-size:12px">${UI.esc(u.email)}</div></td>
+          <td><span class="tag" style="position:static">${roleLabel[u.role] || u.role}</span></td>
+          <td>${u.suspended ? `<span class="status annulee">Suspendu</span>` : `<span class="status livree">Actif</span>`}</td>
+          <td class="text-muted" style="font-size:12.5px">${u.createdAt ? UI.dateFR(u.createdAt) : "—"}</td>
+          <td style="text-align:right"><div class="row-actions">
+            <select class="mini-select" data-urole="${u.id}"><option value="client" ${u.role === "client" ? "selected" : ""}>Client</option><option value="vendor" ${u.role === "vendor" ? "selected" : ""}>Vendeur</option><option value="admin" ${u.role === "admin" ? "selected" : ""}>Admin</option></select>
+            <button class="btn btn-ghost btn-sm" data-ususpend="${u.id}">${u.suspended ? "Réactiver" : "Suspendre"}</button>
+            <button class="icon-action danger" data-udel="${u.id}" title="Supprimer">${SICON.trash}</button>
+          </div></td>
+        </tr>`).join("")}</tbody>
+      </table></div>`;
+  }
+  function wireAdminUsers() {
+    const me = Auth.current();
+    const search = document.getElementById("admUserSearch");
+    if (search) search.addEventListener("input", () => {
+      const q = search.value.toLowerCase().trim();
+      V().querySelectorAll("[data-urow]").forEach((r) => { r.style.display = r.getAttribute("data-urow").includes(q) ? "" : "none"; });
+    });
+    V().querySelectorAll("[data-urole]").forEach((sel) => sel.addEventListener("change", () => {
+      const id = sel.getAttribute("data-urole");
+      if (id === me.id && sel.value !== "admin") { UI.toast("Vous ne pouvez pas retirer votre propre rôle admin.", "error"); sel.value = "admin"; return; }
+      DB.update(DB.KEYS.users, id, { role: sel.value });
+      UI.toast("Rôle mis à jour ✓", "success");
+    }));
+    V().querySelectorAll("[data-ususpend]").forEach((b) => b.addEventListener("click", () => {
+      const id = b.getAttribute("data-ususpend");
+      if (id === me.id) { UI.toast("Vous ne pouvez pas vous suspendre vous-même.", "error"); return; }
+      const u = DB.find(DB.KEYS.users, id);
+      DB.update(DB.KEYS.users, id, { suspended: !u.suspended });
+      UI.toast(!u.suspended ? "Compte suspendu." : "Compte réactivé.", "info"); viewAdmin({ query: { tab: "users" } });
+    }));
+    V().querySelectorAll("[data-udel]").forEach((b) => b.addEventListener("click", async () => {
+      const id = b.getAttribute("data-udel");
+      if (id === me.id) { UI.toast("Vous ne pouvez pas supprimer votre propre compte ici.", "error"); return; }
+      if (!(await UI.confirm("Supprimer ce compte utilisateur ?", { danger: true, confirmLabel: "Supprimer" }))) return;
+      DB.removeItem(DB.KEYS.users, id);
+      UI.toast("Compte supprimé.", "info"); viewAdmin({ query: { tab: "users" } });
+    }));
+  }
+
+  /* ---------- Onglet : Boutiques ---------- */
+  function adminStores() {
+    const stores = Store.all().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    return `<div class="table-wrap"><table class="data-table">
+      <thead><tr><th>Boutique</th><th>Propriétaire</th><th>Articles</th><th>Commandes</th><th>Statut</th><th style="text-align:right">Actions</th></tr></thead>
+      <tbody>${stores.map((s) => {
+        const owner = DB.find(DB.KEYS.users, s.ownerId);
+        return `<tr>
           <td><div class="flex gap-8" style="align-items:center"><img src="${UI.safeImg(s.logo, s.name)}" style="width:36px;height:36px;border-radius:8px" alt=""/>
-            <a href="#/store/${s.id}" style="font-weight:600">${UI.esc(s.name)}</a></div></td>
-          <td>${UI.esc(s.commune)}</td>
+            <a href="#/store/${s.id}" style="font-weight:600">${UI.esc(s.name)}${s.verified ? ` <span class="verified-badge">✔️</span>` : ""}</a></div></td>
+          <td class="text-muted" style="font-size:12.5px">${owner ? UI.esc(owner.name) : "—"}</td>
           <td>${Products.byStore(s.id, true).length}</td>
           <td>${Orders.byStore(s.id).length}</td>
-          <td><button class="btn btn-danger btn-sm" data-delstore="${s.id}">Supprimer</button></td>
-        </tr>`).join("")}</tbody>
-      </table></div>
-
-      <div class="section-title">Derniers articles</div>
-      <div class="table-wrap"><table class="data-table">
-        <thead><tr><th>Article</th><th>Boutique</th><th>Prix</th><th>Statut</th><th></th></tr></thead>
-        <tbody>${products.slice().sort((a, b) => b.createdAt - a.createdAt).slice(0, 12).map((p) => {
-          const st = Store.get(p.storeId);
-          return `<tr><td><a href="#/product/${p.id}" style="font-weight:600">${UI.esc(p.title)}</a></td>
-            <td>${UI.esc(st ? st.name : "—")}</td><td>${UI.fcfa(Products.effectivePrice(p))}</td>
-            <td><span class="status ${p.status}">${statusLabel(p.status)}</span></td>
-            <td><button class="btn btn-danger btn-sm" data-delprod="${p.id}">Retirer</button></td></tr>`;
-        }).join("")}</tbody>
-      </table></div>`);
-
-    V().querySelectorAll("[data-delstore]").forEach((b) => b.addEventListener("click", async () => {
-      if (await UI.confirm("Supprimer cette boutique et tous ses articles ?", { danger: true, confirmLabel: "Supprimer" })) {
-        Store.remove(b.getAttribute("data-delstore")); UI.toast("Boutique supprimée.", "info"); viewAdmin();
-      }
+          <td>${s.suspended ? `<span class="status annulee">Suspendue</span>` : `<span class="status livree">Active</span>`}</td>
+          <td style="text-align:right"><div class="row-actions">
+            <button class="btn btn-ghost btn-sm" data-sverify="${s.id}">${s.verified ? "Retirer badge" : "✔️ Vérifier"}</button>
+            <button class="btn btn-ghost btn-sm" data-ssuspend="${s.id}">${s.suspended ? "Réactiver" : "Suspendre"}</button>
+            <button class="icon-action danger" data-sdel="${s.id}" title="Supprimer">${SICON.trash}</button>
+          </div></td>
+        </tr>`;
+      }).join("")}</tbody>
+    </table></div>`;
+  }
+  function wireAdminStores() {
+    V().querySelectorAll("[data-sverify]").forEach((b) => b.addEventListener("click", () => {
+      const s = Store.get(b.getAttribute("data-sverify"));
+      DB.update(DB.KEYS.stores, s.id, { verified: !s.verified });
+      UI.toast(!s.verified ? "Boutique vérifiée ✔️" : "Badge retiré.", "success"); viewAdmin({ query: { tab: "stores" } });
     }));
-    V().querySelectorAll("[data-delprod]").forEach((b) => b.addEventListener("click", async () => {
-      if (await UI.confirm("Retirer cet article ?", { danger: true, confirmLabel: "Retirer" })) {
-        Products.remove(b.getAttribute("data-delprod")); UI.toast("Article retiré.", "info"); viewAdmin();
-      }
+    V().querySelectorAll("[data-ssuspend]").forEach((b) => b.addEventListener("click", () => {
+      const s = Store.get(b.getAttribute("data-ssuspend"));
+      DB.update(DB.KEYS.stores, s.id, { suspended: !s.suspended });
+      if (!s.suspended) Notifications.push(s.ownerId, { type: "info", message: `⛔ Votre boutique « ${s.name} » a été suspendue par la modération.`, link: "#/seller/dashboard" });
+      UI.toast(!s.suspended ? "Boutique suspendue." : "Boutique réactivée.", "info"); viewAdmin({ query: { tab: "stores" } });
     }));
-    document.getElementById("reseedBtn").addEventListener("click", async () => {
+    V().querySelectorAll("[data-sdel]").forEach((b) => b.addEventListener("click", async () => {
+      if (!(await UI.confirm("Supprimer cette boutique et tous ses articles ?", { danger: true, confirmLabel: "Supprimer" }))) return;
+      Store.remove(b.getAttribute("data-sdel")); UI.toast("Boutique supprimée.", "info"); viewAdmin({ query: { tab: "stores" } });
+    }));
+  }
+
+  /* ---------- Onglet : Commandes ---------- */
+  function adminOrders(params) {
+    const q = (params && params.query) || {};
+    const orders = DB.all(DB.KEYS.orders).sort((a, b) => b.createdAt - a.createdAt);
+    return `<div class="table-wrap"><table class="data-table">
+      <thead><tr><th>N°</th><th>Boutique</th><th>Client</th><th>Total</th><th>Statut</th><th>Date</th></tr></thead>
+      <tbody>${orders.length ? orders.slice(0, 100).map((o) => `<tr>
+        <td><strong>${UI.esc(o.number)}</strong></td>
+        <td><a href="#/store/${o.storeId}">${UI.esc(o.storeName)}</a></td>
+        <td class="text-muted" style="font-size:12.5px">${UI.esc(o.buyerName)}</td>
+        <td>${UI.fcfa(o.total)}</td>
+        <td><span class="status ${o.status}">${Orders.STATUS[o.status]}</span>${o.problem && !o.problem.resolved ? ` <span class="tag" style="position:static;background:var(--danger);color:#fff">Litige</span>` : ""}</td>
+        <td class="text-muted" style="font-size:12.5px">${UI.dateFR(o.createdAt)}</td>
+      </tr>`).join("") : `<tr><td colspan="6" class="text-muted" style="text-align:center;padding:20px">Aucune commande.</td></tr>`}</tbody>
+    </table></div>`;
+  }
+  function wireAdminOrders() {}
+
+  /* ---------- Onglet : Données ---------- */
+  function adminData() {
+    return `<div class="card card-pad" style="max-width:640px">
+      <h3 style="margin:0 0 6px">💾 Sauvegarde & restauration</h3>
+      <p class="text-muted" style="font-size:13.5px;margin:0 0 14px">Exportez ou restaurez l'intégralité des données locales de la marketplace (JSON).</p>
+      <div class="flex gap-8 wrap">
+        <button class="btn btn-primary" id="admBackup">${SICON.download} Exporter une sauvegarde</button>
+        <button class="btn btn-ghost" id="admRestore">Restaurer une sauvegarde</button>
+      </div>
+      <div class="divider" style="margin:18px 0"></div>
+      <h3 style="margin:0 0 6px;color:var(--danger)">Zone dangereuse</h3>
+      <p class="text-muted" style="font-size:13.5px;margin:0 0 12px">Réinitialise toutes les données avec le jeu de démonstration. Irréversible.</p>
+      <button class="btn btn-danger" id="admReseed">Réinitialiser les données démo</button>
+    </div>`;
+  }
+  function wireAdminData() {
+    const bk = document.getElementById("admBackup");
+    if (bk) bk.addEventListener("click", exportBackup);
+    const rs = document.getElementById("admRestore");
+    if (rs) rs.addEventListener("click", openRestoreBackup);
+    const rd = document.getElementById("admReseed");
+    if (rd) rd.addEventListener("click", async () => {
       if (await UI.confirm("Réinitialiser TOUTES les données de démonstration ? Cette action est irréversible.", { danger: true, confirmLabel: "Réinitialiser" })) {
         Seed.run(true); Auth.logout(); renderHeaderUser(); UI.refreshBadges(); UI.toast("Données réinitialisées.", "success"); Router.go("#/");
       }

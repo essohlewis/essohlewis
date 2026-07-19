@@ -73,6 +73,7 @@ window.MP = window.MP || {};
     if (!user || user.password !== password) {
       return { ok: false, error: "E-mail ou mot de passe incorrect." };
     }
+    if (user.suspended) return { ok: false, error: "Ce compte a été suspendu. Contactez l'assistance." };
     _startSession(user.id);
     return { ok: true, user };
   }

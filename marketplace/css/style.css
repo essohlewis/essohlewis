@@ -1028,3 +1028,12 @@ body.seller-mode #chatbotRoot { display: none; }
 /* Liste du staff */
 .staff-list { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
 .staff-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface-2); }
+
+/* =========================================================================
+   Console d'administration
+   ========================================================================= */
+.admin-tabs { margin-bottom: 18px; }
+.admin-toolbar { margin-bottom: 14px; }
+.admin-toolbar .ss-search { max-width: 340px; width: 100%; }
+.mod-card { border-left: 3px solid var(--warning); }
+.mini-select { padding: 5px 8px; border-radius: var(--r-sm); border: 1.5px solid var(--border-strong); background: var(--surface); color: var(--text); font-size: 12.5px; }
