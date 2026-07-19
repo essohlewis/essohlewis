@@ -135,11 +135,14 @@ window.MP = window.MP || {};
     root.classList.add("open");
     document.body.style.overflow = "hidden";
 
+    let closed = false;
     function close() {
+      if (closed) return; closed = true;
       root.classList.remove("open");
       root.innerHTML = "";
       document.body.style.overflow = "";
       document.removeEventListener("keydown", onKey);
+      if (typeof opts.onClose === "function") { try { opts.onClose(); } catch (e) {} }
     }
     function onKey(e) { if (e.key === "Escape") close(); }
     document.addEventListener("keydown", onKey);

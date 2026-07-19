@@ -5,7 +5,7 @@
    ouverture directe via file://, ils ne s'enregistrent pas (dégradation propre).
    ========================================================================= */
 
-const CACHE = "marchesci-v1";
+const CACHE = "marchesci-v2";
 const ASSETS = [
   "./",
   "./index.html",
@@ -20,6 +20,8 @@ const ASSETS = [
   "./js/auth.js",
   "./js/store.js",
   "./js/products.js",
+  "./js/security.js",
+  "./js/kyc.js",
   "./js/coupons.js",
   "./js/messages.js",
   "./js/cart.js",
@@ -45,6 +47,8 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
+  // Ne jamais mettre en cache l'API de vérification (backend PHP) : réseau direct.
+  if (e.request.url.indexOf("/backend/") !== -1) return;
   e.respondWith(
     caches.match(e.request).then((cached) =>
       cached ||
