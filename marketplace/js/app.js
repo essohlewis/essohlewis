@@ -2914,14 +2914,7 @@
    */
   function openKycFlow(store, onDone) {
     const user = Auth.current();
-    // Défi de vivacité aléatoire (anti-photo / anti-deepfake).
-    const CHALLENGES = [
-      { code: "blink", label: "clignez des yeux" },
-      { code: "turn", label: "tournez lentement la tête à gauche puis à droite" },
-      { code: "smile", label: "souriez" },
-    ];
-    const challenge = CHALLENGES[Math.floor(Math.random() * CHALLENGES.length)];
-    const state = { idType: "CNI", idNumber: "", idImage: "", idImageBack: "", selfie: "", faceDetected: null, live: null, liveChallenge: challenge.code };
+    const state = { idType: "CNI", idNumber: "", idImage: "", idImageBack: "", selfie: "", faceDetected: null };
     const camAvailable = KYC && KYC.secureContextOk() && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
     UI.modal({
       title: "🪪 Vérification de votre identité",
@@ -2942,9 +2935,8 @@
         </div>
 
         <div data-step="2" hidden>
-          <p class="text-muted" style="font-size:13px;margin:0 0 10px">Placez votre visage dans l'ovale. Pendant la capture <strong>en direct</strong>, suivez la consigne — ceci prouve que vous êtes une vraie personne (anti-photo).</p>
+          <p class="text-muted" style="font-size:13px;margin:0 0 10px">Placez votre visage dans l'ovale et prenez la photo. La capture se fait <strong>en direct</strong> pour garantir qu'il s'agit bien de vous.</p>
           ${camAvailable ? `
-            <div class="kyc-challenge" id="kycChallenge">🟢 Consigne : <strong>${challenge.label}</strong></div>
             <div class="kyc-cam-wrap">
               <video id="kycVideo" playsinline muted></video>
               <img id="kycShot" alt="" hidden />
@@ -2953,7 +2945,7 @@
             <div id="kycFaceMsg" class="pw-hint" style="text-align:center"></div>
             <div class="flex gap-8 mt-8" style="justify-content:center">
               <button class="btn btn-ghost" id="kycCamStart">Démarrer la caméra</button>
-              <button class="btn btn-primary" id="kycCapture" hidden>▶️ Lancer la vérification</button>
+              <button class="btn btn-primary" id="kycCapture" hidden>📸 Prendre la photo</button>
               <button class="btn btn-ghost" id="kycRetake" hidden>↺ Reprendre</button>
             </div>` : `
             <div class="scam-warn">📷 La capture par la caméra nécessite d'ouvrir le site en <strong>http(s)</strong> ou <strong>localhost</strong> (elle est bloquée en ouverture de fichier « file:// »). Vous pouvez importer une photo récente en attendant.</div>
@@ -2990,37 +2982,28 @@
         bindDrop("#kycIdBack", (url) => { state.idImageBack = url; });
         $("#kycNext1").addEventListener("click", () => { state.idType = $("#kycIdType").value; state.idNumber = $("#kycIdNum").value.trim(); showStep(2); });
 
-        // Étape 2 : selfie + vivacité (caméra en direct ou repli fichier).
-        const gateNext = () => { $("#kycNext2").disabled = !state.selfie || state.faceDetected === false || state.live === false; };
+        // Étape 2 : selfie (caméra en direct ou repli fichier).
         const setSelfie = async (url) => {
           state.selfie = url;
           state.faceDetected = await KYC.detectFace(url);
-          gateNext();
+          const msg = $("#kycFaceMsg");
+          if (msg) msg.textContent = state.faceDetected === true ? "✅ Visage détecté" : state.faceDetected === false ? "⚠️ Aucun visage détecté — recadrez." : "Photo prise ✓";
+          $("#kycNext2").disabled = !url || state.faceDetected === false;
         };
         if (camAvailable) {
-          const video = $("#kycVideo"), shot = $("#kycShot"), msg = $("#kycFaceMsg");
+          const video = $("#kycVideo"), shot = $("#kycShot");
           $("#kycCamStart").addEventListener("click", async () => {
             try { await KYC.camera.start(video); video.hidden = false; shot.hidden = true; $("#kycCamStart").hidden = true; $("#kycCapture").hidden = false; }
             catch (e) { UI.toast("Impossible d'accéder à la caméra. Autorisez-la dans le navigateur.", "error"); }
           });
           $("#kycCapture").addEventListener("click", async () => {
-            $("#kycCapture").disabled = true;
-            // Rafale pendant que l'utilisateur suit la consigne (vivacité).
-            const frames = await KYC.camera.captureBurst(video, 10, 260, (i, n) => { msg.textContent = `Capture ${i}/${n} — ${challenge.label}…`; });
-            const url = KYC.camera.capture(video); // selfie pleine résolution
+            const url = KYC.camera.capture(video);
             shot.src = url; shot.hidden = false; video.hidden = true; KYC.camera.stop();
-            $("#kycCapture").hidden = true; $("#kycCapture").disabled = false; $("#kycRetake").hidden = false;
-            msg.textContent = "Analyse de vivacité…";
-            const live = await KYC.checkLiveness(frames, challenge.code);
-            state.live = (live && typeof live.live === "boolean") ? live.live : null;
+            $("#kycCapture").hidden = true; $("#kycRetake").hidden = false;
             await setSelfie(url);
-            if (state.live === false) msg.innerHTML = `⚠️ Vivacité non confirmée (photo/écran détecté ?). Reprenez et <strong>${challenge.label}</strong>.`;
-            else if (state.live === true) msg.textContent = "✅ Vivacité confirmée" + (state.faceDetected === false ? " (mais visage peu net)" : "");
-            else msg.textContent = state.faceDetected === false ? "⚠️ Aucun visage détecté — recadrez." : "Photo prise ✓";
-            gateNext();
           });
           $("#kycRetake").addEventListener("click", async () => {
-            state.selfie = ""; state.live = null; $("#kycNext2").disabled = true; msg.textContent = "";
+            state.selfie = ""; $("#kycNext2").disabled = true; $("#kycFaceMsg").textContent = "";
             try { await KYC.camera.start(video); video.hidden = false; shot.hidden = true; $("#kycRetake").hidden = true; $("#kycCapture").hidden = false; } catch (e) {}
           });
         } else {
@@ -3043,13 +3026,12 @@
               idType: state.idType, idNumber: state.idNumber,
               idImage: state.idImage, idImageBack: state.idImageBack, selfie: state.selfie,
               faceDetected: state.faceDetected === true, consent: true,
-              live: state.live, liveChallenge: state.liveChallenge,
             });
             if (res.ok) {
               if (window.MP.Security) Security.log("Vérification d'identité soumise", state.idType);
               // Alerte les administrateurs.
               DB.all(DB.KEYS.users).filter((u) => u.role === "admin").forEach((a) => Notifications.push(a.id, { type: "info", message: `🪪 Nouvelle vérification d'identité à valider${store ? " : « " + store.name + " »" : ""}.`, link: "#/admin?tab=security" }));
-              $("#kycResult").innerHTML = `<div class="ci-alert" style="background:var(--accent-soft);color:var(--accent)">✅ Vérification envoyée ! Elle sera examinée par un administrateur.${KYC.enabled ? "" : " (mode local)"}</div>`;
+              $("#kycResult").innerHTML = `<div class="ci-alert" style="background:var(--accent-soft);color:var(--accent)">✅ Vérification envoyée ! Elle sera examinée par un administrateur.</div>`;
               KYC.camera.stop();
               setTimeout(() => { close(); if (onDone) onDone(); }, 1400);
             } else { $("#kycResult").innerHTML = `<div class="scam-warn">${UI.esc(res.error || "Échec de l'envoi.")}</div>`; $("#kycSubmit").disabled = false; }
@@ -6353,16 +6335,17 @@
         ${statCard(sig.messages.length ? "ic-orange" : "ic-green", "💬", sig.messages.length, "Messages suspects")}
         ${statCard((sig.accounts.length || sig.reviews.length) ? "ic-orange" : "ic-green", "👤", sig.accounts.length + sig.reviews.length, "Comptes / avis suspects")}
       </div>
-      <div class="text-muted" style="font-size:12px;margin:12px 0 0">Vérification : ${KYC && KYC.enabled ? `<strong style="color:var(--accent)">backend PHP connecté</strong>${KYC.faceMatch ? " · biométrie externe active" : ""}` : "mode local (backend hors ligne)"}</div>
-      <div id="kycBackendQueue"></div>
       ${kyc.length ? section("🪪 Vérifications d'identité (KYC) en attente", kyc.length, kyc.map((s) => `<div class="card card-pad mt-12 mod-card">
-        <div class="flex-between wrap"><div><strong><a href="#" data-secstore="${s.id}">${UI.esc(s.name)}</a></strong>
-          <div class="text-muted" style="font-size:12.5px">Pièce transmise ${UI.timeAgo(s.kyc.submittedAt || s.createdAt)}</div></div>
-          <div class="flex gap-8">
-            ${s.kyc.doc ? `<button class="btn btn-ghost btn-sm" data-kycview="${s.id}">Voir la pièce</button>` : ""}
-            <button class="btn btn-accent btn-sm" data-kycok="${s.id}">✔️ Valider</button>
-            <button class="btn btn-danger btn-sm" data-kycno="${s.id}">Refuser</button>
-          </div></div></div>`).join("")) : ""}
+        <div class="flex-between wrap" style="margin-bottom:8px"><div><strong><a href="#" data-secstore="${s.id}">${UI.esc(s.name)}</a></strong>
+          <div class="text-muted" style="font-size:12.5px">${UI.esc(s.kyc.idType || "Pièce")}${s.kyc.idNumber ? " · N° " + UI.esc(s.kyc.idNumber) : ""} · transmise ${UI.timeAgo(s.kyc.submittedAt || s.createdAt)}</div></div></div>
+        <div class="kyc-compare">
+          <figure><figcaption>Pièce d'identité</figcaption><img src="${UI.safeImg(s.kyc.doc, "pièce")}" alt="pièce" data-kyczoom="${s.id}:doc" /></figure>
+          ${s.kyc.selfie ? `<figure><figcaption>Selfie (capture live)</figcaption><img src="${UI.safeImg(s.kyc.selfie, "selfie")}" alt="selfie" data-kyczoom="${s.id}:selfie" /></figure>` : ""}
+        </div>
+        <div class="flex gap-8 mt-8">
+          <button class="btn btn-accent btn-sm" data-kycok="${s.id}">✔️ Valider</button>
+          <button class="btn btn-danger btn-sm" data-kycno="${s.id}">Refuser</button>
+        </div></div>`).join("")) : ""}
       ${sig.stores.length ? section("🏪 Boutiques à risque (score de confiance faible)", sig.stores.length, sig.stores.map((x) => `<div class="card card-pad mt-12 mod-card">
         <div class="flex-between wrap"><div><strong><a href="#" data-secstore="${x.store.id}">${UI.esc(x.store.name)}</a></strong> ${trustBadgeHTML(x.trust)}
           <div class="text-muted" style="font-size:12.5px">${x.trust.factors.filter((f) => f.delta < 0).map((f) => UI.esc(f.msg)).join(" · ") || "Score faible"}</div></div>
@@ -6397,13 +6380,10 @@
   }
   function wireAdminSecurity() {
     const reload = () => viewAdmin({ query: { tab: "security" } });
-    // File KYC issue du backend PHP (pièce + selfie côte à côte).
-    if (KYC && KYC.enabled) renderBackendKyc();
     V().querySelectorAll("[data-secstore]").forEach((b) => b.addEventListener("click", (e) => { e.preventDefault(); openAdminStoreDetail(b.getAttribute("data-secstore")); }));
     V().querySelectorAll("[data-secuser]").forEach((b) => b.addEventListener("click", (e) => { e.preventDefault(); openUserDetail(b.getAttribute("data-secuser")); }));
-    V().querySelectorAll("[data-kycview]").forEach((b) => b.addEventListener("click", () => {
-      const s = Store.get(b.getAttribute("data-kycview"));
-      UI.modal({ title: "Pièce d'identité — " + s.name, body: `<img src="${UI.safeImg(s.kyc.doc, "pièce")}" alt="pièce d'identité" style="width:100%;border-radius:8px" />`, footer: `<button class="btn btn-primary btn-block" data-close>Fermer</button>` });
+    V().querySelectorAll("[data-kyczoom]").forEach((img) => img.addEventListener("click", () => {
+      UI.modal({ title: "Aperçu", body: `<img src="${img.getAttribute("src")}" alt="" style="width:100%;border-radius:8px" />`, footer: `<button class="btn btn-primary btn-block" data-close>Fermer</button>` });
     }));
     V().querySelectorAll("[data-kycok]").forEach((b) => b.addEventListener("click", () => {
       const s = Store.get(b.getAttribute("data-kycok"));
@@ -6443,63 +6423,6 @@
       if (!(await UI.confirm("Supprimer cet avis suspect ?", { danger: true, confirmLabel: "Supprimer" }))) return;
       DB.removeItem(DB.KEYS.reviews, b.getAttribute("data-secdelrev"));
       Security.log("Avis suspect supprimé", ""); UI.toast("Avis supprimé.", "info"); reload();
-    }));
-  }
-
-  /** Rend la file de vérifications KYC issue du backend PHP. */
-  async function renderBackendKyc() {
-    const el = document.getElementById("kycBackendQueue");
-    if (!el) return;
-    let items = [];
-    try { items = await KYC.list("pending"); } catch (e) { el.innerHTML = `<div class="scam-warn" style="margin-top:12px">Backend injoignable pour la file KYC.</div>`; return; }
-    if (!items.length) return;
-    const bio = KYC.faceMatch; // service biométrique réel branché ?
-    const matchBadge = (it) => it.autoMatch
-      ? `<span class="risk-pill trust-high">✅ ${bio ? "Visages concordants (biométrie)" : "Correspondance probable"}</span>`
-      : `<span class="risk-pill risk-med">${bio ? "Visages non concordants" : "À vérifier manuellement"}</span>`;
-    el.innerHTML = `<div class="section-title">🪪 Vérifications d'identité (KYC) — backend (${items.length})</div>` + items.map((it) => `
-      <div class="card card-pad mt-12 mod-card" data-krow="${it.id}">
-        <div class="flex-between wrap" style="margin-bottom:8px"><div><strong>${UI.esc(it.vendorName || it.vendorId)}</strong>
-          <div class="text-muted" style="font-size:12.5px">${UI.esc(it.idType || "Pièce")}${it.idNumber ? " · N° " + UI.esc(it.idNumber) : ""} · ${UI.timeAgo(it.createdAt * 1000)}</div></div>
-          <div class="flex gap-8" style="align-items:center">${matchBadge(it)}</div></div>
-        <div class="kyc-compare">
-          <figure><figcaption>Pièce d'identité</figcaption><img src="${it.idImageUrl}" alt="pièce" data-zoom="${it.idImageUrl}" /></figure>
-          <figure><figcaption>Selfie (capture live)</figcaption><img src="${it.selfieUrl}" alt="selfie" data-zoom="${it.selfieUrl}" /></figure>
-        </div>
-        <div class="text-muted" style="font-size:12px;margin:4px 0 8px">Qualité : ${it.quality}/100 · ${bio ? "Score biométrique" : "Similarité (indicative)"} : ${it.similarity}% · Visage détecté : ${it.faceDetected ? "oui" : "non"} · Vivacité : ${it.live === 1 ? "<span style='color:var(--accent)'>✅ confirmée</span>" : it.live === 0 ? "<span style='color:var(--danger)'>❌ échouée (photo ?)</span>" : "non testée"}${it.liveChallenge ? " (" + UI.esc(it.liveChallenge) + ")" : ""}</div>
-        <div class="flex gap-8"><button class="btn btn-accent btn-sm" data-kbok="${it.id}" data-vid="${it.vendorId}">✔️ Valider</button>
-          <button class="btn btn-danger btn-sm" data-kbno="${it.id}" data-vid="${it.vendorId}">Refuser</button></div>
-      </div>`).join("");
-    el.querySelectorAll("[data-zoom]").forEach((img) => img.addEventListener("click", () => {
-      UI.modal({ title: "Aperçu", body: `<img src="${img.getAttribute("data-zoom")}" alt="" style="width:100%;border-radius:8px" />`, footer: `<button class="btn btn-primary btn-block" data-close>Fermer</button>` });
-    }));
-    el.querySelectorAll("[data-kbok]").forEach((b) => b.addEventListener("click", async () => {
-      b.disabled = true;
-      const r = await KYC.review(b.getAttribute("data-kbok"), "approve", "");
-      if (r.ok) {
-        Notifications.push(b.getAttribute("data-vid"), { type: "info", message: `✅ Votre identité a été vérifiée : vous pouvez désormais vendre.`, link: "#/seller/dashboard" });
-        logAudit("KYC validé (backend)", b.getAttribute("data-vid"));
-        UI.toast("Identité validée ✓", "success"); viewAdmin({ query: { tab: "security" } });
-      } else { b.disabled = false; UI.toast(r.error || "Échec.", "error"); }
-    }));
-    el.querySelectorAll("[data-kbno]").forEach((b) => b.addEventListener("click", () => {
-      UI.modal({
-        title: "Refuser la vérification",
-        body: `<div class="field"><label>Motif du refus</label><input id="kbReason" placeholder="Ex : pièce illisible, visage non concordant…" /></div>`,
-        footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-danger" id="kbGo">Refuser</button>`,
-        onMount(m, close) {
-          m.querySelector("#kbGo").addEventListener("click", async () => {
-            const reason = m.querySelector("#kbReason").value.trim();
-            const r = await KYC.review(b.getAttribute("data-kbno"), "reject", reason);
-            close();
-            if (r.ok) {
-              Notifications.push(b.getAttribute("data-vid"), { type: "info", message: `❌ Votre vérification d'identité a été refusée${reason ? " : " + reason : ""}. Vous pouvez la refaire.`, link: "#/seller/store" });
-              logAudit("KYC refusé (backend)", b.getAttribute("data-vid"));
-              UI.toast("Vérification refusée.", "info"); viewAdmin({ query: { tab: "security" } });
-            } else UI.toast(r.error || "Échec.", "error");
-          });
-        },
-      });
     }));
   }
 

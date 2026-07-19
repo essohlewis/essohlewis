@@ -229,7 +229,7 @@ Algorithme heuristique **100 % front** qui protège la crédibilité de la plate
 - **Anti-fraude messagerie** : les messages sollicitant un paiement hors plateforme sont **signalés** (avertissement à l'acheteur + alerte admin).
 - **Faux comptes** : blocage des **e-mails jetables**, détection des doublons (téléphone/nom), **limitation de création** de comptes, signaux dans le tableau de bord.
 - **Faux avis** : détection des rafales, commentaires dupliqués et notes extrêmes sans achat vérifié.
-- **KYC vendeur avec capture faciale** : parcours obligatoire (pièce d'identité + **selfie capturé en direct par la caméra**) → **file de validation admin** (pièce et selfie côte à côte) → badge « Vérifié ». La publication d'articles est **bloquée** tant que l'identité n'est pas approuvée. Voir la section « Backend » ci-dessous.
+- **KYC vendeur avec capture faciale** : parcours obligatoire (pièce d'identité + **selfie capturé en direct par la caméra**) → **file de validation admin** (pièce et selfie côte à côte) → badge « Vérifié ». La publication d'articles est **bloquée** tant que l'identité n'est pas approuvée. 100 % front (stockage local).
 - **Mots de passe** : politique de robustesse (6+ car., lettres + chiffres, rejet des mots courants) + **jauge en direct** + **verrouillage temporaire** après 5 échecs de connexion (anti-force brute).
 - **Centre de sécurité client** : activité récente du compte, conseils anti-arnaque, changement de mot de passe.
 - **Journal de sécurité** : connexions, échecs, actions sensibles horodatés.
@@ -276,30 +276,21 @@ marketplace/
 │   ├── orders.js        # commandes (paiement à la livraison)
 │   ├── seed.js          # données de démonstration
 │   ├── security.js      # algorithme anti-fraude & score de confiance
-│   ├── kyc.js           # vérification d'identité front (caméra + appels backend)
+│   ├── kyc.js           # vérification d'identité vendeur (caméra, 100 % front)
 │   ├── router.js        # routeur SPA (hash routing)
 │   └── app.js           # point d'entrée + rendu des vues + wiring
-├── backend/             # ⚙️ backend PHP (vanilla) — vérification d'identité (KYC)
-│   ├── api.php          # front-controller (endpoints ?action=…)
-│   ├── lib.php          # PDO SQLite, images (GD), similarité, biométrie externe
-│   ├── config.php       # configuration (token admin, seuils, hook facial)
-│   └── README.md        # mode d'emploi du backend
 └── assets/
     └── placeholder.svg
 ```
 
-Architecture : chaque module s'attache au **namespace global `window.MP`** (scripts classiques, compatibles avec l'ouverture directe en `file://` — pas de modules ES pour éviter les restrictions CORS locales).
+Architecture : chaque module s'attache au **namespace global `window.MP`** (scripts classiques, compatibles avec l'ouverture directe en `file://` — pas de modules ES pour éviter les restrictions CORS locales). **100 % front-end, sans serveur.**
 
-### ⚙️ Backend de vérification d'identité (PHP pur, sans framework)
-La marketplace reste **100 % front** ; **seule la vérification d'identité vendeur** peut passer par un petit backend PHP optionnel (`backend/`).
+### 🪪 Vérification d'identité vendeur (100 % front)
 - **Parcours vendeur** : assistant en 3 étapes — pièce d'identité + **selfie capturé en direct par la caméra** (`getUserMedia`, guide ovale, détection de visage via `FaceDetector` si disponible) + consentement.
-- **Traitement serveur** (GD) : contrôle de **qualité** d'image, **similarité perceptuelle** (aide à la décision), enregistrement SQLite, images stockées hors Git.
-- **Revue admin** : dans l'onglet Sécurité, la file KYC affiche **pièce et selfie côte à côte** avec les scores ; validation/refus (avec motif) via l'API.
+- **Revue admin** : dans l'onglet Sécurité, la file KYC affiche **pièce et selfie côte à côte** ; validation ou refus.
 - **Éligibilité** : tant que l'identité n'est pas approuvée, le vendeur **ne peut pas publier** (réglable dans Paramètres).
-- **Démarrage** : depuis `marketplace/`, lancer `php -S localhost:8000` puis ouvrir `http://localhost:8000/index.html`. Le front détecte le backend (`ping`) ; s'il est absent (ex. `file://`), la vérification **retombe proprement** sur un mode local (localStorage).
-- **Reconnaissance faciale automatique RÉELLE** : un microservice biométrique est fourni dans **`backend/face-service/`** (Python, `http.server` — sans framework) utilisant **dlib / ResNet** (embeddings 128-D, modèles PyPI, hors-ligne). Branché via `KYC_FACE_MATCH_URL`, il compare **automatiquement** le selfie au visage de la pièce et renvoie `{match, score}`. Validé : même personne → correspondance (score ~87), personnes différentes → rejet (score ~19), aucun visage → rejet. Adaptateurs **Face++** et **AWS Rekognition** également fournis (même contrat). Sans service branché, le PHP retombe sur une heuristique + décision admin.
-- **Détection de vivacité (anti-photo / anti-deepfake)** : lors de la capture, l'application impose une **consigne aléatoire** (cligner / tourner la tête / sourire) et envoie une **rafale d'images** au service (`/liveness`), qui vérifie le mouvement facial via les points de repère dlib. Une **photo statique** présentée à la caméra est **rejetée** (`live:false`). Le résultat s'affiche dans la revue admin. Détails : `backend/face-service/README.md`.
-- ⚠️ La **caméra** exige `http(s)`/`localhost` : bloquée en ouverture `file://` (repli « importer une photo » proposé).
+- Les pièces/selfies sont stockés **localement** (localStorage), comme le reste des données.
+- ⚠️ La **caméra** exige `http(s)`/`localhost` : en ouverture directe `file://`, elle est bloquée par le navigateur → un **repli « importer une photo »** est proposé.
 
 ---
 
