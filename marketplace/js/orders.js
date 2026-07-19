@@ -128,6 +128,7 @@ window.MP = window.MP || {};
           commune: delivery.commune,
           address: delivery.address.trim(),
           note: (delivery.note || "").trim(),
+          geo: delivery.geo || null, // coordonnées GPS optionnelles (aide livreur)
         },
         createdAt: Date.now(),
         history: [{ status: "en_attente", at: Date.now() }],

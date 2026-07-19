@@ -96,6 +96,8 @@ Données de démo : **4 boutiques**, **16 articles**, quelques avis, abonnements
 - **Bandeau confidentialité** (stockage 100 % local) + **tour de bienvenue** à la première visite.
 - **Installation PWA** : bouton « Installer l'application » (via `beforeinstallprompt`).
 - **Listes de souhaits multiples** : plusieurs listes nommées, ajout d'un article à une ou plusieurs listes, **renommage / suppression / partage** (WhatsApp, copie).
+- **Partager mon panier** : génère un lien (WhatsApp / copie / partage natif) qui **reconstitue le panier** chez un proche — pratique quand quelqu'un commande pour un autre (page `#/shared-cart`).
+- **Localisation GPS à la livraison** : bouton « 📍 Utiliser ma position » au checkout (`navigator.geolocation`) — les coordonnées sont jointes à la commande et le vendeur dispose d'un lien **« 🗺️ Itinéraire GPS »** pour guider le livreur.
 
 ### Vendeur — espace dédié (back-office)
 L'espace vendeur est un **véritable back-office distinct de l'espace client** : barre latérale sombre de navigation, en-tête « Espace Vendeur » (le chrome d'achat — recherche, panier, favoris, nav basse mobile — est masqué), et zone de travail professionnelle.

@@ -1739,6 +1739,7 @@
             <div class="summary-row"><span>${T("cart.delivery")}</span><span class="text-muted">${T("cart.toAgree")}</span></div>
             <div class="summary-row total"><span>${T("cart.total")}</span><span>${UI.fcfa(total)}</span></div>
             <button class="btn btn-primary btn-block btn-lg mt-16" id="goCheckout">${T("cart.checkout")} (${groups.length})</button>
+            <button class="btn btn-ghost btn-block mt-8" id="shareCart">${SICON.wa} Partager mon panier</button>
             <button class="btn btn-ghost btn-block mt-8" id="clearCart">${T("cart.clear")}</button>
           </div>
         </div>
@@ -1761,6 +1762,69 @@
     });
     document.getElementById("clearCart").addEventListener("click", async () => {
       if (await UI.confirm("Vider entièrement votre panier ?", { danger: true, confirmLabel: "Vider" })) { Cart.clear(); viewCart(); }
+    });
+    document.getElementById("shareCart").addEventListener("click", () => openShareCartModal());
+  }
+
+  /** Partage du panier : génère un lien qui reconstitue le panier chez un proche. */
+  function openShareCartModal() {
+    const items = Cart.items().map((it) => ({ p: it.productId, q: it.qty, v: it.variant || {} }));
+    if (!items.length) { UI.toast("Votre panier est vide.", "info"); return; }
+    const link = location.origin + location.pathname + "#/shared-cart?d=" + encodeURIComponent(b64Encode(JSON.stringify(items)));
+    const groups = Cart.grouped();
+    const lines = groups.flatMap((g) => g.lines.map((l) => `• ${l.product.title} × ${l.qty}`)).join("\n");
+    const txt = `🛒 Voici mon panier sur Marché CI :\n${lines}\n\n👉 Ouvrez ce lien pour le retrouver et commander (paiement à la livraison) :\n${link}`;
+    UI.modal({
+      title: "🛒 Partager mon panier",
+      body: `<p class="text-muted" style="margin:0 0 12px;font-size:13.5px">Envoyez votre panier à un proche : il pourra le retrouver et passer commande (utile s'il paie pour vous).</p>
+        <div class="flex gap-8 wrap">
+          <button class="btn wa-btn" id="scWa">${SICON.wa} WhatsApp</button>
+          <button class="btn btn-ghost" id="scCopy">🔗 Copier le lien</button>
+          ${navigator.share ? `<button class="btn btn-ghost" id="scNative">📤 Autre…</button>` : ""}
+        </div>`,
+      onMount(m, close) {
+        m.querySelector("#scWa").addEventListener("click", () => { waShare(txt); close(); });
+        m.querySelector("#scCopy").addEventListener("click", () => { copyToClipboard(link); UI.toast("Lien copié ✓", "success"); });
+        const nat = m.querySelector("#scNative");
+        if (nat) nat.addEventListener("click", () => { navigator.share({ title: "Mon panier Marché CI", text: txt, url: link }).catch(() => {}); close(); });
+      },
+    });
+  }
+
+  /* ============================================================
+     VUE : Panier partagé (reconstitution depuis un lien)
+     ============================================================ */
+  function viewSharedCart(params) {
+    const raw = params.query && params.query.d;
+    let items = [];
+    try { items = JSON.parse(b64Decode(decodeURIComponent(raw || ""))) || []; } catch (e) { items = []; }
+    const resolved = items.map((it) => ({ product: Products.get(it.p), qty: Math.max(1, it.q || 1), variant: it.v || {} })).filter((x) => x.product);
+    if (!resolved.length) {
+      layout(emptyState("🛒", "Panier partagé introuvable", "Ce lien est invalide ou les articles ne sont plus disponibles sur cet appareil.", `<a href="#/" class="btn btn-primary">Explorer la marketplace</a>`));
+      return;
+    }
+    const total = resolved.reduce((s, x) => s + Products.effectivePrice(x.product) * x.qty, 0);
+    const missing = items.length - resolved.length;
+    layout(`
+      <div class="page-head"><div><div class="page-title">🛒 Panier partagé</div>
+        <div class="page-sub">${resolved.length} article(s) partagé(s) avec vous</div></div></div>
+      ${missing ? `<div class="guest-banner">⚠️ ${missing} article(s) du lien ne sont pas disponibles sur cet appareil et ont été ignorés.</div>` : ""}
+      <div class="card" style="overflow:hidden">
+        ${resolved.map((x) => { const vparts = []; if (x.variant.size) vparts.push(x.variant.size); if (x.variant.color) vparts.push(x.variant.color);
+          return `<div class="cart-item"><img src="${UI.safeImg(x.product.images && x.product.images[0], x.product.title)}" alt=""/>
+            <div class="cart-item-info"><h4><a href="#/product/${x.product.id}">${UI.esc(x.product.title)}</a></h4>
+            ${vparts.length ? `<div class="ci-variant">${UI.esc(vparts.join(" · "))}</div>` : ""}
+            <div class="ci-price">${UI.fcfa(Products.effectivePrice(x.product))} × ${x.qty}</div></div></div>`; }).join("")}
+      </div>
+      <div class="card card-pad mt-16 flex-between wrap" style="gap:12px">
+        <strong style="font-size:17px">Total : <span style="color:var(--brand)">${UI.fcfa(total)}</span></strong>
+        <button class="btn btn-primary btn-lg" id="adoptCart">Ajouter à mon panier</button>
+      </div>`);
+    document.getElementById("adoptCart").addEventListener("click", () => {
+      let n = 0;
+      resolved.forEach((x) => { const r = Cart.add(x.product.id, x.qty, x.variant); if (r.ok) n++; });
+      UI.toast(n ? `${n} article(s) ajouté(s) à votre panier ✓` : "Impossible d'ajouter ces articles.", n ? "success" : "error");
+      if (n) Router.go("#/cart");
     });
   }
 
@@ -1852,7 +1916,11 @@
                 <div class="field"><label>Téléphone *</label><input id="dPhone" value="${UI.esc(user.phone)}" placeholder="07 00 00 00 00" required /><span class="err">Numéro invalide.</span></div>
               </div>
               <div class="field"><label>Commune *</label><select id="dCommune">${communeOpts}</select><span class="err">Commune requise.</span></div>
-              <div class="field"><label>Adresse / point de repère *</label><textarea id="dAddress" placeholder="Ex : Riviera Palmeraie, près de la station…" required>${UI.esc(user.address)}</textarea><span class="err">Adresse requise.</span></div>
+              <div class="field"><label>Adresse / point de repère *</label><textarea id="dAddress" placeholder="Ex : Riviera Palmeraie, près de la station…" required>${UI.esc(user.address)}</textarea><span class="err">Adresse requise.</span>
+                <div class="flex gap-8 wrap" style="align-items:center;margin-top:6px">
+                  <button type="button" class="btn btn-ghost btn-sm" id="useGps">📍 Utiliser ma position</button>
+                  <span id="gpsStatus" class="text-muted" style="font-size:12.5px"></span>
+                </div></div>
               <div class="field"><label>Créneau de livraison souhaité</label>
                 <select id="dSlot">
                   <option value="Dès que possible">Dès que possible</option>
@@ -1948,6 +2016,30 @@
     });
     refreshSummary();
 
+    // Géolocalisation : ajoute des coordonnées GPS pour guider le livreur.
+    let geo = null;
+    const gpsBtn = document.getElementById("useGps");
+    const gpsStatus = document.getElementById("gpsStatus");
+    if (gpsBtn) gpsBtn.addEventListener("click", () => {
+      if (!navigator.geolocation) { UI.toast("Géolocalisation non disponible sur cet appareil.", "error"); return; }
+      gpsStatus.textContent = "Localisation en cours…";
+      gpsBtn.disabled = true;
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          geo = { lat: +pos.coords.latitude.toFixed(6), lng: +pos.coords.longitude.toFixed(6) };
+          gpsStatus.innerHTML = `✅ Position ajoutée — <a href="https://maps.google.com/?q=${geo.lat},${geo.lng}" target="_blank" rel="noopener">voir sur la carte</a>`;
+          gpsBtn.disabled = false;
+          UI.toast("Position ajoutée à la livraison ✓", "success");
+        },
+        (err) => {
+          gpsStatus.textContent = err.code === 1 ? "Autorisation refusée." : "Position indisponible.";
+          gpsBtn.disabled = false;
+          UI.toast("Impossible d'obtenir votre position.", "error");
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    });
+
     document.getElementById("placeOrder").addEventListener("click", () => {
       const delivery = {
         name: document.getElementById("dName").value,
@@ -1955,6 +2047,7 @@
         commune: document.getElementById("dCommune").value,
         address: document.getElementById("dAddress").value,
         note: document.getElementById("dNote").value,
+        geo,
       };
       const err = Orders.validateDelivery(delivery);
       if (err) { UI.toast(err, "error"); return; }
@@ -3389,6 +3482,10 @@
     document.body.removeChild(ta);
   }
 
+  /** Encodage/décodage base64 tolérant à l'Unicode (accents). */
+  function b64Encode(str) { try { return btoa(unescape(encodeURIComponent(str))); } catch (e) { return ""; } }
+  function b64Decode(b64) { try { return decodeURIComponent(escape(atob(b64))); } catch (e) { return ""; } }
+
   function shareProduct(p) {
     const store = Store.get(p.storeId);
     const price = Products.effectivePrice(p);
@@ -4389,7 +4486,7 @@
       <div class="divider" style="margin:12px 0"></div>
       <div class="flex-between wrap" style="align-items:flex-start">
         <div style="font-size:13.5px"><strong>📍 Livraison :</strong> ${UI.esc(o.delivery.name)} · ${UI.esc(o.delivery.phone)}<br>
-          ${UI.esc(o.delivery.commune)} — ${UI.esc(o.delivery.address)}${o.delivery.note ? `<br><em class="text-muted">Note : ${UI.esc(o.delivery.note)}</em>` : ""}</div>
+          ${UI.esc(o.delivery.commune)} — ${UI.esc(o.delivery.address)}${o.delivery.note ? `<br><em class="text-muted">Note : ${UI.esc(o.delivery.note)}</em>` : ""}${o.delivery.geo ? `<br><a href="https://maps.google.com/?q=${o.delivery.geo.lat},${o.delivery.geo.lng}" target="_blank" rel="noopener" style="color:var(--brand);font-weight:700">🗺️ Itinéraire GPS</a>` : ""}</div>
         <div style="text-align:right"><div class="text-muted" style="font-size:12px">💵 À encaisser</div>
           <strong style="font-size:18px;color:var(--brand)">${UI.fcfa(o.total)}</strong></div>
       </div>
@@ -5393,6 +5490,7 @@
     Router.on("#/product/:id", viewProduct);
     Router.on("#/store/:id", viewStore);
     Router.on("#/cart", viewCart);
+    Router.on("#/shared-cart", viewSharedCart);
     Router.on("#/checkout", viewCheckout);
     Router.on("#/order/:id", viewOrderConfirm);
     Router.on("#/orders", viewOrders);
