@@ -363,6 +363,21 @@
     render();
   }
 
+  /** Grille complète de la galerie (modale) : toutes les photos, chacune ouvrant la visionneuse. */
+  function openGalleryModal(images, storeName) {
+    if (!images || !images.length) return;
+    UI.modal({
+      title: `🖼️ Galerie — ${storeName} (${images.length})`,
+      body: `<div class="gallery-modal-grid">${images.map((src, i) => `<button class="gal-item" data-gm="${i}"><img src="${src}" alt="Photo ${i + 1}" loading="lazy" /></button>`).join("")}</div>`,
+      footer: `<button class="btn btn-ghost btn-block" data-close>Fermer</button>`,
+      onMount(m, close) {
+        m.querySelectorAll("[data-gm]").forEach((b) =>
+          b.addEventListener("click", () => { close(); openLightbox(images, Number(b.getAttribute("data-gm"))); })
+        );
+      },
+    });
+  }
+
   /* ============================================================
      VUE : Accueil (fil de toutes les boutiques)
      ============================================================ */
@@ -1579,8 +1594,19 @@
       ${store.promoBanner ? `<div class="store-ribbon promo">📣 ${UI.esc(store.promoBanner)}</div>` : ""}
       <p class="text-muted" style="max-width:720px">${UI.esc(store.description)}</p>
       ${socialLinksHTML(store)}
-      ${gallery.length ? `<div class="section-title">Galerie</div>
-        <div class="gallery-grid">${gallery.map((img, i) => `<button class="gal-item" data-gal="${i}"><img src="${UI.safeImg(img, store.name)}" alt="Photo ${i + 1} de ${UI.esc(store.name)}" loading="lazy" /></button>`).join("")}</div>` : ""}
+      ${gallery.length ? (() => {
+        const MAX = 6; // aperçu limité pour ne pas noyer les articles
+        const preview = gallery.slice(0, MAX);
+        const extra = gallery.length - MAX;
+        return `<div class="section-title flex-between" style="align-items:center">
+            <span>Galerie <span class="text-muted" style="font-weight:500;font-size:14px">(${gallery.length})</span></span>
+            ${gallery.length > MAX ? `<button class="btn btn-ghost btn-sm" id="galSeeAll">🖼️ Voir toutes les photos</button>` : ""}
+          </div>
+          <div class="gallery-grid">${preview.map((img, i) => {
+            const isLast = i === preview.length - 1 && extra > 0;
+            return `<button class="gal-item ${isLast ? "gal-more" : ""}" data-gal="${i}"><img src="${UI.safeImg(img, store.name)}" alt="Photo ${i + 1} de ${UI.esc(store.name)}" loading="lazy" />${isLast ? `<span class="gal-more-overlay">+${extra}</span>` : ""}</button>`;
+          }).join("")}</div>` ;
+      })() : ""}
       <div class="section-title">Articles (${products.length})</div>
       ${gridHTML(products, "Cette boutique n'a pas encore publié d'article.")}
       ${store.faq ? `<div class="section-title">Questions fréquentes</div>
@@ -1591,11 +1617,17 @@
       </div>
     `);
 
-    // Galerie -> visionneuse plein écran.
+    // Galerie -> visionneuse plein écran (ou grille complète pour la tuile « +N »).
     if (gallery.length) {
+      const imgs = gallery.map((g) => UI.safeImg(g, store.name));
       V().querySelectorAll("[data-gal]").forEach((b) =>
-        b.addEventListener("click", () => openLightbox(gallery.map((g) => UI.safeImg(g, store.name)), Number(b.getAttribute("data-gal"))))
+        b.addEventListener("click", () => {
+          if (b.classList.contains("gal-more")) openGalleryModal(imgs, store.name);
+          else openLightbox(imgs, Number(b.getAttribute("data-gal")));
+        })
       );
+      const seeAll = document.getElementById("galSeeAll");
+      if (seeAll) seeAll.addEventListener("click", () => openGalleryModal(imgs, store.name));
     }
 
     const subBtn = document.getElementById("subBtn");
