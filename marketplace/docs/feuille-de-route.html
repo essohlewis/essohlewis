@@ -1,0 +1,416 @@
+<title>Marché CI — Feuille de route complète</title>
+<style>
+  :root{
+    --bg:#faf8f5; --bg-elev:#ffffff; --ink:#1c1917; --ink-soft:#57534e; --ink-faint:#8b857e;
+    --line:#e9e2da; --line-strong:#ddd3c8;
+    --brand:#ea580c; --brand-ink:#c2410c; --green:#0f9d58; --green-ink:#0b7a44;
+    --amber:#d97706; --red:#dc2626; --blue:#2563eb;
+    --chip-fait-bg:#e4f5ec; --chip-fait-ink:#0b7a44;
+    --chip-encours-bg:#fdeede; --chip-encours-ink:#b45309;
+    --chip-afaire-bg:#eeeae4; --chip-afaire-ink:#6b6058;
+    --shadow:0 1px 2px rgba(28,25,23,.05), 0 6px 20px -12px rgba(28,25,23,.18);
+    --radius:14px;
+    --sans:"Segoe UI",system-ui,-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#17130f; --bg-elev:#211b16; --ink:#f5efe8; --ink-soft:#c3b9ae; --ink-faint:#8f857a;
+      --line:#332a22; --line-strong:#463a30;
+      --brand:#fb923c; --brand-ink:#fdba74; --green:#34d399; --green-ink:#6ee7b7;
+      --amber:#fbbf24; --red:#f87171; --blue:#60a5fa;
+      --chip-fait-bg:#123122; --chip-fait-ink:#6ee7b7;
+      --chip-encours-bg:#3a2610; --chip-encours-ink:#fcd9a3;
+      --chip-afaire-bg:#2a2219; --chip-afaire-ink:#b6a999;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -14px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#faf8f5; --bg-elev:#ffffff; --ink:#1c1917; --ink-soft:#57534e; --ink-faint:#8b857e;
+    --line:#e9e2da; --line-strong:#ddd3c8; --brand:#ea580c; --brand-ink:#c2410c; --green:#0f9d58; --green-ink:#0b7a44;
+    --amber:#d97706; --red:#dc2626; --blue:#2563eb;
+    --chip-fait-bg:#e4f5ec; --chip-fait-ink:#0b7a44; --chip-encours-bg:#fdeede; --chip-encours-ink:#b45309;
+    --chip-afaire-bg:#eeeae4; --chip-afaire-ink:#6b6058; --shadow:0 1px 2px rgba(28,25,23,.05), 0 6px 20px -12px rgba(28,25,23,.18);
+  }
+  :root[data-theme="dark"]{
+    --bg:#17130f; --bg-elev:#211b16; --ink:#f5efe8; --ink-soft:#c3b9ae; --ink-faint:#8f857a;
+    --line:#332a22; --line-strong:#463a30; --brand:#fb923c; --brand-ink:#fdba74; --green:#34d399; --green-ink:#6ee7b7;
+    --amber:#fbbf24; --red:#f87171; --blue:#60a5fa;
+    --chip-fait-bg:#123122; --chip-fait-ink:#6ee7b7; --chip-encours-bg:#3a2610; --chip-encours-ink:#fcd9a3;
+    --chip-afaire-bg:#2a2219; --chip-afaire-ink:#b6a999; --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -14px rgba(0,0,0,.7);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;
+    -webkit-font-smoothing:antialiased;font-feature-settings:"kern";}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+
+  /* Hero */
+  header.hero{padding:56px 0 28px;border-bottom:1px solid var(--line)}
+  .kicker{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--brand);margin:0 0 14px}
+  h1{font-size:clamp(30px,5vw,50px);line-height:1.04;letter-spacing:-.02em;font-weight:800;margin:0;text-wrap:balance}
+  h1 .m{color:var(--brand)}
+  .lede{max-width:64ch;color:var(--ink-soft);font-size:17px;margin:16px 0 0}
+  .meta{margin-top:18px;display:flex;flex-wrap:wrap;gap:8px 18px;font-size:13px;color:var(--ink-faint)}
+  .meta b{color:var(--ink-soft);font-weight:600}
+
+  /* Summary tiles */
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:26px 0 4px}
+  .tile{background:var(--bg-elev);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow)}
+  .tile .n{font-size:30px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1}
+  .tile .l{font-size:12.5px;color:var(--ink-soft);margin-top:6px;font-weight:600}
+  .tile .bar{height:6px;border-radius:99px;background:var(--line);margin-top:12px;overflow:hidden}
+  .tile .bar>i{display:block;height:100%;border-radius:99px}
+  .tile.fait .n{color:var(--green-ink)} .tile.fait .bar>i{background:var(--green)}
+  .tile.encours .n{color:var(--amber)} .tile.encours .bar>i{background:var(--amber)}
+  .tile.afaire .n{color:var(--ink-soft)} .tile.afaire .bar>i{background:var(--line-strong)}
+  .tile.total .n{color:var(--brand)} .tile.total .bar>i{background:var(--brand)}
+
+  /* Legend */
+  .legend{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;margin:22px 0 6px;
+    padding:14px 16px;background:var(--bg-elev);border:1px solid var(--line);border-radius:var(--radius)}
+  .legend .grp{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .legend .t{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint)}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap}
+  .chip.fait{background:var(--chip-fait-bg);color:var(--chip-fait-ink)}
+  .chip.encours{background:var(--chip-encours-bg);color:var(--chip-encours-ink)}
+  .chip.afaire{background:var(--chip-afaire-bg);color:var(--chip-afaire-ink)}
+  .dot{width:9px;height:9px;border-radius:99px;flex:none;display:inline-block}
+  .dot.critique{background:var(--red)} .dot.haute{background:var(--brand)}
+  .dot.moyenne{background:var(--blue)} .dot.basse{background:var(--ink-faint)}
+  .prio-l{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:var(--ink-soft);font-weight:600}
+
+  /* Domain nav */
+  nav.jump{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line);margin:26px -20px 0;padding:10px 20px}
+  nav.jump .row{display:flex;gap:7px;overflow-x:auto;scrollbar-width:thin}
+  nav.jump a{flex:none;font-size:12.5px;font-weight:600;color:var(--ink-soft);text-decoration:none;
+    padding:6px 11px;border-radius:99px;border:1px solid var(--line);white-space:nowrap}
+  nav.jump a:hover{color:var(--brand);border-color:var(--brand)}
+  nav.jump a b{color:var(--ink-faint);font-weight:700}
+
+  /* Sections */
+  main{padding:8px 0 40px}
+  section.domain{padding:34px 0 6px;scroll-margin-top:64px;border-bottom:1px solid var(--line)}
+  section.domain:last-child{border-bottom:0}
+  .dh{display:flex;align-items:baseline;gap:14px;margin:0 0 4px}
+  .code{font-size:13px;font-weight:800;color:#fff;background:var(--brand);border-radius:8px;
+    padding:4px 9px;letter-spacing:.02em;flex:none;line-height:1.1}
+  .dh h2{font-size:22px;font-weight:800;letter-spacing:-.01em;margin:0;text-wrap:balance}
+  .dsub{color:var(--ink-soft);font-size:14.5px;margin:2px 0 18px;max-width:70ch}
+
+  ul.items{list-style:none;margin:0;padding:0;display:grid;gap:9px}
+  li.item{display:grid;grid-template-columns:16px 1fr auto;gap:12px;align-items:start;
+    background:var(--bg-elev);border:1px solid var(--line);border-radius:12px;padding:13px 15px}
+  li.item .pri{margin-top:6px}
+  li.item .body .t{font-weight:650;font-size:15px;letter-spacing:-.005em}
+  li.item .body .d{color:var(--ink-soft);font-size:13.5px;margin-top:2px}
+  li.item .st{align-self:center}
+  @media(max-width:560px){
+    li.item{grid-template-columns:16px 1fr;gap:9px}
+    li.item .st{grid-column:2;justify-self:start;margin-top:8px}
+  }
+
+  footer{padding:30px 0 60px;color:var(--ink-faint);font-size:13px;text-align:center}
+  footer b{color:var(--ink-soft)}
+
+  .tiles.two{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:720px){.tiles{grid-template-columns:repeat(2,1fr)}}
+  a.focusable:focus-visible,nav.jump a:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+</style>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="kicker">Marché CI · Place de marché multi‑vendeurs · Côte d'Ivoire</p>
+    <h1>Feuille de route <span class="m">complète</span> du projet</h1>
+    <p class="lede">Inventaire exhaustif — backend, base de données, frontend, paiement, livraison, sécurité,
+      administration, croissance, conformité, infrastructure, mobile et innovations. Chaque élément porte un
+      <b>statut</b> (fait / en cours / à faire) et une <b>priorité</b>. Rien n'est omis.</p>
+    <div class="meta" id="meta"></div>
+
+    <div class="tiles" id="tiles"></div>
+
+    <div class="legend">
+      <div class="grp"><span class="t">Statut</span>
+        <span class="chip fait">✓ Fait</span>
+        <span class="chip encours">◐ En cours</span>
+        <span class="chip afaire">○ À faire</span>
+      </div>
+      <div class="grp" style="margin-left:auto"><span class="t">Priorité</span>
+        <span class="prio-l"><i class="dot critique"></i>Critique</span>
+        <span class="prio-l"><i class="dot haute"></i>Haute</span>
+        <span class="prio-l"><i class="dot moyenne"></i>Moyenne</span>
+        <span class="prio-l"><i class="dot basse"></i>Basse</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<nav class="jump"><div class="wrap"><div class="row" id="jump"></div></div></nav>
+
+<main class="wrap" id="main"></main>
+
+<footer class="wrap">
+  <p>Marché CI — feuille de route générée le <b id="date"></b>. Document de travail : les statuts reflètent l'état actuel du dépôt et se mettent à jour au fil des livraisons.</p>
+</footer>
+
+<script>
+/* Données de la feuille de route. status: fait|encours|afaire — prio: critique|haute|moyenne|basse */
+const DATA = [
+ {code:"A", title:"Base de données & architecture backend",
+  sub:"Le cœur de persistance. Passage de localStorage vers une base serveur unique et fiable.",
+  items:[
+   ["Base SQLite intégrée (node:sqlite)","Comptes, catalogue, panier, commandes, sessions, avis persistés.","fait","critique"],
+   ["API REST /api/shop","Endpoints comptes, catalogue, panier, commandes, avis, admin.","fait","critique"],
+   ["Pont front↔backend (write-through)","La SPA écrit inscriptions, commandes et avis en base quand le serveur est présent.","fait","haute"],
+   ["Migrer les collections restantes","favoris, listes de souhaits, abonnements, notifications, messages, coupons, questions, alertes, boutiques, dépenses, signalements en base.","afaire","haute"],
+   ["Entités vendeurs/boutiques en base","Modèle boutiques + rattachement produits/commandes au vendeur.","afaire","critique"],
+   ["Catalogue = source unique","Réconcilier le catalogue front (démo) et le catalogue serveur (un seul référentiel produits).","afaire","haute"],
+   ["Système de migrations versionnées","Schéma évolutif reproductible (au‑delà des ALTER ad hoc actuels).","afaire","moyenne"],
+   ["Passage à PostgreSQL en production","SQLite pour le dev ; Postgres pour la concurrence et la montée en charge.","afaire","haute"],
+   ["Pagination sur toutes les listes","Éviter de renvoyer 500 lignes ; curseur/limit-offset.","afaire","moyenne"],
+   ["Cache (Redis)","Catalogue, sessions, agrégats de notes.","afaire","basse"],
+   ["Sauvegardes & restauration","Export planifié + procédure de restauration testée.","afaire","haute"],
+   ["Versionnement de l'API (/api/v1)","Compatibilité ascendante pour le mobile et les intégrations.","afaire","moyenne"],
+   ["Documentation OpenAPI/Swagger","Contrat d'API publié et navigable.","afaire","moyenne"],
+   ["Middleware d'erreurs & format uniforme","Réponses d'erreur cohérentes (code, message, détails).","encours","moyenne"],
+   ["Journalisation structurée","Logs applicatifs exploitables (niveaux, corrélation).","afaire","moyenne"],
+  ]},
+ {code:"B", title:"Comptes, authentification & rôles",
+  sub:"Identité, sécurité d'accès et séparation client / vendeur / administrateur.",
+  items:[
+   ["Inscription/connexion en base","Mots de passe hachés (scrypt+sel), sessions par jeton.","fait","critique"],
+   ["Expiration & rotation des jetons","Durée de vie, révocation, jetons de rafraîchissement.","afaire","haute"],
+   ["Réinitialisation de mot de passe","Lien/one-time code par e-mail ou SMS.","afaire","haute"],
+   ["Vérification de l'e‑mail / du téléphone","Confirmation à l'inscription (anti-faux comptes).","afaire","haute"],
+   ["Double authentification (2FA)","SMS ou application d'authentification.","afaire","moyenne"],
+   ["Contrôle d'accès par rôle côté serveur","client / vendeur / admin appliqué à chaque endpoint.","encours","critique"],
+   ["Connexion sociale / OTP téléphone","OTP SMS très adapté au marché ivoirien.","afaire","moyenne"],
+   ["Connexion biométrique (visage)","Réutiliser la reconnaissance faciale KYC pour se connecter.","afaire","basse"],
+   ["Gestion de session multi‑appareils","Liste des sessions actives + déconnexion à distance.","afaire","basse"],
+  ]},
+ {code:"C", title:"Paiement",
+  sub:"Aujourd'hui : paiement à la livraison. Priorité n°1 business : le mobile money.",
+  items:[
+   ["Paiement à la livraison (COD)","Encaissement à la livraison, total recalculé serveur.","fait","critique"],
+   ["Mobile money (Orange, MTN, Moov, Wave)","Intégration des portefeuilles mobiles — incontournable en Côte d'Ivoire.","afaire","critique"],
+   ["Paiement par carte (CinetPay / Paystack)","Agrégateur panafricain pour cartes + wallets.","afaire","haute"],
+   ["Paiement séquestre (escrow)","Fonds bloqués puis libérés au vendeur après livraison confirmée.","afaire","haute"],
+   ["Répartition automatique (split)","Commission plateforme prélevée, reste versé au vendeur.","afaire","haute"],
+   ["Portefeuille & retraits vendeurs","Solde, demandes de retrait, historique des versements.","afaire","haute"],
+   ["Remboursements & annulations","Flux de remboursement lié aux retours/litiges.","afaire","moyenne"],
+   ["Factures & reçus PDF","Génération et envoi automatiques.","afaire","moyenne"],
+   ["Réconciliation & journal des transactions","Suivi comptable des encaissements/versements.","afaire","moyenne"],
+  ]},
+ {code:"D", title:"Livraison & logistique",
+  sub:"Du panier au colis remis : zones, frais, suivi et acteurs de livraison.",
+  items:[
+   ["Zones de livraison & frais par commune","Paramétrage des communes desservies et des frais.","fait","haute"],
+   ["Calcul des frais par distance","Géocodage + tarification kilométrique.","afaire","moyenne"],
+   ["Suivi de commande (statuts)","Chronologie en attente → confirmée → expédiée → livrée.","fait","haute"],
+   ["Suivi GPS temps réel","Position du livreur sur carte pour le client.","afaire","moyenne"],
+   ["Rôle & application livreur","Attribution des courses, preuve de livraison.","afaire","haute"],
+   ["Intégration transporteurs / coursiers","Partenaires de livraison locaux.","afaire","moyenne"],
+   ["Points relais / points de retrait","Retrait en boutique ou en point relais.","afaire","basse"],
+   ["Créneaux de livraison","Choix d'un créneau horaire.","fait","basse"],
+  ]},
+ {code:"E", title:"Catalogue, recherche & recommandations",
+  sub:"Trouver le bon produit vite — recherche, filtres, découverte.",
+  items:[
+   ["Catalogue en base + gestion admin","Produits persistés, ajout/édition depuis le back-office.","fait","critique"],
+   ["Téléversement réel des images produits","Upload, redimensionnement, stockage objet/CDN (aujourd'hui : placeholder).","afaire","haute"],
+   ["Recherche plein texte serveur","Index, tolérance aux fautes, pertinence.","afaire","haute"],
+   ["Filtres & tri avancés (à facettes)","Prix, catégorie, note, boutique, disponibilité.","encours","moyenne"],
+   ["Recommandations personnalisées","« Vu récemment », « Souvent achetés ensemble », suggestions.","afaire","moyenne"],
+   ["Recherche « aucun résultat » intelligente","Suggestions et corrections.","fait","basse"],
+   ["Gestion des variantes & stock","Stock par variante, décrément à la commande.","fait","haute"],
+   ["Catégories & arborescence en base","CMS des catégories côté serveur.","afaire","moyenne"],
+  ]},
+ {code:"F", title:"Espace vendeur",
+  sub:"Les outils du commerçant : ventes, stock, revenus, promotions.",
+  items:[
+   ["Tableau de bord vendeur (démo)","Vue ventes/commandes côté SPA.","fait","haute"],
+   ["« Mes ventes » depuis la base","Commandes du vendeur, revenus, versements — persistés.","afaire","haute"],
+   ["Blocage tant que KYC non validé","Impossible de vendre avant vérification d'identité.","encours","critique"],
+   ["Gestion produits depuis la base","CRUD produits vendeur côté serveur.","afaire","haute"],
+   ["Gestion de l'inventaire","Vue stock, alertes rupture, réappro.","fait","moyenne"],
+   ["Promotions & campagnes en base","Coupons, promos groupées persistés.","afaire","moyenne"],
+   ["Messagerie vendeur↔client en base","Fil de discussion persistant.","afaire","moyenne"],
+   ["Analytique vendeur","Chiffre d'affaires, conversions, meilleurs produits.","afaire","moyenne"],
+   ["Import d'articles (CSV/JSON)","Ajout en masse.","fait","basse"],
+   ["Comptes staff / multi‑utilisateurs","Plusieurs opérateurs par boutique.","fait","basse"],
+  ]},
+ {code:"G", title:"Espace client & expérience (UX)",
+  sub:"Le parcours d'achat : rapidité, confort, fidélisation.",
+  items:[
+   ["Parcours d'achat + commande en base","Panier, checkout (invité et connecté), commande persistée.","fait","critique"],
+   ["Suivi client « Mes commandes » en ligne","Statut réel mis à jour par l'admin.","fait","haute"],
+   ["Favoris & listes de souhaits en base","Synchronisation multi‑appareils.","afaire","moyenne"],
+   ["Notifications push web","Rappels commande, promos, retour en stock.","afaire","moyenne"],
+   ["PWA installable + hors‑ligne","Installation et cache applicatif.","fait","haute"],
+   ["Multilingue (i18n)","Interface traduite ; extensible aux langues locales.","fait","moyenne"],
+   ["Accessibilité (clavier, ARIA, focus)","Bases posées ; viser conformité WCAG AA.","encours","moyenne"],
+   ["Compatibilité tous navigateurs","Chrome, Firefox, Edge, Safari.","fait","haute"],
+   ["Panier « garder pour plus tard »","Mise de côté d'articles.","fait","basse"],
+   ["Programme de fidélité / points","Récompenses à l'achat.","afaire","moyenne"],
+  ]},
+ {code:"H", title:"Avis, réputation & communauté",
+  sub:"La confiance sociale : notes, avis, questions, modération.",
+  items:[
+   ["Avis en base + note agrégée","Avis produits/boutiques persistés, moyenne calculée.","fait","haute"],
+   ["Modération des avis (admin)","Masquer/afficher, achat vérifié.","fait","moyenne"],
+   ["Affichage des avis serveur sur la fiche produit","Brancher la note agrégée de la base sur le front.","afaire","moyenne"],
+   ["Questions / réponses produit en base","Q&R persistantes.","afaire","basse"],
+   ["Réponses vendeur aux avis","Droit de réponse du commerçant.","fait","basse"],
+   ["Signalement d'avis abusifs","File de modération.","fait","moyenne"],
+   ["Anti‑faux avis (IA)","Détection d'avis frauduleux/automatisés.","encours","moyenne"],
+  ]},
+ {code:"I", title:"Sécurité & anti‑fraude",
+  sub:"Crédibilité de la plateforme : KYC biométrique, détection d'arnaques, protection des comptes.",
+  items:[
+   ["KYC vendeur : reconnaissance faciale","Pièce d'identité vs selfie, comparaison dlib automatique.","fait","critique"],
+   ["Détection de vivacité (anti‑photo)","Clignement + mouvement ; bloque photo/écran figé.","fait","critique"],
+   ["Chiffrement & purge RGPD des pièces","Chiffrer au repos, purger après décision.","afaire","haute"],
+   ["OCR & authenticité du document","Lecture des champs + contrôle des sécurités du document.","afaire","moyenne"],
+   ["Score de confiance (Trust Score)","Notation de risque boutiques/annonces/comptes.","fait","haute"],
+   ["Scan des annonces & messages","Détection de contenus frauduleux/interdits.","fait","haute"],
+   ["Score de risque des commandes","Vélocité, empreinte d'appareil, incohérences.","afaire","moyenne"],
+   ["Protection anti‑bot (CAPTCHA)","hCaptcha/reCAPTCHA aux points sensibles.","afaire","moyenne"],
+   ["Anti‑force brute & verrouillage","Limitation des tentatives de connexion.","fait","haute"],
+   ["Politique de mot de passe renforcée","Exigences de robustesse.","fait","moyenne"],
+   ["Journal d'audit & de sécurité serveur","Traçabilité des actions sensibles.","encours","moyenne"],
+   ["En‑têtes de sécurité, CORS, CSRF, HTTPS","helmet, CORS restreint, anti‑CSRF, TLS.","afaire","critique"],
+   ["Test d'intrusion (pentest)","Audit de sécurité externe avant production.","afaire","haute"],
+  ]},
+ {code:"J", title:"Administration & back‑office",
+  sub:"Piloter la marketplace : commandes, catalogue, utilisateurs, litiges, contenu.",
+  items:[
+   ["Back‑office base client (/admin/shop)","Stats, commandes+statuts, catalogue, avis (Tailwind).","fait","haute"],
+   ["Revue KYC dédiée (/admin/kyc)","Pièce + selfie côte à côte, décision.","fait","haute"],
+   ["Console admin SPA (analytique, modération)","Tableau de bord, signalements, suspensions, finances.","fait","haute"],
+   ["Unifier les deux back‑offices","Consolider l'admin localStorage et l'admin base (source unique).","afaire","haute"],
+   ["Gestion des utilisateurs en base","Recherche, fiche, suspension côté serveur.","afaire","haute"],
+   ["File d'approbation des boutiques","Validation vendeur liée au KYC, en base.","encours","haute"],
+   ["Gestion des litiges & remboursements","Traitement des réclamations de commande.","fait","moyenne"],
+   ["Exports & rapports (CSV/PDF)","Extractions commandes/finances.","encours","moyenne"],
+   ["CMS : pages, catégories, bannières en base","Contenu éditorial persistant.","afaire","moyenne"],
+   ["Personnalisation de la plateforme","Nom, logo, couleurs, politique de confidentialité.","fait","moyenne"],
+   ["Rôles administrateurs & permissions","Droits fins par membre de l'équipe.","fait","moyenne"],
+   ["Zones de livraison & alertes auto","Paramétrage opérationnel.","fait","basse"],
+  ]},
+ {code:"K", title:"Marketing & croissance",
+  sub:"Acquérir, convertir, fidéliser.",
+  items:[
+   ["Coupons & promotions globales","Codes promo plateforme.","fait","moyenne"],
+   ["Rappel de panier abandonné","Relance automatique.","fait","moyenne"],
+   ["Parrainage (referral)","Récompense à l'invitation d'amis.","afaire","moyenne"],
+   ["Campagnes e‑mail / SMS","Envois marketing segmentés.","afaire","moyenne"],
+   ["Notifications aux abonnés d'une boutique","Nouveautés, promos.","fait","basse"],
+   ["Analytique produit & événements","Suivi comportemental (funnels, conversions).","afaire","haute"],
+   ["Tests A/B","Optimisation des parcours.","afaire","basse"],
+   ["Bannières & mises en avant","Boutiques/produits à la une.","fait","basse"],
+  ]},
+ {code:"L", title:"SEO & acquisition organique",
+  sub:"Être trouvé sur Google — point faible structurel d'une SPA en routage par ancre.",
+  items:[
+   ["Rendu serveur / prérendu des fiches produit","SSR/SSG pour l'indexation (le hash‑routing actuel nuit au SEO).","afaire","haute"],
+   ["Balises meta & Open Graph dynamiques","Titre/description/partage par page.","afaire","haute"],
+   ["Données structurées (JSON‑LD)","Produit, avis, fil d'Ariane pour les rich results.","afaire","moyenne"],
+   ["Sitemap.xml & robots.txt","Cartographie pour les moteurs.","afaire","moyenne"],
+   ["URLs propres (history API)","Chemins lisibles plutôt que #/…","afaire","moyenne"],
+   ["Performances (Core Web Vitals)","Lazy‑load, découpage, images optimisées.","encours","moyenne"],
+  ]},
+ {code:"M", title:"Conformité, légal & finances",
+  sub:"Cadre réglementaire ivoirien et obligations d'une place de marché.",
+  items:[
+   ["Conformité protection des données (ARTCI/RGPD)","Consentement, portabilité, purge, registre.","encours","haute"],
+   ["CGU, confidentialité, mentions légales","Documents juridiques à jour.","fait","moyenne"],
+   ["Gestion de la TVA / fiscalité","Calcul et déclaration selon la réglementation.","afaire","moyenne"],
+   ["Contrats vendeurs & commissions","Cadre contractuel de la place de marché.","afaire","moyenne"],
+   ["Bandeau consentement cookies/traceurs","Information et choix de l'utilisateur.","fait","basse"],
+   ["Politique de retour & remboursement","Règles claires et appliquées.","fait","moyenne"],
+  ]},
+ {code:"N", title:"Infrastructure, DevOps & qualité",
+  sub:"Mettre en production de façon fiable et scalable.",
+  items:[
+   ["Conteneurisation (Docker)","Image reproductible du serveur.","afaire","haute"],
+   ["CI/CD (build, tests, déploiement)","Pipeline automatisé.","afaire","haute"],
+   ["Hébergement & nom de domaine + TLS","Mise en ligne HTTPS.","afaire","critique"],
+   ["Séparation des environnements","dev / staging / production.","afaire","moyenne"],
+   ["Tests automatisés (unitaires & intégration)","Couverture backend et front.","afaire","haute"],
+   ["Tests de charge & performance","Vérifier la tenue en montée de trafic.","afaire","moyenne"],
+   ["Supervision & alertes (Sentry, uptime)","Détection proactive des incidents.","afaire","haute"],
+   ["Protection DDoS / WAF (Cloudflare)","Bouclier réseau.","afaire","moyenne"],
+   ["Limitation de débit (rate limiting)","Anti‑abus des endpoints.","afaire","haute"],
+   ["Plan de reprise (sauvegardes testées)","Restauration en cas de sinistre.","afaire","moyenne"],
+  ]},
+ {code:"O", title:"Mobile",
+  sub:"Le canal majoritaire en Côte d'Ivoire.",
+  items:[
+   ["PWA installable (Android/iOS)","Installation depuis le navigateur.","fait","haute"],
+   ["Notifications push mobiles","Engagement et rétention.","afaire","moyenne"],
+   ["Application native (React Native/Flutter)","Présence sur les stores, accès matériel.","afaire","moyenne"],
+   ["Optimisation data / mode léger","Adapté aux connexions limitées.","afaire","moyenne"],
+  ]},
+ {code:"P", title:"Innovations & différenciation (IA)",
+  sub:"Ce qui distingue Marché CI de la concurrence.",
+  items:[
+   ["Assistant virtuel / chatbot support","Aide à l'achat et SAV (maquette existante à brancher).","encours","moyenne"],
+   ["Recommandations par IA","Personnalisation temps réel.","afaire","moyenne"],
+   ["Recherche visuelle (par photo)","Trouver un produit à partir d'une image.","afaire","basse"],
+   ["Recherche vocale (langues locales)","Dioula, Baoulé… accessibilité orale.","afaire","basse"],
+   ["Anti‑fraude par IA","Modèles de détection avancés (comptes, avis, commandes).","afaire","moyenne"],
+   ["Anti‑deepfake vidéo (KYC)","Texture / rPPG en complément de la vivacité active.","afaire","basse"],
+   ["Tarification dynamique","Ajustement selon la demande.","afaire","basse"],
+   ["Score de crédit vendeur","Éligibilité à des avances/financements.","afaire","basse"],
+  ]},
+];
+
+const STLABEL={fait:"✓ Fait",encours:"◐ En cours",afaire:"○ À faire"};
+const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
+
+let nF=0,nE=0,nA=0,nT=0;
+DATA.forEach(d=>d.items.forEach(([,,st])=>{nT++;st==="fait"?nF++:st==="encours"?nE++:nA++;}));
+const pct=n=>Math.round(n/nT*100);
+
+/* Tiles */
+const tiles=[["total","Éléments recensés",nT,100],["fait","Déjà réalisés",nF,pct(nF)],
+  ["encours","En cours",nE,pct(nE)],["afaire","À faire",nA,pct(nA)]];
+const tw=document.getElementById("tiles");
+tiles.forEach(([c,l,n,p])=>{
+  tw.appendChild(el("div","tile "+c,
+    `<div class="n">${n}</div><div class="l">${l}</div><div class="bar"><i style="width:${p}%"></i></div>`));
+});
+
+/* Meta */
+document.getElementById("meta").innerHTML =
+  `<span><b>${DATA.length}</b> domaines</span><span><b>${nT}</b> éléments</span>`+
+  `<span><b>${pct(nF)}%</b> réalisés</span><span>Priorités : critique · haute · moyenne · basse</span>`;
+
+/* Jump nav */
+const jw=document.getElementById("jump");
+DATA.forEach(d=>{
+  const a=el("a",null,`${d.code} · ${d.title.split(" & ")[0].split(",")[0]} <b>${d.items.length}</b>`);
+  a.href="#dom-"+d.code;a.className="focusable";jw.appendChild(a);
+});
+
+/* Sections */
+const main=document.getElementById("main");
+DATA.forEach(d=>{
+  const sec=el("section","domain");sec.id="dom-"+d.code;
+  const head=el("div","dh",`<span class="code">${d.code}</span><h2>${d.title}</h2>`);
+  sec.appendChild(head);
+  sec.appendChild(el("p","dsub",d.sub));
+  const ul=el("ul","items");
+  d.items.forEach(([t,desc,st,pr])=>{
+    const li=el("li","item");
+    li.innerHTML=`<span class="pri"><i class="dot ${pr}" title="Priorité : ${pr}"></i></span>`+
+      `<div class="body"><div class="t">${t}</div><div class="d">${desc}</div></div>`+
+      `<span class="st"><span class="chip ${st}">${STLABEL[st]}</span></span>`;
+    ul.appendChild(li);
+  });
+  sec.appendChild(ul);
+  main.appendChild(sec);
+});
+
+document.getElementById("date").textContent =
+  new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
+</script>
