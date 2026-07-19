@@ -932,3 +932,59 @@ body.seller-mode #chatbotRoot { display: none; }
 .seller-return-box.return-requested { border-color: var(--warning); background: color-mix(in srgb, var(--warning) 10%, var(--surface)); }
 .seller-return-box.return-accepted { border-color: var(--accent); }
 .seller-return-box.return-refused { border-color: var(--danger); }
+
+/* =========================================================================
+   Bloc orange/jaune : catégorie, panier+, notifs, recherche, a11y
+   ========================================================================= */
+
+/* Page catégorie */
+.category-hero { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
+.category-hero-icon { width: 64px; height: 64px; border-radius: var(--r); display: grid; place-items: center; font-size: 32px; background: var(--brand-soft); flex-shrink: 0; }
+.category-hero h1 { margin: 0; font-size: 26px; }
+
+/* Panier : alertes de ligne + « plus tard » */
+.ci-oldprice { text-decoration: line-through; color: var(--text-3); font-weight: 500; font-size: 12.5px; margin-left: 4px; }
+.ci-alert { font-size: 12px; font-weight: 600; margin-top: 4px; }
+.ci-alert.alert-out { color: var(--danger); }
+.ci-alert.alert-drop { color: var(--accent); }
+.saved-item { opacity: .96; }
+
+/* Centre de notifications */
+.notif-group-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-3); margin: 4px 2px 6px; }
+.notif-item { position: relative; }
+.notif-del { flex-shrink: 0; color: var(--text-3); opacity: 0; transition: opacity var(--t-fast); }
+.notif-item:hover .notif-del, .notif-del:focus-visible { opacity: 1; }
+@media (hover: none) { .notif-del { opacity: .6; } }
+
+/* Recherche : aucun résultat */
+.no-results { text-align: center; padding: 30px 16px; }
+.no-results-emoji { font-size: 52px; }
+.no-results h3 { margin: 8px 0; }
+.no-results-tips { display: inline-block; margin-top: 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r); padding: 10px 16px; font-size: 13px; color: var(--text-2); }
+
+/* --- Accessibilité --- */
+.skip-link { position: fixed; top: -60px; left: 12px; z-index: 2000; background: var(--brand); color: var(--text-on-brand); padding: 10px 16px; border-radius: 0 0 var(--r-sm) var(--r-sm); font-weight: 700; transition: top var(--t-fast); }
+.skip-link:focus { top: 0; }
+:focus-visible { outline: 3px solid color-mix(in srgb, var(--brand) 55%, transparent); outline-offset: 2px; border-radius: 4px; }
+.product-card:focus-visible { outline-offset: 3px; }
+/* Ne montre le contour que pour la navigation clavier (pas au clic souris). */
+:focus:not(:focus-visible) { outline: none; }
+
+/* Bandeau confidentialité (première visite) */
+.privacy-banner { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 1100; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: center; background: var(--bg-elev); border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg); border-radius: var(--r); padding: 12px 18px; font-size: 13px; color: var(--text-2); animation: privUp .35s cubic-bezier(.2,.9,.3,1); }
+.privacy-banner strong { color: var(--text); }
+.privacy-banner.out { opacity: 0; transform: translateY(10px); transition: all .3s; }
+@keyframes privUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@media (max-width: 760px) { .privacy-banner { bottom: calc(var(--bottomnav-h) + 10px); flex-direction: column; text-align: center; } }
+
+/* Tour de bienvenue */
+.welcome-steps { display: flex; flex-direction: column; gap: 12px; }
+.welcome-step { display: flex; gap: 12px; align-items: flex-start; }
+.welcome-step .ws-ico { font-size: 26px; flex-shrink: 0; width: 40px; height: 40px; display: grid; place-items: center; background: var(--brand-soft); border-radius: 12px; }
+.welcome-step strong { display: block; }
+.welcome-step .text-muted { font-size: 13px; }
+
+/* Bouton d'installation PWA */
+.install-fab { position: fixed; left: 18px; bottom: 20px; z-index: 899; display: inline-flex; align-items: center; gap: 10px; background: var(--brand); color: var(--text-on-brand); border: none; border-radius: var(--r-full); padding: 12px 18px; font-weight: 700; font-size: 13.5px; cursor: pointer; box-shadow: var(--shadow-brand); }
+.install-fab .install-close { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: rgba(255,255,255,.25); font-size: 12px; }
+@media (max-width: 760px) { .install-fab { bottom: calc(var(--bottomnav-h) + 14px); left: 14px; } }

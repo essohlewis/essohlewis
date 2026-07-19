@@ -164,8 +164,64 @@ window.MP = window.MP || {};
     },
   };
 
+  /* ---------- Listes de souhaits multiples ---------- */
+  const Wishlists = {
+    _all() { return window.MP.DB.get(window.MP.DB.KEYS.wishlists, {}); },
+    _save(map) { window.MP.DB.set(window.MP.DB.KEYS.wishlists, map); },
+    lists() {
+      const user = window.MP.Auth.current();
+      if (!user) return [];
+      return this._all()[user.id] || [];
+    },
+    get(id) { return this.lists().find((l) => l.id === id) || null; },
+    create(name) {
+      const user = window.MP.Auth.current();
+      if (!user) return { ok: false, error: "Connexion requise." };
+      name = String(name || "").trim();
+      if (!name) return { ok: false, error: "Nom requis." };
+      const map = this._all();
+      map[user.id] = map[user.id] || [];
+      const list = { id: window.MP.DB.uid("wl"), name, items: [], createdAt: Date.now() };
+      map[user.id].push(list);
+      this._save(map);
+      return { ok: true, list };
+    },
+    rename(id, name) {
+      const user = window.MP.Auth.current(); if (!user) return { ok: false };
+      name = String(name || "").trim(); if (!name) return { ok: false, error: "Nom requis." };
+      const map = this._all();
+      const list = (map[user.id] || []).find((l) => l.id === id);
+      if (!list) return { ok: false };
+      list.name = name; this._save(map); return { ok: true };
+    },
+    remove(id) {
+      const user = window.MP.Auth.current(); if (!user) return;
+      const map = this._all();
+      map[user.id] = (map[user.id] || []).filter((l) => l.id !== id);
+      this._save(map);
+    },
+    has(listId, productId) { const l = this.get(listId); return !!l && l.items.includes(productId); },
+    listsContaining(productId) { return this.lists().filter((l) => l.items.includes(productId)).map((l) => l.id); },
+    toggle(listId, productId) {
+      const user = window.MP.Auth.current(); if (!user) return { ok: false };
+      const map = this._all();
+      const list = (map[user.id] || []).find((l) => l.id === listId);
+      if (!list) return { ok: false };
+      const i = list.items.indexOf(productId);
+      if (i === -1) list.items.push(productId); else list.items.splice(i, 1);
+      this._save(map);
+      return { ok: true, added: list.items.includes(productId) };
+    },
+    items(listId) {
+      const l = this.get(listId);
+      if (!l) return [];
+      return l.items.map((id) => window.MP.Products.get(id)).filter((p) => p && p.status === "published");
+    },
+  };
+
   window.MP.Recent = Recent;
   window.MP.SearchHist = SearchHist;
+  window.MP.Wishlists = Wishlists;
   window.MP.Alerts = Alerts;
   window.MP.Compare = Compare;
   window.MP.Loyalty = Loyalty;

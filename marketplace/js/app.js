@@ -7,10 +7,11 @@
   "use strict";
 
   const { DB, UI, Auth, Store, Products, Cart, Orders, Notifications, Router, Seed, Coupons, Messages, Expenses,
-    Recent, SearchHist, Alerts, Compare, Loyalty, Questions, SavedSearches, I18n } = window.MP;
+    Recent, SearchHist, Alerts, Compare, Loyalty, Questions, SavedSearches, Wishlists, I18n } = window.MP;
 
   const V = () => document.getElementById("view");
   const SB = () => document.getElementById("sidebar");
+  const T = (k) => I18n.t(k); // raccourci de traduction
 
   /* ============================================================
      Favoris (wishlist) — logique légère persistée dans localStorage
@@ -84,7 +85,7 @@
     const img = UI.safeImg(p.images && p.images[0], p.title);
     const favActive = Fav.has(p.id) ? "active" : "";
     return `
-      <article class="product-card" data-href="#/product/${p.id}">
+      <article class="product-card" data-href="#/product/${p.id}" tabindex="0" role="link" aria-label="${UI.esc(p.title)} — ${UI.fcfa(price)}">
         <div class="pc-media">
           <img src="${img}" alt="${UI.esc(p.title)}" loading="lazy" />
           <div class="pc-tag">
@@ -388,9 +389,9 @@
     let sections = "";
     if (!hasFilters) {
       const recent = user ? Recent.list().slice(0, 10) : [];
-      if (recent.length) sections += `<div class="section-title">Vus récemment</div><div class="scroll-row">${recent.map(productCard).join("")}</div>`;
+      if (recent.length) sections += `<div class="section-title">${T("home.recentlyViewed")}</div><div class="scroll-row">${recent.map(productCard).join("")}</div>`;
       const reco = recommendedProducts(8);
-      if (reco.length) sections += `<div class="section-title">✨ Recommandé pour vous</div><div class="scroll-row">${reco.map(productCard).join("")}</div>`;
+      if (reco.length) sections += `<div class="section-title">${T("home.recommended")}</div><div class="scroll-row">${reco.map(productCard).join("")}</div>`;
     }
 
     // Onglet « Suivis » (boutiques abonnées).
@@ -418,24 +419,24 @@
           <button class="btn btn-primary btn-sm" id="onboardBtn">Choisir mes catégories</button></div>` : "";
 
     const tabs = `<div class="filter-bar" style="margin-bottom:6px">
-      <a href="#/" class="chip ${q.tab !== "suivis" ? "active" : ""}">🏠 Pour vous</a>
-      ${user ? `<a href="#/?tab=suivis" class="chip ${q.tab === "suivis" ? "active" : ""}">➕ Suivis</a>` : ""}
-      <a href="#/deals" class="chip">🔥 Bons plans</a>
-      <a href="#/stores" class="chip">🏪 Boutiques</a>
-      ${user ? `<a href="#/activity" class="chip">📊 Mon activité</a>` : ""}
+      <a href="#/" class="chip ${q.tab !== "suivis" ? "active" : ""}">${T("home.tabForYou")}</a>
+      ${user ? `<a href="#/?tab=suivis" class="chip ${q.tab === "suivis" ? "active" : ""}">${T("home.tabFollowed")}</a>` : ""}
+      <a href="#/deals" class="chip">${T("home.deals")}</a>
+      <a href="#/stores" class="chip">${T("home.stores")}</a>
+      ${user ? `<a href="#/activity" class="chip">${T("home.activity")}</a>` : ""}
       ${Compare.count() ? `<a href="#/compare" class="chip">⚖️ Comparer (${Compare.count()})</a>` : ""}
     </div>`;
 
     layout(
-      `<div class="hero-banner"><h1>Le marché en ligne de Côte d'Ivoire</h1>
-        <p>Des centaines d'articles de vendeurs près de chez vous. Payez en espèces à la livraison.</p>
+      `<div class="hero-banner"><h1>${T("home.heroTitle")}</h1>
+        <p>${T("home.heroSub")}</p>
         <div class="hero-badges">
-          <span class="hero-pill">🚚 Livraison à domicile</span>
-          <span class="hero-pill">💵 Paiement à la livraison</span>
-          <span class="hero-pill">🏪 ${Store.all().length} boutiques</span>
+          <span class="hero-pill">${T("home.pillDelivery")}</span>
+          <span class="hero-pill">${T("home.pillCod")}</span>
+          <span class="hero-pill">🏪 ${Store.all().length} ${T("home.stores").replace(/^🏪\s*/, "").toLowerCase()}</span>
         </div></div>` +
       onboard + tabs + sections +
-      `<div class="section-title">${q.tab === "suivis" ? "Nouveautés de vos boutiques suivies" : hasFilters ? "Résultats" : "À découvrir"}</div>` +
+      `<div class="section-title">${q.tab === "suivis" ? T("home.newFromFollowed") : hasFilters ? T("home.results") : T("home.discover")}</div>` +
       categoryChips(filters.category) + skeletonGrid(8),
       sidebarFilters(filters)
     );
@@ -500,9 +501,57 @@
     V().querySelectorAll(".chip[data-cat]").forEach((c) =>
       c.addEventListener("click", () => {
         const cat = c.getAttribute("data-cat");
-        Router.go(cat ? "#/?cat=" + cat : "#/");
+        Router.go(cat ? "#/category/" + cat : "#/");
       })
     );
+  }
+
+  /* ============================================================
+     VUE : Page catégorie dédiée (fil d'Ariane + sous-filtres)
+     ============================================================ */
+  function viewCategory(params) {
+    const cat = UI.CATEGORIES.find((c) => c.id === params.id);
+    if (!cat) { layout(emptyState("🧭", "Catégorie introuvable", "Cette catégorie n'existe pas.", `<a href="#/" class="btn btn-primary">Retour à l'accueil</a>`)); return; }
+    const q = params.query || {};
+    const filters = {
+      category: cat.id,
+      sort: q.sort || "recent",
+      promoOnly: q.promo === "1",
+      inStock: q.stock === "1",
+    };
+    const list = Products.search(filters);
+    // Répartition par sous-catégorie implicite : boutiques présentes dans cette catégorie.
+    const storeCount = new Set(list.map((p) => p.storeId)).size;
+    const sortOpts = [["recent", "Plus récents"], ["popular", "Populaires"], ["rating", "Mieux notés"], ["discount", "Meilleures promos"], ["price_asc", "Prix croissant"], ["price_desc", "Prix décroissant"]];
+    layout(`
+      <nav class="breadcrumb"><a href="#/">Accueil</a> › <span>${UI.esc(cat.label)}</span></nav>
+      <div class="category-hero">
+        <div class="category-hero-icon">${cat.icon}</div>
+        <div><h1>${UI.esc(cat.label)}</h1>
+          <p class="text-muted" style="margin:2px 0 0">${list.length} article(s) · ${storeCount} boutique(s)</p></div>
+      </div>
+      <div class="filter-bar" style="align-items:center">
+        <label class="inline-field">Trier
+          <select id="catSort">${sortOpts.map(([v, l]) => `<option value="${v}" ${filters.sort === v ? "selected" : ""}>${l}</option>`).join("")}</select>
+        </label>
+        <button class="chip ${filters.promoOnly ? "active" : ""}" id="catPromo">🔥 En promo</button>
+        <button class="chip ${filters.inStock ? "active" : ""}" id="catStock">✅ En stock</button>
+        <a href="#/stores" class="chip">🏪 Voir les boutiques</a>
+      </div>
+      ${gridHTML(list, "Aucun article dans cette catégorie pour le moment.")}`);
+
+    const rebuild = () => {
+      const p = new URLSearchParams();
+      const s = document.getElementById("catSort").value;
+      if (s && s !== "recent") p.set("sort", s);
+      if (document.getElementById("catPromo").classList.contains("active")) p.set("promo", "1");
+      if (document.getElementById("catStock").classList.contains("active")) p.set("stock", "1");
+      const qs = p.toString();
+      Router.go("#/category/" + cat.id + (qs ? "?" + qs : ""));
+    };
+    document.getElementById("catSort").addEventListener("change", rebuild);
+    document.getElementById("catPromo").addEventListener("click", () => { document.getElementById("catPromo").classList.toggle("active"); rebuild(); });
+    document.getElementById("catStock").addEventListener("click", () => { document.getElementById("catStock").classList.toggle("active"); rebuild(); });
   }
 
   function sidebarFilters(f) {
@@ -633,16 +682,40 @@
     const q = (params.query && params.query.q) || "";
     const filters = { q, sort: "recent" };
     const list = q ? Products.search(filters) : Products.published();
+    if (q) SearchHist.add(q);
+
+    // Bloc « aucun résultat » intelligent : correction, catégorie proche, alternatives.
+    let noResultsHTML = "";
+    if (q && !list.length) {
+      const suggestion = closestSearchTerm(q);
+      const catGuess = closestCategory(q);
+      const popular = Array.from(new Set(Products.published().map((p) => p.category)))
+        .map((id) => UI.CATEGORIES.find((c) => c.id === id)).filter(Boolean).slice(0, 6);
+      const alternatives = recommendedProducts(8);
+      noResultsHTML = `
+        <div class="no-results">
+          <div class="no-results-emoji">🔍</div>
+          <h3>Aucun résultat pour « ${UI.esc(q)} »</h3>
+          ${suggestion ? `<p>Vouliez-vous dire <button class="btn-link-inline" data-didyoumean="${UI.esc(suggestion)}">« ${UI.esc(suggestion)} »</button> ?</p>` : ""}
+          ${catGuess ? `<p>Explorez la catégorie <a href="#/category/${catGuess.id}" class="chip">${catGuess.icon} ${catGuess.label}</a></p>` : ""}
+          <div class="no-results-tips">
+            <strong>Conseils :</strong> vérifiez l'orthographe, utilisez des mots plus généraux, ou parcourez les catégories.
+          </div>
+          <div class="filter-bar" style="justify-content:center;margin-top:10px">${popular.map((c) => `<a href="#/category/${c.id}" class="chip">${c.icon} ${c.label}</a>`).join("")}</div>
+        </div>
+        ${alternatives.length ? `<div class="section-title">✨ Vous pourriez aussi aimer</div><div class="scroll-row">${alternatives.map(productCard).join("")}</div>` : ""}`;
+    }
+
     layout(
       `<div class="page-head"><div>
-        <div class="page-title">${q ? "Résultats" : "Explorer"}</div>
-        <div class="page-sub">${q ? `${list.length} résultat(s) pour « ${UI.esc(q)} »` : "Parcourez tous les articles disponibles."}</div>
+        <div class="page-title">${q ? T("search.results") : T("search.explore")}</div>
+        <div class="page-sub">${q ? `${list.length} résultat(s) pour « ${UI.esc(q)} »` : T("search.exploreSub")}</div>
       </div></div>
       <form id="searchForm" style="margin-bottom:18px">
         <div class="field"><input type="search" id="searchQ" placeholder="Que recherchez-vous ?" value="${UI.esc(q)}" /></div>
       </form>
       ${categoryChips("")}
-      ${gridHTML(list, "Aucun article ne correspond à votre recherche.")}`
+      ${list.length ? gridHTML(list) : (q ? noResultsHTML : gridHTML(list))}`
     );
     wireCategoryChips();
     const form = document.getElementById("searchForm");
@@ -651,6 +724,46 @@
       const val = document.getElementById("searchQ").value.trim();
       Router.go("#/search?q=" + encodeURIComponent(val));
     });
+    V().querySelectorAll("[data-didyoumean]").forEach((b) => b.addEventListener("click", () => Router.go("#/search?q=" + encodeURIComponent(b.getAttribute("data-didyoumean")))));
+  }
+
+  /** Distance de Levenshtein (tolérance aux fautes de frappe). */
+  function levenshtein(a, b) {
+    a = a.toLowerCase(); b = b.toLowerCase();
+    const m = a.length, n = b.length;
+    if (!m) return n; if (!n) return m;
+    let prev = Array.from({ length: n + 1 }, (_, i) => i);
+    for (let i = 1; i <= m; i++) {
+      const cur = [i];
+      for (let j = 1; j <= n; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      }
+      prev = cur;
+    }
+    return prev[n];
+  }
+
+  /** Terme le plus proche parmi les titres/mots des articles publiés. */
+  function closestSearchTerm(q) {
+    q = String(q || "").trim().toLowerCase();
+    if (q.length < 3) return null;
+    const words = new Set();
+    Products.published().forEach((p) => (p.title || "").toLowerCase().split(/[^a-zà-ÿ0-9]+/i).forEach((w) => { if (w.length >= 3) words.add(w); }));
+    UI.CATEGORIES.forEach((c) => words.add(c.label.toLowerCase()));
+    let best = null, bestD = Infinity;
+    words.forEach((w) => { const d = levenshtein(q, w); if (d < bestD) { bestD = d; best = w; } });
+    // Retenu seulement si suffisamment proche et pas identique.
+    return best && best !== q && bestD > 0 && bestD <= Math.max(1, Math.floor(q.length / 3)) ? best : null;
+  }
+
+  /** Catégorie la plus proche du terme recherché. */
+  function closestCategory(q) {
+    q = String(q || "").trim().toLowerCase();
+    let best = null, bestD = Infinity;
+    UI.CATEGORIES.forEach((c) => {
+      c.label.toLowerCase().split(/\s*&\s*|\s+/).forEach((w) => { const d = levenshtein(q, w); if (d < bestD) { bestD = d; best = c; } });
+    });
+    return best && bestD <= Math.max(2, Math.floor(q.length / 2)) ? best : null;
   }
 
   /* ============================================================
@@ -947,6 +1060,7 @@
           ${!isOwner ? `<div class="flex gap-8 wrap mt-8">
               <button class="btn btn-ghost btn-sm" id="cmpBtn">${Compare.has(p.id) ? "✓ Dans le comparateur" : "⚖️ Comparer"}</button>
               <button class="btn btn-ghost btn-sm" id="shareBtn">${SICON.wa} Partager</button>
+              <button class="btn btn-ghost btn-sm" id="addToListBtn">📋 Ajouter à une liste</button>
               ${p.stock <= 0 ? `<button class="btn btn-ghost btn-sm" id="restockAlert">🔔 Alerte réassort</button>` : `<button class="btn btn-ghost btn-sm" id="priceAlert">🔔 Alerte prix</button>`}
               <button class="btn btn-ghost btn-sm" id="reportBtn">⚑ Signaler</button>
             </div>
@@ -1079,6 +1193,8 @@
     });
     const reportBtn = document.getElementById("reportBtn");
     if (reportBtn) reportBtn.addEventListener("click", () => openReportModal(p));
+    const addToListBtn = document.getElementById("addToListBtn");
+    if (addToListBtn) addToListBtn.addEventListener("click", () => openAddToListModal(p.id));
 
     // --- Poser une question au vendeur ---
     const ask = document.getElementById("askSeller");
@@ -1496,8 +1612,13 @@
      ============================================================ */
   function viewCart() {
     const groups = Cart.grouped();
+    const saved = Cart.savedList();
+    const savedHTML = saved.length ? `
+      <div class="section-title" style="margin-top:24px">🔖 Enregistré pour plus tard (${saved.length})</div>
+      <div class="card" style="overflow:hidden">${saved.map(savedLineHTML).join("")}</div>` : "";
     if (!groups.length) {
-      layout(emptyState("🛒", "Votre panier est vide", "Parcourez les boutiques et ajoutez des articles.", `<a href="#/" class="btn btn-primary">Découvrir les articles</a>`));
+      layout(`${emptyState("🛒", T("cart.empty"), T("cart.emptySub"), `<a href="#/" class="btn btn-primary">${T("cart.discover")}</a>`)}${savedHTML}`);
+      wireSaved();
       return;
     }
     const total = Cart.total();
@@ -1514,7 +1635,7 @@
       </div>`).join("");
 
     layout(`
-      <div class="page-head"><div><div class="page-title">Mon panier</div>
+      <div class="page-head"><div><div class="page-title">${T("cart.title")}</div>
         <div class="page-sub">${totalItems} article(s) · ${groups.length} boutique(s)</div></div></div>
       <div class="cart-layout">
         <div>${groupsHTML}
@@ -1525,15 +1646,16 @@
         </div>
         <div class="summary">
           <div class="card card-pad">
-            <h3 style="margin:0 0 12px">Récapitulatif</h3>
-            <div class="summary-row"><span>Sous-total</span><span>${UI.fcfa(total)}</span></div>
-            <div class="summary-row"><span>Livraison</span><span class="text-muted">À convenir</span></div>
-            <div class="summary-row total"><span>Total</span><span>${UI.fcfa(total)}</span></div>
-            <button class="btn btn-primary btn-block btn-lg mt-16" id="goCheckout">Commander (${groups.length})</button>
-            <button class="btn btn-ghost btn-block mt-8" id="clearCart">Vider le panier</button>
+            <h3 style="margin:0 0 12px">${T("cart.summary")}</h3>
+            <div class="summary-row"><span>${T("cart.subtotal")}</span><span>${UI.fcfa(total)}</span></div>
+            <div class="summary-row"><span>${T("cart.delivery")}</span><span class="text-muted">${T("cart.toAgree")}</span></div>
+            <div class="summary-row total"><span>${T("cart.total")}</span><span>${UI.fcfa(total)}</span></div>
+            <button class="btn btn-primary btn-block btn-lg mt-16" id="goCheckout">${T("cart.checkout")} (${groups.length})</button>
+            <button class="btn btn-ghost btn-block mt-8" id="clearCart">${T("cart.clear")}</button>
           </div>
         </div>
-      </div>`);
+      </div>
+      ${savedHTML}`);
 
     // Wiring des lignes.
     V().querySelectorAll("[data-line]").forEach((row) => {
@@ -1542,7 +1664,9 @@
       row.querySelector(".ci-minus").addEventListener("click", () => { changeQty(pid, variant, -1); });
       row.querySelector(".ci-plus").addEventListener("click", () => { changeQty(pid, variant, 1); });
       row.querySelector(".ci-del").addEventListener("click", () => { Cart.removeLine(pid, variant); UI.toast("Article retiré.", "info"); viewCart(); });
+      row.querySelector(".ci-savelater").addEventListener("click", () => { Cart.saveForLater(pid, variant); UI.toast("Gardé pour plus tard 🔖", "success"); viewCart(); });
     });
+    wireSaved();
     document.getElementById("goCheckout").addEventListener("click", () => {
       if (!Auth.isLogged()) { UI.toast("Connectez-vous pour commander.", "info"); Router.go("#/login"); return; }
       Router.go("#/checkout");
@@ -1552,21 +1676,56 @@
     });
   }
 
+  /** Wiring des lignes « gardées pour plus tard ». */
+  function wireSaved() {
+    V().querySelectorAll("[data-saved]").forEach((row) => {
+      const pid = row.getAttribute("data-pid");
+      const variant = JSON.parse(row.getAttribute("data-variant") || "{}");
+      const toCart = row.querySelector(".ci-tocart");
+      if (toCart) toCart.addEventListener("click", () => { const r = Cart.moveToCart(pid, variant); UI.toast(r.ok ? "Remis au panier ✓" : r.error, r.ok ? "success" : "error"); viewCart(); });
+      row.querySelector(".ci-delsaved").addEventListener("click", () => { Cart.removeSaved(pid, variant); UI.toast("Retiré.", "info"); viewCart(); });
+    });
+  }
+
   function cartLineHTML(l) {
     const vparts = [];
     if (l.variant && l.variant.size) vparts.push("Taille : " + l.variant.size);
     if (l.variant && l.variant.color) vparts.push("Couleur : " + l.variant.color);
+    // Alertes : rupture de stock, ou baisse de prix depuis l'ajout au panier.
+    const out = l.product.stock <= 0;
+    const dropped = l.addedPrice != null && l.unit < l.addedPrice;
     return `<div class="cart-item" data-line data-pid="${l.product.id}" data-variant='${UI.esc(JSON.stringify(l.variant || {}))}'>
-      <img src="${UI.safeImg(l.product.images && l.product.images[0], l.product.title)}" alt="" />
+      <img src="${UI.safeImg(l.product.images && l.product.images[0], l.product.title)}" alt="${UI.esc(l.product.title)}" />
       <div class="cart-item-info">
         <h4><a href="#/product/${l.product.id}">${UI.esc(l.product.title)}</a></h4>
         ${vparts.length ? `<div class="ci-variant">${UI.esc(vparts.join(" · "))}</div>` : ""}
-        <div class="ci-price">${UI.fcfa(l.unit)}</div>
+        <div class="ci-price">${UI.fcfa(l.unit)}${dropped ? ` <span class="ci-oldprice">${UI.fcfa(l.addedPrice)}</span>` : ""}</div>
+        ${out ? `<div class="ci-alert alert-out">⚠️ En rupture de stock</div>` : (dropped ? `<div class="ci-alert alert-drop">🔻 Le prix a baissé de ${UI.fcfa(l.addedPrice - l.unit)} !</div>` : "")}
+        <button class="btn-link-inline ci-savelater" style="margin-top:4px">🔖 Garder pour plus tard</button>
       </div>
-      <div class="qty-box"><button class="ci-minus">−</button><span>${l.qty}</span><button class="ci-plus">+</button></div>
-      <button class="icon-btn ci-del" title="Retirer" style="width:38px;height:38px">
+      <div class="qty-box"><button class="ci-minus" aria-label="Diminuer la quantité">−</button><span>${l.qty}</span><button class="ci-plus" aria-label="Augmenter la quantité">+</button></div>
+      <button class="icon-btn ci-del" title="Retirer" aria-label="Retirer du panier" style="width:38px;height:38px">
         <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M6 7h12l-1 13H7zM9 4h6l1 2H8z"/></svg>
       </button>
+    </div>`;
+  }
+
+  /** Ligne d'un article « gardé pour plus tard ». */
+  function savedLineHTML(s) {
+    const price = Products.effectivePrice(s.product);
+    const out = s.product.stock <= 0;
+    return `<div class="cart-item saved-item" data-saved data-pid="${s.product.id}" data-variant='${UI.esc(JSON.stringify(s.variant || {}))}'>
+      <img src="${UI.safeImg(s.product.images && s.product.images[0], s.product.title)}" alt="${UI.esc(s.product.title)}" />
+      <div class="cart-item-info">
+        <h4><a href="#/product/${s.product.id}">${UI.esc(s.product.title)}</a></h4>
+        <div class="ci-price">${UI.fcfa(price)}</div>
+        ${out ? `<div class="ci-alert alert-out">⚠️ En rupture</div>` : ""}
+      </div>
+      <div class="flex gap-8">
+        <button class="btn btn-ghost btn-sm ci-tocart" ${out ? "disabled" : ""}>↩︎ Au panier</button>
+        <button class="icon-btn ci-delsaved" title="Retirer" aria-label="Retirer" style="width:38px;height:38px">
+          <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M6 7h12l-1 13H7zM9 4h6l1 2H8z"/></svg></button>
+      </div>
     </div>`;
   }
 
@@ -1763,11 +1922,11 @@
     const orders = Orders.mine();
     const isGuest = !Auth.isLogged();
     if (!orders.length) {
-      layout(emptyState("📦", "Aucune commande", "Vous n'avez pas encore passé de commande.", `<a href="#/" class="btn btn-primary">Découvrir les articles</a>`));
+      layout(emptyState("📦", T("orders.empty"), T("orders.emptySub"), `<a href="#/" class="btn btn-primary">${T("cart.discover")}</a>`));
       return;
     }
     layout(`
-      <div class="page-head"><div><div class="page-title">Mes commandes</div>
+      <div class="page-head"><div><div class="page-title">${T("orders.title")}</div>
         <div class="page-sub">${orders.length} commande(s)</div></div></div>
       ${isGuest ? `<div class="guest-banner">💡 Ces commandes sont enregistrées sur cet appareil. <a href="#/login?adopt=1">Créez un compte</a> pour les retrouver partout.</div>` : ""}
       ${orders.map((o) => orderCardBuyer(o)).join("")}`);
@@ -1921,14 +2080,120 @@
   /* ============================================================
      VUE : Favoris
      ============================================================ */
-  function viewFavorites() {
+  function viewFavorites(params) {
     if (!requireAuth()) return;
-    const ids = Fav.list();
-    const list = ids.map((id) => Products.get(id)).filter((p) => p && p.status === "published");
+    const q = (params && params.query) || {};
+    const wl = Wishlists.lists();
+    const activeId = q.list || "default"; // "default" = ❤️ Mes favoris
+    const active = activeId === "default" ? null : Wishlists.get(activeId);
+    if (activeId !== "default" && !active) { Router.go("#/favorites"); return; }
+
+    const list = activeId === "default"
+      ? Fav.list().map((id) => Products.get(id)).filter((p) => p && p.status === "published")
+      : Wishlists.items(activeId);
+
+    // Onglets : favoris par défaut + listes personnalisées + « Nouvelle liste ».
+    const tabs = `<div class="filter-bar" style="margin-bottom:14px">
+      <a href="#/favorites" class="chip ${activeId === "default" ? "active" : ""}">❤️ Mes favoris (${Fav.list().length})</a>
+      ${wl.map((l) => `<a href="#/favorites?list=${l.id}" class="chip ${activeId === l.id ? "active" : ""}">📋 ${UI.esc(l.name)} (${l.items.length})</a>`).join("")}
+      <button class="chip" id="newListChip">➕ Nouvelle liste</button>
+    </div>`;
+
+    const title = active ? active.name : "Mes favoris";
+    const listActions = active
+      ? `<div class="flex gap-8">
+          <button class="btn btn-ghost btn-sm" id="shareList">${SICON.wa} Partager</button>
+          <button class="btn btn-ghost btn-sm" id="renameList">✏️ Renommer</button>
+          <button class="btn btn-ghost btn-sm" id="deleteList">🗑️ Supprimer</button>
+        </div>` : "";
+
     layout(`
-      <div class="page-head"><div><div class="page-title">Mes favoris</div>
-        <div class="page-sub">${list.length} article(s) sauvegardé(s)</div></div></div>
-      ${list.length ? gridHTML(list) : emptyState("❤️", "Aucun favori", "Ajoutez des articles à vos favoris pour les retrouver ici.", `<a href="#/" class="btn btn-primary">Explorer</a>`)}`);
+      <div class="page-head"><div><div class="page-title">${UI.esc(title)}</div>
+        <div class="page-sub">${list.length} article(s)</div></div>${listActions}</div>
+      ${tabs}
+      ${list.length ? gridHTML(list) : emptyState("❤️", "Liste vide", active ? "Ajoutez des articles à cette liste depuis leur fiche (bouton « Ajouter à une liste »)." : "Ajoutez des articles à vos favoris pour les retrouver ici.", `<a href="#/" class="btn btn-primary">Explorer</a>`)}`);
+
+    document.getElementById("newListChip").addEventListener("click", () => openCreateListModal());
+    if (active) {
+      document.getElementById("renameList").addEventListener("click", () => {
+        UI.modal({
+          title: "Renommer la liste",
+          body: `<div class="field"><label>Nom de la liste</label><input type="text" id="wlName" value="${UI.esc(active.name)}" /></div>`,
+          footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-primary" id="wlGo">Renommer</button>`,
+          onMount(m, close) { m.querySelector("#wlGo").addEventListener("click", () => { const r = Wishlists.rename(active.id, m.querySelector("#wlName").value); if (!r.ok) { UI.toast(r.error, "error"); return; } close(); Router.resolve(); }); },
+        });
+      });
+      document.getElementById("deleteList").addEventListener("click", async () => {
+        if (await UI.confirm(`Supprimer la liste « ${active.name} » ?`, { danger: true, confirmLabel: "Supprimer" })) { Wishlists.remove(active.id); UI.toast("Liste supprimée.", "info"); Router.go("#/favorites"); }
+      });
+      document.getElementById("shareList").addEventListener("click", () => {
+        const items = Wishlists.items(active.id);
+        if (!items.length) { UI.toast("Cette liste est vide.", "info"); return; }
+        const lines = items.map((p) => `• ${p.title} — ${UI.fcfa(Products.effectivePrice(p))}`).join("\n");
+        const txt = `🛍️ Ma liste « ${active.name} » sur Marché CI :\n${lines}\n\n💵 Paiement à la livraison.`;
+        UI.modal({
+          title: "Partager la liste",
+          body: `<p class="text-muted" style="margin:0 0 12px;font-size:13.5px">Partagez le contenu de votre liste « ${UI.esc(active.name)} ».</p>
+            <div class="flex gap-8 wrap"><button class="btn wa-btn" id="slWa">${SICON.wa} WhatsApp</button><button class="btn btn-ghost" id="slCopy">🔗 Copier</button></div>`,
+          onMount(m, close) {
+            m.querySelector("#slWa").addEventListener("click", () => { waShare(txt); close(); });
+            m.querySelector("#slCopy").addEventListener("click", () => { copyToClipboard(txt); UI.toast("Liste copiée ✓", "success"); });
+          },
+        });
+      });
+    }
+  }
+
+  /** Modale de création d'une nouvelle liste de souhaits. */
+  function openCreateListModal(afterProductId) {
+    UI.modal({
+      title: "Nouvelle liste",
+      body: `<div class="field"><label>Nom de la liste</label><input type="text" id="nlName" placeholder="Ex : Cadeaux, À acheter plus tard…" /></div>`,
+      footer: `<button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-primary" id="nlGo">Créer</button>`,
+      onMount(m, close) {
+        m.querySelector("#nlName").addEventListener("keydown", (e) => { if (e.key === "Enter") m.querySelector("#nlGo").click(); });
+        m.querySelector("#nlGo").addEventListener("click", () => {
+          const r = Wishlists.create(m.querySelector("#nlName").value);
+          if (!r.ok) { UI.toast(r.error, "error"); return; }
+          if (afterProductId) { Wishlists.toggle(r.list.id, afterProductId); UI.toast(`Ajouté à « ${r.list.name} » ✓`, "success"); close(); }
+          else { close(); Router.go("#/favorites?list=" + r.list.id); }
+        });
+      },
+    });
+  }
+
+  /** Modale « Ajouter à une liste » depuis une fiche produit. */
+  function openAddToListModal(productId) {
+    if (!Auth.isLogged()) { UI.toast("Connectez-vous pour créer des listes.", "info"); Router.go("#/login"); return; }
+    const render = () => {
+      const lists = Wishlists.lists();
+      return lists.length
+        ? lists.map((l) => `<label class="radio-item"><input type="checkbox" data-wl="${l.id}" ${Wishlists.has(l.id, productId) ? "checked" : ""}/> 📋 ${UI.esc(l.name)} <span class="text-muted">(${l.items.length})</span></label>`).join("")
+        : `<p class="text-muted" style="margin:0">Vous n'avez pas encore de liste. Créez-en une !</p>`;
+    };
+    UI.modal({
+      title: "Ajouter à une liste",
+      body: `<div id="wlChoices">${render()}</div>
+        <button class="btn btn-ghost btn-sm mt-8" id="wlNew">➕ Nouvelle liste</button>`,
+      footer: `<button class="btn btn-primary btn-block" data-close>Terminé</button>`,
+      onMount(m, close) {
+        const wire = () => m.querySelectorAll("[data-wl]").forEach((c) => c.addEventListener("change", () => {
+          const r = Wishlists.toggle(c.getAttribute("data-wl"), productId);
+          UI.toast(r.added ? "Ajouté à la liste ✓" : "Retiré de la liste", r.added ? "success" : "info");
+        }));
+        wire();
+        m.querySelector("#wlNew").addEventListener("click", () => {
+          const name = prompt("Nom de la nouvelle liste :", "");
+          if (!name) return;
+          const r = Wishlists.create(name);
+          if (!r.ok) { UI.toast(r.error, "error"); return; }
+          Wishlists.toggle(r.list.id, productId);
+          m.querySelector("#wlChoices").innerHTML = render();
+          wire();
+          UI.toast(`Ajouté à « ${r.list.name} » ✓`, "success");
+        });
+      },
+    });
   }
 
   /* ============================================================
@@ -1942,32 +2207,62 @@
     info: { bg: "ic-blue", svg: "<path fill='currentColor' d='M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-6h2zm0-8h-2V7h2z'/>" },
   };
 
-  function viewNotifications() {
+  // Regroupe les types de notification en familles filtrables.
+  const NOTIF_GROUP = { new_order: "orders", order_status: "orders", new_product: "news", review_reply: "news", message: "messages" };
+  const NOTIF_FILTERS = [["all", "Tout"], ["orders", "Commandes"], ["news", "Nouveautés"], ["messages", "Messages"], ["info", "Autres"]];
+
+  function notifFamily(type) { return NOTIF_GROUP[type] || "info"; }
+
+  function viewNotifications(params) {
     if (!requireAuth()) return;
     const user = Auth.current();
-    const list = Notifications.forUser(user.id);
+    const q = params && params.query || {};
+    const filter = q.f || "all";
+    const all = Notifications.forUser(user.id);
+    const list = filter === "all" ? all : all.filter((n) => notifFamily(n.type) === filter);
+
+    // Regroupement temporel.
+    const now = Date.now(), DAY = 86400000;
+    const buckets = { "Aujourd'hui": [], "Cette semaine": [], "Plus ancien": [] };
+    list.forEach((n) => {
+      const age = now - n.createdAt;
+      if (age < DAY) buckets["Aujourd'hui"].push(n);
+      else if (age < 7 * DAY) buckets["Cette semaine"].push(n);
+      else buckets["Plus ancien"].push(n);
+    });
+
+    const notifRow = (n) => {
+      const ic = NOTIF_ICON[n.type] || NOTIF_ICON.info;
+      return `<div class="notif-item ${n.read ? "" : "unread"}" data-notif="${n.id}" data-link="${UI.esc(n.link || "")}">
+        <div class="notif-ico ${ic.bg}"><svg viewBox="0 0 24 24">${ic.svg}</svg></div>
+        <div class="notif-body"><p>${UI.esc(n.message)}</p><div class="notif-time">${UI.timeAgo(n.createdAt)}</div></div>
+        <button class="icon-btn notif-del" data-notifdel="${n.id}" title="Supprimer" aria-label="Supprimer" style="width:34px;height:34px">✕</button>
+      </div>`;
+    };
+
+    const groupsHTML = Object.keys(buckets).filter((k) => buckets[k].length).map((k) =>
+      `<div class="notif-group-label">${k}</div><div class="card" style="overflow:hidden;margin-bottom:12px">${buckets[k].map(notifRow).join("")}</div>`
+    ).join("");
+
     layout(`
       <div class="page-head"><div><div class="page-title">Notifications</div>
-        <div class="page-sub">${list.filter((n) => !n.read).length} non lue(s)</div></div>
-        ${list.length ? `<div class="flex gap-8"><button class="btn btn-ghost btn-sm" id="markAll">Tout marquer lu</button><button class="btn btn-ghost btn-sm" id="clearAll">Effacer</button></div>` : ""}
+        <div class="page-sub">${all.filter((n) => !n.read).length} non lue(s)</div></div>
+        ${all.length ? `<div class="flex gap-8"><button class="btn btn-ghost btn-sm" id="markAll">Tout marquer lu</button><button class="btn btn-ghost btn-sm" id="clearAll">Effacer</button></div>` : ""}
       </div>
-      <div class="card" style="overflow:hidden">
-        ${list.length ? list.map((n) => {
-          const ic = NOTIF_ICON[n.type] || NOTIF_ICON.info;
-          return `<div class="notif-item ${n.read ? "" : "unread"}" data-notif="${n.id}" data-link="${UI.esc(n.link || "")}">
-            <div class="notif-ico ${ic.bg}"><svg viewBox="0 0 24 24">${ic.svg}</svg></div>
-            <div class="notif-body"><p>${UI.esc(n.message)}</p><div class="notif-time">${UI.timeAgo(n.createdAt)}</div></div>
-          </div>`;
-        }).join("") : emptyState("🔔", "Aucune notification", "Abonnez-vous à des boutiques pour être alerté de leurs nouveautés.")}
-      </div>`);
+      <div class="filter-bar">${NOTIF_FILTERS.map(([v, l]) => { const cnt = v === "all" ? all.length : all.filter((n) => notifFamily(n.type) === v).length; return `<a href="#/notifications${v === "all" ? "" : "?f=" + v}" class="chip ${filter === v ? "active" : ""}">${l}${cnt ? ` (${cnt})` : ""}</a>`; }).join("")}</div>
+      ${list.length ? groupsHTML : emptyState("🔔", "Aucune notification", filter === "all" ? "Abonnez-vous à des boutiques pour être alerté de leurs nouveautés." : "Aucune notification dans cette catégorie.")}`);
 
     V().querySelectorAll("[data-notif]").forEach((el) =>
-      el.addEventListener("click", () => {
+      el.addEventListener("click", (e) => {
+        if (e.target.closest("[data-notifdel]")) return;
         Notifications.markRead(el.getAttribute("data-notif"));
         const link = el.getAttribute("data-link");
         if (link) Router.go(link);
         else Router.resolve();
       })
+    );
+    V().querySelectorAll("[data-notifdel]").forEach((b) =>
+      b.addEventListener("click", (e) => { e.stopPropagation(); Notifications.remove(b.getAttribute("data-notifdel")); Router.resolve(); })
     );
     const markAll = document.getElementById("markAll");
     if (markAll) markAll.addEventListener("click", () => { Notifications.markAllRead(user.id); Router.resolve(); });
@@ -2122,7 +2417,7 @@
         <button class="btn btn-ghost btn-sm mt-16" id="addAddr">+ Ajouter une adresse</button>
       </div>
 
-      <div class="section-title">Préférences & accessibilité</div>
+      <div class="section-title">${T("profile.prefs")}</div>
       <div class="card card-pad form-grid">
         <div class="field"><label>Taille du texte</label>
           <select id="pFont">
@@ -2143,7 +2438,7 @@
         <a href="#/help" class="btn btn-ghost btn-sm" style="align-self:flex-start">❓ Centre d'aide</a>
       </div>
 
-      <div class="section-title">Espace vendeur</div>
+      <div class="section-title">${T("profile.sellerSpace")}</div>
       <div class="card card-pad">
         ${store
           ? `<div class="flex-between wrap"><div><strong>${UI.esc(store.name)}</strong><div class="text-muted" style="font-size:13px">${Products.byStore(store.id, true).length} article(s) · ${Store.subscriberCount(store.id)} abonné(s)</div></div>
@@ -2154,7 +2449,7 @@
 
       ${user.role === "admin" ? `<div class="section-title">Administration</div><div class="card card-pad"><a href="#/admin" class="btn btn-ghost">Console d'administration</a></div>` : ""}
 
-      <div class="section-title">Sécurité du compte</div>
+      <div class="section-title">${T("profile.security")}</div>
       <div class="card card-pad form-grid">
         <div class="flex gap-8 wrap">
           <button class="btn btn-ghost btn-sm" id="changePwBtn">🔑 Changer mon mot de passe</button>
@@ -2214,7 +2509,9 @@
     // Langue.
     document.getElementById("pLang").addEventListener("change", (e) => {
       I18n.set(e.target.value); Auth.updateProfile({ lang: e.target.value });
+      renderHeaderUser(); // menu utilisateur traduit
       UI.toast(e.target.value === "en" ? "Language updated ✓" : "Langue mise à jour ✓", "success");
+      viewProfile(); // re-rend la vue courante avec la nouvelle langue
     });
 
     // Contraste élevé.
@@ -4100,25 +4397,25 @@
     const dd = document.getElementById("userDropdown");
     if (!user) {
       dd.innerHTML = `
-        <a href="#/login" class="dd-item">🔑 Se connecter</a>
-        <a href="#/login?mode=register" class="dd-item">📝 Créer un compte</a>
+        <a href="#/login" class="dd-item">🔑 ${T("menu.login")}</a>
+        <a href="#/login?mode=register" class="dd-item">📝 ${T("menu.register")}</a>
         <div class="divider" style="margin:6px 0"></div>
-        <a href="#/login?mode=register" class="dd-item">🏪 Devenir vendeur</a>`;
+        <a href="#/login?mode=register" class="dd-item">🏪 ${T("menu.becomeSeller")}</a>`;
     } else {
       const store = Store.byOwner(user.id);
       dd.innerHTML = `
         <div class="dd-head"><div class="dd-name">${UI.esc(user.name)}</div><div class="dd-mail">${UI.esc(user.email)}</div>
           <span class="dd-role">${user.role === "admin" ? "Admin" : user.role === "vendor" ? "Vendeur" : "Client"}</span></div>
-        <a href="#/profile" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-4 0-8 2-8 5v1h16v-1c0-3-4-5-8-5z"/></svg>Mon profil</a>
-        <a href="#/orders" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M7 4V2h10v2h4v2h-2v14H5V6H3V4z"/></svg>Mes commandes</a>
-        <a href="#/favorites" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 21s-6.7-4.35-9.33-8.36C.9 9.7 2.1 6 5.4 6a4.3 4.3 0 0 1 3.6 2 4.3 4.3 0 0 1 3.6-2c3.3 0 4.5 3.7 2.73 6.64C18.7 16.65 12 21 12 21z"/></svg>Mes favoris</a>
-        <a href="#/messages" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg>Mes messages${Messages.unreadForBuyer(user.id) ? ` <span class="ss-badge" style="position:static;margin-left:auto">${Messages.unreadForBuyer(user.id)}</span>` : ""}</a>
+        <a href="#/profile" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-4 0-8 2-8 5v1h16v-1c0-3-4-5-8-5z"/></svg>${T("menu.profile")}</a>
+        <a href="#/orders" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M7 4V2h10v2h4v2h-2v14H5V6H3V4z"/></svg>${T("menu.orders")}</a>
+        <a href="#/favorites" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 21s-6.7-4.35-9.33-8.36C.9 9.7 2.1 6 5.4 6a4.3 4.3 0 0 1 3.6 2 4.3 4.3 0 0 1 3.6-2c3.3 0 4.5 3.7 2.73 6.64C18.7 16.65 12 21 12 21z"/></svg>${T("menu.favorites")}</a>
+        <a href="#/messages" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg>${T("menu.messages")}${Messages.unreadForBuyer(user.id) ? ` <span class="ss-badge" style="position:static;margin-left:auto">${Messages.unreadForBuyer(user.id)}</span>` : ""}</a>
         ${store
-          ? `<a href="#/seller/dashboard" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 3h8v8H3zm10 0h8v5h-8zM3 13h8v8H3zm10 3h8v5h-8z"/></svg>Espace vendeur</a>`
-          : `<a href="#/seller/store" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 4h16l1 5-2 1v10H5V10L3 9zm3 8v6h4v-4h2v4h4v-6z"/></svg>Ouvrir ma boutique</a>`}
-        ${user.role === "admin" ? `<a href="#/admin" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 1 3 5v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V5z"/></svg>Administration</a>` : ""}
+          ? `<a href="#/seller/dashboard" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 3h8v8H3zm10 0h8v5h-8zM3 13h8v8H3zm10 3h8v5h-8z"/></svg>${T("menu.sellerSpace")}</a>`
+          : `<a href="#/seller/store" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 4h16l1 5-2 1v10H5V10L3 9zm3 8v6h4v-4h2v4h4v-6z"/></svg>${T("menu.openShop")}</a>`}
+        ${user.role === "admin" ? `<a href="#/admin" class="dd-item"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 1 3 5v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V5z"/></svg>${T("menu.admin")}</a>` : ""}
         <div class="divider" style="margin:6px 0"></div>
-        <button class="dd-item danger" id="ddLogout"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M16 13v-2H7V8l-5 4 5 4v-3zM20 3h-8v2h8v14h-8v2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/></svg>Se déconnecter</button>`;
+        <button class="dd-item danger" id="ddLogout"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M16 13v-2H7V8l-5 4 5 4v-3zM20 3h-8v2h8v14h-8v2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/></svg>${T("menu.logout")}</button>`;
       const lo = document.getElementById("ddLogout");
       if (lo) lo.addEventListener("click", () => { Auth.logout(); renderHeaderUser(); UI.refreshBadges(); UI.toast("Déconnecté.", "info"); Router.go("#/"); });
     }
@@ -4294,6 +4591,12 @@
         Router.go(nav.getAttribute("data-href"));
       }
     });
+    // Accessibilité clavier : Entrée/Espace activent les éléments [data-href] (cartes produit…).
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      const nav = e.target.closest && e.target.closest("[data-href]");
+      if (nav && e.target === nav) { e.preventDefault(); Router.go(nav.getAttribute("data-href")); }
+    });
   }
 
   /* ============================================================
@@ -4305,6 +4608,7 @@
     Router.on("#/deals", viewDeals);
     Router.on("#/compare", viewCompare);
     Router.on("#/stores", viewStores);
+    Router.on("#/category/:id", viewCategory);
     Router.on("#/activity", viewActivity);
     Router.on("#/help", viewHelp);
     Router.on("#/product/:id", viewProduct);
@@ -4363,13 +4667,90 @@
     UI.refreshBadges();
     // Assistant virtuel flottant.
     mountChatbot();
+    // Bandeau confidentialité + tour de bienvenue (première visite).
+    mountPrivacyBanner();
+    // PWA : bouton d'installation.
+    setupInstallPrompt();
     // Routeur.
     registerRoutes();
     Router.start();
+    // Tour de bienvenue après le premier rendu.
+    setTimeout(maybeShowWelcome, 800);
     // PWA : enregistre le service worker (uniquement en contexte sécurisé http/https).
     if (/^https?:$/.test(location.protocol) && "serviceWorker" in navigator) {
       navigator.serviceWorker.register("sw.js").catch(() => {});
     }
+  }
+
+  /* ============================================================
+     Confidentialité + onboarding première visite
+     ============================================================ */
+  function mountPrivacyBanner() {
+    if (DB.get("privacyAck", false)) return;
+    if (document.getElementById("privacyBanner")) return;
+    const el = document.createElement("div");
+    el.id = "privacyBanner";
+    el.className = "privacy-banner";
+    el.setAttribute("role", "region");
+    el.setAttribute("aria-label", "Information sur la confidentialité");
+    el.innerHTML = `
+      <span>🔒 Ce site fonctionne <strong>sans serveur</strong> : vos données (compte, panier, commandes) sont stockées <strong>uniquement sur cet appareil</strong>. Aucune information n'est envoyée en ligne.</span>
+      <button class="btn btn-primary btn-sm" id="privacyOk">J'ai compris</button>`;
+    document.body.appendChild(el);
+    document.getElementById("privacyOk").addEventListener("click", () => {
+      DB.set("privacyAck", true);
+      el.classList.add("out");
+      setTimeout(() => el.remove(), 300);
+    });
+  }
+
+  function maybeShowWelcome() {
+    if (DB.get("onboarded", false)) return;
+    DB.set("onboarded", true);
+    UI.modal({
+      title: "👋 Bienvenue sur Marché CI",
+      body: `<p class="text-muted" style="margin:0 0 14px;font-size:13.5px">La marketplace ivoirienne, 100 % paiement à la livraison. Voici l'essentiel :</p>
+        <div class="welcome-steps">
+          <div class="welcome-step"><span class="ws-ico">🛍️</span><div><strong>Parcourez & commandez</strong><div class="text-muted">Des articles de plusieurs boutiques, réunis en un seul panier.</div></div></div>
+          <div class="welcome-step"><span class="ws-ico">💵</span><div><strong>Payez à la livraison</strong><div class="text-muted">En espèces, à la réception. Aucun paiement en ligne.</div></div></div>
+          <div class="welcome-step"><span class="ws-ico">🏪</span><div><strong>Devenez vendeur</strong><div class="text-muted">Ouvrez votre boutique en quelques minutes.</div></div></div>
+        </div>`,
+      footer: `<button class="btn btn-primary btn-block" data-close>Commencer à explorer</button>`,
+    });
+  }
+
+  /* ============================================================
+     PWA : invite d'installation
+     ============================================================ */
+  let deferredInstallPrompt = null;
+  function setupInstallPrompt() {
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      showInstallButton();
+    });
+    window.addEventListener("appinstalled", () => {
+      deferredInstallPrompt = null;
+      const b = document.getElementById("installFab"); if (b) b.remove();
+      UI.toast("Application installée ✓", "success");
+    });
+  }
+  function showInstallButton() {
+    if (DB.get("installDismissed", false)) return;
+    if (document.getElementById("installFab")) return;
+    const b = document.createElement("button");
+    b.id = "installFab";
+    b.className = "install-fab";
+    b.innerHTML = `📲 Installer l'app <span class="install-close" title="Masquer">✕</span>`;
+    document.body.appendChild(b);
+    b.addEventListener("click", async (e) => {
+      if (e.target.classList.contains("install-close")) { DB.set("installDismissed", true); b.remove(); return; }
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      const { outcome } = await deferredInstallPrompt.userChoice;
+      if (outcome === "accepted") b.remove();
+      deferredInstallPrompt = null;
+    });
   }
 
   document.addEventListener("DOMContentLoaded", init);

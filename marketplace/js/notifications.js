@@ -87,7 +87,13 @@ window.MP = window.MP || {};
     if (window.MP.UI) window.MP.UI.refreshBadges();
   }
 
+  /** Supprime une notification unique. */
+  function remove(id) {
+    DB.removeItem(K, id);
+    if (window.MP.UI) window.MP.UI.refreshBadges();
+  }
+
   window.MP.Notifications = {
-    forUser, unreadCount, push, notifySubscribers, markRead, markAllRead, clearAll,
+    forUser, unreadCount, push, notifySubscribers, markRead, markAllRead, clearAll, remove,
   };
 })();

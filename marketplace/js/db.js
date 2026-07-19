@@ -31,6 +31,8 @@ window.MP = window.MP || {};
     searchHist: "searchhist",    // { userId: [terme] } — historique de recherche
     questions: "questions",      // [ {id, productId, storeId, userId, question, answer, ...} ]
     savedSearches: "savedsearch",// [ {id, userId, label, filters, createdAt} ]
+    savedItems: "saveditems",    // { key: [ {productId, variant, savedAt} ] } — « gardé pour plus tard »
+    wishlists: "wishlists",      // { userId: [ {id, name, items:[productId], createdAt} ] } — listes de souhaits
     session: "session",          // { userId }
     theme: "theme",              // "light" | "dark"
     seeded: "seeded",            // bool

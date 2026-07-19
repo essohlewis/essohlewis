@@ -16,6 +16,9 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%9B%92%3C/text%3E%3C/svg%3E" />
 </head>
 <body>
+  <!-- Lien d'évitement (accessibilité clavier / lecteurs d'écran) -->
+  <a href="#view" class="skip-link" id="skipLink">Aller au contenu principal</a>
+
   <!-- ================= EN-TÊTE (desktop + mobile top) ================= -->
   <header class="app-header" id="appHeader">
     <div class="header-inner">
@@ -74,7 +77,7 @@
     <aside class="sidebar" id="sidebar"></aside>
 
     <!-- Zone de rendu des vues (routeur SPA) -->
-    <main class="view" id="view" aria-live="polite"></main>
+    <main class="view" id="view" aria-live="polite" tabindex="-1"></main>
   </div>
 
   <!-- ================= NAVIGATION BASSE (mobile) ================= -->

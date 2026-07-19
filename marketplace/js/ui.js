@@ -124,7 +124,7 @@ window.MP = window.MP || {};
     const root = modalRoot();
     root.innerHTML =
       `<div class="modal-overlay" data-close></div>` +
-      `<div class="modal" role="dialog" aria-modal="true">` +
+      `<div class="modal" role="dialog" aria-modal="true" tabindex="-1">` +
       `<div class="modal-head"><h3>${esc(opts.title || "")}</h3>` +
       `<button class="modal-close" data-close aria-label="Fermer">` +
       `<svg viewBox='0 0 24 24' width='20' height='20'><path fill='currentColor' d='M18.3 5.7 12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3 10.6 10.6 16.9 4.3z'/></svg>` +
@@ -146,6 +146,9 @@ window.MP = window.MP || {};
     root.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", close));
 
     if (typeof opts.onMount === "function") opts.onMount(root.querySelector(".modal"), close);
+    // Accessibilité : place le focus sur le premier champ/bouton de la modale.
+    const focusable = root.querySelector(".modal input, .modal textarea, .modal select, .modal-body button, .modal-foot button");
+    (focusable || root.querySelector(".modal")).focus();
     return close;
   }
 

@@ -86,6 +86,17 @@ Données de démo : **4 boutiques**, **16 articles**, quelques avis, abonnements
 - **Gestion de ses avis** : **modifier** / **supprimer** son propre avis, et **signaler** un avis abusif (transmis à la modération).
 - **Livraison estimée** : fenêtre de dates affichée sur la commande + **rappel de suivi** pour les commandes expédiées.
 
+##### 🧩 Confort & finitions (parcours client)
+- **Page catégorie dédiée** (`#/category/:id`) avec **fil d'Ariane**, en-tête catégorie et sous-filtres (tri, en promo, en stock).
+- **Panier « garder pour plus tard »** : mise de côté d'un article + **alertes de ligne** (rupture, baisse de prix depuis l'ajout).
+- **Centre de notifications enrichi** : filtres par type (commandes, nouveautés, messages…), **regroupement par date**, suppression unitaire, tout marquer comme lu.
+- **Recherche « aucun résultat » intelligente** : **correction de fautes** (« Vouliez-vous dire… »), catégorie proche, catégories populaires et articles alternatifs.
+- **Multi-langue plus complet** : vues principales traduites (accueil, panier, commandes, profil, menu) — bascule Français / English en direct.
+- **Accessibilité** : lien « aller au contenu », **focus clavier visible**, cartes produit navigables au clavier, focus géré dans les modales, `aria-label` sur les actions.
+- **Bandeau confidentialité** (stockage 100 % local) + **tour de bienvenue** à la première visite.
+- **Installation PWA** : bouton « Installer l'application » (via `beforeinstallprompt`).
+- **Listes de souhaits multiples** : plusieurs listes nommées, ajout d'un article à une ou plusieurs listes, **renommage / suppression / partage** (WhatsApp, copie).
+
 ### Vendeur — espace dédié (back-office)
 L'espace vendeur est un **véritable back-office distinct de l'espace client** : barre latérale sombre de navigation, en-tête « Espace Vendeur » (le chrome d'achat — recherche, panier, favoris, nav basse mobile — est masqué), et zone de travail professionnelle.
 
