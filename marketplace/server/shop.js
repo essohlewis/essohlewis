@@ -180,6 +180,21 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
     const sales = shopdb.vendorSales(s.id);
     res.json({ ok: true, store: decorate(s), summary: sales.summary, lines: sales.lines });
   });
+  // Portefeuille du vendeur (escrow / disponible / commission) + ses retraits.
+  router.get("/vendor/wallet", auth, (req, res) => {
+    const s = shopdb.getStoreByOwner(req.userId);
+    if (!s) return res.json({ ok: true, store: null, wallet: null, payouts: [] });
+    res.json({ ok: true, store: decorate(s), wallet: shopdb.vendorWallet(s.id), payouts: shopdb.listPayouts({ storeId: s.id }) });
+  });
+  // Demande de retrait (débitée du solde disponible).
+  router.post("/vendor/payouts", auth, (req, res) => {
+    const s = shopdb.getStoreByOwner(req.userId);
+    if (!s) return res.status(400).json({ ok: false, error: "Aucune boutique." });
+    const b = req.body || {};
+    const r = shopdb.createPayout(s.id, { amount: b.amount, method: b.method, details: b.details });
+    if (r.error) return res.status(400).json({ ok: false, error: r.error });
+    res.json({ ok: true, payout: r.payout, wallet: shopdb.vendorWallet(s.id) });
+  });
 
   /* ------------------- Collections génériques (données client) ------------------- */
   // Mirroring des collections localStorage (favoris, souhaits, coupons, …) par compte.
@@ -202,6 +217,17 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
     res.json({ ok: true, store: s });
   });
   router.get("/admin/payments", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.listPayments({ status: req.query.status }) }));
+  router.get("/admin/payouts", requireAdmin, (req, res) => {
+    const items = shopdb.listPayouts({ status: req.query.status });
+    const byStore = {};
+    for (const p of items) { if (!byStore[p.storeId]) { const s = shopdb.getStoreById(p.storeId); byStore[p.storeId] = s ? s.name : p.storeId; } p.storeName = byStore[p.storeId]; }
+    res.json({ ok: true, items });
+  });
+  router.post("/admin/payouts/:id/status", requireAdmin, (req, res) => {
+    const p = shopdb.setPayoutStatus(req.params.id, (req.body || {}).status);
+    if (!p) return res.status(400).json({ ok: false, error: "Statut invalide ou retrait introuvable." });
+    res.json({ ok: true, payout: p });
+  });
   router.get("/admin/data", requireAdmin, (req, res) => res.json({ ok: true, collections: shopdb.listCollections() }));
   router.get("/admin/data/:collection", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.listDocs(req.params.collection) }));
   router.get("/admin/reviews", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.listReviews({ status: req.query.status }) }));

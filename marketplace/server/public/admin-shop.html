@@ -34,6 +34,7 @@
           <button data-t="catalog" class="btn btn-ghost !py-1.5 !px-4">Catalogue</button>
           <button data-t="stores" class="btn btn-ghost !py-1.5 !px-4">Boutiques</button>
           <button data-t="payments" class="btn btn-ghost !py-1.5 !px-4">Paiements</button>
+          <button data-t="payouts" class="btn btn-ghost !py-1.5 !px-4">Retraits</button>
           <button data-t="reviews" class="btn btn-ghost !py-1.5 !px-4">Avis</button>
           <button data-t="data" class="btn btn-ghost !py-1.5 !px-4">Données</button>
         </div>
@@ -74,6 +75,12 @@
       <section id="pane-payments" class="hidden">
         <div id="payments" class="space-y-2"></div>
         <p id="payEmpty" class="text-center text-slate-400 py-10 hidden">Aucun paiement enregistré.</p>
+      </section>
+
+      <!-- Retraits vendeurs -->
+      <section id="pane-payouts" class="hidden">
+        <div id="payouts" class="space-y-2"></div>
+        <p id="payoutsEmpty" class="text-center text-slate-400 py-10 hidden">Aucune demande de retrait.</p>
       </section>
 
       <!-- Boutiques -->
@@ -118,7 +125,30 @@
       if (r.status === 401) { $("#authErr").classList.remove("hidden"); return; }
       $("#auth").classList.add("hidden"); $("#app").classList.remove("hidden"); loadAll();
     }
-    async function loadAll() { await Promise.all([loadStats(), loadOrders(), loadCatalog(), loadReviews(), loadData(), loadStores(), loadPayments()]); }
+    async function loadAll() { await Promise.all([loadStats(), loadOrders(), loadCatalog(), loadReviews(), loadData(), loadStores(), loadPayments(), loadPayouts()]); }
+    const PO_ST = { requested: ["En attente", "bg-amber-100 text-amber-700"], paid: ["Payé", "bg-accent-soft text-accent"], rejected: ["Refusé", "bg-red-100 text-red-700"] };
+    const PO_M = { orange: "🟠 Orange Money", mtn: "🟡 MTN MoMo", moov: "🔵 Moov Money", wave: "🌊 Wave", bank: "🏦 Virement", mobile: "📱 Mobile" };
+    async function loadPayouts() {
+      const j = await (await fetch("/api/shop/admin/payouts", { headers: H() })).json();
+      const items = j.items || [];
+      $("#payoutsEmpty").classList.toggle("hidden", items.length > 0);
+      $("#payouts").innerHTML = items.map((p) => {
+        const st = PO_ST[p.status] || [p.status, "bg-slate-200 text-slate-600"];
+        const act = p.status === "requested"
+          ? `<button class="btn btn-accent !py-1 !px-3 text-sm" data-po-paid="${p.id}">Marquer payé</button><button class="btn btn-ghost !py-1 !px-3 text-sm !text-red-600 !border-red-200" data-po-rej="${p.id}">Refuser</button>`
+          : "";
+        return `<div class="card !py-3 flex items-center justify-between flex-wrap gap-2">
+          <div><div class="font-semibold">${p.storeName || p.storeId} <span class="pill ${st[1]}">${st[0]}</span></div>
+            <div class="text-xs text-slate-500">${PO_M[p.method] || p.method}${p.details ? " · " + p.details : ""} · ${new Date(p.createdAt).toLocaleString("fr-FR")}</div></div>
+          <div class="flex items-center gap-2"><span class="font-extrabold">${fcfa(p.amount)}</span>${act}</div></div>`;
+      }).join("");
+      $("#payouts").querySelectorAll("[data-po-paid]").forEach((b) => b.addEventListener("click", () => setPayout(b.dataset.poPaid, "paid")));
+      $("#payouts").querySelectorAll("[data-po-rej]").forEach((b) => b.addEventListener("click", () => setPayout(b.dataset.poRej, "rejected")));
+    }
+    async function setPayout(id, status) {
+      await fetch("/api/shop/admin/payouts/" + id + "/status", { method: "POST", headers: Object.assign({ "Content-Type": "application/json" }, H()), body: JSON.stringify({ status }) });
+      loadPayouts(); loadStats();
+    }
     const PAY_METHOD = { cod: "💵 Livraison", orange: "🟠 Orange Money", mtn: "🟡 MTN MoMo", moov: "🔵 Moov Money", wave: "🌊 Wave", card: "💳 Carte" };
     const PAY_ST = { pending: ["En attente", "bg-amber-100 text-amber-700"], paid: ["Payé", "bg-accent-soft text-accent"], failed: ["Échoué", "bg-red-100 text-red-700"], cod: ["Livraison", "bg-slate-200 text-slate-600"] };
     async function loadPayments() {
@@ -175,7 +205,7 @@
       const j = await (await fetch("/api/shop/admin/stats", { headers: H() })).json();
       const s = j.stats || {};
       const card = (icon, label, val) => `<div class="card !p-4"><div class="text-2xl">${icon}</div><div class="text-2xl font-extrabold mt-1">${val}</div><div class="text-xs text-slate-500">${label}</div></div>`;
-      $("#stats").innerHTML = card("👤", "Clients", s.users || 0) + card("🏪", "Boutiques", s.stores || 0) + card("📦", "Produits", s.products || 0) + card("🧾", "Commandes", s.orders || 0) + card("⭐", "Avis", s.reviews || 0) + card("💰", "Chiffre d'affaires", fcfa(s.revenue));
+      $("#stats").innerHTML = card("👤", "Clients", s.users || 0) + card("🏪", "Boutiques", s.stores || 0) + card("📦", "Produits", s.products || 0) + card("🧾", "Commandes", s.orders || 0) + card("💰", "Chiffre d'affaires", fcfa(s.revenue)) + card("🏦", "Commission (" + Math.round((s.commissionRate || 0) * 100) + "%)", fcfa(s.commission));
     }
 
     async function loadOrders() {
@@ -266,6 +296,7 @@
       $("#pane-reviews").classList.toggle("hidden", t !== "reviews");
       $("#pane-stores").classList.toggle("hidden", t !== "stores");
       $("#pane-payments").classList.toggle("hidden", t !== "payments");
+      $("#pane-payouts").classList.toggle("hidden", t !== "payouts");
       $("#pane-data").classList.toggle("hidden", t !== "data");
       document.querySelectorAll("#tabs [data-t]").forEach((b) => b.className = "btn btn-ghost !py-1.5 !px-4");
       document.querySelector(`#tabs [data-t="${t}"]`).className = "btn btn-brand !py-1.5 !px-4";

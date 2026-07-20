@@ -20,6 +20,8 @@ catch (e) { DatabaseSync = null; } // SQLite indisponible → l'API shop se dés
 
 const DATA_DIR = path.join(__dirname, "data");
 const DB_FILE = process.env.SHOP_DB || path.join(DATA_DIR, "marche.db");
+// Commission plateforme prélevée sur chaque vente (0.10 = 10 %).
+const COMMISSION_RATE = Math.min(0.9, Math.max(0, parseFloat(process.env.COMMISSION_RATE || "0.10")));
 
 let db = null;
 
@@ -55,6 +57,11 @@ function init() {
       reference TEXT, instructions TEXT, status TEXT DEFAULT 'pending', createdAt INTEGER, updatedAt INTEGER
     );
     CREATE INDEX IF NOT EXISTS idx_pay_order ON payments(orderId);
+    CREATE TABLE IF NOT EXISTS payouts (
+      id TEXT PRIMARY KEY, storeId TEXT, amount INTEGER, method TEXT, details TEXT,
+      status TEXT DEFAULT 'requested', createdAt INTEGER, updatedAt INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_payouts_store ON payouts(storeId);
     CREATE TABLE IF NOT EXISTS order_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT, orderId TEXT, productId TEXT,
       name TEXT, price INTEGER, qty INTEGER, variant TEXT, storeId TEXT, storeName TEXT
@@ -253,6 +260,9 @@ function stats() {
     documents: db.prepare("SELECT COUNT(*) c FROM documents").get().c,
     stores: db.prepare("SELECT COUNT(*) c FROM stores").get().c,
     paidOnline: db.prepare("SELECT COALESCE(SUM(amount),0) s FROM payments WHERE status='paid'").get().s,
+    commission: Math.round(db.prepare("SELECT COALESCE(SUM(oi.price*oi.qty),0) g FROM order_items oi JOIN orders o ON o.id=oi.orderId WHERE o.status='delivered'").get().g * COMMISSION_RATE),
+    payoutsPaid: db.prepare("SELECT COALESCE(SUM(amount),0) s FROM payouts WHERE status='paid'").get().s,
+    commissionRate: COMMISSION_RATE,
   };
 }
 
@@ -365,6 +375,57 @@ function vendorSales(storeId) {
   return { summary: s, lines };
 }
 
+/* -------------------- Portefeuille & retraits vendeurs ------------------- */
+function _storeGross(storeId, statuses) {
+  const ph = statuses.map(() => "?").join(",");
+  return db.prepare(`SELECT COALESCE(SUM(oi.price*oi.qty),0) g FROM order_items oi JOIN orders o ON o.id=oi.orderId
+    WHERE oi.storeId=? AND o.status IN (${ph})`).get(storeId, ...statuses).g;
+}
+function _sumPayouts(storeId, statuses) {
+  const ph = statuses.map(() => "?").join(",");
+  return db.prepare(`SELECT COALESCE(SUM(amount),0) s FROM payouts WHERE storeId=? AND status IN (${ph})`).get(storeId, ...statuses).s;
+}
+/** Portefeuille d'une boutique : escrow (en attente de livraison), disponible, retiré, commission. */
+function vendorWallet(storeId) {
+  const rate = COMMISSION_RATE;
+  const deliveredGross = _storeGross(storeId, ["delivered"]);
+  const escrowGross = _storeGross(storeId, ["confirmed", "shipped"]); // vendu, pas encore livré
+  const deliveredNet = Math.round(deliveredGross * (1 - rate));
+  const paidOut = _sumPayouts(storeId, ["paid"]);
+  const held = _sumPayouts(storeId, ["requested"]); // retraits en cours (réservés)
+  const available = Math.max(0, deliveredNet - paidOut - held);
+  return {
+    commissionRate: rate,
+    escrow: Math.round(escrowGross * (1 - rate)),
+    deliveredNet, available, paidOut, held,
+    commission: Math.round(deliveredGross * rate),
+    currency: "FCFA",
+  };
+}
+function createPayout(storeId, { amount, method, details }) {
+  const w = vendorWallet(storeId);
+  const amt = Math.round(parseInt(amount, 10) || 0);
+  if (amt <= 0) return { error: "Montant invalide." };
+  if (amt > w.available) return { error: "Montant supérieur au solde disponible (" + w.available + " FCFA)." };
+  const row = { id: uid("po"), storeId, amount: amt, method: method || "mobile", details: details || "", status: "requested", createdAt: now(), updatedAt: now() };
+  db.prepare(`INSERT INTO payouts (id,storeId,amount,method,details,status,createdAt,updatedAt)
+    VALUES (@id,@storeId,@amount,@method,@details,@status,@createdAt,@updatedAt)`).run(row);
+  return { payout: row };
+}
+function listPayouts({ storeId, status } = {}) {
+  let sql = "SELECT * FROM payouts WHERE 1=1", args = {};
+  if (storeId) { sql += " AND storeId=@storeId"; args.storeId = storeId; }
+  if (status && status !== "all") { sql += " AND status=@status"; args.status = status; }
+  return db.prepare(sql + " ORDER BY createdAt DESC LIMIT 500").all(args);
+}
+function setPayoutStatus(id, status) {
+  if (!["requested", "paid", "rejected"].includes(status)) return null;
+  const p = db.prepare("SELECT * FROM payouts WHERE id=?").get(id);
+  if (!p) return null;
+  db.prepare("UPDATE payouts SET status=?,updatedAt=? WHERE id=?").run(status, now(), id);
+  return db.prepare("SELECT * FROM payouts WHERE id=?").get(id);
+}
+
 /* ---------- Collections génériques (favoris, souhaits, coupons, …) -------- */
 // Collections autorisées au mirroring (une par ligne, propre à chaque compte).
 const SYNC_COLLECTIONS = ["favorites", "subs", "wishlists", "notifs", "messages", "coupons", "questions", "alerts", "stores", "expenses", "reports"];
@@ -406,4 +467,5 @@ module.exports = {
   addReview, listReviews, ratingFor, setReviewStatus,
   upsertStore, getStoreById, getStoreByOwner, listStores, setStoreStatus, vendorSales,
   createPayment, getPayment, paymentsForOrder, listPayments, setPaymentStatus,
+  vendorWallet, createPayout, listPayouts, setPayoutStatus, COMMISSION_RATE,
 };

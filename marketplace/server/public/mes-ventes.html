@@ -29,6 +29,7 @@
     <div id="app" class="hidden">
       <div id="storehead" class="card mb-4"></div>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5" id="stats"></div>
+      <div id="wallet" class="mb-5"></div>
       <h2 class="font-bold mb-2">Articles vendus</h2>
       <div id="lines" class="space-y-2"></div>
       <p id="empty" class="text-center text-slate-400 py-10 hidden">Aucune vente pour l'instant.</p>
@@ -80,6 +81,8 @@
       $("#stats").innerHTML = card("🧾", "Commandes", s.orders || 0) + card("📦", "Articles vendus", s.units || 0)
         + card("💰", "Revenu encaissé", fcfa(s.revenue)) + card("⏳", "En attente", fcfa(s.pending));
 
+      renderWallet();
+
       const lines = j.lines || [];
       $("#empty").classList.toggle("hidden", lines.length > 0);
       $("#lines").innerHTML = lines.map((l) => {
@@ -91,6 +94,46 @@
         </div>`;
       }).join("");
     }
+    const PO_ST = { requested: ["En attente", "bg-amber-100 text-amber-700"], paid: ["Payé", "bg-accent-soft text-accent"], rejected: ["Refusé", "bg-red-100 text-red-700"] };
+    async function renderWallet() {
+      const j = await (await fetch("/api/shop/vendor/wallet", { headers: { Authorization: "Bearer " + token() } })).json();
+      if (!j.wallet) { $("#wallet").innerHTML = ""; return; }
+      const w = j.wallet;
+      const tile = (icon, label, val, cls) => `<div class="card !p-4"><div class="text-2xl">${icon}</div><div class="text-xl font-extrabold mt-1 ${cls || ""}">${fcfa(val)}</div><div class="text-xs text-slate-500">${label}</div></div>`;
+      const payouts = (j.payouts || []).map((p) => { const st = PO_ST[p.status] || [p.status, "bg-slate-200 text-slate-600"];
+        return `<div class="flex items-center justify-between text-sm py-1.5 border-t border-slate-100"><span>${new Date(p.createdAt).toLocaleDateString("fr-FR")} · ${p.method}</span><span class="flex items-center gap-2"><span class="pill ${st[1]}">${st[0]}</span><b>${fcfa(p.amount)}</b></span></div>`;
+      }).join("");
+      $("#wallet").innerHTML = `
+        <h2 class="font-bold mb-2">💰 Portefeuille <span class="text-xs font-normal text-slate-400">commission plateforme ${Math.round(w.commissionRate * 100)} %</span></h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          ${tile("🔒", "En attente de livraison (escrow)", w.escrow, "text-slate-700")}
+          ${tile("✅", "Disponible au retrait", w.available, "text-accent")}
+          ${tile("🏦", "Déjà retiré", w.paidOut)}
+          ${tile("🧾", "Commission prélevée", w.commission, "text-slate-500")}
+        </div>
+        <div class="card mt-3">
+          <div class="flex items-end gap-2 flex-wrap">
+            <label class="flex-1 min-w-[140px]"><span class="text-sm font-semibold">Demander un retrait</span>
+              <input id="poAmount" type="number" max="${w.available}" placeholder="Montant (max ${w.available})" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" /></label>
+            <label class="min-w-[130px]"><span class="text-sm font-semibold">Vers</span>
+              <select id="poMethod" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"><option value="orange">Orange Money</option><option value="mtn">MTN MoMo</option><option value="moov">Moov Money</option><option value="wave">Wave</option><option value="bank">Virement bancaire</option></select></label>
+            <button id="poBtn" class="btn btn-brand" ${w.available <= 0 ? "disabled" : ""}>Retirer</button>
+          </div>
+          <p id="poMsg" class="text-sm mt-2"></p>
+          ${payouts ? `<div class="mt-3"><div class="text-xs font-bold text-slate-500 uppercase tracking-wide">Historique des retraits</div>${payouts}</div>` : ""}
+        </div>`;
+      const btn = $("#poBtn");
+      if (btn) btn.addEventListener("click", async () => {
+        const amount = parseInt($("#poAmount").value, 10) || 0;
+        const msg = $("#poMsg");
+        if (amount <= 0) { msg.className = "text-sm mt-2 text-red-600"; msg.textContent = "Saisissez un montant."; return; }
+        btn.disabled = true;
+        const r = await (await fetch("/api/shop/vendor/payouts", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token() }, body: JSON.stringify({ amount, method: $("#poMethod").value }) })).json();
+        if (r.ok) { msg.className = "text-sm mt-2 text-accent"; msg.textContent = "✅ Demande de retrait envoyée."; renderWallet(); }
+        else { msg.className = "text-sm mt-2 text-red-600"; msg.textContent = r.error || "Échec."; btn.disabled = false; }
+      });
+    }
+
     $("#refresh").addEventListener("click", load);
     load();
   </script>

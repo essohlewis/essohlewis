@@ -102,6 +102,15 @@ client : `/paiement`. **Production** : renseignez `CINETPAY_API_KEY` (ou
 `PAYSTACK_SECRET_KEY`) et implémentez l'appel réel dans `payments.initiate/verify`
 — le reste de l'application ne change pas.
 
+### Escrow, commission & retraits vendeurs
+La part vendeur d'une commande est **séquestrée** (escrow) tant que la commande
+n'est pas **livrée** ; à la livraison, elle est **libérée** dans le portefeuille
+du vendeur, déduction faite de la **commission plateforme** (`COMMISSION_RATE`,
+défaut 10 %). Le vendeur voit `escrow / disponible / retiré / commission` sur
+`/mes-ventes` et **demande un retrait** ; l'administrateur valide (payé/refusé)
+dans l'onglet **Retraits**. Endpoints : `GET /vendor/wallet`,
+`POST /vendor/payouts`, `GET /admin/payouts`, `POST /admin/payouts/:id/status`.
+
 ## Résultats de référence (validés)
 - Reconnaissance faciale : même personne → `match:true`, score ~87 ;
   personnes différentes → `match:false`, score ~19 ; absence de visage → rejet.
