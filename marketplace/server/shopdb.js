@@ -17,6 +17,7 @@ const crypto = require("crypto");
 let DatabaseSync;
 try { ({ DatabaseSync } = require("node:sqlite")); }
 catch (e) { DatabaseSync = null; } // SQLite indisponible → l'API shop se désactive proprement.
+const migrations = require("./migrations");
 
 const DATA_DIR = path.join(__dirname, "data");
 const DB_FILE = process.env.SHOP_DB || path.join(DATA_DIR, "marche.db");
@@ -36,90 +37,12 @@ function init() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   db = new DatabaseSync(DB_FILE);
   db.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;");
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY, name TEXT, email TEXT UNIQUE, phone TEXT,
-      passHash TEXT, passSalt TEXT, role TEXT DEFAULT 'client', createdAt INTEGER,
-      emailVerified INTEGER DEFAULT 0, phoneVerified INTEGER DEFAULT 0,
-      twofaSecret TEXT, twofaEnabled INTEGER DEFAULT 0
-    );
-    CREATE TABLE IF NOT EXISTS otp (
-      id TEXT PRIMARY KEY, kind TEXT, subject TEXT, userId TEXT, code TEXT, expiresAt INTEGER, createdAt INTEGER
-    );
-    CREATE INDEX IF NOT EXISTS idx_otp_lookup ON otp(kind, subject);
-    CREATE TABLE IF NOT EXISTS products (
-      id TEXT PRIMARY KEY, storeId TEXT, storeName TEXT, name TEXT, description TEXT,
-      price INTEGER, currency TEXT DEFAULT 'FCFA', category TEXT, image TEXT,
-      stock INTEGER DEFAULT 0, active INTEGER DEFAULT 1, createdAt INTEGER
-    );
-    CREATE TABLE IF NOT EXISTS carts (
-      userId TEXT PRIMARY KEY, items TEXT, updatedAt INTEGER
-    );
-    CREATE TABLE IF NOT EXISTS orders (
-      id TEXT PRIMARY KEY, userId TEXT, customerName TEXT, phone TEXT, address TEXT,
-      city TEXT, itemsTotal INTEGER DEFAULT 0, deliveryFee INTEGER DEFAULT 0, discount INTEGER DEFAULT 0,
-      total INTEGER, currency TEXT DEFAULT 'FCFA', payment TEXT DEFAULT 'cod',
-      paymentMethod TEXT DEFAULT 'cod', paymentStatus TEXT DEFAULT 'cod',
-      status TEXT DEFAULT 'pending', note TEXT, createdAt INTEGER, updatedAt INTEGER
-    );
-    CREATE TABLE IF NOT EXISTS payments (
-      id TEXT PRIMARY KEY, orderId TEXT, method TEXT, amount INTEGER, phone TEXT,
-      reference TEXT, instructions TEXT, status TEXT DEFAULT 'pending', createdAt INTEGER, updatedAt INTEGER
-    );
-    CREATE INDEX IF NOT EXISTS idx_pay_order ON payments(orderId);
-    CREATE TABLE IF NOT EXISTS payouts (
-      id TEXT PRIMARY KEY, storeId TEXT, amount INTEGER, method TEXT, details TEXT,
-      status TEXT DEFAULT 'requested', createdAt INTEGER, updatedAt INTEGER
-    );
-    CREATE INDEX IF NOT EXISTS idx_payouts_store ON payouts(storeId);
-    CREATE TABLE IF NOT EXISTS order_items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, orderId TEXT, productId TEXT,
-      name TEXT, price INTEGER, qty INTEGER, variant TEXT, storeId TEXT, storeName TEXT
-    );
-    CREATE TABLE IF NOT EXISTS stores (
-      id TEXT PRIMARY KEY, ownerId TEXT, name TEXT, description TEXT, category TEXT,
-      commune TEXT, logo TEXT, status TEXT DEFAULT 'pending', createdAt INTEGER, updatedAt INTEGER
-    );
-    CREATE INDEX IF NOT EXISTS idx_items_store ON order_items(storeId);
-    CREATE INDEX IF NOT EXISTS idx_stores_owner ON stores(ownerId);
-    CREATE TABLE IF NOT EXISTS sessions (
-      token TEXT PRIMARY KEY, userId TEXT, createdAt INTEGER,
-      expiresAt INTEGER, refreshToken TEXT, refreshExpiresAt INTEGER
-    );
-    CREATE INDEX IF NOT EXISTS idx_sessions_refresh ON sessions(refreshToken);
-    CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(userId);
-    CREATE TABLE IF NOT EXISTS reviews (
-      id TEXT PRIMARY KEY, targetType TEXT, targetId TEXT, userId TEXT,
-      authorName TEXT, rating INTEGER, comment TEXT, verified INTEGER DEFAULT 0,
-      status TEXT DEFAULT 'visible', createdAt INTEGER
-    );
-    CREATE INDEX IF NOT EXISTS idx_reviews_target ON reviews(targetType, targetId);
-    CREATE TABLE IF NOT EXISTS documents (
-      collection TEXT, userId TEXT, data TEXT, updatedAt INTEGER,
-      PRIMARY KEY (collection, userId)
-    );
-    CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(userId);
-    CREATE INDEX IF NOT EXISTS idx_items_order ON order_items(orderId);
-    CREATE INDEX IF NOT EXISTS idx_products_cat ON products(category);
-  `);
-  // Migrations légères pour les bases créées avant l'ajout de ces colonnes.
-  for (const col of ["itemsTotal INTEGER DEFAULT 0", "deliveryFee INTEGER DEFAULT 0", "discount INTEGER DEFAULT 0"]) {
-    try { db.exec(`ALTER TABLE orders ADD COLUMN ${col}`); } catch (e) { /* colonne déjà présente */ }
-  }
-  for (const col of ["storeId TEXT", "storeName TEXT"]) {
-    try { db.exec(`ALTER TABLE order_items ADD COLUMN ${col}`); } catch (e) { /* déjà présente */ }
-  }
-  for (const col of ["paymentMethod TEXT DEFAULT 'cod'", "paymentStatus TEXT DEFAULT 'cod'"]) {
-    try { db.exec(`ALTER TABLE orders ADD COLUMN ${col}`); } catch (e) { /* déjà présente */ }
-  }
-  for (const col of ["expiresAt INTEGER", "refreshToken TEXT", "refreshExpiresAt INTEGER"]) {
-    try { db.exec(`ALTER TABLE sessions ADD COLUMN ${col}`); } catch (e) { /* déjà présente */ }
-  }
-  for (const col of ["emailVerified INTEGER DEFAULT 0", "phoneVerified INTEGER DEFAULT 0", "twofaSecret TEXT", "twofaEnabled INTEGER DEFAULT 0"]) {
-    try { db.exec(`ALTER TABLE users ADD COLUMN ${col}`); } catch (e) { /* déjà présente */ }
-  }
+  // Schéma géré par des migrations versionnées et reproductibles (migrations.js).
+  const res = migrations.run(db);
+  if (res.applied.length) console.log(`[db] migrations appliquées : ${res.applied.join(", ")} → schéma v${res.to}`);
   return true;
 }
+function schemaVersion() { return db ? migrations.currentVersion(db) : 0; }
 
 /* --------------------------------- Utils --------------------------------- */
 const now = () => Date.now();
@@ -604,8 +527,34 @@ function listDocs(collection) {
   return db.prepare("SELECT userId, LENGTH(data) bytes, updatedAt FROM documents WHERE collection=? ORDER BY updatedAt DESC").all(collection);
 }
 
+/* --------------------------- Sauvegarde & restauration ------------------- */
+const BACKUP_TABLES = ["users", "products", "carts", "orders", "order_items", "payments", "payouts", "stores", "sessions", "reviews", "documents"];
+function backup() {
+  const out = { app: "marche-ci", schemaVersion: migrations.currentVersion(db), exportedAt: now(), tables: {} };
+  for (const t of BACKUP_TABLES) out.tables[t] = db.prepare(`SELECT * FROM ${t}`).all();
+  return out;
+}
+function restore(data) {
+  if (!data || !data.tables) return { error: "Sauvegarde invalide." };
+  db.exec("BEGIN");
+  try {
+    for (const t of BACKUP_TABLES) {
+      const rows = data.tables[t];
+      if (!Array.isArray(rows)) continue;
+      db.exec(`DELETE FROM ${t}`);
+      for (const r of rows) {
+        const cols = Object.keys(r);
+        if (!cols.length) continue;
+        db.prepare(`INSERT INTO ${t} (${cols.join(",")}) VALUES (${cols.map((c) => "@" + c).join(",")})`).run(r);
+      }
+    }
+    db.exec("COMMIT");
+  } catch (e) { db.exec("ROLLBACK"); return { error: "Échec de la restauration : " + e.message }; }
+  return { ok: true, restored: BACKUP_TABLES.length };
+}
+
 module.exports = {
-  init, available, uid, isSyncCollection, SYNC_COLLECTIONS,
+  init, available, uid, isSyncCollection, SYNC_COLLECTIONS, schemaVersion, backup, restore,
   putDoc, getDoc, getAllDocs, listCollections, listDocs,
   createUser, authUser, getUser, publicUser,
   createSession, userIdForToken, refreshSession, destroySession, destroyUserSessions, revokeSession, listSessions,

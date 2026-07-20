@@ -137,6 +137,22 @@ défaut 10 %). Le vendeur voit `escrow / disponible / retiré / commission` sur
 dans l'onglet **Retraits**. Endpoints : `GET /vendor/wallet`,
 `POST /vendor/payouts`, `GET /admin/payouts`, `POST /admin/payouts/:id/status`.
 
+### Base de données : migrations, pagination & sauvegardes (domaine A)
+- **Migrations versionnées** (`migrations.js`) : table `schema_migrations` +
+  runner appliqué automatiquement au démarrage (`shopdb.init`). Chaque migration
+  a un numéro et s'exécute **une seule fois**, dans une transaction. Fini les
+  `ALTER` ad hoc : le schéma est reproductible sur toute base.
+  `GET /admin/schema` expose la version courante et la liste des migrations.
+- **Pagination** de toutes les listes : `?limit=` (1–500, défaut 50) et
+  `?offset=`. La réponse contient `{ items, total, limit, offset, hasMore }`.
+  Appliquée à `/products`, `/reviews`, `/admin/orders`, `/admin/stores`,
+  `/admin/payments`, `/admin/transactions` (la synthèse `reconciliation` est
+  conservée en plus des `items` paginés).
+- **Sauvegarde & restauration** (admin) : `GET /admin/backup` exporte toute la
+  base en JSON (toutes les tables + `schemaVersion`) ; `POST /admin/restore`
+  remplace intégralement le contenu des tables dans une transaction
+  (`ROLLBACK` en cas d'erreur, base intacte). À archiver hors ligne.
+
 ## Résultats de référence (validés)
 - Reconnaissance faciale : même personne → `match:true`, score ~87 ;
   personnes différentes → `match:false`, score ~19 ; absence de visage → rejet.

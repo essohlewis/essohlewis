@@ -30,6 +30,13 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
     if (h.startsWith("Bearer ")) return h.slice(7).trim();
     return req.get("X-Shop-Token") || req.query.stoken || null;
   }
+  // Pagination : ?limit&offset → { items, total, limit, offset, hasMore }.
+  function page(req, arr) {
+    const total = arr.length;
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 500);
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+    return { items: arr.slice(offset, offset + limit), total, limit, offset, hasMore: offset + limit < total };
+  }
   // Comptes promus administrateurs (liste d'e-mails, séparés par des virgules).
   const ADMIN_EMAILS = new Set((process.env.ADMIN_EMAILS || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean));
   const roleOf = (userId) => { const u = userId && shopdb.getUserRaw(userId); return u ? u.role : null; };
@@ -191,8 +198,8 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
 
   /* ------------------------------ Catalogue ---------------------------- */
   router.get("/products", (req, res) => {
-    const { category, q, storeId, limit } = req.query;
-    res.json({ ok: true, items: shopdb.listProducts({ category, q, storeId, limit }) });
+    const { category, q, storeId } = req.query;
+    res.json({ ok: true, ...page(req, shopdb.listProducts({ category, q, storeId, limit: 1000 })) });
   });
   router.get("/products/:id", (req, res) => {
     const p = shopdb.getProduct(req.params.id);
@@ -248,7 +255,7 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
   });
   router.get("/reviews", (req, res) => {
     const { targetType, targetId } = req.query;
-    res.json({ ok: true, items: shopdb.listReviews({ targetType, targetId, status: "visible" }), rating: targetId ? shopdb.ratingFor(targetType || "product", targetId) : null });
+    res.json({ ok: true, ...page(req, shopdb.listReviews({ targetType, targetId, status: "visible" })), rating: targetId ? shopdb.ratingFor(targetType || "product", targetId) : null });
   });
 
   /* ------------------------------ Paiements ---------------------------- */
@@ -345,15 +352,15 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
   });
 
   /* ------------------------------- Admin ------------------------------- */
-  router.get("/admin/stores", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.listStores({ status: req.query.status }).map(decorate) }));
+  router.get("/admin/stores", requireAdmin, (req, res) => res.json({ ok: true, ...page(req, shopdb.listStores({ status: req.query.status }).map(decorate)) }));
   router.post("/admin/stores/:id/status", requireAdmin, (req, res) => {
     const s = shopdb.setStoreStatus(req.params.id, (req.body || {}).status);
     if (!s) return res.status(400).json({ ok: false, error: "Statut invalide ou boutique introuvable." });
     res.json({ ok: true, store: s });
   });
-  router.get("/admin/payments", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.listPayments({ status: req.query.status }) }));
+  router.get("/admin/payments", requireAdmin, (req, res) => res.json({ ok: true, ...page(req, shopdb.listPayments({ status: req.query.status })) }));
   // Journal comptable unifié + synthèse de réconciliation.
-  router.get("/admin/transactions", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.transactions({ limit: req.query.limit }), reconciliation: shopdb.reconciliation() }));
+  router.get("/admin/transactions", requireAdmin, (req, res) => res.json({ ok: true, ...page(req, shopdb.transactions({ limit: 5000 })), reconciliation: shopdb.reconciliation() }));
   router.get("/admin/payouts", requireAdmin, (req, res) => {
     const items = shopdb.listPayouts({ status: req.query.status });
     const byStore = {};
@@ -373,7 +380,7 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
     if (!r) return res.status(400).json({ ok: false, error: "Statut invalide ou avis introuvable." });
     res.json({ ok: true, review: r });
   });
-  router.get("/admin/orders", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.listOrders({ status: req.query.status }) }));
+  router.get("/admin/orders", requireAdmin, (req, res) => res.json({ ok: true, ...page(req, shopdb.listOrders({ status: req.query.status })) }));
   router.get("/admin/orders/:id", requireAdmin, (req, res) => {
     const o = shopdb.getOrder(req.params.id);
     if (!o) return res.status(404).json({ ok: false, error: "Commande introuvable." });
@@ -391,6 +398,21 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
     res.json({ ok: true, order: r.order, refunded: r.refunded, wasPaid: r.wasPaid });
   });
   router.get("/admin/stats", requireAdmin, (req, res) => res.json({ ok: true, stats: shopdb.stats() }));
+
+  /* ---------------- Schéma, sauvegarde & restauration ---------------- */
+  router.get("/admin/schema", requireAdmin, (req, res) => res.json({
+    ok: true,
+    version: shopdb.schemaVersion(),
+    migrations: require("./migrations").MIGRATIONS.map((m) => ({ version: m.version, name: m.name })),
+  }));
+  // Export complet de la base (JSON) — à archiver hors ligne.
+  router.get("/admin/backup", requireAdmin, (req, res) => res.json({ ok: true, backup: shopdb.backup() }));
+  // Restauration : remplace intégralement le contenu des tables (transaction).
+  router.post("/admin/restore", requireAdmin, (req, res) => {
+    const r = shopdb.restore((req.body || {}).backup);
+    if (r.error) return res.status(400).json({ ok: false, error: r.error });
+    res.json({ ok: true, ...r });
+  });
 
   return router;
 };
