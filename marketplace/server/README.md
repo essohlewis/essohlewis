@@ -170,6 +170,19 @@ dans l'onglet **Retraits**. Endpoints : `GET /vendor/wallet`,
   par une **page navigable** `/api/docs` (renderer autonome, sans CDN, conforme
   à la CSP stricte). Recherche/filtre, regroupement par domaine, schémas de
   sécurité (session `Bearer` + `X-Admin-Token`) documentés.
+- **Journalisation structurée** (`logger.js`, sans dépendance) : logs à
+  **niveaux** (`debug`/`info`/`warn`/`error`, filtrés par `LOG_LEVEL`), au
+  format **JSON une ligne** (`LOG_FORMAT=json`, défaut en production —
+  exploitable par Loki/ELK/CloudWatch) ou **lisible** en dev. **Corrélation** :
+  chaque requête reçoit un `X-Request-Id` (repris de l'appelant s'il en fournit
+  un valide, sinon généré) renvoyé dans la réponse et **injecté
+  automatiquement** dans tous les logs de l'appel (via `AsyncLocalStorage`).
+  Un log d'**accès HTTP** par requête (méthode, route, statut, durée, IP).
+- **Middleware d'erreurs & format uniforme** : gestionnaire terminal renvoyant
+  `{ ok:false, error, requestId }` avec le bon code HTTP, et **journalisant**
+  l'erreur (message + pile) corrélée au `requestId` — l'utilisateur ne voit
+  jamais de pile, mais le support relie le ticket au log par l'identifiant.
+  Variables : `LOG_LEVEL` (défaut `info`), `LOG_FORMAT` (`json`/`pretty`).
 
 ## Résultats de référence (validés)
 - Reconnaissance faciale : même personne → `match:true`, score ~87 ;

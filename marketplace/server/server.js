@@ -16,6 +16,7 @@ const createShopRouter = require("./shop");
 const seedProducts = require("./seed");
 const security = require("./security");
 const openapi = require("./openapi");
+const { logger, requestContext, accessLog, errorHandler } = require("./logger");
 
 const PORT = process.env.PORT || 3000;
 const ADMIN_TOKEN = process.env.KYC_ADMIN_TOKEN || "admin-demo-token";
@@ -38,6 +39,10 @@ app.use((req, res, next) => {
   next();
 });
 
+// Corrélation + journalisation d'accès (avant tout traitement métier).
+app.use(requestContext());                  // X-Request-Id + contexte de corrélation
+app.use(accessLog());                       // une ligne de log par requête HTTP
+
 app.use(security.httpsRedirect());          // HTTP→HTTPS si FORCE_HTTPS=1
 app.use(security.securityHeaders());        // CSP, HSTS, X-Frame-Options, …
 app.use("/api", security.cors());           // CORS restreint (ALLOWED_ORIGINS)
@@ -47,7 +52,7 @@ app.use(express.json({ limit: "16mb" }));
 
 // Garde-fou : jeton admin par défaut interdit en production réelle.
 if (process.env.NODE_ENV === "production" && ADMIN_TOKEN === "admin-demo-token") {
-  console.warn("[sécurité] ⚠️  KYC_ADMIN_TOKEN par défaut en production — définissez un jeton fort !");
+  logger.warn("KYC_ADMIN_TOKEN par défaut en production — définissez un jeton fort", { scope: "sécurité" });
 }
 
 // Limiteurs renforcés sur les points sensibles (avant le montage des routeurs).
@@ -62,15 +67,15 @@ app.use("/api/shop/password/forgot", security.rateLimit({ name: "forgot", window
 app.use("/api/shop/2fa/enable", security.rateLimit({ name: "2faen", windowMs: 60000, max: Number(process.env.RATE_MAX_AUTH) || 30 }));
 
 let FACE_AVAILABLE = false;
-face.selfTest().then((ok) => { FACE_AVAILABLE = ok; console.log(`[face] reconnaissance faciale : ${ok ? "OPÉRATIONNELLE (dlib)" : "indisponible → revue admin manuelle"}`); });
+face.selfTest().then((ok) => { FACE_AVAILABLE = ok; logger.info(`reconnaissance faciale : ${ok ? "opérationnelle (dlib)" : "indisponible → revue admin manuelle"}`, { scope: "face", available: ok }); });
 
 // Base de données SQLite de l'espace client (comptes, catalogue, panier, commandes).
 let SHOP_AVAILABLE = false;
 try {
   SHOP_AVAILABLE = shopdb.init();
-  if (SHOP_AVAILABLE && shopdb.countProducts() === 0) { seedProducts.forEach((p) => shopdb.upsertProduct(p)); console.log(`[shop] catalogue initialisé (${seedProducts.length} produits)`); }
-  console.log(`[shop] base de données client : ${SHOP_AVAILABLE ? "SQLite prête (" + shopdb.countProducts() + " produits)" : "indisponible (node:sqlite absent)"}`);
-} catch (e) { console.log("[shop] base de données indisponible :", e.message); }
+  if (SHOP_AVAILABLE && shopdb.countProducts() === 0) { seedProducts.forEach((p) => shopdb.upsertProduct(p)); logger.info(`catalogue initialisé (${seedProducts.length} produits)`, { scope: "shop" }); }
+  logger.info(`base de données client : ${SHOP_AVAILABLE ? "SQLite prête (" + shopdb.countProducts() + " produits)" : "indisponible (node:sqlite absent)"}`, { scope: "shop", available: SHOP_AVAILABLE });
+} catch (e) { logger.error("base de données indisponible", { scope: "shop", err: e.message }); }
 // Statut KYC d'une boutique (lecture directe du store KYC) — sert à bloquer la
 // vente tant que l'identité du vendeur n'est pas validée.
 function kycStatusForStore(storeId) {
@@ -239,9 +244,14 @@ app.use(express.static(path.join(__dirname, "public")));
 // Marketplace front existante.
 app.use(express.static(MARKETPLACE_DIR, { index: "index.html" }));
 
+// Gestionnaire d'erreurs terminal : réponse uniforme { ok:false, error, requestId }
+// + log d'erreur corrélé. Doit être enregistré en dernier.
+app.use(errorHandler());
+
 app.listen(PORT, () => {
-  console.log(`\n  Marché CI — serveur Node prêt sur http://localhost:${PORT}`);
-  console.log(`  • Marketplace : http://localhost:${PORT}/`);
-  console.log(`  • Vérification vendeur : http://localhost:${PORT}/verify`);
-  console.log(`  • Revue admin (KYC) : http://localhost:${PORT}/admin/kyc\n`);
+  logger.info(`serveur prêt sur http://localhost:${PORT}`, {
+    scope: "server", port: Number(PORT),
+    logLevel: process.env.LOG_LEVEL || "info",
+    logFormat: process.env.LOG_FORMAT || (process.env.NODE_ENV === "production" ? "json" : "pretty"),
+  });
 });

@@ -18,6 +18,7 @@ let DatabaseSync;
 try { ({ DatabaseSync } = require("node:sqlite")); }
 catch (e) { DatabaseSync = null; } // SQLite indisponible → l'API shop se désactive proprement.
 const migrations = require("./migrations");
+const { logger } = require("./logger");
 
 const DATA_DIR = path.join(__dirname, "data");
 const DB_FILE = process.env.SHOP_DB || path.join(DATA_DIR, "marche.db");
@@ -39,7 +40,7 @@ function init() {
   db.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;");
   // Schéma géré par des migrations versionnées et reproductibles (migrations.js).
   const res = migrations.run(db);
-  if (res.applied.length) console.log(`[db] migrations appliquées : ${res.applied.join(", ")} → schéma v${res.to}`);
+  if (res.applied.length) logger.info(`migrations appliquées : ${res.applied.join(", ")} → schéma v${res.to}`, { scope: "db", applied: res.applied, schemaVersion: res.to });
   return true;
 }
 function schemaVersion() { return db ? migrations.currentVersion(db) : 0; }
