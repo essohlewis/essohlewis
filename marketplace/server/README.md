@@ -138,6 +138,14 @@ dans l'onglet **Retraits**. Endpoints : `GET /vendor/wallet`,
 `POST /vendor/payouts`, `GET /admin/payouts`, `POST /admin/payouts/:id/status`.
 
 ### Base de données : migrations, pagination & sauvegardes (domaine A)
+- **Catalogue = source unique** (`../shared/catalogue.js`) : un **référentiel
+  produits partagé** (module UMD) alimente à la fois le front
+  (`window.MP.Catalogue`, via `<script>`) **et** le serveur
+  (`require("../shared/catalogue")`). Le `seed.js` du front comme celui du
+  serveur en **dérivent** : mêmes identifiants (`prd_1`…`prd_16`), mêmes
+  boutiques (`sto_1`…`sto_4`), mêmes prix. Fini les deux catalogues divergents.
+  Le serveur y stocke le **prix effectif** (promo si active) pour que le total
+  recalculé côté serveur corresponde à ce que le client paie côté front.
 - **Migrations versionnées** (`migrations.js`) : table `schema_migrations` +
   runner appliqué automatiquement au démarrage (`shopdb.init`). Chaque migration
   a un numéro et s'exécute **une seule fois**, dans une transaction. Fini les
