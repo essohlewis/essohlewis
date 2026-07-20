@@ -231,7 +231,7 @@ function createOrder(userId, payload) {
 function getOrder(id) {
   const o = db.prepare("SELECT * FROM orders WHERE id=?").get(id);
   if (!o) return null;
-  o.items = db.prepare("SELECT productId,name,price,qty,variant FROM order_items WHERE orderId=?").all(id);
+  o.items = db.prepare("SELECT productId,name,price,qty,variant,storeName FROM order_items WHERE orderId=?").all(id);
   return o;
 }
 function listOrders({ userId, status, limit } = {}) {
@@ -240,7 +240,7 @@ function listOrders({ userId, status, limit } = {}) {
   if (status && status !== "all") { sql += " AND status=@status"; args.status = status; }
   sql += " ORDER BY createdAt DESC LIMIT @limit"; args.limit = Math.min(parseInt(limit, 10) || 200, 1000);
   const rows = db.prepare(sql).all(args);
-  const itemsStmt = db.prepare("SELECT productId,name,price,qty,variant FROM order_items WHERE orderId=?");
+  const itemsStmt = db.prepare("SELECT productId,name,price,qty,variant,storeName FROM order_items WHERE orderId=?");
   for (const r of rows) r.items = itemsStmt.all(r.id);
   return rows;
 }

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reçu — Marché CI</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="/tailwind.css" />
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #fff !important; }
+      .sheet { box-shadow: none !important; border: 0 !important; margin: 0 !important; max-width: 100% !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+  <div class="max-w-2xl mx-auto px-4 py-6">
+    <div class="no-print flex items-center justify-between mb-4">
+      <a href="/mes-commandes" class="btn btn-ghost !py-1.5 !px-4 text-sm">← Mes commandes</a>
+      <button id="print" class="btn btn-brand !py-1.5 !px-4 text-sm">🖨️ Imprimer / PDF</button>
+    </div>
+
+    <div id="err" class="card hidden text-center text-slate-600"></div>
+
+    <div id="sheet" class="sheet card !p-8 hidden">
+      <div class="flex items-start justify-between border-b border-slate-200 pb-4 mb-4">
+        <div class="flex items-center gap-2"><span class="text-3xl">🛒</span>
+          <div><div class="font-extrabold text-xl">Marché<span class="text-brand">CI</span></div>
+            <div class="text-xs text-slate-500">Place de marché · Côte d'Ivoire</div></div></div>
+        <div class="text-right"><div class="font-extrabold text-lg">REÇU</div>
+          <div id="ref" class="text-sm text-slate-500"></div><div id="date" class="text-xs text-slate-400"></div></div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 text-sm mb-5">
+        <div><div class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Client</div>
+          <div id="cust" class="font-semibold"></div><div id="custc" class="text-slate-500"></div></div>
+        <div class="text-right"><div class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Statut</div>
+          <div id="status"></div></div>
+      </div>
+
+      <table class="w-full text-sm border-t border-slate-200">
+        <thead><tr class="text-left text-xs text-slate-400 uppercase tracking-wide">
+          <th class="py-2">Article</th><th class="py-2 text-center">Qté</th><th class="py-2 text-right">P.U.</th><th class="py-2 text-right">Total</th></tr></thead>
+        <tbody id="lines"></tbody>
+      </table>
+
+      <div class="mt-4 ml-auto max-w-xs text-sm space-y-1">
+        <div class="flex justify-between"><span class="text-slate-500">Sous-total articles</span><span id="itemsTotal"></span></div>
+        <div id="discountRow" class="flex justify-between hidden"><span class="text-slate-500">Remise</span><span id="discount" class="text-accent"></span></div>
+        <div id="feeRow" class="flex justify-between hidden"><span class="text-slate-500">Livraison</span><span id="fee"></span></div>
+        <div class="flex justify-between font-extrabold text-lg border-t border-slate-200 pt-2 mt-1"><span>Total</span><span id="total"></span></div>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-slate-200 text-xs text-slate-500 flex items-center justify-between flex-wrap gap-2">
+        <div id="payline"></div>
+        <div>Merci de votre confiance — Marché CI</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const id = decodeURIComponent(location.pathname.split("/facture/")[1] || "");
+    const qs = new URLSearchParams(location.search);
+    const adminToken = qs.get("token");
+    const $ = (s) => document.querySelector(s);
+    const fcfa = (n) => (n || 0).toLocaleString("fr-FR") + " FCFA";
+    const shopToken = () => { try { return localStorage.getItem("marchesci_shopToken") || ""; } catch (e) { return ""; } };
+    const ST = { pending: ["🕓 En attente", "text-amber-600"], confirmed: ["✅ Confirmée", "text-sky-600"], shipped: ["🚚 Expédiée", "text-indigo-600"], delivered: ["📦 Livrée", "text-accent"], cancelled: ["❌ Annulée", "text-red-600"] };
+    const PAY = { paid: "✅ Payé en ligne", pending: "💳 Paiement en attente", refunded: "↩️ Remboursé", cod: "💵 Paiement à la livraison" };
+
+    async function load() {
+      let url, opts = {};
+      if (adminToken) { url = "/api/shop/admin/orders/" + encodeURIComponent(id) + "?token=" + encodeURIComponent(adminToken); }
+      else { url = "/api/shop/orders/" + encodeURIComponent(id); opts.headers = { Authorization: "Bearer " + shopToken() }; }
+      let j;
+      try { const r = await fetch(url, opts); j = await r.json(); if (!r.ok || !j.ok) throw new Error(j.error || "Accès refusé."); }
+      catch (e) { $("#err").classList.remove("hidden"); $("#err").textContent = "Reçu indisponible : " + e.message; return; }
+      render(j.order);
+    }
+
+    function render(o) {
+      $("#sheet").classList.remove("hidden");
+      $("#ref").textContent = (o.note && o.note.replace(/^Réf\.\s*/, "").split(" · ")[0]) || o.id;
+      $("#date").textContent = new Date(o.createdAt).toLocaleString("fr-FR");
+      $("#cust").textContent = o.customerName || "Client";
+      $("#custc").innerHTML = [o.phone, o.city, o.address].filter(Boolean).map((x) => x).join("<br>");
+      const st = ST[o.status] || [o.status, "text-slate-600"];
+      $("#status").innerHTML = `<span class="font-bold ${st[1]}">${st[0]}</span>`;
+      $("#lines").innerHTML = (o.items || []).map((i) => `<tr class="border-t border-slate-100">
+        <td class="py-2">${i.name}${i.storeName ? `<div class="text-xs text-slate-400">${i.storeName}</div>` : ""}</td>
+        <td class="py-2 text-center">${i.qty}</td><td class="py-2 text-right">${fcfa(i.price)}</td><td class="py-2 text-right font-semibold">${fcfa(i.price * i.qty)}</td></tr>`).join("");
+      $("#itemsTotal").textContent = fcfa(o.itemsTotal);
+      if (o.discount) { $("#discountRow").classList.remove("hidden"); $("#discount").textContent = "− " + fcfa(o.discount); }
+      if (o.deliveryFee) { $("#feeRow").classList.remove("hidden"); $("#fee").textContent = fcfa(o.deliveryFee); }
+      $("#total").textContent = fcfa(o.total);
+      $("#payline").textContent = PAY[o.paymentStatus] || PAY.cod;
+      document.title = "Reçu " + ($("#ref").textContent) + " — Marché CI";
+    }
+
+    $("#print").addEventListener("click", () => window.print());
+    load();
+  </script>
+</body>
+</html>

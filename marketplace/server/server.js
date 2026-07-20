@@ -182,6 +182,7 @@ app.get("/admin/shop", (req, res) => res.sendFile(path.join(__dirname, "public",
 app.get("/mes-commandes", (req, res) => res.sendFile(path.join(__dirname, "public", "mes-commandes.html")));
 app.get("/mes-ventes", (req, res) => res.sendFile(path.join(__dirname, "public", "mes-ventes.html")));
 app.get("/paiement", (req, res) => res.sendFile(path.join(__dirname, "public", "paiement.html")));
+app.get("/facture/:id", (req, res) => res.sendFile(path.join(__dirname, "public", "facture.html")));
 
 // Assets du back-office (tailwind.css, etc.).
 app.use(express.static(path.join(__dirname, "public")));

@@ -225,6 +225,7 @@
       const actions = [];
       if (next) actions.push(`<button class="btn btn-accent !py-1 !px-3 text-sm" data-adv="${o.id}" data-to="${next}">→ ${STATUS[next]}</button>`);
       if (o.status !== "cancelled") actions.push(`<button class="btn btn-ghost !py-1 !px-3 text-sm !text-red-600 !border-red-200" data-refund="${o.id}" data-paid="${paid ? 1 : 0}">${paid ? "Rembourser" : "Annuler"}</button>`);
+      actions.push(`<a class="btn btn-ghost !py-1 !px-3 text-sm" href="/facture/${encodeURIComponent(o.id)}?token=${encodeURIComponent(TOKEN)}" target="_blank" rel="noopener">🧾 Reçu</a>`);
       const pay = OPAY[o.paymentStatus] || OPAY.cod;
       const detail = (o.deliveryFee || o.discount)
         ? `<div class="text-xs text-slate-400 mt-1">Articles ${fcfa(o.itemsTotal)}${o.discount ? " · remise −" + fcfa(o.discount) : ""}${o.deliveryFee ? " · livraison " + fcfa(o.deliveryFee) : ""}</div>` : "";

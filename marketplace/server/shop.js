@@ -237,6 +237,11 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
     res.json({ ok: true, review: r });
   });
   router.get("/admin/orders", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.listOrders({ status: req.query.status }) }));
+  router.get("/admin/orders/:id", requireAdmin, (req, res) => {
+    const o = shopdb.getOrder(req.params.id);
+    if (!o) return res.status(404).json({ ok: false, error: "Commande introuvable." });
+    res.json({ ok: true, order: o });
+  });
   router.post("/admin/orders/:id/status", requireAdmin, (req, res) => {
     const o = shopdb.setOrderStatus(req.params.id, (req.body || {}).status);
     if (!o) return res.status(400).json({ ok: false, error: "Statut invalide ou commande introuvable." });
