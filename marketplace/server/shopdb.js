@@ -542,6 +542,20 @@ function listDocs(collection) {
   return db.prepare("SELECT userId, LENGTH(data) bytes, updatedAt FROM documents WHERE collection=? ORDER BY updatedAt DESC").all(collection);
 }
 
+/* ------------------------- Abonnements Web Push -------------------------- */
+function savePushSub(userId, sub) {
+  if (!userId || !sub || !sub.endpoint || !sub.keys) return { error: "abonnement invalide" };
+  db.prepare("INSERT INTO push_subs (endpoint,userId,p256dh,auth,createdAt) VALUES (?,?,?,?,?) ON CONFLICT(endpoint) DO UPDATE SET userId=excluded.userId,p256dh=excluded.p256dh,auth=excluded.auth")
+    .run(sub.endpoint, userId, sub.keys.p256dh, sub.keys.auth, now());
+  return { ok: true };
+}
+function deletePushSub(endpoint) { if (!endpoint) return { ok: false }; db.prepare("DELETE FROM push_subs WHERE endpoint=?").run(endpoint); return { ok: true }; }
+function listPushSubs(userId) {
+  return db.prepare("SELECT endpoint,p256dh,auth FROM push_subs WHERE userId=?").all(userId)
+    .map((r) => ({ endpoint: r.endpoint, keys: { p256dh: r.p256dh, auth: r.auth } }));
+}
+function countPushSubs() { return db.prepare("SELECT COUNT(*) c FROM push_subs").get().c; }
+
 /* --------------------------- Sauvegarde & restauration ------------------- */
 const BACKUP_TABLES = ["users", "products", "carts", "orders", "order_items", "payments", "payouts", "stores", "sessions", "reviews", "documents"];
 function backup() {
@@ -571,6 +585,7 @@ function restore(data) {
 module.exports = {
   init, available, uid, isSyncCollection, SYNC_COLLECTIONS, schemaVersion, backup, restore,
   putDoc, getDoc, getAllDocs, getDocsMeta, getDocWithMeta, listCollections, listDocs,
+  savePushSub, deletePushSub, listPushSubs, countPushSubs,
   createUser, authUser, getUser, publicUser,
   createSession, userIdForToken, refreshSession, destroySession, destroyUserSessions, revokeSession, listSessions,
   createOtp, verifyOtp, setEmailVerified, setPhoneVerified, setUserPassword, getUserByEmail, getUserByPhone, getUserRaw, setTwofa, setRole,

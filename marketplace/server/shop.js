@@ -20,6 +20,7 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
   // Statut KYC d'une boutique (injecté par server.js, lecture directe du store KYC).
   // Valeurs : "approved" | "pending" | "rejected" | "none".
   const kycStatusForStore = (opts && opts.kycStatusForStore) || (() => "approved");
+  const pushNotify = (opts && opts.pushNotify) || (() => {}); // (userId, payload) → Web Push (rappels commande…)
   // Une boutique ne peut vendre que si elle est approuvée ET son identité vérifiée (KYC).
   const isSellable = (s) => !!s && s.status === "approved" && kycStatusForStore(s.id) === "approved";
   const decorate = (s) => s && Object.assign({}, s, { kycStatus: kycStatusForStore(s.id), sellable: isSellable(s) });
@@ -390,9 +391,16 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
     if (!o) return res.status(404).json({ ok: false, error: "Commande introuvable." });
     res.json({ ok: true, order: o });
   });
+  const STATUS_LABEL = { pending: "reçue", confirmed: "confirmée", shipped: "expédiée", delivered: "livrée", cancelled: "annulée" };
   router.post("/admin/orders/:id/status", requireAdmin, (req, res) => {
     const o = shopdb.setOrderStatus(req.params.id, (req.body || {}).status);
     if (!o) return res.status(400).json({ ok: false, error: "Statut invalide ou commande introuvable." });
+    // Rappel commande (notification push) au client concerné, s'il est abonné.
+    if (o.userId) pushNotify(o.userId, {
+      title: "Marché CI — votre commande",
+      body: `Votre commande ${o.id} est ${STATUS_LABEL[o.status] || o.status}.`,
+      url: "/mes-commandes", tag: "order-" + o.id,
+    });
     res.json({ ok: true, order: o });
   });
   // Remboursement / annulation (rembourse le paiement en ligne le cas échéant).

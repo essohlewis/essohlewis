@@ -184,6 +184,27 @@ dans l'onglet **Retraits**. Endpoints : `GET /vendor/wallet`,
   jamais de pile, mais le support relie le ticket au log par l'identifiant.
   Variables : `LOG_LEVEL` (défaut `info`), `LOG_FORMAT` (`json`/`pretty`).
 
+### Notifications push web (domaine G) — `webpush.js`
+Implémentation **complète et sans dépendance** du protocole Web Push :
+- **VAPID** (RFC 8292) : JWT **ES256** signé avec la clé privée du serveur.
+- **Chiffrement de charge utile** (RFC 8291, `aes128gcm`) : ECDH P‑256 +
+  HKDF‑SHA256 → CEK/nonce, AES‑128‑GCM (round‑trip validé par test).
+- **Service Worker** (`sw.js`) : événements `push` (affiche la notification) et
+  `notificationclick` (focalise/ouvre la bonne page).
+- **Front** (`js/push.js`, `MP.Push`) : permission, abonnement `PushManager`,
+  enregistrement serveur ; encart d'activation dans la page **Notifications**.
+- **Serveur** : `GET /push/vapidPublicKey`, `POST /push/subscribe`,
+  `POST /push/unsubscribe`, `POST /push/test`. Un **changement de statut de
+  commande** déclenche un **rappel** push au client abonné. Abonnements stockés
+  par appareil (table `push_subs`) ; les endpoints expirés (404/410) sont purgés.
+
+**Production** : définissez des clés VAPID **persistantes**
+(`VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`, générables via
+`node -e "console.log(require('./webpush').generateVapidKeys())"`) et
+`VAPID_SUBJECT` (mailto:…). La **livraison réelle** requiert HTTPS et un accès
+réseau au service de push du navigateur (FCM/Mozilla/…) ; sans cela, le serveur
+chiffre et signe correctement mais l'envoi échoue proprement (journalisé).
+
 ## Résultats de référence (validés)
 - Reconnaissance faciale : même personne → `match:true`, score ~87 ;
   personnes différentes → `match:false`, score ~19 ; absence de visage → rejet.

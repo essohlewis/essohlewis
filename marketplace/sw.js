@@ -5,7 +5,7 @@
    ouverture directe via file://, ils ne s'enregistrent pas (dégradation propre).
    ========================================================================= */
 
-const CACHE = "marchesci-v6";
+const CACHE = "marchesci-v7";
 const ASSETS = [
   "./",
   "./index.html",
@@ -28,6 +28,7 @@ const ASSETS = [
   "./js/cart.js",
   "./js/orders.js",
   "./js/api.js",
+  "./js/push.js",
   "./js/seed.js",
   "./js/router.js",
   "./js/app.js",
@@ -73,5 +74,33 @@ self.addEventListener("fetch", (e) => {
         // Repli index.html uniquement pour les navigations (jamais pour js/css/images).
         .catch(() => (e.request.mode === "navigate" ? caches.match("./index.html") : Response.error()))
     )
+  );
+});
+
+/* ----------------------------- Notifications push ----------------------------- */
+// Réception d'un message push → affiche une notification système.
+self.addEventListener("push", (e) => {
+  let data = {};
+  try { data = e.data ? e.data.json() : {}; } catch (err) { data = { body: e.data ? e.data.text() : "" }; }
+  const title = data.title || "Marché CI";
+  const options = {
+    body: data.body || "",
+    icon: data.icon || "./assets/icon.svg",
+    badge: "./assets/icon.svg",
+    tag: data.tag || undefined,
+    data: { url: data.url || "/" },
+  };
+  e.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Clic sur la notification → focalise un onglet existant ou en ouvre un.
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const target = (e.notification.data && e.notification.data.url) || "/";
+  e.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const c of list) { if ("focus" in c) { c.focus(); if (c.navigate && target !== "/") c.navigate(target).catch(() => {}); return; } }
+      if (self.clients.openWindow) return self.clients.openWindow(target);
+    })
   );
 });

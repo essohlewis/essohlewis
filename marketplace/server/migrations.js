@@ -103,6 +103,18 @@ const MIGRATIONS = [
       }
     },
   },
+  {
+    version: 3,
+    name: "abonnements-push",
+    up(db) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS push_subs (
+          endpoint TEXT PRIMARY KEY, userId TEXT, p256dh TEXT, auth TEXT, createdAt INTEGER
+        );
+        CREATE INDEX IF NOT EXISTS idx_push_user ON push_subs(userId);
+      `);
+    },
+  },
 ];
 
 function currentVersion(db) {

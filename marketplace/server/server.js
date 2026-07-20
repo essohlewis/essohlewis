@@ -16,6 +16,7 @@ const createShopRouter = require("./shop");
 const seedProducts = require("./seed");
 const security = require("./security");
 const openapi = require("./openapi");
+const webpush = require("./webpush");
 const { logger, requestContext, accessLog, errorHandler } = require("./logger");
 
 const PORT = process.env.PORT || 3000;
@@ -105,7 +106,62 @@ if (SHOP_AVAILABLE) {
     const sess = shopdb.createSession(u.id);
     res.json({ ok: true, token: sess.token, refreshToken: sess.refreshToken, expiresAt: sess.expiresAt, user: shopdb.publicUser(u), score: cmp.score });
   });
-  app.use("/api/shop", createShopRouter(shopdb, ADMIN_TOKEN, { kycStatusForStore }));
+  /* ------------------------- Notifications Web Push ------------------------- */
+  // Clés VAPID : persistantes en production (VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY),
+  // sinon éphémères pour la démo (les abonnements devront être repris au redémarrage).
+  const VAPID = {
+    publicKey: process.env.VAPID_PUBLIC_KEY,
+    privateKey: process.env.VAPID_PRIVATE_KEY,
+    subject: process.env.VAPID_SUBJECT || "mailto:admin@marche.ci",
+  };
+  if (!VAPID.publicKey || !VAPID.privateKey) {
+    const gen = webpush.generateVapidKeys();
+    VAPID.publicKey = gen.publicKey; VAPID.privateKey = gen.privateKey;
+    logger.warn("clés VAPID éphémères (démo) — définissez VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY en production", { scope: "push" });
+  }
+
+  // Envoie une notification à tous les appareils abonnés d'un utilisateur.
+  // Meilleur effort : purge les abonnements expirés (404/410), journalise le reste.
+  async function pushToUser(userId, payload) {
+    const subs = shopdb.listPushSubs(userId);
+    let sent = 0, failed = 0;
+    for (const sub of subs) {
+      const r = await webpush.send(sub, payload, VAPID);
+      if (r.ok) sent++;
+      else { failed++; if (r.expired) shopdb.deletePushSub(sub.endpoint); }
+    }
+    if (subs.length) logger.info("push envoyé", { scope: "push", userId, sent, failed, devices: subs.length });
+    return { devices: subs.length, sent, failed };
+  }
+
+  app.use("/api/shop", createShopRouter(shopdb, ADMIN_TOKEN, {
+    kycStatusForStore,
+    pushNotify: (userId, payload) => { pushToUser(userId, payload).catch((e) => logger.error("push échec", { scope: "push", err: e.message })); },
+  }));
+
+  // Clé publique VAPID (le navigateur en a besoin pour s'abonner).
+  app.get("/api/shop/push/vapidPublicKey", (req, res) => res.json({ ok: true, key: VAPID.publicKey }));
+  // Enregistre / retire un abonnement (authentifié via jeton de session).
+  const pushAuth = (req, res, next) => {
+    const t = (req.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+    const uid = t && shopdb.userIdForToken(t);
+    if (!uid) return res.status(401).json({ ok: false, error: "Connexion requise." });
+    req.pushUserId = uid; next();
+  };
+  app.post("/api/shop/push/subscribe", pushAuth, (req, res) => {
+    const r = shopdb.savePushSub(req.pushUserId, (req.body || {}).subscription);
+    if (r.error) return res.status(400).json({ ok: false, error: r.error });
+    res.json({ ok: true });
+  });
+  app.post("/api/shop/push/unsubscribe", pushAuth, (req, res) => {
+    shopdb.deletePushSub((req.body || {}).endpoint);
+    res.json({ ok: true });
+  });
+  // Envoi d'une notification de test à soi-même (vérifie le parcours de bout en bout).
+  app.post("/api/shop/push/test", pushAuth, async (req, res) => {
+    const r = await pushToUser(req.pushUserId, { title: "Marché CI", body: "Notifications activées ✅", url: "/", tag: "test" });
+    res.json({ ok: true, ...r });
+  });
 }
 
 function requireAdmin(req, res, next) {

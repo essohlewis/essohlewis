@@ -62,6 +62,7 @@ function build({ version = "1.0.0", baseUrl = "/api/v1" } = {}) {
       { name: "Paiements", description: "Mobile money, carte, confirmation, webhooks." },
       { name: "Vendeur", description: "Boutique, ventes, portefeuille, retraits." },
       { name: "Administration", description: "Gestion, réconciliation, sauvegardes, schéma." },
+      { name: "Notifications", description: "Notifications push web (VAPID + aes128gcm)." },
       { name: "KYC", description: "Vérification d'identité + reconnaissance faciale + vivacité." },
     ],
     paths: {
@@ -175,6 +176,11 @@ function build({ version = "1.0.0", baseUrl = "/api/v1" } = {}) {
       "/shop/admin/schema": { get: op("Administration", "Version de schéma + migrations appliquées", { security: adminAuth }) },
       "/shop/admin/backup": { get: op("Administration", "Export complet de la base (JSON)", { security: adminAuth }) },
       "/shop/admin/restore": { post: op("Administration", "Restaurer la base (remplacement transactionnel)", { security: adminAuth }) },
+
+      "/shop/push/vapidPublicKey": { get: op("Notifications", "Clé publique VAPID (pour s'abonner)", { security: [] }) },
+      "/shop/push/subscribe": { post: op("Notifications", "Enregistrer un abonnement push", { security: bearer }) },
+      "/shop/push/unsubscribe": { post: op("Notifications", "Retirer un abonnement push", { security: bearer }) },
+      "/shop/push/test": { post: op("Notifications", "Envoyer une notification de test à soi-même", { security: bearer }) },
 
       "/kyc/health": { get: op("KYC", "État KYC + reconnaissance faciale + vivacité", { security: [] }) },
       "/kyc/liveness": { post: op("KYC", "Vérifier la vivacité (rafale d'images, anti-photo)", { security: [] }) },

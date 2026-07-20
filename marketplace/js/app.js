@@ -2523,6 +2523,7 @@
         <div class="page-sub">${all.filter((n) => !n.read).length} non lue(s)</div></div>
         ${all.length ? `<div class="flex gap-8"><button class="btn btn-ghost btn-sm" id="markAll">Tout marquer lu</button><button class="btn btn-ghost btn-sm" id="clearAll">Effacer</button></div>` : ""}
       </div>
+      <div id="pushToggle"></div>
       <div class="filter-bar">${NOTIF_FILTERS.map(([v, l]) => { const cnt = v === "all" ? all.length : all.filter((n) => notifFamily(n.type) === v).length; return `<a href="#/notifications${v === "all" ? "" : "?f=" + v}" class="chip ${filter === v ? "active" : ""}">${l}${cnt ? ` (${cnt})` : ""}</a>`; }).join("")}</div>
       ${list.length ? groupsHTML : emptyState("🔔", "Aucune notification", filter === "all" ? "Abonnez-vous à des boutiques pour être alerté de leurs nouveautés." : "Aucune notification dans cette catégorie.")}`);
 
@@ -2544,6 +2545,37 @@
     if (clearAll) clearAll.addEventListener("click", async () => {
       if (await UI.confirm("Effacer toutes les notifications ?", { danger: true, confirmLabel: "Effacer" })) { Notifications.clearAll(user.id); Router.resolve(); }
     });
+    renderPushToggle();
+  }
+
+  /** Encart « notifications push web » dans la page Notifications (si supporté). */
+  async function renderPushToggle() {
+    const box = document.getElementById("pushToggle");
+    if (!box || !window.MP.Push || !window.MP.Push.supported()) return;
+    const st = await window.MP.Push.status();
+    const on = st.subscribed && st.permission === "granted";
+    const denied = st.permission === "denied";
+    box.innerHTML = `<div class="card" style="padding:14px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="font-size:22px">🔔</div>
+      <div style="flex:1;min-width:180px">
+        <div style="font-weight:600">Notifications push</div>
+        <div class="text-muted" style="font-size:13px">${denied ? "Bloquées par le navigateur — autorisez-les dans les réglages du site." : on ? "Activées : rappels de commande, promos et retours en stock." : "Recevez les rappels de commande même l'application fermée."}</div>
+      </div>
+      ${denied ? "" : on
+        ? `<div class="flex gap-8"><button class="btn btn-ghost btn-sm" id="pushTest">Tester</button><button class="btn btn-ghost btn-sm" id="pushOff">Désactiver</button></div>`
+        : `<button class="btn btn-primary btn-sm" id="pushOn">Activer</button>`}
+    </div>`;
+    const onBtn = document.getElementById("pushOn");
+    if (onBtn) onBtn.addEventListener("click", async () => {
+      onBtn.disabled = true;
+      const r = await window.MP.Push.enable();
+      UI.toast(r.ok ? "Notifications activées." : (r.error || "Échec."), r.ok ? "success" : "error");
+      renderPushToggle();
+    });
+    const offBtn = document.getElementById("pushOff");
+    if (offBtn) offBtn.addEventListener("click", async () => { await window.MP.Push.disable(); UI.toast("Notifications désactivées.", "info"); renderPushToggle(); });
+    const testBtn = document.getElementById("pushTest");
+    if (testBtn) testBtn.addEventListener("click", async () => { const r = await window.MP.Push.test(); UI.toast(r.ok && r.sent ? "Notification envoyée." : "Envoi impossible (aucun service de push joignable ici).", r.ok && r.sent ? "success" : "info"); });
   }
 
   /* ============================================================
