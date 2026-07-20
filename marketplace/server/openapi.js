@@ -133,6 +133,17 @@ function build({ version = "1.0.0", baseUrl = "/api/v1" } = {}) {
         }),
         post: op("Catalogue", "Déposer un avis (client)", { security: bearer }),
       },
+      "/shop/questions": {
+        get: op("Catalogue", "Questions publiques d'un produit (paginées)", {
+          security: [], parameters: [{ name: "productId", in: "query", schema: { type: "string" } }, ...pageParams],
+        }),
+        post: op("Catalogue", "Poser une question sur un produit (client)", { security: bearer }),
+      },
+      "/shop/questions/{id}/answer": {
+        post: op("Catalogue", "Répondre à une question (vendeur propriétaire ou admin)", {
+          security: bearer, parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        }),
+      },
 
       "/shop/cart": {
         get: op("Panier & commandes", "Récupérer mon panier", { security: bearer }),

@@ -256,6 +256,20 @@ window.MP = window.MP || {};
     try { const j = await get("/loyalty"); return j && j.ok ? j : null; } catch (e) { return null; }
   }
 
+  /* -------------------- Questions / réponses produit ------------------------- */
+  async function questionsFor(productId) {
+    if (!API.enabled) return [];
+    try { const j = await get("/questions?productId=" + encodeURIComponent(productId)); return (j && j.items) || []; } catch (e) { return []; }
+  }
+  async function askQuestion(productId, storeId, question) {
+    if (!API.enabled) return null;
+    try { await authOp; if (!token()) return null; const r = await post("/questions", { productId, storeId, question }); return r && r.json; } catch (e) { return null; }
+  }
+  async function answerQuestion(id, answer) {
+    if (!API.enabled || !token()) return null;
+    try { const r = await post("/questions/" + encodeURIComponent(id) + "/answer", { answer }); return r && r.json; } catch (e) { return null; }
+  }
+
   API.init = init;
   API.syncRegister = syncRegister;
   API.syncLogin = syncLogin;
@@ -276,6 +290,9 @@ window.MP = window.MP || {};
   API.products = products;      // fonction (le nombre est dans API.productCount)
   API.myOrders = myOrders;
   API.loyalty = loyalty;
+  API.questionsFor = questionsFor;
+  API.askQuestion = askQuestion;
+  API.answerQuestion = answerQuestion;
   API.token = token;
   API.adminUrl = adminUrl;
   API.ordersUrl = function () { return "/mes-commandes"; };

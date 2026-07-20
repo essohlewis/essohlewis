@@ -184,6 +184,18 @@ dans l'onglet **Retraits**. Endpoints : `GET /vendor/wallet`,
   jamais de pile, mais le support relie le ticket au log par l'identifiant.
   Variables : `LOG_LEVEL` (défaut `info`), `LOG_FORMAT` (`json`/`pretty`).
 
+### Questions / réponses produit en base (domaine H)
+Q&R **partagées et persistées** (table `product_questions`), branchées sur la
+fiche produit du front :
+- `POST /questions` (client connecté) pose une question ; `GET /questions?productId=`
+  liste les questions **visibles** (public, paginé) ; `POST /questions/:id/answer`
+  réservé au **vendeur propriétaire** de la boutique (ou admin, sinon **403**).
+- **Modération** : `GET /admin/questions`, `POST /admin/questions/:id/status`
+  (`visible`/`hidden`).
+- **Front** : panneau « Questions en ligne (base de données) » en tête de la
+  section Q&R ; l'envoi d'une question est **écrit en base** (write‑through) et
+  le vendeur peut répondre depuis la fiche. Dégradation propre sans backend.
+
 ### Programme de fidélité / points (domaine G)
 Points **réels et dépensables**, source de vérité serveur (table
 `loyalty_ledger`, journal signé earn/redeem) :

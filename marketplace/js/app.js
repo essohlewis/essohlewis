@@ -1435,6 +1435,8 @@
       if (!t) { UI.toast("Écrivez votre question.", "info"); return; }
       const r = Questions.ask(p.id, store.id, t);
       if (!r.ok) { UI.toast(r.error, "error"); return; }
+      // Write-through : la question est aussi persistée en base (visible cross‑appareils).
+      if (window.MP.Api && window.MP.Api.askQuestion) window.MP.Api.askQuestion(p.id, store.id, t);
       UI.toast("Question publiée ✓", "success"); refresh();
     });
     box.querySelectorAll("[data-ans]").forEach((b) => b.addEventListener("click", () => {
@@ -1446,6 +1448,44 @@
       UI.toast("Réponse publiée ✓", "success"); refresh();
     }));
     box.querySelectorAll("[data-reportq]").forEach((b) => b.addEventListener("click", () => openContentReportModal("question", b.getAttribute("data-reportq"), "")));
+    enhanceQna(p, store, isOwner);
+  }
+
+  /**
+   * Branche les questions/réponses de la BASE (serveur) sur la fiche produit.
+   * Panneau non destructif en tête de #qnaBox ; le vendeur peut répondre en base.
+   */
+  async function enhanceQna(p, store, isOwner) {
+    if (!window.MP.Api || !window.MP.Api.questionsFor) return;
+    try { await window.MP.Api.ready; } catch (e) {}
+    if (!window.MP.Api.enabled) return;
+    const box = document.getElementById("qnaBox");
+    if (!box) return;
+    let list;
+    try { list = await window.MP.Api.questionsFor(p.id); } catch (e) { return; }
+    box.querySelectorAll("[data-serverqna]").forEach((e) => e.remove()); // évite l'empilement au refresh
+    if (!list || !list.length) return;
+    const rows = list.map((q) => `<div class="qna-item">
+      <div class="qna-q"><span class="qna-icon">Q</span><div style="flex:1"><strong>${UI.esc(q.authorName || "Client")}</strong> — ${UI.dateFR(q.createdAt)}<div>${UI.esc(q.question)}</div></div></div>
+      ${q.answer ? `<div class="qna-a"><span class="qna-icon">R</span><div><strong>Réponse du vendeur</strong><div>${UI.esc(q.answer)}</div></div></div>`
+        : (isOwner ? `<div class="qna-answer-form"><textarea data-sansfield="${q.id}" placeholder="Répondre publiquement…" rows="2"></textarea><button class="btn btn-primary btn-sm" data-sans="${q.id}">Répondre</button></div>`
+          : `<div class="qna-pending text-muted">En attente de réponse du vendeur…</div>`)}
+    </div>`).join("");
+    const panel = document.createElement("div");
+    panel.setAttribute("data-serverqna", "1");
+    panel.style.cssText = "margin-bottom:14px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--bg-soft,transparent)";
+    panel.innerHTML = `<div style="margin-bottom:8px"><span class="verified-badge">🛢️ Questions en ligne (base de données)</span></div>${rows}`;
+    box.insertBefore(panel, box.firstChild);
+    panel.querySelectorAll("[data-sans]").forEach((b) => b.addEventListener("click", async () => {
+      const id = b.getAttribute("data-sans");
+      const field = panel.querySelector(`[data-sansfield="${id}"]`);
+      const t = field ? field.value.trim() : "";
+      if (!t) { UI.toast("Écrivez une réponse.", "info"); return; }
+      b.disabled = true;
+      const r = await window.MP.Api.answerQuestion(id, t);
+      if (r && r.ok) { UI.toast("Réponse publiée ✓", "success"); enhanceQna(p, store, isOwner); }
+      else { UI.toast((r && r.error) || "Échec de la réponse.", "error"); b.disabled = false; }
+    }));
   }
 
   /* ============================================================

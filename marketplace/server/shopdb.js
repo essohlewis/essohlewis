@@ -585,6 +585,38 @@ function loyaltyLedger(userId, limit) {
     .all(userId, Math.min(parseInt(limit, 10) || 50, 500));
 }
 
+/* --------------------- Questions / réponses produit ---------------------- */
+function createQuestion(userId, { productId, storeId, authorName, question }) {
+  if (!userId || !productId || !String(question || "").trim()) return { error: "Question invalide." };
+  const q = { id: uid("qst"), productId, storeId: storeId || "", userId, authorName: authorName || "Client",
+    question: String(question).trim(), answer: "", answeredAt: 0, status: "visible", createdAt: now() };
+  db.prepare("INSERT INTO product_questions (id,productId,storeId,userId,authorName,question,answer,answeredAt,status,createdAt) VALUES (@id,@productId,@storeId,@userId,@authorName,@question,@answer,@answeredAt,@status,@createdAt)").run(q);
+  return { ok: true, question: q };
+}
+/** Répond à une question. Réservé au propriétaire de la boutique ou à un admin. */
+function answerQuestion(id, userId, answer, isAdmin) {
+  const q = db.prepare("SELECT * FROM product_questions WHERE id=?").get(id);
+  if (!q) return { error: "Question introuvable." };
+  if (!isAdmin) { const store = q.storeId ? getStoreById(q.storeId) : null; if (!store || store.ownerId !== userId) return { error: "Réservé au vendeur de la boutique." }; }
+  db.prepare("UPDATE product_questions SET answer=?, answeredAt=? WHERE id=?").run(String(answer || "").trim(), now(), id);
+  return { ok: true, question: db.prepare("SELECT * FROM product_questions WHERE id=?").get(id) };
+}
+function listQuestions({ productId, storeId, status } = {}) {
+  let sql = "SELECT * FROM product_questions WHERE 1=1", args = {};
+  if (productId) { sql += " AND productId=@productId"; args.productId = productId; }
+  if (storeId) { sql += " AND storeId=@storeId"; args.storeId = storeId; }
+  if (status && status !== "all") { sql += " AND status=@status"; args.status = status; }
+  sql += " ORDER BY createdAt DESC LIMIT 500";
+  return db.prepare(sql).all(args);
+}
+function setQuestionStatus(id, status) {
+  if (!["visible", "hidden"].includes(status)) return null;
+  const q = db.prepare("SELECT * FROM product_questions WHERE id=?").get(id);
+  if (!q) return null;
+  db.prepare("UPDATE product_questions SET status=? WHERE id=?").run(status, id);
+  return db.prepare("SELECT * FROM product_questions WHERE id=?").get(id);
+}
+
 /* ------------------------- Abonnements Web Push -------------------------- */
 function savePushSub(userId, sub) {
   if (!userId || !sub || !sub.endpoint || !sub.keys) return { error: "abonnement invalide" };
@@ -600,7 +632,7 @@ function listPushSubs(userId) {
 function countPushSubs() { return db.prepare("SELECT COUNT(*) c FROM push_subs").get().c; }
 
 /* --------------------------- Sauvegarde & restauration ------------------- */
-const BACKUP_TABLES = ["users", "products", "carts", "orders", "order_items", "payments", "payouts", "stores", "sessions", "reviews", "documents"];
+const BACKUP_TABLES = ["users", "products", "carts", "orders", "order_items", "payments", "payouts", "stores", "sessions", "reviews", "documents", "push_subs", "loyalty_ledger", "product_questions"];
 function backup() {
   const out = { app: "marche-ci", schemaVersion: migrations.currentVersion(db), exportedAt: now(), tables: {} };
   for (const t of BACKUP_TABLES) out.tables[t] = db.prepare(`SELECT * FROM ${t}`).all();
@@ -630,6 +662,7 @@ module.exports = {
   putDoc, getDoc, getAllDocs, getDocsMeta, getDocWithMeta, listCollections, listDocs,
   savePushSub, deletePushSub, listPushSubs, countPushSubs,
   loyaltyBalance, awardLoyalty, loyaltyEarnedFor, loyaltyLedger, LOYALTY_RULES,
+  createQuestion, answerQuestion, listQuestions, setQuestionStatus,
   createUser, authUser, getUser, publicUser,
   createSession, userIdForToken, refreshSession, destroySession, destroyUserSessions, revokeSession, listSessions,
   createOtp, verifyOtp, setEmailVerified, setPhoneVerified, setUserPassword, getUserByEmail, getUserByPhone, getUserRaw, setTwofa, setRole,

@@ -129,6 +129,20 @@ const MIGRATIONS = [
       `);
     },
   },
+  {
+    version: 5,
+    name: "questions-produit",
+    up(db) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS product_questions (
+          id TEXT PRIMARY KEY, productId TEXT, storeId TEXT, userId TEXT, authorName TEXT,
+          question TEXT, answer TEXT, answeredAt INTEGER, status TEXT DEFAULT 'visible', createdAt INTEGER
+        );
+        CREATE INDEX IF NOT EXISTS idx_pq_product ON product_questions(productId, status);
+        CREATE INDEX IF NOT EXISTS idx_pq_store ON product_questions(storeId);
+      `);
+    },
+  },
 ];
 
 function currentVersion(db) {

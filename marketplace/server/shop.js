@@ -266,6 +266,24 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
     res.json({ ok: true, ...page(req, shopdb.listReviews({ targetType, targetId, status: "visible" })), rating: targetId ? shopdb.ratingFor(targetType || "product", targetId) : null });
   });
 
+  /* ----------------------- Questions / réponses produit ---------------- */
+  router.post("/questions", auth, (req, res) => {
+    const b = req.body || {};
+    const user = shopdb.getUser(req.userId);
+    const r = shopdb.createQuestion(req.userId, { productId: b.productId, storeId: b.storeId, question: b.question, authorName: (user && user.name) || b.authorName });
+    if (r.error) return res.status(400).json({ ok: false, error: r.error });
+    res.json({ ok: true, question: r.question });
+  });
+  router.get("/questions", (req, res) => res.json({ ok: true, ...page(req, shopdb.listQuestions({ productId: req.query.productId, storeId: req.query.storeId, status: "visible" })) }));
+  // Réponse du vendeur (propriétaire de la boutique) ou d'un admin.
+  router.post("/questions/:id/answer", auth, (req, res) => {
+    const u = shopdb.getUser(req.userId);
+    const isAdmin = !!(u && u.role === "admin");
+    const r = shopdb.answerQuestion(req.params.id, req.userId, (req.body || {}).answer, isAdmin);
+    if (r.error) return res.status(r.error.includes("Réservé") ? 403 : 400).json({ ok: false, error: r.error });
+    res.json({ ok: true, question: r.question });
+  });
+
   /* ------------------------------ Paiements ---------------------------- */
   // Moyens de paiement proposés (COD toujours ; mobile money & carte selon config).
   router.get("/payments/methods", (req, res) => res.json({ ok: true, methods: payments.methods(), live: payments.LIVE }));
@@ -391,6 +409,12 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
     const r = shopdb.setReviewStatus(req.params.id, (req.body || {}).status);
     if (!r) return res.status(400).json({ ok: false, error: "Statut invalide ou avis introuvable." });
     res.json({ ok: true, review: r });
+  });
+  router.get("/admin/questions", requireAdmin, (req, res) => res.json({ ok: true, ...page(req, shopdb.listQuestions({ status: req.query.status })) }));
+  router.post("/admin/questions/:id/status", requireAdmin, (req, res) => {
+    const q = shopdb.setQuestionStatus(req.params.id, (req.body || {}).status);
+    if (!q) return res.status(400).json({ ok: false, error: "Statut invalide ou question introuvable." });
+    res.json({ ok: true, question: q });
   });
   router.get("/admin/orders", requireAdmin, (req, res) => res.json({ ok: true, ...page(req, shopdb.listOrders({ status: req.query.status })) }));
   router.get("/admin/orders/:id", requireAdmin, (req, res) => {
