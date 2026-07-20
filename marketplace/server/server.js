@@ -14,6 +14,7 @@ const face = require("./face");
 const shopdb = require("./shopdb");
 const createShopRouter = require("./shop");
 const seedProducts = require("./seed");
+const security = require("./security");
 
 const PORT = process.env.PORT || 3000;
 const ADMIN_TOKEN = process.env.KYC_ADMIN_TOKEN || "admin-demo-token";
@@ -21,7 +22,25 @@ const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 const MARKETPLACE_DIR = path.join(__dirname, "..");
 
 const app = express();
+app.disable("x-powered-by");
+app.set("trust proxy", true);              // req.ip / req.secure derrière un proxy TLS
+app.use(security.httpsRedirect());          // HTTP→HTTPS si FORCE_HTTPS=1
+app.use(security.securityHeaders());        // CSP, HSTS, X-Frame-Options, …
+app.use("/api", security.cors());           // CORS restreint (ALLOWED_ORIGINS)
+app.use("/api", security.originGuard());    // défense anti-CSRF (vérif. d'origine)
+app.use("/api", security.rateLimit({ name: "api", windowMs: 60000, max: Number(process.env.RATE_MAX_API) || 600 }));
 app.use(express.json({ limit: "16mb" }));
+
+// Garde-fou : jeton admin par défaut interdit en production réelle.
+if (process.env.NODE_ENV === "production" && ADMIN_TOKEN === "admin-demo-token") {
+  console.warn("[sécurité] ⚠️  KYC_ADMIN_TOKEN par défaut en production — définissez un jeton fort !");
+}
+
+// Limiteurs renforcés sur les points sensibles (avant le montage des routeurs).
+app.use("/api/shop/login", security.rateLimit({ name: "login", windowMs: 60000, max: Number(process.env.RATE_MAX_AUTH) || 30 }));
+app.use("/api/shop/register", security.rateLimit({ name: "register", windowMs: 60000, max: Number(process.env.RATE_MAX_AUTH) || 30 }));
+app.use("/api/shop/payments/initiate", security.rateLimit({ name: "pay", windowMs: 60000, max: 60 }));
+app.use("/api/kyc/submit", security.rateLimit({ name: "kyc", windowMs: 60000, max: 15 }));
 
 let FACE_AVAILABLE = false;
 face.selfTest().then((ok) => { FACE_AVAILABLE = ok; console.log(`[face] reconnaissance faciale : ${ok ? "OPÉRATIONNELLE (dlib)" : "indisponible → revue admin manuelle"}`); });

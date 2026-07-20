@@ -109,6 +109,26 @@ client : `/paiement`. **Production** : renseignez `CINETPAY_API_KEY` (ou
   yeux / bouge → `live:true`. La page vendeur **bloque** la suite tant que la
   présence n'est pas confirmée.
 
+## Durcissement production (`security.js`)
+Middlewares Express **sans dépendance** activés automatiquement :
+- **En-têtes de sécurité** : CSP, HSTS (sur HTTPS), `X-Frame-Options: DENY`,
+  `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`,
+  `Cross-Origin-Opener-Policy`. `X-Powered-By` masqué.
+- **CORS restreint** : autorise uniquement les origines de `ALLOWED_ORIGINS`
+  (liste séparée par des virgules) ; préflight `OPTIONS` géré.
+- **Anti-CSRF** : l'API s'authentifie par jeton d'en-tête (non-cookie, donc non
+  vulnérable au CSRF classique) ; en défense en profondeur, toute requête
+  mutante d'une origine connue mais non autorisée est refusée (403).
+- **Limitation de débit** (en mémoire) : global sur `/api` (`RATE_MAX_API`,
+  défaut 600/min) + limites renforcées sur `login`/`register` (`RATE_MAX_AUTH`,
+  défaut 30/min), `payments/initiate` (60/min) et `kyc/submit` (15/min).
+- **HTTPS** : `FORCE_HTTPS=1` redirige HTTP→HTTPS derrière un proxy TLS
+  (`X-Forwarded-Proto`). En production, terminez le TLS au reverse-proxy et
+  définissez un `KYC_ADMIN_TOKEN` fort.
+
+Variables : `ALLOWED_ORIGINS`, `FORCE_HTTPS`, `CSP_REPORT_ONLY`, `RATE_MAX_API`,
+`RATE_MAX_AUTH`, `KYC_ADMIN_TOKEN`, `NODE_ENV=production`.
+
 ## Sécurité / production
 - Servez en **HTTPS**, changez `KYC_ADMIN_TOKEN`, restreignez le CORS.
 - **Chiffrez** et **purgez** les pièces d'identité après décision (RGPD).
