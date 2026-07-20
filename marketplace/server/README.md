@@ -184,6 +184,23 @@ dans l'onglet **Retraits**. Endpoints : `GET /vendor/wallet`,
   jamais de pile, mais le support relie le ticket au log par l'identifiant.
   Variables : `LOG_LEVEL` (défaut `info`), `LOG_FORMAT` (`json`/`pretty`).
 
+### Programme de fidélité / points (domaine G)
+Points **réels et dépensables**, source de vérité serveur (table
+`loyalty_ledger`, journal signé earn/redeem) :
+- **Gain à la livraison** : quand l'admin passe une commande à `delivered`, le
+  client est crédité de `floor(itemsTotal × LOYALTY_EARN_RATE)` points
+  (défaut **1 pt / 100 FCFA**), **idempotent** par commande (pas de double
+  crédit) + notification push.
+- **Dépense au paiement** : `POST /orders` accepte `redeemPoints` ; le serveur
+  plafonne au **solde** et au **sous-total**, convertit en remise
+  (`LOYALTY_REDEEM_VALUE`, défaut **1 pt = 5 FCFA**) et débite le journal — le
+  tout dans la transaction de commande.
+- **Consultation** : `GET /loyalty` (solde, règles, journal) ; `GET /me` expose
+  `loyaltyPoints`. Le front affiche une carte **« Mes points à dépenser »** dans
+  le profil (solde + valeur + journal), distincte du niveau de fidélité local.
+
+Variables : `LOYALTY_EARN_RATE` (points/FCFA), `LOYALTY_REDEEM_VALUE` (FCFA/point).
+
 ### Notifications push web (domaine G) — `webpush.js`
 Implémentation **complète et sans dépendance** du protocole Web Push :
 - **VAPID** (RFC 8292) : JWT **ES256** signé avec la clé privée du serveur.

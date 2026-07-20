@@ -250,6 +250,11 @@ window.MP = window.MP || {};
     const j = await get("/orders");
     return (j && j.items) || [];
   }
+  // Fidélité : { balance, rules:{earnRate, redeemValue}, ledger } — null si indisponible.
+  async function loyalty() {
+    if (!API.enabled || !token()) return null;
+    try { const j = await get("/loyalty"); return j && j.ok ? j : null; } catch (e) { return null; }
+  }
 
   API.init = init;
   API.syncRegister = syncRegister;
@@ -270,6 +275,7 @@ window.MP = window.MP || {};
   API.reviewsFor = reviewsFor;
   API.products = products;      // fonction (le nombre est dans API.productCount)
   API.myOrders = myOrders;
+  API.loyalty = loyalty;
   API.token = token;
   API.adminUrl = adminUrl;
   API.ordersUrl = function () { return "/mes-commandes"; };

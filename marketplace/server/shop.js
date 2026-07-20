@@ -132,7 +132,14 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
     const sess = shopdb.createSession(u.id);
     res.json({ ok: true, token: sess.token, refreshToken: sess.refreshToken, expiresAt: sess.expiresAt, user: shopdb.publicUser(u) });
   });
-  router.get("/me", auth, (req, res) => res.json({ ok: true, user: shopdb.getUser(req.userId) }));
+  router.get("/me", auth, (req, res) => res.json({ ok: true, user: shopdb.getUser(req.userId), loyaltyPoints: shopdb.loyaltyBalance(req.userId) }));
+  // Fidélité : solde, règles et journal des points du client connecté.
+  router.get("/loyalty", auth, (req, res) => res.json({
+    ok: true,
+    balance: shopdb.loyaltyBalance(req.userId),
+    rules: shopdb.LOYALTY_RULES,
+    ledger: shopdb.loyaltyLedger(req.userId, req.query.limit),
+  }));
 
   /* ---------------------- Vérification e-mail / téléphone -------------------- */
   router.post("/verify/email", (req, res) => {
@@ -395,13 +402,20 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
   router.post("/admin/orders/:id/status", requireAdmin, (req, res) => {
     const o = shopdb.setOrderStatus(req.params.id, (req.body || {}).status);
     if (!o) return res.status(400).json({ ok: false, error: "Statut invalide ou commande introuvable." });
+    // À la livraison : crédite les points de fidélité (idempotent par commande).
+    let loyalty = null;
+    if (o.userId && o.status === "delivered") {
+      const earned = shopdb.loyaltyEarnedFor(o.itemsTotal);
+      const r = shopdb.awardLoyalty(o.userId, o.id, earned, "earn");
+      if (r.ok) { loyalty = { earned, balance: r.balance }; pushNotify(o.userId, { title: "Marché CI — points gagnés", body: `+${earned} points de fidélité sur votre commande livrée.`, url: "/mes-commandes", tag: "loyalty-" + o.id }); }
+    }
     // Rappel commande (notification push) au client concerné, s'il est abonné.
     if (o.userId) pushNotify(o.userId, {
       title: "Marché CI — votre commande",
       body: `Votre commande ${o.id} est ${STATUS_LABEL[o.status] || o.status}.`,
       url: "/mes-commandes", tag: "order-" + o.id,
     });
-    res.json({ ok: true, order: o });
+    res.json({ ok: true, order: o, loyalty });
   });
   // Remboursement / annulation (rembourse le paiement en ligne le cas échéant).
   router.post("/admin/orders/:id/refund", requireAdmin, (req, res) => {

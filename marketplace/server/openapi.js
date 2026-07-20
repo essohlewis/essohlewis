@@ -177,6 +177,8 @@ function build({ version = "1.0.0", baseUrl = "/api/v1" } = {}) {
       "/shop/admin/backup": { get: op("Administration", "Export complet de la base (JSON)", { security: adminAuth }) },
       "/shop/admin/restore": { post: op("Administration", "Restaurer la base (remplacement transactionnel)", { security: adminAuth }) },
 
+      "/shop/loyalty": { get: op("Panier & commandes", "Fidélité : solde de points, règles et journal", { security: bearer }) },
+
       "/shop/push/vapidPublicKey": { get: op("Notifications", "Clé publique VAPID (pour s'abonner)", { security: [] }) },
       "/shop/push/subscribe": { post: op("Notifications", "Enregistrer un abonnement push", { security: bearer }) },
       "/shop/push/unsubscribe": { post: op("Notifications", "Retirer un abonnement push", { security: bearer }) },
@@ -229,6 +231,7 @@ function build({ version = "1.0.0", baseUrl = "/api/v1" } = {}) {
           properties: {
             customerName: { type: "string" }, phone: { type: "string" }, address: { type: "string" }, city: { type: "string" },
             paymentMethod: { type: "string", enum: ["cod", "orange", "mtn", "moov", "wave", "card"] },
+            redeemPoints: { type: "integer", minimum: 0, description: "Points de fidélité à utiliser en remise (plafonné au solde et au sous-total)." },
             note: { type: "string" },
             items: { type: "array", items: { type: "object", properties: { productId: { type: "string" }, qty: { type: "integer", minimum: 1 }, variant: { type: "string" } }, required: ["productId", "qty"] } },
           },

@@ -115,6 +115,20 @@ const MIGRATIONS = [
       `);
     },
   },
+  {
+    version: 4,
+    name: "fidelite-points",
+    up(db) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS loyalty_ledger (
+          id INTEGER PRIMARY KEY AUTOINCREMENT, userId TEXT, delta INTEGER,
+          reason TEXT, orderId TEXT, createdAt INTEGER
+        );
+        CREATE INDEX IF NOT EXISTS idx_loyalty_user ON loyalty_ledger(userId);
+        CREATE INDEX IF NOT EXISTS idx_loyalty_order ON loyalty_ledger(orderId, reason);
+      `);
+    },
+  },
 ];
 
 function currentVersion(db) {

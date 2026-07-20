@@ -24,6 +24,10 @@ const DATA_DIR = path.join(__dirname, "data");
 const DB_FILE = process.env.SHOP_DB || path.join(DATA_DIR, "marche.db");
 // Commission plateforme prélevée sur chaque vente (0.10 = 10 %).
 const COMMISSION_RATE = Math.min(0.9, Math.max(0, parseFloat(process.env.COMMISSION_RATE || "0.10")));
+// Programme de fidélité : points gagnés par FCFA dépensé (0.01 = 1 pt / 100 FCFA)
+// et valeur d'un point à l'usage (5 = 100 pts → 500 FCFA de remise).
+const LOYALTY_EARN_RATE = Math.max(0, parseFloat(process.env.LOYALTY_EARN_RATE || "0.01"));
+const LOYALTY_REDEEM_VALUE = Math.max(1, parseInt(process.env.LOYALTY_REDEEM_VALUE || "5", 10));
 // Durées de vie (secondes) : jeton d'accès, jeton de rafraîchissement, code OTP.
 const SESSION_TTL = (parseInt(process.env.SESSION_TTL, 10) || 7 * 24 * 3600) * 1000;
 const REFRESH_TTL = (parseInt(process.env.REFRESH_TTL, 10) || 30 * 24 * 3600) * 1000;
@@ -207,7 +211,18 @@ function createOrder(userId, payload) {
       storeId: (prod && prod.storeId) || it.storeId || "", storeName: (prod && prod.storeName) || it.storeName || "" });
   }
   const deliveryFee = Math.max(0, parseInt(payload.deliveryFee, 10) || 0);
-  const discount = Math.max(0, parseInt(payload.discount, 10) || 0);
+  const couponDiscount = Math.max(0, parseInt(payload.discount, 10) || 0);
+  // Fidélité : conversion des points demandés en remise (plafonnée au solde et
+  // au sous-total restant). La déduction est enregistrée dans la transaction.
+  let pointsRedeemed = 0, loyaltyDiscount = 0;
+  const wantPoints = Math.max(0, parseInt(payload.redeemPoints, 10) || 0);
+  if (userId && wantPoints > 0) {
+    const remaining = Math.max(0, itemsTotal - couponDiscount);
+    pointsRedeemed = Math.min(wantPoints, loyaltyBalance(userId), Math.floor(remaining / LOYALTY_REDEEM_VALUE));
+    pointsRedeemed = Math.max(0, pointsRedeemed);
+    loyaltyDiscount = pointsRedeemed * LOYALTY_REDEEM_VALUE;
+  }
+  const discount = couponDiscount + loyaltyDiscount;
   const total = Math.max(0, itemsTotal - discount) + deliveryFee;
   const paymentMethod = payload.paymentMethod || "cod";
   const o = {
@@ -226,10 +241,13 @@ function createOrder(userId, payload) {
   try {
     insertOrder.run(o);
     for (const r of resolved) { insertItem.run(o.id, r.productId, r.name, r.price, r.qty, r.variant, r.storeId, r.storeName); if (r.productId) decStock.run(r.qty, r.productId); }
+    if (pointsRedeemed > 0) db.prepare("INSERT INTO loyalty_ledger (userId,delta,reason,orderId,createdAt) VALUES (?,?,?,?,?)").run(userId, -pointsRedeemed, "redeem", o.id, now());
     db.exec("COMMIT");
   } catch (e) { db.exec("ROLLBACK"); return { error: "Échec de l'enregistrement de la commande." }; }
   if (userId) setCart(userId, []); // vide le panier après achat
-  return { order: getOrder(o.id) };
+  const order = getOrder(o.id);
+  if (pointsRedeemed > 0) order.pointsRedeemed = pointsRedeemed;
+  return { order };
 }
 function getOrder(id) {
   const o = db.prepare("SELECT * FROM orders WHERE id=?").get(id);
@@ -542,6 +560,31 @@ function listDocs(collection) {
   return db.prepare("SELECT userId, LENGTH(data) bytes, updatedAt FROM documents WHERE collection=? ORDER BY updatedAt DESC").all(collection);
 }
 
+/* --------------------------- Fidélité (points) --------------------------- */
+const LOYALTY_RULES = { earnRate: LOYALTY_EARN_RATE, redeemValue: LOYALTY_REDEEM_VALUE };
+function loyaltyBalance(userId) {
+  if (!userId) return 0;
+  const r = db.prepare("SELECT COALESCE(SUM(delta),0) b FROM loyalty_ledger WHERE userId=?").get(userId);
+  return (r && r.b) || 0;
+}
+/** Crédite des points une seule fois par (commande, motif) — idempotent. */
+function awardLoyalty(userId, orderId, points, reason) {
+  if (!userId || points <= 0) return { ok: false, awarded: 0 };
+  if (orderId) {
+    const dup = db.prepare("SELECT 1 FROM loyalty_ledger WHERE orderId=? AND reason=?").get(orderId, reason || "earn");
+    if (dup) return { ok: false, awarded: 0, already: true };
+  }
+  db.prepare("INSERT INTO loyalty_ledger (userId,delta,reason,orderId,createdAt) VALUES (?,?,?,?,?)")
+    .run(userId, points, reason || "earn", orderId || null, now());
+  return { ok: true, awarded: points, balance: loyaltyBalance(userId) };
+}
+/** Points gagnés pour un sous-total (arrondi bas). */
+function loyaltyEarnedFor(itemsTotal) { return Math.floor(Math.max(0, itemsTotal) * LOYALTY_EARN_RATE); }
+function loyaltyLedger(userId, limit) {
+  return db.prepare("SELECT delta,reason,orderId,createdAt FROM loyalty_ledger WHERE userId=? ORDER BY createdAt DESC, id DESC LIMIT ?")
+    .all(userId, Math.min(parseInt(limit, 10) || 50, 500));
+}
+
 /* ------------------------- Abonnements Web Push -------------------------- */
 function savePushSub(userId, sub) {
   if (!userId || !sub || !sub.endpoint || !sub.keys) return { error: "abonnement invalide" };
@@ -586,6 +629,7 @@ module.exports = {
   init, available, uid, isSyncCollection, SYNC_COLLECTIONS, schemaVersion, backup, restore,
   putDoc, getDoc, getAllDocs, getDocsMeta, getDocWithMeta, listCollections, listDocs,
   savePushSub, deletePushSub, listPushSubs, countPushSubs,
+  loyaltyBalance, awardLoyalty, loyaltyEarnedFor, loyaltyLedger, LOYALTY_RULES,
   createUser, authUser, getUser, publicUser,
   createSession, userIdForToken, refreshSession, destroySession, destroyUserSessions, revokeSession, listSessions,
   createOtp, verifyOtp, setEmailVerified, setPhoneVerified, setUserPassword, getUserByEmail, getUserByPhone, getUserRaw, setTwofa, setRole,

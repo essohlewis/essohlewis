@@ -2714,6 +2714,8 @@
         </div>
       </div>
 
+      <div id="loyaltyServer"></div>
+
       <div class="card card-pad mt-16">
         <form id="profForm" class="form-grid">
           <div class="form-grid form-2col">
@@ -2807,6 +2809,10 @@
       waShare(`Rejoignez-moi sur Marché CI 🛒, la marketplace ivoirienne (paiement à la livraison) ! Utilisez mon code de parrainage : ${refCode}`);
     });
 
+    // Points de fidélité « à dépenser » (serveur) : gagnés à la livraison,
+    // utilisables en remise au paiement. Affiché seulement si le backend répond.
+    renderServerLoyalty();
+
     // Carnet d'adresses.
     document.getElementById("addAddr").addEventListener("click", () => openAddressModal(null, viewProfile));
     V().querySelectorAll("[data-editaddr]").forEach((b) => b.addEventListener("click", () => openAddressModal(b.getAttribute("data-editaddr"), viewProfile)));
@@ -2895,6 +2901,34 @@
         },
       });
     });
+  }
+
+  /** Carte « points à dépenser » (solde serveur + journal), si le backend répond. */
+  async function renderServerLoyalty() {
+    const box = document.getElementById("loyaltyServer");
+    if (!box || !(window.MP.Api && window.MP.Api.enabled) || !window.MP.Api.loyalty) return;
+    const l = await window.MP.Api.loyalty();
+    if (!l) return;
+    const val = (l.rules && l.rules.redeemValue) || 5;
+    const rate = (l.rules && l.rules.earnRate) || 0.01;
+    const perFcfa = Math.round(1 / rate); // ex : 100 FCFA → 1 point
+    const worth = l.balance * val;
+    const label = (r) => ({ earn: "Gagnés (commande livrée)", redeem: "Utilisés (remise)" }[r] || r);
+    const ledgerRows = (l.ledger || []).slice(0, 6).map((e) =>
+      `<div class="flex-between" style="font-size:13px;padding:6px 0;border-bottom:1px solid var(--border)">
+        <span class="text-muted">${label(e.reason)}${e.orderId ? " · " + UI.esc(e.orderId) : ""}</span>
+        <strong style="color:${e.delta >= 0 ? "var(--accent)" : "var(--danger)"}">${e.delta >= 0 ? "+" : ""}${e.delta} pts</strong>
+      </div>`).join("") || `<p class="text-muted" style="margin:0;font-size:13px">Aucun point pour l'instant. Passez commande : vos points arrivent à la livraison.</p>`;
+    box.innerHTML = `<div class="card card-pad mt-16">
+      <div class="flex-between wrap">
+        <div><div class="section-title" style="margin:0">💰 Mes points à dépenser</div>
+          <div class="text-muted" style="font-size:13px">1 point / ${perFcfa} FCFA dépensés · 1 point = ${val} FCFA de remise</div></div>
+        <div style="text-align:right"><div style="font-size:24px;font-weight:800">${l.balance} pts</div>
+          <div class="text-muted" style="font-size:12.5px">soit ${UI.fcfa(worth)} de remise</div></div>
+      </div>
+      <div class="divider"></div>
+      ${ledgerRows}
+    </div>`;
   }
 
   function addressRow(a) {
