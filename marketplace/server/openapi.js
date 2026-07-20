@@ -140,6 +140,11 @@ function build({ version = "1.0.0", baseUrl = "/api/v1" } = {}) {
       "/shop/recommendations": {
         get: op("Catalogue", "Recommandations (personnalisées si connecté, sinon populaires)", { security: [] }),
       },
+      "/shop/products/facets": {
+        get: op("Catalogue", "Facettes : compteurs par catégorie / boutique / tranche de prix", {
+          security: [], parameters: [{ name: "q", in: "query", schema: { type: "string" } }, { name: "storeId", in: "query", schema: { type: "string" } }],
+        }),
+      },
       "/shop/reviews": {
         get: op("Catalogue", "Avis (paginés) d'une cible + note moyenne", {
           security: [],

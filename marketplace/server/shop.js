@@ -214,6 +214,8 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
     const { q, category, storeId } = req.query;
     res.json({ ok: true, q: q || "", ...page(req, shopdb.searchProducts(q, { category, storeId, limit: 500 })) });
   });
+  // Facettes : compteurs par catégorie / boutique / tranche de prix sur le résultat.
+  router.get("/products/facets", (req, res) => res.json(Object.assign({ ok: true }, shopdb.facets({ q: req.query.q, storeId: req.query.storeId }))));
   // Recommandations personnalisées (catégories déjà achetées ; repli populaires).
   router.get("/recommendations", maybeAuth, (req, res) => res.json({ ok: true, items: shopdb.recommendFor(req.userId, req.query.limit) }));
   router.get("/products/:id", (req, res) => {

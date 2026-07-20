@@ -763,9 +763,15 @@
      VUE : Recherche
      ============================================================ */
   function viewSearch(params) {
-    const q = (params.query && params.query.q) || "";
-    const filters = { q, sort: "recent" };
-    const list = q ? Products.search(filters) : Products.published();
+    const qq = params.query || {};
+    const q = qq.q || "";
+    const cat = qq.cat || "";
+    const minP = qq.min || "";
+    const maxP = qq.max || "";
+    const sort = qq.sort || "recent";
+    const hasFacet = !!(cat || minP || maxP);
+    const filters = { q, category: cat || undefined, minPrice: minP, maxPrice: maxP, sort };
+    const list = (q || hasFacet) ? Products.search(filters) : Products.published();
     if (q) SearchHist.add(q);
 
     // Bloc « aucun résultat » intelligent : correction, catégorie proche, alternatives.
@@ -795,14 +801,16 @@
         <div class="page-title">${q ? T("search.results") : T("search.explore")}</div>
         <div class="page-sub">${q ? `<span id="searchCount">${list.length}</span> résultat(s) pour « ${UI.esc(q)} »` : T("search.exploreSub")}</div>
       </div></div>
-      <form id="searchForm" style="margin-bottom:18px">
+      <form id="searchForm" style="margin-bottom:12px">
         <div class="field"><input type="search" id="searchQ" placeholder="Que recherchez-vous ?" value="${UI.esc(q)}" /></div>
       </form>
+      <div id="facetBar"></div>
       ${categoryChips("")}
       <div id="searchResults">${list.length ? gridHTML(list) : (q ? noResultsHTML : gridHTML(list))}</div>`
     );
     wireCategoryChips();
-    if (q) enhanceSearch(q);
+    renderFacets({ q, cat, minP, maxP, sort });
+    if (q && !hasFacet) enhanceSearch(q);
     const form = document.getElementById("searchForm");
     form.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -831,6 +839,69 @@
     const count = document.getElementById("searchCount");
     if (results) results.innerHTML = gridHTML(prods);
     if (count) count.textContent = prods.length;
+  }
+
+  // Tranches de prix des facettes (alignées sur le serveur).
+  const FACET_PRICE = [
+    { id: "0-5000", label: "< 5 000", min: 0, max: 5000 },
+    { id: "5000-15000", label: "5 000–15 000", min: 5000, max: 15000 },
+    { id: "15000-30000", label: "15 000–30 000", min: 15000, max: 30000 },
+    { id: "30000-100000", label: "30 000–100 000", min: 30000, max: 100000 },
+    { id: "100000+", label: "> 100 000", min: 100000, max: null },
+  ];
+  /**
+   * Barre de facettes : catégories et tranches de prix AVEC compteurs (serveur
+   * si présent, sinon calcul local), + tri. Chaque facette raffine la recherche
+   * via l'URL. Complète les filtres « à facettes » du catalogue.
+   */
+  async function renderFacets(state) {
+    const bar = document.getElementById("facetBar");
+    if (!bar) return;
+    let f = null;
+    if (window.MP.Api && window.MP.Api.facets) {
+      try { await window.MP.Api.ready; if (window.MP.Api.enabled) f = await window.MP.Api.facets({ q: state.q }); } catch (e) {}
+    }
+    // Compteurs prix + catégories (repli local si pas de backend).
+    const priceCounts = {}, catCounts = {};
+    if (f) {
+      (f.priceRanges || []).forEach((r) => (priceCounts[r.id] = r.count));
+      (f.categories || []).forEach((c) => (catCounts[c.value] = c.count));
+    } else {
+      const base = state.q ? Products.search({ q: state.q }) : Products.published();
+      base.forEach((p) => {
+        const price = Products.effectivePrice(p);
+        const b = FACET_PRICE.find((x) => price >= x.min && (x.max == null || price < x.max));
+        if (b) priceCounts[b.id] = (priceCounts[b.id] || 0) + 1;
+        catCounts[p.category] = (catCounts[p.category] || 0) + 1;
+      });
+    }
+    const urlFor = (over) => {
+      const p = Object.assign({ q: state.q, cat: state.cat, min: state.minP, max: state.maxP, sort: state.sort }, over);
+      const qs = Object.keys(p).filter((k) => p[k] !== "" && p[k] != null).map((k) => k + "=" + encodeURIComponent(p[k])).join("&");
+      return "#/search?" + qs;
+    };
+    // Catégories (avec compteurs) — n'affiche que celles présentes dans le résultat.
+    const catChips = Object.keys(catCounts).map((val) => {
+      const meta = UI.CATEGORIES.find((c) => c.id === val);
+      const active = state.cat === val;
+      return `<a href="${active ? urlFor({ cat: "" }) : urlFor({ cat: val })}" class="chip ${active ? "active" : ""}">${meta ? meta.icon + " " + meta.label : UI.esc(val)} (${catCounts[val]})</a>`;
+    }).join("");
+    // Tranches de prix (avec compteurs).
+    const priceChips = FACET_PRICE.filter((r) => priceCounts[r.id]).map((r) => {
+      const active = String(state.minP) === String(r.min) && String(state.maxP) === String(r.max == null ? "" : r.max);
+      const target = active ? urlFor({ min: "", max: "" }) : urlFor({ min: r.min, max: r.max == null ? "" : r.max });
+      return `<a href="${target}" class="chip ${active ? "active" : ""}">${r.label} FCFA (${priceCounts[r.id]})</a>`;
+    }).join("");
+    const sortSel = `<select id="sortSel" class="chip" style="padding:6px 10px">${
+      [["recent", "Plus récents"], ["price_asc", "Prix ↑"], ["price_desc", "Prix ↓"], ["popular", "Populaires"], ["rating", "Mieux notés"], ["discount", "Promos"]]
+        .map(([v, l]) => `<option value="${v}" ${state.sort === v ? "selected" : ""}>${l}</option>`).join("")}</select>`;
+    const rows = [];
+    if (catChips) rows.push(`<div class="filter-bar" style="gap:8px;flex-wrap:wrap"><span class="text-muted" style="font-size:12.5px;align-self:center">Catégorie :</span>${catChips}</div>`);
+    if (priceChips) rows.push(`<div class="filter-bar" style="gap:8px;flex-wrap:wrap"><span class="text-muted" style="font-size:12.5px;align-self:center">Prix :</span>${priceChips}<span style="flex:1"></span>${sortSel}</div>`);
+    else if (state.q || state.cat) rows.push(`<div class="filter-bar" style="justify-content:flex-end">${sortSel}</div>`);
+    bar.innerHTML = rows.length ? `<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">${rows.join("")}</div>` : "";
+    const sel = document.getElementById("sortSel");
+    if (sel) sel.addEventListener("change", () => Router.go(urlFor({ sort: sel.value })));
   }
 
   /** Distance de Levenshtein (tolérance aux fautes de frappe). */

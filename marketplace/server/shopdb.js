@@ -180,6 +180,41 @@ function listProducts({ category, q, storeId, limit } = {}) {
   return db.prepare(sql).all(args);
 }
 
+/* --------------------------- Facettes (filtres) --------------------------- */
+const PRICE_BUCKETS = [
+  { id: "0-5000", label: "Moins de 5 000 FCFA", min: 0, max: 5000 },
+  { id: "5000-15000", label: "5 000 – 15 000 FCFA", min: 5000, max: 15000 },
+  { id: "15000-30000", label: "15 000 – 30 000 FCFA", min: 15000, max: 30000 },
+  { id: "30000-100000", label: "30 000 – 100 000 FCFA", min: 30000, max: 100000 },
+  { id: "100000+", label: "Plus de 100 000 FCFA", min: 100000, max: Infinity },
+];
+/**
+ * Facettes calculées sur l'ensemble de résultats : nombre de produits par
+ * catégorie, par boutique et par tranche de prix (+ min/max). Respecte q et les
+ * filtres transmis (sauf la dimension elle‑même n'est pas restreinte par soi).
+ */
+function facets({ q, storeId } = {}) {
+  const base = q ? searchProducts(q, { storeId, limit: 500 }) : listProducts({ storeId, limit: 500 });
+  const byCat = {}, byStore = {}, byBucket = {};
+  let min = Infinity, max = 0;
+  for (const p of base) {
+    byCat[p.category] = (byCat[p.category] || 0) + 1;
+    if (p.storeId) byStore[p.storeId] = { name: p.storeName || p.storeId, count: ((byStore[p.storeId] || {}).count || 0) + 1 };
+    const price = p.price || 0;
+    if (price < min) min = price; if (price > max) max = price;
+    const b = PRICE_BUCKETS.find((x) => price >= x.min && price < x.max);
+    if (b) byBucket[b.id] = (byBucket[b.id] || 0) + 1;
+  }
+  return {
+    total: base.length,
+    categories: Object.keys(byCat).map((c) => ({ value: c, count: byCat[c] })).sort((a, b) => b.count - a.count),
+    stores: Object.keys(byStore).map((id) => ({ id, name: byStore[id].name, count: byStore[id].count })).sort((a, b) => b.count - a.count),
+    priceRanges: PRICE_BUCKETS.filter((b) => byBucket[b.id]).map((b) => ({ id: b.id, label: b.label, min: b.min, max: b.max === Infinity ? null : b.max, count: byBucket[b.id] })),
+    priceMin: base.length ? min : 0,
+    priceMax: max,
+  };
+}
+
 /* ------------------------- Recommandations ------------------------------- */
 // Produits populaires (par quantité vendue), actifs uniquement.
 function popularProducts(limit, excludeIds) {
@@ -769,7 +804,7 @@ module.exports = {
   createSession, userIdForToken, refreshSession, destroySession, destroyUserSessions, revokeSession, listSessions,
   createOtp, verifyOtp, setEmailVerified, setPhoneVerified, setUserPassword, getUserByEmail, getUserByPhone, getUserRaw, setTwofa, setRole,
   upsertProduct, listProducts, searchProducts, getProduct, countProducts,
-  popularProducts, boughtTogether, recommendFor,
+  popularProducts, boughtTogether, recommendFor, facets,
   getCart, setCart,
   createOrder, getOrder, listOrders, setOrderStatus, refundOrder, stats,
   addReview, listReviews, ratingFor, setReviewStatus,

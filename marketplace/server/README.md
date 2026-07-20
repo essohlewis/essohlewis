@@ -184,6 +184,15 @@ dans l'onglet **Retraits**. Endpoints : `GET /vendor/wallet`,
   jamais de pile, mais le support relie le ticket au log par l'identifiant.
   Variables : `LOG_LEVEL` (défaut `info`), `LOG_FORMAT` (`json`/`pretty`).
 
+### Filtres & tri à facettes (domaine D)
+`GET /products/facets?q=&storeId=` renvoie, **sur l'ensemble de résultats**, le
+**nombre de produits par catégorie, par boutique et par tranche de prix**
+(+ `priceMin`/`priceMax`). La page de recherche affiche une **barre de facettes**
+(catégories et prix **avec compteurs**, + tri) ; chaque facette raffine la
+requête via l'URL (`?q=&cat=&min=&max=&sort=`). Compteurs serveur si présent,
+sinon **calcul local** (repli `file://`). Le filtrage lui-même (catégorie, prix
+min/max, tri) est appliqué par `Products.search` côté front.
+
 ### Recommandations personnalisées (domaine D)
 Calculées à partir des **vraies commandes** (table `order_items`) :
 - `GET /products/:id/related` — « souvent achetés ensemble » par **co-occurrence**

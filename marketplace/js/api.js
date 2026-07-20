@@ -264,6 +264,11 @@ window.MP = window.MP || {};
     if (!API.enabled) return null;
     try { const j = await get("/recommendations?limit=" + (limit || 8)); return j && j.ok ? (j.items || []).map((p) => p.id) : null; } catch (e) { return null; }
   }
+  // Facettes : { categories:[{value,count}], priceRanges:[{id,label,min,max,count}], stores, total } ou null.
+  async function facets(params) {
+    if (!API.enabled) return null;
+    try { const qs = new URLSearchParams(params || {}).toString(); const j = await get("/products/facets" + (qs ? "?" + qs : "")); return j && j.ok ? j : null; } catch (e) { return null; }
+  }
   async function myOrders() {
     if (!API.enabled || !token()) return [];
     const j = await get("/orders");
@@ -310,6 +315,7 @@ window.MP = window.MP || {};
   API.searchProducts = searchProducts;
   API.relatedProducts = relatedProducts;
   API.recommendations = recommendations;
+  API.facets = facets;
   API.myOrders = myOrders;
   API.loyalty = loyalty;
   API.questionsFor = questionsFor;
