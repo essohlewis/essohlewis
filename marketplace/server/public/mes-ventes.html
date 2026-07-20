@@ -55,10 +55,25 @@
       $("#noauth").classList.add("hidden"); $("#app").classList.remove("hidden");
 
       const st = STORE_STATUS[j.store.status] || ["", "bg-slate-200 text-slate-600"];
+      const kycBadge = j.store.sellable
+        ? `<span class="pill bg-accent-soft text-accent">🛡️ Identité vérifiée</span>`
+        : `<span class="pill bg-red-100 text-red-700">🛡️ Identité non vérifiée</span>`;
       $("#storehead").innerHTML = `<div class="flex items-center justify-between flex-wrap gap-2">
         <div><div class="text-lg font-extrabold">${j.store.name}</div>
           <div class="text-xs text-slate-500">${j.store.category || ""}${j.store.commune ? " · " + j.store.commune : ""}</div></div>
-        <span class="pill ${st[1]}">${st[0]}</span></div>`;
+        <div class="flex flex-wrap gap-1.5">${kycBadge}<span class="pill ${st[1]}">${st[0]}</span></div></div>`;
+      // Blocage de la vente tant que l'identité n'est pas validée.
+      if (!j.store.sellable) {
+        const verify = "/verify?vendorId=" + encodeURIComponent(j.store.ownerId || "") + "&storeId=" + encodeURIComponent(j.store.id) + "&vendorName=" + encodeURIComponent(j.store.name || "");
+        const reason = j.store.kycStatus === "rejected" ? "Votre vérification d'identité a été refusée. Merci de la refaire."
+          : j.store.kycStatus === "pending" ? "Votre vérification d'identité est en cours d'examen."
+          : j.store.status !== "approved" ? "Votre boutique est en attente de validation par l'administration."
+          : "Vérifiez votre identité pour activer la vente sur votre boutique.";
+        $("#storehead").insertAdjacentHTML("afterend",
+          `<div class="card border-l-4 border-red-500 bg-red-50 mb-4"><div class="flex items-center justify-between flex-wrap gap-2">
+            <div><strong class="text-red-700">🚫 Vente désactivée</strong><div class="text-sm text-red-700/90 mt-0.5">${reason} Tant que ce n'est pas résolu, vos articles ne sont pas visibles et aucune commande ne peut être passée.</div></div>
+            ${j.store.kycStatus !== "pending" ? `<a href="${verify}" class="btn btn-brand">Vérifier mon identité →</a>` : ""}</div></div>`);
+      }
 
       const s = j.summary || {};
       const card = (icon, label, val) => `<div class="card !p-4"><div class="text-2xl">${icon}</div><div class="text-xl font-extrabold mt-1">${val}</div><div class="text-xs text-slate-500">${label}</div></div>`;

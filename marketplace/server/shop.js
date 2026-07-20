@@ -8,8 +8,14 @@
 const express = require("express");
 const payments = require("./payments");
 
-module.exports = function createShopRouter(shopdb, adminToken) {
+module.exports = function createShopRouter(shopdb, adminToken, opts) {
   const router = express.Router();
+  // Statut KYC d'une boutique (injecté par server.js, lecture directe du store KYC).
+  // Valeurs : "approved" | "pending" | "rejected" | "none".
+  const kycStatusForStore = (opts && opts.kycStatusForStore) || (() => "approved");
+  // Une boutique ne peut vendre que si elle est approuvée ET son identité vérifiée (KYC).
+  const isSellable = (s) => !!s && s.status === "approved" && kycStatusForStore(s.id) === "approved";
+  const decorate = (s) => s && Object.assign({}, s, { kycStatus: kycStatusForStore(s.id), sellable: isSellable(s) });
 
   // Jeton de session → req.userId (facultatif selon la route).
   function readToken(req) {
@@ -78,6 +84,14 @@ module.exports = function createShopRouter(shopdb, adminToken) {
     if (!req.userId) {
       if (!b.customerName || !b.phone || !b.address) return res.status(400).json({ ok: false, error: "Nom, téléphone et adresse requis." });
     }
+    // Blocage : aucune vente pour une boutique enregistrée mais non autorisée (KYC/approbation).
+    const blocked = new Set();
+    for (const it of (Array.isArray(b.items) ? b.items : [])) {
+      if (!it || !it.storeId) continue;
+      const s = shopdb.getStoreById(it.storeId);
+      if (s && !isSellable(s)) blocked.add(s.name || s.id);
+    }
+    if (blocked.size) return res.status(403).json({ ok: false, error: "Boutique non autorisée à vendre (identité vendeur non vérifiée) : " + [...blocked].join(", ") + "." });
     const r = shopdb.createOrder(req.userId, b);
     if (r.error) return res.status(400).json({ ok: false, error: r.error });
     res.json({ ok: true, order: r.order });
@@ -144,11 +158,12 @@ module.exports = function createShopRouter(shopdb, adminToken) {
   });
 
   /* ------------------------------ Boutiques ---------------------------- */
-  router.get("/stores", (req, res) => res.json({ ok: true, items: shopdb.listStores({ status: "approved" }) }));
+  // Vitrine publique : uniquement les boutiques autorisées à vendre (approuvées + KYC validé).
+  router.get("/stores", (req, res) => res.json({ ok: true, items: shopdb.listStores({ status: "approved" }).filter(isSellable).map(decorate) }));
   router.get("/stores/:id", (req, res) => {
     const s = shopdb.getStoreById(req.params.id);
     if (!s) return res.status(404).json({ ok: false, error: "Boutique introuvable." });
-    res.json({ ok: true, store: s });
+    res.json({ ok: true, store: decorate(s) });
   });
   // Enregistrement / mise à jour de sa boutique (le compte connecté devient vendeur).
   router.post("/stores", auth, (req, res) => {
@@ -158,12 +173,12 @@ module.exports = function createShopRouter(shopdb, adminToken) {
   });
 
   /* ---------------------------- Espace vendeur ------------------------- */
-  router.get("/vendor/store", auth, (req, res) => res.json({ ok: true, store: shopdb.getStoreByOwner(req.userId) }));
+  router.get("/vendor/store", auth, (req, res) => res.json({ ok: true, store: decorate(shopdb.getStoreByOwner(req.userId)) }));
   router.get("/vendor/sales", auth, (req, res) => {
     const s = shopdb.getStoreByOwner(req.userId);
     if (!s) return res.json({ ok: true, store: null, summary: null, lines: [] });
     const sales = shopdb.vendorSales(s.id);
-    res.json({ ok: true, store: s, summary: sales.summary, lines: sales.lines });
+    res.json({ ok: true, store: decorate(s), summary: sales.summary, lines: sales.lines });
   });
 
   /* ------------------- Collections génériques (données client) ------------------- */
@@ -180,7 +195,7 @@ module.exports = function createShopRouter(shopdb, adminToken) {
   });
 
   /* ------------------------------- Admin ------------------------------- */
-  router.get("/admin/stores", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.listStores({ status: req.query.status }) }));
+  router.get("/admin/stores", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.listStores({ status: req.query.status }).map(decorate) }));
   router.post("/admin/stores/:id/status", requireAdmin, (req, res) => {
     const s = shopdb.setStoreStatus(req.params.id, (req.body || {}).status);
     if (!s) return res.status(400).json({ ok: false, error: "Statut invalide ou boutique introuvable." });

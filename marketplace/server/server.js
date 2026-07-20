@@ -33,7 +33,16 @@ try {
   if (SHOP_AVAILABLE && shopdb.countProducts() === 0) { seedProducts.forEach((p) => shopdb.upsertProduct(p)); console.log(`[shop] catalogue initialisé (${seedProducts.length} produits)`); }
   console.log(`[shop] base de données client : ${SHOP_AVAILABLE ? "SQLite prête (" + shopdb.countProducts() + " produits)" : "indisponible (node:sqlite absent)"}`);
 } catch (e) { console.log("[shop] base de données indisponible :", e.message); }
-if (SHOP_AVAILABLE) app.use("/api/shop", createShopRouter(shopdb, ADMIN_TOKEN));
+// Statut KYC d'une boutique (lecture directe du store KYC) — sert à bloquer la
+// vente tant que l'identité du vendeur n'est pas validée.
+function kycStatusForStore(storeId) {
+  if (!storeId) return "none";
+  try {
+    const rows = db.all().filter((r) => r.storeId === storeId).sort((a, b) => b.createdAt - a.createdAt);
+    return rows[0] ? rows[0].status : "none"; // pending | approved | rejected | none
+  } catch (e) { return "none"; }
+}
+if (SHOP_AVAILABLE) app.use("/api/shop", createShopRouter(shopdb, ADMIN_TOKEN, { kycStatusForStore }));
 
 function requireAdmin(req, res, next) {
   const tok = req.get("X-Admin-Token") || req.query.token;

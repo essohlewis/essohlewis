@@ -143,8 +143,10 @@
         const btns = [];
         if (s.status !== "approved") btns.push(`<button class="btn btn-accent !py-1 !px-3 text-sm" data-approve="${s.id}">Approuver</button>`);
         if (s.status !== "suspended") btns.push(`<button class="btn btn-ghost !py-1 !px-3 text-sm !text-red-600 !border-red-200" data-suspend="${s.id}">Suspendre</button>`);
+        const kyc = s.sellable ? `<span class="pill bg-accent-soft text-accent">🛡️ KYC ok · vend</span>`
+          : `<span class="pill bg-red-100 text-red-700">🛡️ KYC ${s.kycStatus === "approved" ? "ok" : s.kycStatus || "manquant"} · ne vend pas</span>`;
         return `<div class="card"><div class="flex items-start justify-between flex-wrap gap-2">
-          <div><div class="font-bold">${s.name} <span class="pill ${st[1]}">${st[0]}</span></div>
+          <div><div class="font-bold">${s.name} <span class="pill ${st[1]}">${st[0]}</span> ${kyc}</div>
             <div class="text-xs text-slate-500">${s.category || "—"}${s.commune ? " · " + s.commune : ""} · créée ${new Date(s.createdAt).toLocaleDateString("fr-FR")}</div>
             ${s.description ? `<div class="text-sm text-slate-600 mt-1">${s.description.replace(/</g, "&lt;")}</div>` : ""}</div>
           <div class="flex gap-2">${btns.join("")}</div></div></div>`;
