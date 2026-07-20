@@ -102,6 +102,23 @@ client : `/paiement`. **Production** : renseignez `CINETPAY_API_KEY` (ou
 `PAYSTACK_SECRET_KEY`) et implémentez l'appel réel dans `payments.initiate/verify`
 — le reste de l'application ne change pas.
 
+### Comptes & sécurité (domaine B)
+- **Jetons** : jeton d'accès à durée de vie (`SESSION_TTL`, défaut 7 j) + jeton
+  de **rafraîchissement** (`REFRESH_TTL`, 30 j) à usage unique (rotation).
+  `POST /refresh`, `POST /logout`, `POST /logout-all`, `GET /sessions`.
+- **Réinitialisation de mot de passe** : `POST /password/forgot` → code à usage
+  unique ; `POST /password/reset` (révoque toutes les sessions) ;
+  `POST /password/change` (connecté). Page publique `/mot-de-passe`.
+- **Vérification e-mail** : code à l'inscription ; `POST /verify/email`,
+  `POST /verify/email/resend`. Statut exposé dans `GET /me`.
+- **2FA (TOTP)** : `POST /2fa/setup` (secret + URI otpauth), `POST /2fa/enable`,
+  `POST /2fa/disable` ; connexion en 2 étapes (`/login` → `twofaRequired` →
+  `/login/2fa`). Compatible Google Authenticator/Authy (`totp.js`, sans dépendance).
+- **Envoi e-mail/SMS** : simulateur tant qu'aucun fournisseur n'est configuré
+  (le code est renvoyé dans la réponse `devCode`). Production : définir
+  `EMAIL_PROVIDER`/`SMS_PROVIDER` et brancher l'envoi réel.
+- Page compte : `/securite` (vérification, mot de passe, 2FA, sessions).
+
 ### Escrow, commission & retraits vendeurs
 La part vendeur d'une commande est **séquestrée** (escrow) tant que la commande
 n'est pas **livrée** ; à la livraison, elle est **libérée** dans le portefeuille

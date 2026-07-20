@@ -41,6 +41,11 @@ app.use("/api/shop/login", security.rateLimit({ name: "login", windowMs: 60000, 
 app.use("/api/shop/register", security.rateLimit({ name: "register", windowMs: 60000, max: Number(process.env.RATE_MAX_AUTH) || 30 }));
 app.use("/api/shop/payments/initiate", security.rateLimit({ name: "pay", windowMs: 60000, max: 60 }));
 app.use("/api/kyc/submit", security.rateLimit({ name: "kyc", windowMs: 60000, max: 15 }));
+// Points d'authentification sensibles (anti-brute force sur codes/2FA).
+app.use("/api/shop/login/2fa", security.rateLimit({ name: "2fa", windowMs: 60000, max: Number(process.env.RATE_MAX_AUTH) || 30 }));
+app.use("/api/shop/password/reset", security.rateLimit({ name: "reset", windowMs: 60000, max: Number(process.env.RATE_MAX_AUTH) || 30 }));
+app.use("/api/shop/password/forgot", security.rateLimit({ name: "forgot", windowMs: 60000, max: Number(process.env.RATE_MAX_AUTH) || 30 }));
+app.use("/api/shop/2fa/enable", security.rateLimit({ name: "2faen", windowMs: 60000, max: Number(process.env.RATE_MAX_AUTH) || 30 }));
 
 let FACE_AVAILABLE = false;
 face.selfTest().then((ok) => { FACE_AVAILABLE = ok; console.log(`[face] reconnaissance faciale : ${ok ? "OPÉRATIONNELLE (dlib)" : "indisponible → revue admin manuelle"}`); });
@@ -183,6 +188,8 @@ app.get("/mes-commandes", (req, res) => res.sendFile(path.join(__dirname, "publi
 app.get("/mes-ventes", (req, res) => res.sendFile(path.join(__dirname, "public", "mes-ventes.html")));
 app.get("/paiement", (req, res) => res.sendFile(path.join(__dirname, "public", "paiement.html")));
 app.get("/facture/:id", (req, res) => res.sendFile(path.join(__dirname, "public", "facture.html")));
+app.get("/securite", (req, res) => res.sendFile(path.join(__dirname, "public", "securite.html")));
+app.get("/mot-de-passe", (req, res) => res.sendFile(path.join(__dirname, "public", "mot-de-passe.html")));
 
 // Assets du back-office (tailwind.css, etc.).
 app.use(express.static(path.join(__dirname, "public")));

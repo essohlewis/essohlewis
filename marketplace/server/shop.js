@@ -7,6 +7,13 @@
 
 const express = require("express");
 const payments = require("./payments");
+const totp = require("./totp");
+
+// Envoi e-mail/SMS : simulateur tant qu'aucun fournisseur n'est configuré
+// (le code est renvoyé dans la réponse pour la démo). En production, brancher
+// un fournisseur (SENDGRID/TWILIO…) et retirer devCode.
+const NOTIFY = !!(process.env.EMAIL_PROVIDER || process.env.SMS_PROVIDER);
+function delivery(code) { return NOTIFY ? { sent: true, simulated: false } : { sent: true, simulated: true, devCode: code }; }
 
 module.exports = function createShopRouter(shopdb, adminToken, opts) {
   const router = express.Router();
@@ -42,18 +49,103 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
     const { name, email, phone, password } = req.body || {};
     const r = shopdb.createUser({ name, email, phone, password });
     if (r.error) return res.status(400).json({ ok: false, error: r.error });
-    const token = shopdb.createSession(r.user.id);
-    res.json({ ok: true, token, user: r.user });
+    const sess = shopdb.createSession(r.user.id);
+    const code = shopdb.createOtp("verify_email", r.user.email, r.user.id);
+    res.json({ ok: true, token: sess.token, refreshToken: sess.refreshToken, expiresAt: sess.expiresAt, user: r.user, emailVerification: delivery(code) });
   });
   router.post("/login", (req, res) => {
     const { email, password } = req.body || {};
     const u = shopdb.authUser(email, password);
     if (!u) return res.status(401).json({ ok: false, error: "Identifiants incorrects." });
-    const token = shopdb.createSession(u.id);
-    res.json({ ok: true, token, user: shopdb.publicUser(u) });
+    if (u.twofaEnabled) return res.json({ ok: true, twofaRequired: true, email: u.email }); // 2e étape requise
+    const sess = shopdb.createSession(u.id);
+    res.json({ ok: true, token: sess.token, refreshToken: sess.refreshToken, expiresAt: sess.expiresAt, user: shopdb.publicUser(u) });
+  });
+  // Deuxième étape de connexion (2FA).
+  router.post("/login/2fa", (req, res) => {
+    const { email, password, code } = req.body || {};
+    const u = shopdb.authUser(email, password);
+    if (!u || !u.twofaEnabled) return res.status(401).json({ ok: false, error: "Identifiants incorrects." });
+    if (!totp.verify(u.twofaSecret, code)) return res.status(401).json({ ok: false, error: "Code d'authentification invalide." });
+    const sess = shopdb.createSession(u.id);
+    res.json({ ok: true, token: sess.token, refreshToken: sess.refreshToken, expiresAt: sess.expiresAt, user: shopdb.publicUser(u) });
+  });
+  // Rotation du jeton d'accès via le jeton de rafraîchissement.
+  router.post("/refresh", (req, res) => {
+    const sess = shopdb.refreshSession((req.body || {}).refreshToken);
+    if (!sess) return res.status(401).json({ ok: false, error: "Jeton de rafraîchissement invalide ou expiré." });
+    res.json({ ok: true, token: sess.token, refreshToken: sess.refreshToken, expiresAt: sess.expiresAt });
   });
   router.post("/logout", (req, res) => { shopdb.destroySession(readToken(req)); res.json({ ok: true }); });
+  router.post("/logout-all", auth, (req, res) => { shopdb.destroyUserSessions(req.userId); res.json({ ok: true }); });
+  router.get("/sessions", auth, (req, res) => {
+    const cur = readToken(req);
+    res.json({ ok: true, sessions: shopdb.listSessions(req.userId).map((s) => Object.assign(s, { current: !!(cur && cur.slice(0, 8) === s.id) })) });
+  });
   router.get("/me", auth, (req, res) => res.json({ ok: true, user: shopdb.getUser(req.userId) }));
+
+  /* ---------------------- Vérification e-mail / téléphone -------------------- */
+  router.post("/verify/email", (req, res) => {
+    const email = String((req.body || {}).email || "").trim().toLowerCase();
+    const v = shopdb.verifyOtp("verify_email", email, (req.body || {}).code);
+    if (!v) return res.status(400).json({ ok: false, error: "Code invalide ou expiré." });
+    const u = shopdb.getUserByEmail(email); if (u) shopdb.setEmailVerified(u.id);
+    res.json({ ok: true });
+  });
+  router.post("/verify/email/resend", (req, res) => {
+    const email = String((req.body || {}).email || "").trim().toLowerCase();
+    const u = shopdb.getUserByEmail(email);
+    if (!u) return res.json({ ok: true, sent: true, simulated: !NOTIFY }); // ne divulgue pas l'existence
+    res.json({ ok: true, ...delivery(shopdb.createOtp("verify_email", email, u.id)) });
+  });
+
+  /* ------------------------ Réinitialisation mot de passe ------------------- */
+  router.post("/password/forgot", (req, res) => {
+    const email = String((req.body || {}).email || "").trim().toLowerCase();
+    const u = shopdb.getUserByEmail(email);
+    if (!u) return res.json({ ok: true, sent: true, simulated: !NOTIFY }); // anti-énumération
+    res.json({ ok: true, ...delivery(shopdb.createOtp("reset_password", email, u.id)) });
+  });
+  router.post("/password/reset", (req, res) => {
+    const email = String((req.body || {}).email || "").trim().toLowerCase();
+    const { code, password } = req.body || {};
+    const v = shopdb.verifyOtp("reset_password", email, code);
+    if (!v) return res.status(400).json({ ok: false, error: "Code invalide ou expiré." });
+    if (!password || String(password).length < 6) return res.status(400).json({ ok: false, error: "Mot de passe trop court (min. 6 caractères)." });
+    const u = shopdb.getUserByEmail(email); if (!u) return res.status(400).json({ ok: false, error: "Compte introuvable." });
+    shopdb.setUserPassword(u.id, password);
+    shopdb.destroyUserSessions(u.id); // révoque toutes les sessions existantes
+    res.json({ ok: true });
+  });
+  router.post("/password/change", auth, (req, res) => {
+    const { currentPassword, newPassword } = req.body || {};
+    const u = shopdb.getUserRaw(req.userId);
+    if (!u || !shopdb.authUser(u.email, currentPassword)) return res.status(401).json({ ok: false, error: "Mot de passe actuel incorrect." });
+    if (!newPassword || String(newPassword).length < 6) return res.status(400).json({ ok: false, error: "Nouveau mot de passe trop court (min. 6 caractères)." });
+    shopdb.setUserPassword(req.userId, newPassword);
+    res.json({ ok: true });
+  });
+
+  /* ----------------------------- 2FA (TOTP) ------------------------------ */
+  router.post("/2fa/setup", auth, (req, res) => {
+    const u = shopdb.getUserRaw(req.userId);
+    const secret = totp.generateSecret();
+    shopdb.setTwofa(req.userId, secret, false); // stocké mais pas encore activé
+    res.json({ ok: true, secret, uri: totp.uri(secret, u.email) });
+  });
+  router.post("/2fa/enable", auth, (req, res) => {
+    const u = shopdb.getUserRaw(req.userId);
+    if (!u.twofaSecret) return res.status(400).json({ ok: false, error: "Configurez d'abord la 2FA." });
+    if (!totp.verify(u.twofaSecret, (req.body || {}).code)) return res.status(400).json({ ok: false, error: "Code invalide." });
+    shopdb.setTwofa(req.userId, u.twofaSecret, true);
+    res.json({ ok: true });
+  });
+  router.post("/2fa/disable", auth, (req, res) => {
+    const u = shopdb.getUserRaw(req.userId);
+    if (u.twofaEnabled && !totp.verify(u.twofaSecret, (req.body || {}).code)) return res.status(400).json({ ok: false, error: "Code invalide." });
+    shopdb.setTwofa(req.userId, null, false);
+    res.json({ ok: true });
+  });
 
   /* ------------------------------ Catalogue ---------------------------- */
   router.get("/products", (req, res) => {

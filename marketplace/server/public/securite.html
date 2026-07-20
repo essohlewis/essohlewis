@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compte & sécurité — Marché CI</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="/tailwind.css" />
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-2xl mx-auto px-4 py-3 flex items-center gap-2">
+      <a href="/" class="flex items-center gap-2"><span class="text-2xl">🛒</span><span class="font-extrabold text-lg">Marché<span class="text-brand">CI</span></span></a>
+      <span class="ml-auto pill bg-accent-soft text-accent">Compte &amp; sécurité</span>
+    </div>
+  </header>
+
+  <main class="max-w-2xl mx-auto px-4 py-6 space-y-4">
+    <h1 class="text-2xl font-extrabold">🔐 Compte &amp; sécurité</h1>
+
+    <div id="noauth" class="card hidden text-center">
+      <p class="text-slate-600">Connectez-vous sur la marketplace pour gérer la sécurité de votre compte.</p>
+      <a href="/" class="btn btn-brand mt-3">Aller à la marketplace</a>
+    </div>
+
+    <div id="app" class="hidden space-y-4">
+      <!-- Identité + vérification e-mail -->
+      <section class="card">
+        <h2 class="font-bold mb-1">Identité</h2>
+        <div id="idBox" class="text-sm text-slate-600"></div>
+        <div id="verifyBox" class="hidden mt-3 rounded-lg bg-amber-50 border border-amber-200 p-3">
+          <div class="text-sm text-amber-800 mb-2">Votre e-mail n'est pas vérifié.</div>
+          <div class="flex gap-2 flex-wrap items-end">
+            <button id="sendCode" class="btn btn-ghost !py-1.5">Envoyer un code</button>
+            <input id="vCode" placeholder="Code à 6 chiffres" class="rounded-lg border border-slate-300 px-3 py-2 w-40" />
+            <button id="doVerify" class="btn btn-brand !py-1.5">Vérifier</button>
+          </div>
+          <p id="vMsg" class="text-xs mt-2"></p>
+        </div>
+      </section>
+
+      <!-- Mot de passe -->
+      <section class="card">
+        <h2 class="font-bold mb-2">Mot de passe</h2>
+        <div class="grid sm:grid-cols-2 gap-2">
+          <input id="curPw" type="password" placeholder="Mot de passe actuel" class="rounded-lg border border-slate-300 px-3 py-2" />
+          <input id="newPw" type="password" placeholder="Nouveau (min. 6)" class="rounded-lg border border-slate-300 px-3 py-2" />
+        </div>
+        <button id="changePw" class="btn btn-brand mt-2 !py-1.5">Modifier le mot de passe</button>
+        <p id="pwMsg" class="text-sm mt-2"></p>
+      </section>
+
+      <!-- 2FA -->
+      <section class="card">
+        <div class="flex items-center justify-between"><h2 class="font-bold">Double authentification (2FA)</h2><span id="twofaBadge"></span></div>
+        <p class="text-sm text-slate-500 mt-1">Ajoutez un code d'application (Google Authenticator, Authy…) à la connexion.</p>
+        <div id="twofaOff" class="hidden mt-3">
+          <button id="setup2fa" class="btn btn-brand !py-1.5">Activer la 2FA</button>
+          <div id="setupBox" class="hidden mt-3 rounded-lg bg-slate-50 border border-slate-200 p-3">
+            <div class="text-sm mb-2">Ajoutez cette clé dans votre application d'authentification :</div>
+            <div class="font-mono text-sm bg-white border border-slate-300 rounded px-3 py-2 break-all" id="secret"></div>
+            <a id="otpuri" class="text-xs text-brand hover:underline break-all block mt-1" href="#">lien otpauth://</a>
+            <div class="flex gap-2 items-end mt-3">
+              <input id="enCode" placeholder="Code à 6 chiffres" class="rounded-lg border border-slate-300 px-3 py-2 w-40" />
+              <button id="enable2fa" class="btn btn-accent !py-1.5">Confirmer</button>
+            </div>
+            <p id="enMsg" class="text-xs mt-2"></p>
+          </div>
+        </div>
+        <div id="twofaOn" class="hidden mt-3">
+          <div class="flex gap-2 items-end">
+            <input id="disCode" placeholder="Code à 6 chiffres" class="rounded-lg border border-slate-300 px-3 py-2 w-40" />
+            <button id="disable2fa" class="btn btn-ghost !py-1.5 !text-red-600 !border-red-200">Désactiver la 2FA</button>
+          </div>
+          <p id="disMsg" class="text-xs mt-2"></p>
+        </div>
+      </section>
+
+      <!-- Sessions -->
+      <section class="card">
+        <div class="flex items-center justify-between mb-2"><h2 class="font-bold">Sessions actives</h2>
+          <button id="logoutAll" class="btn btn-ghost !py-1.5 text-sm !text-red-600 !border-red-200">Déconnecter partout</button></div>
+        <div id="sessions" class="space-y-1 text-sm"></div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const token = () => { try { return localStorage.getItem("marchesci_shopToken") || ""; } catch (e) { return ""; } };
+    const H = () => ({ "Content-Type": "application/json", Authorization: "Bearer " + token() });
+    const post = async (p, b) => { const r = await fetch("/api/shop" + p, { method: "POST", headers: H(), body: JSON.stringify(b || {}) }); return { s: r.status, j: await r.json().catch(() => ({})) }; };
+    const get = async (p) => (await fetch("/api/shop" + p, { headers: H() })).json();
+    let EMAIL = "";
+
+    async function boot() {
+      if (!token()) { $("#noauth").classList.remove("hidden"); return; }
+      const me = await get("/me");
+      if (!me.ok) { $("#noauth").classList.remove("hidden"); return; }
+      $("#app").classList.remove("hidden");
+      render(me.user);
+      loadSessions();
+    }
+    function render(u) {
+      EMAIL = u.email;
+      $("#idBox").innerHTML = `<div><strong>${u.name || "—"}</strong></div><div>${u.email} ${u.emailVerified ? '<span class="pill bg-accent-soft text-accent">✅ vérifié</span>' : '<span class="pill bg-amber-100 text-amber-700">non vérifié</span>'}</div>${u.phone ? "<div>" + u.phone + "</div>" : ""}`;
+      $("#verifyBox").classList.toggle("hidden", !!u.emailVerified);
+      $("#twofaBadge").innerHTML = u.twofaEnabled ? '<span class="pill bg-accent-soft text-accent">Activée</span>' : '<span class="pill bg-slate-200 text-slate-600">Désactivée</span>';
+      $("#twofaOff").classList.toggle("hidden", !!u.twofaEnabled);
+      $("#twofaOn").classList.toggle("hidden", !u.twofaEnabled);
+    }
+    async function loadSessions() {
+      const j = await get("/sessions");
+      $("#sessions").innerHTML = (j.sessions || []).map((s) => `<div class="flex justify-between border-b border-slate-100 py-1.5">
+        <span>Session ${s.id}… ${s.current ? '<span class="pill bg-accent-soft text-accent">actuelle</span>' : ""}</span>
+        <span class="text-slate-400">${new Date(s.createdAt).toLocaleString("fr-FR")}</span></div>`).join("") || '<div class="text-slate-400">Aucune session.</div>';
+    }
+
+    // Vérification e-mail
+    $("#sendCode").addEventListener("click", async () => {
+      const r = await post("/verify/email/resend", { email: EMAIL });
+      $("#vMsg").className = "text-xs mt-2 text-slate-500";
+      $("#vMsg").textContent = r.j.simulated ? "Mode démo — votre code : " + r.j.devCode : "Un code vous a été envoyé.";
+      if (r.j.devCode) $("#vCode").value = r.j.devCode;
+    });
+    $("#doVerify").addEventListener("click", async () => {
+      const r = await post("/verify/email", { email: EMAIL, code: $("#vCode").value.trim() });
+      if (r.j.ok) { $("#vMsg").className = "text-xs mt-2 text-accent"; $("#vMsg").textContent = "✅ E-mail vérifié."; boot(); }
+      else { $("#vMsg").className = "text-xs mt-2 text-red-600"; $("#vMsg").textContent = r.j.error || "Échec."; }
+    });
+
+    // Mot de passe
+    $("#changePw").addEventListener("click", async () => {
+      const r = await post("/password/change", { currentPassword: $("#curPw").value, newPassword: $("#newPw").value });
+      if (r.j.ok) { $("#pwMsg").className = "text-sm mt-2 text-accent"; $("#pwMsg").textContent = "✅ Mot de passe modifié."; $("#curPw").value = $("#newPw").value = ""; }
+      else { $("#pwMsg").className = "text-sm mt-2 text-red-600"; $("#pwMsg").textContent = r.j.error || "Échec."; }
+    });
+
+    // 2FA
+    $("#setup2fa").addEventListener("click", async () => {
+      const r = await post("/2fa/setup", {});
+      if (!r.j.ok) return;
+      $("#setupBox").classList.remove("hidden");
+      $("#secret").textContent = r.j.secret;
+      $("#otpuri").href = r.j.uri;
+    });
+    $("#enable2fa").addEventListener("click", async () => {
+      const r = await post("/2fa/enable", { code: $("#enCode").value.trim() });
+      if (r.j.ok) { $("#enMsg").className = "text-xs mt-2 text-accent"; $("#enMsg").textContent = "✅ 2FA activée."; boot(); }
+      else { $("#enMsg").className = "text-xs mt-2 text-red-600"; $("#enMsg").textContent = r.j.error || "Code invalide."; }
+    });
+    $("#disable2fa").addEventListener("click", async () => {
+      const r = await post("/2fa/disable", { code: $("#disCode").value.trim() });
+      if (r.j.ok) { boot(); } else { $("#disMsg").className = "text-xs mt-2 text-red-600"; $("#disMsg").textContent = r.j.error || "Code invalide."; }
+    });
+
+    // Sessions
+    $("#logoutAll").addEventListener("click", async () => {
+      await post("/logout-all", {});
+      try { localStorage.removeItem("marchesci_shopToken"); } catch (e) {}
+      location.href = "/";
+    });
+    boot();
+  </script>
+</body>
+</html>

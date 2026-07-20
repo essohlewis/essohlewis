@@ -22,6 +22,10 @@ const DATA_DIR = path.join(__dirname, "data");
 const DB_FILE = process.env.SHOP_DB || path.join(DATA_DIR, "marche.db");
 // Commission plateforme prélevée sur chaque vente (0.10 = 10 %).
 const COMMISSION_RATE = Math.min(0.9, Math.max(0, parseFloat(process.env.COMMISSION_RATE || "0.10")));
+// Durées de vie (secondes) : jeton d'accès, jeton de rafraîchissement, code OTP.
+const SESSION_TTL = (parseInt(process.env.SESSION_TTL, 10) || 7 * 24 * 3600) * 1000;
+const REFRESH_TTL = (parseInt(process.env.REFRESH_TTL, 10) || 30 * 24 * 3600) * 1000;
+const OTP_TTL = (parseInt(process.env.OTP_TTL, 10) || 1800) * 1000;
 
 let db = null;
 
@@ -35,8 +39,14 @@ function init() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY, name TEXT, email TEXT UNIQUE, phone TEXT,
-      passHash TEXT, passSalt TEXT, role TEXT DEFAULT 'client', createdAt INTEGER
+      passHash TEXT, passSalt TEXT, role TEXT DEFAULT 'client', createdAt INTEGER,
+      emailVerified INTEGER DEFAULT 0, phoneVerified INTEGER DEFAULT 0,
+      twofaSecret TEXT, twofaEnabled INTEGER DEFAULT 0
     );
+    CREATE TABLE IF NOT EXISTS otp (
+      id TEXT PRIMARY KEY, kind TEXT, subject TEXT, userId TEXT, code TEXT, expiresAt INTEGER, createdAt INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_otp_lookup ON otp(kind, subject);
     CREATE TABLE IF NOT EXISTS products (
       id TEXT PRIMARY KEY, storeId TEXT, storeName TEXT, name TEXT, description TEXT,
       price INTEGER, currency TEXT DEFAULT 'FCFA', category TEXT, image TEXT,
@@ -73,8 +83,11 @@ function init() {
     CREATE INDEX IF NOT EXISTS idx_items_store ON order_items(storeId);
     CREATE INDEX IF NOT EXISTS idx_stores_owner ON stores(ownerId);
     CREATE TABLE IF NOT EXISTS sessions (
-      token TEXT PRIMARY KEY, userId TEXT, createdAt INTEGER
+      token TEXT PRIMARY KEY, userId TEXT, createdAt INTEGER,
+      expiresAt INTEGER, refreshToken TEXT, refreshExpiresAt INTEGER
     );
+    CREATE INDEX IF NOT EXISTS idx_sessions_refresh ON sessions(refreshToken);
+    CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(userId);
     CREATE TABLE IF NOT EXISTS reviews (
       id TEXT PRIMARY KEY, targetType TEXT, targetId TEXT, userId TEXT,
       authorName TEXT, rating INTEGER, comment TEXT, verified INTEGER DEFAULT 0,
@@ -98,6 +111,12 @@ function init() {
   }
   for (const col of ["paymentMethod TEXT DEFAULT 'cod'", "paymentStatus TEXT DEFAULT 'cod'"]) {
     try { db.exec(`ALTER TABLE orders ADD COLUMN ${col}`); } catch (e) { /* déjà présente */ }
+  }
+  for (const col of ["expiresAt INTEGER", "refreshToken TEXT", "refreshExpiresAt INTEGER"]) {
+    try { db.exec(`ALTER TABLE sessions ADD COLUMN ${col}`); } catch (e) { /* déjà présente */ }
+  }
+  for (const col of ["emailVerified INTEGER DEFAULT 0", "phoneVerified INTEGER DEFAULT 0", "twofaSecret TEXT", "twofaEnabled INTEGER DEFAULT 0"]) {
+    try { db.exec(`ALTER TABLE users ADD COLUMN ${col}`); } catch (e) { /* déjà présente */ }
   }
   return true;
 }
@@ -134,20 +153,68 @@ function authUser(email, password) {
   return row;
 }
 function getUser(id) { const r = db.prepare("SELECT * FROM users WHERE id=?").get(id); return r ? publicUser(r) : null; }
-const publicUser = (u) => ({ id: u.id, name: u.name, email: u.email, phone: u.phone, role: u.role, createdAt: u.createdAt });
+const publicUser = (u) => ({ id: u.id, name: u.name, email: u.email, phone: u.phone, role: u.role, createdAt: u.createdAt, emailVerified: !!u.emailVerified, phoneVerified: !!u.phoneVerified, twofaEnabled: !!u.twofaEnabled });
 
 /* ------------------------------- Sessions -------------------------------- */
+// Jeton d'accès (courte durée) + jeton de rafraîchissement (longue durée).
 function createSession(userId) {
   const token = crypto.randomBytes(24).toString("hex");
-  db.prepare("INSERT INTO sessions (token,userId,createdAt) VALUES (?,?,?)").run(token, userId, now());
-  return token;
+  const refreshToken = crypto.randomBytes(24).toString("hex");
+  const t = now();
+  const expiresAt = t + SESSION_TTL, refreshExpiresAt = t + REFRESH_TTL;
+  db.prepare("INSERT INTO sessions (token,userId,createdAt,expiresAt,refreshToken,refreshExpiresAt) VALUES (?,?,?,?,?,?)")
+    .run(token, userId, t, expiresAt, refreshToken, refreshExpiresAt);
+  return { token, refreshToken, expiresAt, refreshExpiresAt };
 }
 function userIdForToken(token) {
   if (!token) return null;
-  const r = db.prepare("SELECT userId FROM sessions WHERE token=?").get(token);
-  return r ? r.userId : null;
+  const r = db.prepare("SELECT userId,expiresAt FROM sessions WHERE token=?").get(token);
+  if (!r) return null;
+  if (r.expiresAt && r.expiresAt <= now()) { db.prepare("DELETE FROM sessions WHERE token=?").run(token); return null; }
+  return r.userId;
+}
+// Rotation : échange un jeton de rafraîchissement valide contre une nouvelle session.
+function refreshSession(refreshToken) {
+  if (!refreshToken) return null;
+  const r = db.prepare("SELECT * FROM sessions WHERE refreshToken=?").get(refreshToken);
+  if (!r) return null;
+  db.prepare("DELETE FROM sessions WHERE refreshToken=?").run(refreshToken); // usage unique (rotation)
+  if (r.refreshExpiresAt && r.refreshExpiresAt <= now()) return null;
+  return createSession(r.userId);
 }
 function destroySession(token) { if (token) db.prepare("DELETE FROM sessions WHERE token=?").run(token); }
+function destroyUserSessions(userId) { if (userId) db.prepare("DELETE FROM sessions WHERE userId=?").run(userId); }
+function listSessions(userId) {
+  return db.prepare("SELECT token,createdAt,expiresAt FROM sessions WHERE userId=? ORDER BY createdAt DESC").all(userId)
+    .map((s) => ({ id: s.token.slice(0, 8), createdAt: s.createdAt, expiresAt: s.expiresAt, current: false }));
+}
+
+/* --------------------------------- OTP ----------------------------------- */
+// Codes à usage unique (vérification e-mail/téléphone, réinitialisation).
+function createOtp(kind, subject, userId) {
+  db.prepare("DELETE FROM otp WHERE kind=? AND subject=?").run(kind, String(subject || ""));
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  db.prepare("INSERT INTO otp (id,kind,subject,userId,code,expiresAt,createdAt) VALUES (?,?,?,?,?,?,?)")
+    .run(uid("otp"), kind, String(subject || ""), userId || null, code, now() + OTP_TTL, now());
+  return code;
+}
+function verifyOtp(kind, subject, code) {
+  const r = db.prepare("SELECT * FROM otp WHERE kind=? AND subject=?").get(kind, String(subject || ""));
+  if (!r || r.expiresAt <= now() || String(r.code) !== String(code || "")) return null;
+  db.prepare("DELETE FROM otp WHERE id=?").run(r.id);
+  return { userId: r.userId };
+}
+
+/* --------------------- Vérification & 2FA (comptes) ---------------------- */
+function setEmailVerified(userId) { db.prepare("UPDATE users SET emailVerified=1 WHERE id=?").run(userId); }
+function setPhoneVerified(userId) { db.prepare("UPDATE users SET phoneVerified=1 WHERE id=?").run(userId); }
+function setUserPassword(userId, password) {
+  const { passHash, passSalt } = hashPassword(password);
+  db.prepare("UPDATE users SET passHash=?,passSalt=? WHERE id=?").run(passHash, passSalt, userId);
+}
+function getUserByEmail(email) { return db.prepare("SELECT * FROM users WHERE email=?").get(String(email || "").trim().toLowerCase()) || null; }
+function getUserRaw(id) { return db.prepare("SELECT * FROM users WHERE id=?").get(id) || null; }
+function setTwofa(userId, secret, enabled) { db.prepare("UPDATE users SET twofaSecret=?,twofaEnabled=? WHERE id=?").run(secret, enabled ? 1 : 0, userId); }
 
 /* ------------------------------- Products -------------------------------- */
 function upsertProduct(p) {
@@ -529,7 +596,8 @@ module.exports = {
   init, available, uid, isSyncCollection, SYNC_COLLECTIONS,
   putDoc, getDoc, getAllDocs, listCollections, listDocs,
   createUser, authUser, getUser, publicUser,
-  createSession, userIdForToken, destroySession,
+  createSession, userIdForToken, refreshSession, destroySession, destroyUserSessions, listSessions,
+  createOtp, verifyOtp, setEmailVerified, setPhoneVerified, setUserPassword, getUserByEmail, getUserRaw, setTwofa,
   upsertProduct, listProducts, getProduct, countProducts,
   getCart, setCart,
   createOrder, getOrder, listOrders, setOrderStatus, refundOrder, stats,

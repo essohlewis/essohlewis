@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mot de passe oublié — Marché CI</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="/tailwind.css" />
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-lg mx-auto px-4 py-3 flex items-center gap-2">
+      <a href="/" class="flex items-center gap-2"><span class="text-2xl">🛒</span><span class="font-extrabold text-lg">Marché<span class="text-brand">CI</span></span></a>
+      <span class="ml-auto pill bg-accent-soft text-accent">Mot de passe</span>
+    </div>
+  </header>
+
+  <main class="max-w-lg mx-auto px-4 py-8">
+    <h1 class="text-2xl font-extrabold mb-1">🔑 Réinitialiser mon mot de passe</h1>
+    <p class="text-sm text-slate-500 mb-5">Recevez un code à usage unique, puis choisissez un nouveau mot de passe.</p>
+
+    <!-- Étape 1 : demande -->
+    <section id="step1" class="card">
+      <label class="text-sm font-semibold">Adresse e-mail du compte</label>
+      <input id="email" type="email" placeholder="vous@exemple.ci" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+      <button id="ask" class="btn btn-brand mt-3 w-full">Recevoir un code</button>
+      <p id="msg1" class="text-sm mt-2"></p>
+    </section>
+
+    <!-- Étape 2 : réinitialisation -->
+    <section id="step2" class="card hidden">
+      <p class="text-sm text-slate-600 mb-3">Saisissez le code reçu et votre nouveau mot de passe.</p>
+      <div class="space-y-2">
+        <input id="code" placeholder="Code à 6 chiffres" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+        <input id="pw" type="password" placeholder="Nouveau mot de passe (min. 6)" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+      </div>
+      <button id="reset" class="btn btn-brand mt-3 w-full">Réinitialiser</button>
+      <p id="msg2" class="text-sm mt-2"></p>
+    </section>
+
+    <a href="/" class="btn btn-ghost mt-5">← Retour à la marketplace</a>
+  </main>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const post = async (p, b) => { const r = await fetch("/api/shop" + p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }); return { s: r.status, j: await r.json().catch(() => ({})) }; };
+
+    $("#ask").addEventListener("click", async () => {
+      const email = $("#email").value.trim();
+      if (!email) { $("#msg1").className = "text-sm mt-2 text-red-600"; $("#msg1").textContent = "Saisissez votre e-mail."; return; }
+      const r = await post("/password/forgot", { email });
+      $("#step2").classList.remove("hidden");
+      $("#msg1").className = "text-sm mt-2 text-slate-500";
+      $("#msg1").textContent = r.j.simulated ? "Mode démo — votre code : " + r.j.devCode : "Si ce compte existe, un code a été envoyé.";
+      if (r.j.devCode) $("#code").value = r.j.devCode;
+    });
+
+    $("#reset").addEventListener("click", async () => {
+      const email = $("#email").value.trim();
+      const r = await post("/password/reset", { email, code: $("#code").value.trim(), password: $("#pw").value });
+      if (r.j.ok) { $("#msg2").className = "text-sm mt-2 text-accent"; $("#msg2").innerHTML = "✅ Mot de passe réinitialisé. <a href='/' class='underline'>Se connecter</a>."; }
+      else { $("#msg2").className = "text-sm mt-2 text-red-600"; $("#msg2").textContent = r.j.error || "Échec."; }
+    });
+  </script>
+</body>
+</html>
