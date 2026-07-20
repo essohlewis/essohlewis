@@ -505,14 +505,28 @@ function isSyncCollection(c) { return SYNC_COLLECTIONS.includes(c); }
 
 function putDoc(userId, collection, data) {
   if (!userId || !isSyncCollection(collection)) return { error: "cible invalide" };
+  const ts = now();
   db.prepare("INSERT INTO documents (collection,userId,data,updatedAt) VALUES (?,?,?,?) ON CONFLICT(collection,userId) DO UPDATE SET data=excluded.data,updatedAt=excluded.updatedAt")
-    .run(collection, userId, JSON.stringify(data == null ? null : data), now());
-  return { ok: true };
+    .run(collection, userId, JSON.stringify(data == null ? null : data), ts);
+  return { ok: true, updatedAt: ts };
 }
 function getDoc(userId, collection) {
   const r = db.prepare("SELECT data FROM documents WHERE collection=? AND userId=?").get(collection, userId);
   if (!r) return null;
   try { return JSON.parse(r.data); } catch (e) { return null; }
+}
+/** Horodatage de dernière écriture par collection, pour l'appareil { collection: updatedAt }. */
+function getDocsMeta(userId) {
+  const out = {};
+  for (const r of db.prepare("SELECT collection, updatedAt FROM documents WHERE userId=?").all(userId)) out[r.collection] = r.updatedAt;
+  return out;
+}
+/** Renvoie données + horodatage d'une collection (pour la synchro multi‑appareils). */
+function getDocWithMeta(userId, collection) {
+  const r = db.prepare("SELECT data, updatedAt FROM documents WHERE collection=? AND userId=?").get(collection, userId);
+  if (!r) return { data: null, updatedAt: 0 };
+  let data = null; try { data = JSON.parse(r.data); } catch (e) {}
+  return { data, updatedAt: r.updatedAt };
 }
 function getAllDocs(userId) {
   const out = {};
@@ -556,7 +570,7 @@ function restore(data) {
 
 module.exports = {
   init, available, uid, isSyncCollection, SYNC_COLLECTIONS, schemaVersion, backup, restore,
-  putDoc, getDoc, getAllDocs, listCollections, listDocs,
+  putDoc, getDoc, getAllDocs, getDocsMeta, getDocWithMeta, listCollections, listDocs,
   createUser, authUser, getUser, publicUser,
   createSession, userIdForToken, refreshSession, destroySession, destroyUserSessions, revokeSession, listSessions,
   createOtp, verifyOtp, setEmailVerified, setPhoneVerified, setUserPassword, getUserByEmail, getUserByPhone, getUserRaw, setTwofa, setRole,

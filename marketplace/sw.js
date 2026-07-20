@@ -5,7 +5,7 @@
    ouverture directe via file://, ils ne s'enregistrent pas (dégradation propre).
    ========================================================================= */
 
-const CACHE = "marchesci-v5";
+const CACHE = "marchesci-v6";
 const ASSETS = [
   "./",
   "./index.html",

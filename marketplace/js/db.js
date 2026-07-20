@@ -93,6 +93,16 @@ window.MP = window.MP || {};
     }
   }
 
+  /**
+   * Écrit sans déclencher le mirroring serveur. Utilisé quand on applique une
+   * mise à jour VENUE du serveur (synchro multi‑appareils) : évite de renvoyer
+   * aussitôt la valeur au serveur (boucle) tout en persistant localement.
+   */
+  function setSilent(key, value) {
+    try { localStorage.setItem(PREFIX + key, JSON.stringify(value)); return true; }
+    catch (e) { console.error("DB.setSilent échec pour", key, e); return false; }
+  }
+
   function remove(key) {
     localStorage.removeItem(PREFIX + key);
   }
@@ -148,6 +158,7 @@ window.MP = window.MP || {};
     KEYS,
     get,
     set,
+    setSilent,
     remove,
     reset,
     uid,

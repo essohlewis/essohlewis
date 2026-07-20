@@ -51,7 +51,14 @@ window.MP = window.MP || {};
         const j = await (await fetch(b + "/health", { cache: "no-store" })).json();
         API.enabled = !!(j && j.ok && j.db);
         API.productCount = (j && j.products) || 0;
-        if (API.enabled && token()) { try { await pullCollections(); } catch (e) {} }
+        if (API.enabled && token()) { try { await pullCollections(); await pullSynced(); } catch (e) {} }
+        // Synchro multi‑appareils : re-tirer favoris/souhaits au retour sur l'onglet.
+        if (API.enabled) {
+          let last = 0;
+          const refresh = () => { if (!token() || document.hidden) return; const t = Date.now(); if (t - last < 3000) return; last = t; pullSynced(); };
+          document.addEventListener("visibilitychange", refresh);
+          window.addEventListener("focus", refresh);
+        }
       } catch (e) { API.enabled = false; }
     })();
     return API.ready;
@@ -82,16 +89,16 @@ window.MP = window.MP || {};
   function syncRegister(user, password) {
     if (!API.enabled || !user || !password) return authOp;
     authOp = _register(user, password);
-    authOp.then(() => pullCollections());   // restaure les collections du compte
+    authOp.then(() => pullCollections()).then(() => pullSynced());   // restaure + synchro multi‑appareils
     return authOp;
   }
   function syncLogin(email, password) {
     if (!API.enabled) return authOp;
     authOp = _login(email, password);
-    authOp.then(() => pullCollections());
+    authOp.then(() => pullCollections()).then(() => pullSynced());
     return authOp;
   }
-  function logout() { if (API.enabled) { post("/logout", {}).catch(() => {}); } setToken(""); authOp = Promise.resolve(); }
+  function logout() { if (API.enabled) { post("/logout", {}).catch(() => {}); } setToken(""); authOp = Promise.resolve(); try { localStorage.removeItem(META_KEY); } catch (e) {} }
 
   /* --------------------------- Commandes (write-through) -------------------------- */
   async function syncOrders(orders) {
@@ -166,14 +173,47 @@ window.MP = window.MP || {};
   }
 
   /* --------------- Collections génériques (favoris, souhaits, coupons, …) --------- */
+  // Collections à VRAIE synchro multi‑appareils (dernier écrivain gagne, par
+  // horodatage serveur) : on tire la version distante plus récente à l'ouverture.
+  const MULTI_DEVICE = ["favorites", "wishlists"];
+  const META_KEY = "marchesci_syncMeta";
+  function syncMeta() { try { return JSON.parse(localStorage.getItem(META_KEY) || "{}"); } catch (e) { return {}; } }
+  function setSyncMeta(m) { try { localStorage.setItem(META_KEY, JSON.stringify(m)); } catch (e) {} }
+  function markSynced(collection, updatedAt) { if (!updatedAt) return; const m = syncMeta(); m[collection] = updatedAt; setSyncMeta(m); }
+
   // Mirroring d'une collection localStorage vers la base (par compte connecté).
   async function syncCollection(collection, value) {
     if (!API.enabled) return;
     try {
       await authOp;
       if (!token()) return;                 // réservé aux comptes connectés
-      await put("/data/" + encodeURIComponent(collection), { data: value });
+      const r = await put("/data/" + encodeURIComponent(collection), { data: value });
+      if (r && r.json && r.json.ok) markSynced(collection, r.json.updatedAt);
     } catch (e) {}
+  }
+
+  // Synchro multi‑appareils : pour favoris/souhaits, adopte la version serveur si
+  // elle est plus récente que la dernière connue localement (dernier écrivain
+  // gagne). Applique en « silencieux » (pas de renvoi) puis rafraîchit l'écran.
+  async function pullSynced(collections) {
+    if (!API.enabled || !token()) return false;
+    const DB = window.MP.DB; if (!DB) return false;
+    let changed = false;
+    try {
+      const j = await get("/data/meta");
+      const meta = (j && j.meta) || {};
+      const local = syncMeta();
+      for (const c of (collections || MULTI_DEVICE)) {
+        const remoteTs = meta[c] || 0;
+        if (remoteTs && remoteTs > (local[c] || 0)) {
+          const d = await get("/data/" + encodeURIComponent(c));
+          if (d && d.ok && d.data != null) { DB.setSilent(c, d.data); markSynced(c, d.updatedAt || remoteTs); changed = true; }
+        }
+      }
+    } catch (e) {}
+    // Rafraîchit la vue courante si des données ont changé (favoris, souhaits…).
+    if (changed && window.MP.Router && window.MP.Router.resolve) { try { window.MP.Router.resolve(); } catch (e) {} }
+    return changed;
   }
   // Restaure depuis la base les collections localement absentes (non destructif).
   // Appelé une fois la session établie (n'attend pas authOp, pour éviter tout blocage).
@@ -226,6 +266,7 @@ window.MP = window.MP || {};
   API.pendingPayments = pendingPayments;
   API.syncCollection = syncCollection;
   API.pullCollections = pullCollections;
+  API.pullSynced = pullSynced;
   API.reviewsFor = reviewsFor;
   API.products = products;      // fonction (le nombre est dans API.productCount)
   API.myOrders = myOrders;

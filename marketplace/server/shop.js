@@ -341,14 +341,18 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
   /* ------------------- Collections génériques (données client) ------------------- */
   // Mirroring des collections localStorage (favoris, souhaits, coupons, …) par compte.
   router.get("/data", auth, (req, res) => res.json({ ok: true, collections: shopdb.getAllDocs(req.userId) }));
+  // Horodatages par collection : l'appareil compare pour ne tirer que le plus récent.
+  // (Déclaré AVANT /data/:collection pour ne pas être capté comme une collection.)
+  router.get("/data/meta", auth, (req, res) => res.json({ ok: true, meta: shopdb.getDocsMeta(req.userId) }));
   router.get("/data/:collection", auth, (req, res) => {
     if (!shopdb.isSyncCollection(req.params.collection)) return res.status(400).json({ ok: false, error: "Collection inconnue." });
-    res.json({ ok: true, data: shopdb.getDoc(req.userId, req.params.collection) });
+    const d = shopdb.getDocWithMeta(req.userId, req.params.collection);
+    res.json({ ok: true, data: d.data, updatedAt: d.updatedAt });
   });
   router.put("/data/:collection", auth, (req, res) => {
     const r = shopdb.putDoc(req.userId, req.params.collection, (req.body || {}).data);
     if (r.error) return res.status(400).json({ ok: false, error: r.error });
-    res.json({ ok: true });
+    res.json({ ok: true, updatedAt: r.updatedAt });
   });
 
   /* ------------------------------- Admin ------------------------------- */
