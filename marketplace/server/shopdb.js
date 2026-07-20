@@ -447,6 +447,54 @@ function setPayoutStatus(id, status) {
   return db.prepare("SELECT * FROM payouts WHERE id=?").get(id);
 }
 
+/* -------------------- Réconciliation & journal comptable ----------------- */
+// Journal unifié des mouvements financiers (paiements, remboursements, versements).
+function transactions({ limit } = {}) {
+  const lim = Math.min(parseInt(limit, 10) || 1000, 5000);
+  const pays = db.prepare("SELECT p.*, o.customerName, o.note FROM payments p LEFT JOIN orders o ON o.id=p.orderId").all();
+  const pos = db.prepare("SELECT po.*, s.name storeName FROM payouts po LEFT JOIN stores s ON s.id=po.storeId").all();
+  const rows = [];
+  for (const p of pays) {
+    if (p.status === "cod") continue; // encaissement à la livraison, pas un flux en ligne
+    const refunded = p.status === "refunded";
+    rows.push({
+      at: p.updatedAt || p.createdAt, kind: refunded ? "refund" : "payment",
+      label: refunded ? "Remboursement" : "Paiement en ligne", ref: p.reference || p.id,
+      party: p.customerName || "Client", method: p.method, amount: p.amount,
+      direction: refunded ? "out" : "in", status: p.status,
+    });
+  }
+  for (const po of pos) {
+    rows.push({
+      at: po.updatedAt || po.createdAt, kind: "payout", label: "Versement vendeur",
+      ref: po.id, party: po.storeName || po.storeId, method: po.method, amount: po.amount,
+      direction: "out", status: po.status,
+    });
+  }
+  rows.sort((a, b) => b.at - a.at);
+  return rows.slice(0, lim);
+}
+// Synthèse de réconciliation (soldes plateforme / vendeurs).
+function reconciliation() {
+  const rate = COMMISSION_RATE;
+  let escrow = 0, available = 0, paidOut = 0, held = 0, commission = 0, deliveredNet = 0;
+  for (const s of listStores({})) {
+    const w = vendorWallet(s.id);
+    escrow += w.escrow; available += w.available; paidOut += w.paidOut; held += w.held; commission += w.commission; deliveredNet += w.deliveredNet;
+  }
+  const onlinePaid = db.prepare("SELECT COALESCE(SUM(amount),0) s FROM payments WHERE status='paid'").get().s;
+  const refunded = db.prepare("SELECT COALESCE(SUM(amount),0) s FROM payments WHERE status='refunded'").get().s;
+  const codDelivered = db.prepare("SELECT COALESCE(SUM(total),0) s FROM orders WHERE status='delivered' AND paymentMethod='cod'").get().s;
+  const dueToVendors = available + held; // net dû aux vendeurs, non encore versé
+  return {
+    commissionRate: rate,
+    onlinePaid, refunded, codDelivered,
+    commission, escrow, deliveredNet, paidOut, dueToVendors, available, held,
+    // Contrôle : le net vendeur livré doit égaler (versé + à reverser).
+    balanced: deliveredNet === paidOut + dueToVendors,
+  };
+}
+
 /* ---------- Collections génériques (favoris, souhaits, coupons, …) -------- */
 // Collections autorisées au mirroring (une par ligne, propre à chaque compte).
 const SYNC_COLLECTIONS = ["favorites", "subs", "wishlists", "notifs", "messages", "coupons", "questions", "alerts", "stores", "expenses", "reports"];
@@ -489,4 +537,5 @@ module.exports = {
   upsertStore, getStoreById, getStoreByOwner, listStores, setStoreStatus, vendorSales,
   createPayment, getPayment, paymentsForOrder, listPayments, setPaymentStatus,
   vendorWallet, createPayout, listPayouts, setPayoutStatus, COMMISSION_RATE,
+  transactions, reconciliation,
 };

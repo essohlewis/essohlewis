@@ -217,6 +217,8 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
     res.json({ ok: true, store: s });
   });
   router.get("/admin/payments", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.listPayments({ status: req.query.status }) }));
+  // Journal comptable unifié + synthèse de réconciliation.
+  router.get("/admin/transactions", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.transactions({ limit: req.query.limit }), reconciliation: shopdb.reconciliation() }));
   router.get("/admin/payouts", requireAdmin, (req, res) => {
     const items = shopdb.listPayouts({ status: req.query.status });
     const byStore = {};

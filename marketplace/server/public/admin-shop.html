@@ -33,7 +33,7 @@
           <button data-t="orders" class="btn btn-brand !py-1.5 !px-4">Commandes</button>
           <button data-t="catalog" class="btn btn-ghost !py-1.5 !px-4">Catalogue</button>
           <button data-t="stores" class="btn btn-ghost !py-1.5 !px-4">Boutiques</button>
-          <button data-t="payments" class="btn btn-ghost !py-1.5 !px-4">Paiements</button>
+          <button data-t="payments" class="btn btn-ghost !py-1.5 !px-4">Finances</button>
           <button data-t="payouts" class="btn btn-ghost !py-1.5 !px-4">Retraits</button>
           <button data-t="reviews" class="btn btn-ghost !py-1.5 !px-4">Avis</button>
           <button data-t="data" class="btn btn-ghost !py-1.5 !px-4">Données</button>
@@ -71,10 +71,20 @@
         <div id="catalog" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
       </section>
 
-      <!-- Paiements -->
+      <!-- Finances (réconciliation + journal) -->
       <section id="pane-payments" class="hidden">
-        <div id="payments" class="space-y-2"></div>
-        <p id="payEmpty" class="text-center text-slate-400 py-10 hidden">Aucun paiement enregistré.</p>
+        <div id="recon" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3"></div>
+        <div id="reconBalance" class="mb-4"></div>
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="font-bold">Journal des transactions</h2>
+          <button id="csvBtn" class="btn btn-ghost !py-1.5 !px-4 text-sm">⬇️ Export CSV</button>
+        </div>
+        <div class="overflow-x-auto"><table class="w-full text-sm min-w-[560px]">
+          <thead><tr class="text-left text-xs text-slate-400 uppercase tracking-wide border-b border-slate-200">
+            <th class="py-2">Date</th><th class="py-2">Type</th><th class="py-2">Référence</th><th class="py-2">Partie</th><th class="py-2 text-right">Montant</th><th class="py-2">Statut</th></tr></thead>
+          <tbody id="payments"></tbody>
+        </table></div>
+        <p id="payEmpty" class="text-center text-slate-400 py-10 hidden">Aucune transaction enregistrée.</p>
       </section>
 
       <!-- Retraits vendeurs -->
@@ -149,19 +159,52 @@
       await fetch("/api/shop/admin/payouts/" + id + "/status", { method: "POST", headers: Object.assign({ "Content-Type": "application/json" }, H()), body: JSON.stringify({ status }) });
       loadPayouts(); loadStats();
     }
-    const PAY_METHOD = { cod: "💵 Livraison", orange: "🟠 Orange Money", mtn: "🟡 MTN MoMo", moov: "🔵 Moov Money", wave: "🌊 Wave", card: "💳 Carte" };
-    const PAY_ST = { pending: ["En attente", "bg-amber-100 text-amber-700"], paid: ["Payé", "bg-accent-soft text-accent"], failed: ["Échoué", "bg-red-100 text-red-700"], cod: ["Livraison", "bg-slate-200 text-slate-600"] };
+    const TX_ST = { pending: ["En attente", "bg-amber-100 text-amber-700"], paid: ["Payé", "bg-accent-soft text-accent"], failed: ["Échoué", "bg-red-100 text-red-700"], refunded: ["Remboursé", "bg-red-100 text-red-700"], requested: ["Demandé", "bg-amber-100 text-amber-700"], rejected: ["Refusé", "bg-slate-200 text-slate-600"] };
+    const TX_METHOD = { orange: "Orange Money", mtn: "MTN MoMo", moov: "Moov Money", wave: "Wave", card: "Carte", bank: "Virement", mobile: "Mobile", cod: "Livraison" };
+    const TX_ICON = { payment: "⬇️", refund: "↩️", payout: "⬆️" };
+    let TX = [];
     async function loadPayments() {
-      const j = await (await fetch("/api/shop/admin/payments", { headers: H() })).json();
-      const items = j.items || [];
-      $("#payEmpty").classList.toggle("hidden", items.length > 0);
-      $("#payments").innerHTML = items.map((p) => {
-        const st = PAY_ST[p.status] || [p.status, "bg-slate-200 text-slate-600"];
-        return `<div class="card !py-3 flex items-center justify-between flex-wrap gap-2">
-          <div><div class="font-semibold">${PAY_METHOD[p.method] || p.method} <span class="pill ${st[1]}">${st[0]}</span></div>
-            <div class="text-xs text-slate-500">${p.reference || ""}${p.phone ? " · " + p.phone : ""} · ${new Date(p.createdAt).toLocaleString("fr-FR")}</div></div>
-          <div class="font-extrabold">${fcfa(p.amount)}</div></div>`;
+      const j = await (await fetch("/api/shop/admin/transactions", { headers: H() })).json();
+      TX = j.items || [];
+      const r = j.reconciliation || {};
+      const tile = (icon, label, val, cls) => `<div class="card !p-4"><div class="text-xl">${icon}</div><div class="text-lg font-extrabold mt-1 ${cls || ""}">${fcfa(val)}</div><div class="text-xs text-slate-500">${label}</div></div>`;
+      $("#recon").innerHTML =
+        tile("⬇️", "Encaissé en ligne", r.onlinePaid, "text-accent") +
+        tile("↩️", "Remboursé", r.refunded, "text-red-600") +
+        tile("💵", "COD livré", r.codDelivered) +
+        tile("🏦", "Commission (" + Math.round((r.commissionRate || 0) * 100) + "%)", r.commission, "text-brand") +
+        tile("🔒", "En escrow", r.escrow, "text-slate-600") +
+        tile("💼", "Dû aux vendeurs", r.dueToVendors, "text-amber-600") +
+        tile("⬆️", "Versé aux vendeurs", r.paidOut) +
+        tile("📦", "Net vendeur livré", r.deliveredNet);
+      $("#reconBalance").innerHTML = r.balanced
+        ? `<div class="rounded-lg bg-accent-soft text-accent text-sm p-2.5">✅ Comptes équilibrés : net vendeur livré (${fcfa(r.deliveredNet)}) = versé (${fcfa(r.paidOut)}) + dû (${fcfa(r.dueToVendors)}).</div>`
+        : `<div class="rounded-lg bg-red-100 text-red-700 text-sm p-2.5">⚠️ Écart de réconciliation détecté.</div>`;
+      $("#payEmpty").classList.toggle("hidden", TX.length > 0);
+      $("#payments").innerHTML = TX.map((t) => {
+        const st = TX_ST[t.status] || [t.status, "bg-slate-200 text-slate-600"];
+        const sign = t.direction === "out" ? "−" : "+";
+        const cls = t.direction === "out" ? "text-red-600" : "text-accent";
+        return `<tr class="border-b border-slate-100">
+          <td class="py-2 whitespace-nowrap text-slate-500">${new Date(t.at).toLocaleString("fr-FR")}</td>
+          <td class="py-2">${TX_ICON[t.kind] || ""} ${t.label}</td>
+          <td class="py-2 font-mono text-xs">${t.ref}</td>
+          <td class="py-2">${t.party}<div class="text-xs text-slate-400">${TX_METHOD[t.method] || t.method}</div></td>
+          <td class="py-2 text-right font-extrabold ${cls}">${sign}${fcfa(t.amount)}</td>
+          <td class="py-2"><span class="pill ${st[1]}">${st[0]}</span></td></tr>`;
       }).join("");
+    }
+    function exportCSV() {
+      const head = ["Date", "Type", "Reference", "Partie", "Methode", "Sens", "Montant", "Statut"];
+      const esc = (v) => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`;
+      const lines = [head.join(",")].concat(TX.map((t) => [
+        new Date(t.at).toISOString(), t.label, t.ref, t.party, TX_METHOD[t.method] || t.method,
+        t.direction === "out" ? "sortie" : "entree", t.amount, t.status,
+      ].map(esc).join(",")));
+      const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = "transactions-marche-ci.csv"; a.click();
+      URL.revokeObjectURL(a.href);
     }
     const ST_STORE = { pending: ["⏳ En attente", "bg-amber-100 text-amber-700"], approved: ["✅ Approuvée", "bg-accent-soft text-accent"], suspended: ["⛔ Suspendue", "bg-red-100 text-red-700"] };
     async function loadStores() {
@@ -315,6 +358,7 @@
     $("#login").addEventListener("click", login);
     $("#token").addEventListener("keydown", (e) => { if (e.key === "Enter") login(); });
     $("#refresh").addEventListener("click", loadAll);
+    $("#csvBtn").addEventListener("click", exportCSV);
     $("#np_add").addEventListener("click", addProduct);
     document.querySelectorAll("#tabs [data-t]").forEach((b) => b.addEventListener("click", () => switchTab(b.dataset.t)));
     document.querySelectorAll("#ofilters [data-f]").forEach((b) => b.addEventListener("click", () => {
