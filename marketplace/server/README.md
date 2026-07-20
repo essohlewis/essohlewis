@@ -118,6 +118,15 @@ client : `/paiement`. **Production** : renseignez `CINETPAY_API_KEY` (ou
   (le code est renvoyé dans la réponse `devCode`). Production : définir
   `EMAIL_PROVIDER`/`SMS_PROVIDER` et brancher l'envoi réel.
 - Page compte : `/securite` (vérification, mot de passe, 2FA, sessions).
+- **Rôles (RBAC)** : `client` / `vendeur` / `admin` appliqués par endpoint
+  (`requireRole`). Devenir vendeur = créer une boutique ; admin = jeton
+  d'administration **ou** compte de rôle admin (liste `ADMIN_EMAILS`).
+- **Sessions multi‑appareils** : `GET /sessions`, révocation d'un appareil
+  précis (`POST /sessions/:id/revoke`) et globale (`/logout-all`).
+- **Connexion par OTP téléphone** : `POST /login/otp/request` + `/verify`
+  (SMS simulé — adapté au marché ivoirien).
+- **Connexion biométrique** : `POST /api/shop/login/face` compare un selfie au
+  visage KYC de référence du compte (nécessite la reconnaissance faciale).
 
 ### Escrow, commission & retraits vendeurs
 La part vendeur d'une commande est **séquestrée** (escrow) tant que la commande

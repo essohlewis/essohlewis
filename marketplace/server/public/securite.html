@@ -111,9 +111,14 @@
     }
     async function loadSessions() {
       const j = await get("/sessions");
-      $("#sessions").innerHTML = (j.sessions || []).map((s) => `<div class="flex justify-between border-b border-slate-100 py-1.5">
-        <span>Session ${s.id}… ${s.current ? '<span class="pill bg-accent-soft text-accent">actuelle</span>' : ""}</span>
-        <span class="text-slate-400">${new Date(s.createdAt).toLocaleString("fr-FR")}</span></div>`).join("") || '<div class="text-slate-400">Aucune session.</div>';
+      $("#sessions").innerHTML = (j.sessions || []).map((s) => `<div class="flex items-center justify-between border-b border-slate-100 py-1.5">
+        <span>Appareil ${s.id}… ${s.current ? '<span class="pill bg-accent-soft text-accent">actuel</span>' : ""}</span>
+        <span class="flex items-center gap-2"><span class="text-slate-400 text-xs">${new Date(s.createdAt).toLocaleString("fr-FR")}</span>
+          ${s.current ? "" : `<button class="pill bg-red-100 text-red-700 hover:bg-red-200" data-revoke="${s.id}">Déconnecter</button>`}</span></div>`).join("") || '<div class="text-slate-400">Aucune session.</div>';
+      $("#sessions").querySelectorAll("[data-revoke]").forEach((b) => b.addEventListener("click", async () => {
+        await post("/sessions/" + b.dataset.revoke + "/revoke", {});
+        loadSessions();
+      }));
     }
 
     // Vérification e-mail

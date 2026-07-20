@@ -30,16 +30,33 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
     if (h.startsWith("Bearer ")) return h.slice(7).trim();
     return req.get("X-Shop-Token") || req.query.stoken || null;
   }
+  // Comptes promus administrateurs (liste d'e-mails, séparés par des virgules).
+  const ADMIN_EMAILS = new Set((process.env.ADMIN_EMAILS || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean));
+  const roleOf = (userId) => { const u = userId && shopdb.getUserRaw(userId); return u ? u.role : null; };
+
   function auth(req, res, next) {
     req.userId = shopdb.userIdForToken(readToken(req));
     if (!req.userId) return res.status(401).json({ ok: false, error: "Connexion requise." });
     next();
   }
   function maybeAuth(req, res, next) { req.userId = shopdb.userIdForToken(readToken(req)); next(); }
+  // Contrôle d'accès par rôle : client / vendeur / admin.
+  function requireRole(...roles) {
+    return (req, res, next) => {
+      req.userId = shopdb.userIdForToken(readToken(req));
+      if (!req.userId) return res.status(401).json({ ok: false, error: "Connexion requise." });
+      const role = roleOf(req.userId);
+      if (role === "admin" || roles.includes(role)) { req.userRole = role; return next(); }
+      return res.status(403).json({ ok: false, error: "Accès réservé au rôle : " + roles.join(" / ") + "." });
+    };
+  }
+  // Admin : soit le jeton d'administration, soit un compte de rôle « admin ».
   function requireAdmin(req, res, next) {
     const tok = req.get("X-Admin-Token") || req.query.token;
-    if (tok !== adminToken) return res.status(401).json({ ok: false, error: "Accès administrateur requis." });
-    next();
+    if (tok === adminToken) return next();
+    const uid = shopdb.userIdForToken(readToken(req));
+    if (uid && roleOf(uid) === "admin") { req.userId = uid; return next(); }
+    return res.status(401).json({ ok: false, error: "Accès administrateur requis." });
   }
 
   router.get("/health", (req, res) => res.json({ ok: true, service: "shop", db: shopdb.available(), products: shopdb.countProducts() }));
@@ -49,6 +66,7 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
     const { name, email, phone, password } = req.body || {};
     const r = shopdb.createUser({ name, email, phone, password });
     if (r.error) return res.status(400).json({ ok: false, error: r.error });
+    if (ADMIN_EMAILS.has(r.user.email)) { shopdb.setRole(r.user.id, "admin"); r.user.role = "admin"; } // promotion admin
     const sess = shopdb.createSession(r.user.id);
     const code = shopdb.createOtp("verify_email", r.user.email, r.user.id);
     res.json({ ok: true, token: sess.token, refreshToken: sess.refreshToken, expiresAt: sess.expiresAt, user: r.user, emailVerification: delivery(code) });
@@ -81,6 +99,30 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
   router.get("/sessions", auth, (req, res) => {
     const cur = readToken(req);
     res.json({ ok: true, sessions: shopdb.listSessions(req.userId).map((s) => Object.assign(s, { current: !!(cur && cur.slice(0, 8) === s.id) })) });
+  });
+  // Déconnexion à distance d'un appareil précis.
+  router.post("/sessions/:id/revoke", auth, (req, res) => {
+    const okRevoke = shopdb.revokeSession(req.userId, req.params.id);
+    if (!okRevoke) return res.status(404).json({ ok: false, error: "Session introuvable." });
+    res.json({ ok: true });
+  });
+
+  /* ------------------------ Connexion par OTP téléphone --------------------- */
+  router.post("/login/otp/request", (req, res) => {
+    const phone = String((req.body || {}).phone || "").replace(/\s+/g, "");
+    const u = shopdb.getUserByPhone(phone);
+    if (!u) return res.json({ ok: true, sent: true, simulated: !NOTIFY }); // anti-énumération
+    res.json({ ok: true, ...delivery(shopdb.createOtp("login_phone", phone, u.id)) });
+  });
+  router.post("/login/otp/verify", (req, res) => {
+    const phone = String((req.body || {}).phone || "").replace(/\s+/g, "");
+    const v = shopdb.verifyOtp("login_phone", phone, (req.body || {}).code);
+    if (!v) return res.status(401).json({ ok: false, error: "Code invalide ou expiré." });
+    const u = shopdb.getUserByPhone(phone);
+    if (!u) return res.status(401).json({ ok: false, error: "Compte introuvable." });
+    if (!u.phoneVerified) { shopdb.setPhoneVerified(u.id); u.phoneVerified = 1; } // connexion OTP → téléphone vérifié
+    const sess = shopdb.createSession(u.id);
+    res.json({ ok: true, token: sess.token, refreshToken: sess.refreshToken, expiresAt: sess.expiresAt, user: shopdb.publicUser(u) });
   });
   router.get("/me", auth, (req, res) => res.json({ ok: true, user: shopdb.getUser(req.userId) }));
 
@@ -261,6 +303,7 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
   router.post("/stores", auth, (req, res) => {
     const r = shopdb.upsertStore(req.userId, req.body || {});
     if (r.error) return res.status(400).json({ ok: false, error: r.error });
+    if (roleOf(req.userId) === "client") shopdb.setRole(req.userId, "vendor"); // devient vendeur
     res.json({ ok: true, store: r.store });
   });
 
@@ -278,8 +321,8 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
     if (!s) return res.json({ ok: true, store: null, wallet: null, payouts: [] });
     res.json({ ok: true, store: decorate(s), wallet: shopdb.vendorWallet(s.id), payouts: shopdb.listPayouts({ storeId: s.id }) });
   });
-  // Demande de retrait (débitée du solde disponible).
-  router.post("/vendor/payouts", auth, (req, res) => {
+  // Demande de retrait (débitée du solde disponible) — réservée aux vendeurs.
+  router.post("/vendor/payouts", requireRole("vendor"), (req, res) => {
     const s = shopdb.getStoreByOwner(req.userId);
     if (!s) return res.status(400).json({ ok: false, error: "Aucune boutique." });
     const b = req.body || {};

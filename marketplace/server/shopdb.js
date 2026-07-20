@@ -184,6 +184,12 @@ function refreshSession(refreshToken) {
 }
 function destroySession(token) { if (token) db.prepare("DELETE FROM sessions WHERE token=?").run(token); }
 function destroyUserSessions(userId) { if (userId) db.prepare("DELETE FROM sessions WHERE userId=?").run(userId); }
+// Révoque une session précise (par son identifiant court) appartenant à l'utilisateur.
+function revokeSession(userId, sessionId) {
+  if (!userId || !sessionId) return false;
+  const r = db.prepare("DELETE FROM sessions WHERE userId=? AND substr(token,1,8)=?").run(userId, String(sessionId));
+  return r.changes > 0;
+}
 function listSessions(userId) {
   return db.prepare("SELECT token,createdAt,expiresAt FROM sessions WHERE userId=? ORDER BY createdAt DESC").all(userId)
     .map((s) => ({ id: s.token.slice(0, 8), createdAt: s.createdAt, expiresAt: s.expiresAt, current: false }));
@@ -213,7 +219,13 @@ function setUserPassword(userId, password) {
   db.prepare("UPDATE users SET passHash=?,passSalt=? WHERE id=?").run(passHash, passSalt, userId);
 }
 function getUserByEmail(email) { return db.prepare("SELECT * FROM users WHERE email=?").get(String(email || "").trim().toLowerCase()) || null; }
+function getUserByPhone(phone) {
+  const p = String(phone || "").replace(/\s+/g, "");
+  if (!p) return null;
+  return db.prepare("SELECT * FROM users WHERE phone=?").get(p) || db.prepare("SELECT * FROM users WHERE replace(phone,' ','')=?").get(p) || null;
+}
 function getUserRaw(id) { return db.prepare("SELECT * FROM users WHERE id=?").get(id) || null; }
+function setRole(userId, role) { if (["client", "vendor", "admin"].includes(role)) db.prepare("UPDATE users SET role=? WHERE id=?").run(role, userId); }
 function setTwofa(userId, secret, enabled) { db.prepare("UPDATE users SET twofaSecret=?,twofaEnabled=? WHERE id=?").run(secret, enabled ? 1 : 0, userId); }
 
 /* ------------------------------- Products -------------------------------- */
@@ -596,8 +608,8 @@ module.exports = {
   init, available, uid, isSyncCollection, SYNC_COLLECTIONS,
   putDoc, getDoc, getAllDocs, listCollections, listDocs,
   createUser, authUser, getUser, publicUser,
-  createSession, userIdForToken, refreshSession, destroySession, destroyUserSessions, listSessions,
-  createOtp, verifyOtp, setEmailVerified, setPhoneVerified, setUserPassword, getUserByEmail, getUserRaw, setTwofa,
+  createSession, userIdForToken, refreshSession, destroySession, destroyUserSessions, revokeSession, listSessions,
+  createOtp, verifyOtp, setEmailVerified, setPhoneVerified, setUserPassword, getUserByEmail, getUserByPhone, getUserRaw, setTwofa, setRole,
   upsertProduct, listProducts, getProduct, countProducts,
   getCart, setCart,
   createOrder, getOrder, listOrders, setOrderStatus, refundOrder, stats,

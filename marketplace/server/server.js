@@ -66,7 +66,28 @@ function kycStatusForStore(storeId) {
     return rows[0] ? rows[0].status : "none"; // pending | approved | rejected | none
   } catch (e) { return "none"; }
 }
-if (SHOP_AVAILABLE) app.use("/api/shop", createShopRouter(shopdb, ADMIN_TOKEN, { kycStatusForStore }));
+if (SHOP_AVAILABLE) {
+  // Connexion biométrique : compare un selfie au visage de référence KYC du compte.
+  app.post("/api/shop/login/face", async (req, res) => {
+    const b = req.body || {};
+    if (!FACE_AVAILABLE) return res.status(400).json({ ok: false, error: "Reconnaissance faciale indisponible sur ce serveur." });
+    const u = shopdb.getUserByEmail(b.email);
+    if (!u || !b.selfie) return res.status(401).json({ ok: false, error: "Identifiants incorrects." });
+    const store = shopdb.getStoreByOwner(u.id);
+    const kyc = store && db.all().filter((r) => r.storeId === store.id && r.status === "approved").sort((a, c) => c.createdAt - a.createdAt)[0];
+    if (!kyc || !kyc.selfieFile) return res.status(400).json({ ok: false, error: "Aucun visage de référence vérifié pour ce compte." });
+    let ref;
+    try { ref = "data:image/jpeg;base64," + fs.readFileSync(db.imagePath(kyc.selfieFile)).toString("base64"); }
+    catch (e) { return res.status(400).json({ ok: false, error: "Référence indisponible." }); }
+    let cmp;
+    try { cmp = await face.compare(ref, b.selfie); } catch (e) { cmp = { available: false }; }
+    if (!cmp.available) return res.status(400).json({ ok: false, error: "Comparaison indisponible." });
+    if (!cmp.match) return res.status(401).json({ ok: false, error: "Visage non reconnu.", score: cmp.score });
+    const sess = shopdb.createSession(u.id);
+    res.json({ ok: true, token: sess.token, refreshToken: sess.refreshToken, expiresAt: sess.expiresAt, user: shopdb.publicUser(u), score: cmp.score });
+  });
+  app.use("/api/shop", createShopRouter(shopdb, ADMIN_TOKEN, { kycStatusForStore }));
+}
 
 function requireAdmin(req, res, next) {
   const tok = req.get("X-Admin-Token") || req.query.token;
