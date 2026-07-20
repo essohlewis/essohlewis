@@ -132,6 +132,14 @@ function build({ version = "1.0.0", baseUrl = "/api/v1" } = {}) {
       "/shop/products/{id}": {
         get: op("Catalogue", "Détail d'un produit", { security: [], parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }] }),
       },
+      "/shop/products/{id}/related": {
+        get: op("Catalogue", "Produits liés (souvent achetés ensemble + même catégorie)", {
+          security: [], parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        }),
+      },
+      "/shop/recommendations": {
+        get: op("Catalogue", "Recommandations (personnalisées si connecté, sinon populaires)", { security: [] }),
+      },
       "/shop/reviews": {
         get: op("Catalogue", "Avis (paginés) d'une cible + note moyenne", {
           security: [],

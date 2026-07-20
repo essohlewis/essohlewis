@@ -214,10 +214,23 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
     const { q, category, storeId } = req.query;
     res.json({ ok: true, q: q || "", ...page(req, shopdb.searchProducts(q, { category, storeId, limit: 500 })) });
   });
+  // Recommandations personnalisées (catégories déjà achetées ; repli populaires).
+  router.get("/recommendations", maybeAuth, (req, res) => res.json({ ok: true, items: shopdb.recommendFor(req.userId, req.query.limit) }));
   router.get("/products/:id", (req, res) => {
     const p = shopdb.getProduct(req.params.id);
     if (!p) return res.status(404).json({ ok: false, error: "Produit introuvable." });
     res.json({ ok: true, product: p });
+  });
+  // Produits liés : « souvent achetés ensemble » + repli même catégorie.
+  router.get("/products/:id/related", (req, res) => {
+    const limit = Math.min(parseInt(req.query.limit, 10) || 4, 20);
+    let items = shopdb.boughtTogether(req.params.id, limit);
+    if (items.length < limit) {
+      const p = shopdb.getProduct(req.params.id);
+      const seen = new Set([req.params.id, ...items.map((x) => x.id)]);
+      if (p) for (const c of shopdb.listProducts({ category: p.category, limit: 50 })) { if (!seen.has(c.id)) { items.push(c); seen.add(c.id); } if (items.length >= limit) break; }
+    }
+    res.json({ ok: true, items });
   });
   // Ajout / mise à jour d'un produit (admin — sert aussi à alimenter le catalogue).
   router.post("/products", requireAdmin, (req, res) => {

@@ -1176,7 +1176,7 @@
             : `<button class="btn btn-ghost btn-block mt-8" id="posterBtn">🖼️ Générer une affiche promotionnelle</button>`}
         </div>
       </div>
-      ${(() => { const bt = Products.boughtTogether(p.id, 4); return bt.length ? `<div class="section-title">🧩 Souvent achetés ensemble</div><div class="scroll-row">${bt.map(productCard).join("")}</div>` : ""; })()}
+      <div id="boughtTogether">${(() => { const bt = Products.boughtTogether(p.id, 4); return bt.length ? `<div class="section-title">🧩 Souvent achetés ensemble</div><div class="scroll-row">${bt.map(productCard).join("")}</div>` : ""; })()}</div>
       <div class="section-title">💬 Questions & réponses</div>
       <div class="card card-pad" id="qnaBox">${qnaHTML(p, isOwner)}</div>
       <div class="section-title">Avis & notes</div>
@@ -1350,6 +1350,7 @@
 
     wireReviews(p.id, "product", store.ownerId);
     enhanceReviews(p.id, "product");
+    enhanceRelated(p.id);
   }
 
   /* ============================================================
@@ -1601,6 +1602,26 @@
     // Met à jour la pastille de note en haut de la fiche produit.
     const badge = document.getElementById("pdRatingBadge");
     if (badge) badge.innerHTML = UI.starsHTML(avg) + `<span class="text-muted" style="font-size:13px">(${count} avis en ligne)</span>`;
+  }
+
+  /**
+   * « Souvent achetés ensemble » depuis le serveur : co-achats réels
+   * (toutes commandes) + repli même catégorie. Remplace le bloc local si des
+   * produits sont trouvés. Sans backend, conserve le calcul local.
+   */
+  async function enhanceRelated(productId) {
+    if (!window.MP.Api || !window.MP.Api.relatedProducts) return;
+    try { await window.MP.Api.ready; } catch (e) {}
+    if (!window.MP.Api.enabled) return;
+    const box = document.getElementById("boughtTogether");
+    if (!box) return;
+    let ids;
+    try { ids = await window.MP.Api.relatedProducts(productId, 6); } catch (e) { return; }
+    if (!ids || !ids.length) return;
+    const pubIds = new Set(Products.published().map((p) => p.id));
+    const prods = ids.map((id) => Products.get(id)).filter((p) => p && pubIds.has(p.id) && p.id !== productId);
+    if (!prods.length) return;
+    box.innerHTML = `<div class="section-title">🧩 Souvent achetés ensemble</div><div class="scroll-row">${prods.map(productCard).join("")}</div>`;
   }
 
   function wireReviews(targetId, targetType, ownerId) {

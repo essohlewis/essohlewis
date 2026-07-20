@@ -255,6 +255,15 @@ window.MP = window.MP || {};
       return j && j.ok ? (j.items || []).map((p) => p.id) : null;
     } catch (e) { return null; }
   }
+  // Recommandations : identifiants de produits (ou null si indisponible).
+  async function relatedProducts(id, limit) {
+    if (!API.enabled || !id) return null;
+    try { const j = await get("/products/" + encodeURIComponent(id) + "/related?limit=" + (limit || 4)); return j && j.ok ? (j.items || []).map((p) => p.id) : null; } catch (e) { return null; }
+  }
+  async function recommendations(limit) {
+    if (!API.enabled) return null;
+    try { const j = await get("/recommendations?limit=" + (limit || 8)); return j && j.ok ? (j.items || []).map((p) => p.id) : null; } catch (e) { return null; }
+  }
   async function myOrders() {
     if (!API.enabled || !token()) return [];
     const j = await get("/orders");
@@ -299,6 +308,8 @@ window.MP = window.MP || {};
   API.reviewsFor = reviewsFor;
   API.products = products;      // fonction (le nombre est dans API.productCount)
   API.searchProducts = searchProducts;
+  API.relatedProducts = relatedProducts;
+  API.recommendations = recommendations;
   API.myOrders = myOrders;
   API.loyalty = loyalty;
   API.questionsFor = questionsFor;

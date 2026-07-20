@@ -184,6 +184,16 @@ dans l'onglet **Retraits**. Endpoints : `GET /vendor/wallet`,
   jamais de pile, mais le support relie le ticket au log par l'identifiant.
   Variables : `LOG_LEVEL` (défaut `info`), `LOG_FORMAT` (`json`/`pretty`).
 
+### Recommandations personnalisées (domaine D)
+Calculées à partir des **vraies commandes** (table `order_items`) :
+- `GET /products/:id/related` — « souvent achetés ensemble » par **co-occurrence**
+  dans les mêmes commandes (toutes clientèles), avec **repli même catégorie**.
+- `GET /recommendations` — **personnalisées** si connecté (produits populaires
+  des **catégories déjà achetées**, hors articles déjà commandés), sinon
+  **populaires** (par quantité vendue).
+- **Front** : le bloc « Souvent achetés ensemble » de la fiche produit utilise le
+  co‑achat serveur quand présent (repli calcul local sinon).
+
 ### Recherche plein texte serveur (domaine D)
 `GET /products/search?q=` — recherche **pondérée par pertinence** (nom >
 catégorie > boutique > description), **insensible aux accents/casse** et

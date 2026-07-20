@@ -180,6 +180,53 @@ function listProducts({ category, q, storeId, limit } = {}) {
   return db.prepare(sql).all(args);
 }
 
+/* ------------------------- Recommandations ------------------------------- */
+// Produits populaires (par quantité vendue), actifs uniquement.
+function popularProducts(limit, excludeIds) {
+  const excl = new Set(excludeIds || []);
+  const rows = db.prepare(`
+    SELECT p.*, COALESCE(SUM(oi.qty),0) sold
+    FROM products p LEFT JOIN order_items oi ON oi.productId = p.id
+    WHERE p.active = 1 GROUP BY p.id ORDER BY sold DESC, p.createdAt DESC LIMIT 100`).all();
+  return rows.filter((p) => !excl.has(p.id)).slice(0, Math.min(parseInt(limit, 10) || 8, 50));
+}
+/** « Souvent achetés ensemble » : co-occurrence dans les mêmes commandes. */
+function boughtTogether(productId, limit) {
+  if (!productId) return [];
+  const rows = db.prepare(`
+    SELECT oi2.productId id, COUNT(*) freq
+    FROM order_items oi1 JOIN order_items oi2 ON oi1.orderId = oi2.orderId
+    WHERE oi1.productId = ? AND oi2.productId <> ? AND oi2.productId <> ''
+    GROUP BY oi2.productId ORDER BY freq DESC LIMIT ?`).all(productId, productId, Math.min(parseInt(limit, 10) || 4, 20));
+  const out = [];
+  for (const r of rows) { const p = getProduct(r.id); if (p && p.active) out.push(Object.assign({ _freq: r.freq }, p)); }
+  return out;
+}
+/**
+ * Recommandations personnalisées : produits populaires dans les catégories déjà
+ * achetées par l'utilisateur (hors produits déjà commandés). Repli : populaires.
+ */
+function recommendFor(userId, limit) {
+  const n = Math.min(parseInt(limit, 10) || 8, 50);
+  if (!userId) return popularProducts(n);
+  const bought = db.prepare(`
+    SELECT DISTINCT oi.productId FROM order_items oi JOIN orders o ON o.id = oi.orderId
+    WHERE o.userId = ? AND oi.productId <> ''`).all(userId).map((r) => r.productId);
+  const boughtSet = new Set(bought);
+  const cats = db.prepare(`
+    SELECT p.category c, COUNT(*) n FROM order_items oi
+    JOIN orders o ON o.id = oi.orderId JOIN products p ON p.id = oi.productId
+    WHERE o.userId = ? GROUP BY p.category ORDER BY n DESC`).all(userId).map((r) => r.c).filter(Boolean);
+  const out = [];
+  for (const cat of cats) {
+    const inCat = db.prepare("SELECT * FROM products WHERE active=1 AND category=? ORDER BY createdAt DESC").all(cat);
+    for (const p of inCat) { if (!boughtSet.has(p.id) && !out.find((x) => x.id === p.id)) out.push(p); if (out.length >= n) break; }
+    if (out.length >= n) break;
+  }
+  if (out.length < n) for (const p of popularProducts(n, [...boughtSet, ...out.map((x) => x.id)])) { out.push(p); if (out.length >= n) break; }
+  return out.slice(0, n);
+}
+
 /* --------------------- Recherche plein texte (pertinence) ----------------- */
 // Repli sans dépendance (le module node:sqlite ne garantit pas FTS5). Convient
 // à l'échelle actuelle ; en production, préférer FTS5/Postgres tsvector.
@@ -722,6 +769,7 @@ module.exports = {
   createSession, userIdForToken, refreshSession, destroySession, destroyUserSessions, revokeSession, listSessions,
   createOtp, verifyOtp, setEmailVerified, setPhoneVerified, setUserPassword, getUserByEmail, getUserByPhone, getUserRaw, setTwofa, setRole,
   upsertProduct, listProducts, searchProducts, getProduct, countProducts,
+  popularProducts, boughtTogether, recommendFor,
   getCart, setCart,
   createOrder, getOrder, listOrders, setOrderStatus, refundOrder, stats,
   addReview, listReviews, ratingFor, setReviewStatus,
