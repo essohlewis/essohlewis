@@ -163,7 +163,7 @@ const DATA = [
    ["Pont front↔backend (write-through)","La SPA écrit inscriptions, commandes et avis en base quand le serveur est présent.","fait","haute"],
    ["Migrer les collections restantes","favoris, souhaits, abonnements, notifications, messages, coupons, questions, alertes, boutiques, dépenses, signalements — mécanisme générique + restauration.","fait","haute"],
    ["Entités vendeurs/boutiques en base","Table stores (propriétaire + statut), commandes taguées par boutique.","fait","critique"],
-   ["Catalogue = source unique","Réconcilier le catalogue front (démo) et le catalogue serveur (un seul référentiel produits).","afaire","haute"],
+   ["Catalogue = source unique","Réconcilier le catalogue front (démo) et le catalogue serveur (un seul référentiel produits). Fait : shared/catalogue.js (UMD) alimente front + serveur (mêmes id/boutiques/prix).","fait","haute"],
    ["Système de migrations versionnées","Schéma évolutif reproductible (au‑delà des ALTER ad hoc actuels). Fait : table schema_migrations + runner appliqué au démarrage, GET /admin/schema.","fait","moyenne"],
    ["Passage à PostgreSQL en production","SQLite pour le dev ; Postgres pour la concurrence et la montée en charge.","afaire","haute"],
    ["Pagination sur toutes les listes","Éviter de renvoyer 500 lignes ; curseur/limit-offset. Fait : {items,total,limit,offset,hasMore} sur produits, avis et listes admin.","fait","moyenne"],
