@@ -1112,7 +1112,7 @@
         <div class="pd-info">
           <div class="flex-between">
             <span class="tag ${p.condition === "occasion" ? "occasion" : ""}" style="position:static">${p.condition === "occasion" ? "Occasion" : "Neuf"}</span>
-            ${rt.count ? UI.starsHTML(rt.avg) + `<span class="text-muted" style="font-size:13px">(${rt.count} avis)</span>` : `<span class="text-muted" style="font-size:13px">Aucun avis</span>`}
+            <span id="pdRatingBadge">${rt.count ? UI.starsHTML(rt.avg) + `<span class="text-muted" style="font-size:13px">(${rt.count} avis)</span>` : `<span class="text-muted" style="font-size:13px">Aucun avis</span>`}</span>
           </div>
           <h1>${UI.esc(p.title)}</h1>
           <div class="pd-price-row">
@@ -1327,6 +1327,7 @@
     wireQna(p, store, isOwner);
 
     wireReviews(p.id, "product", store.ownerId);
+    enhanceReviews(p.id, "product");
   }
 
   /* ============================================================
@@ -1495,6 +1496,49 @@
       </div>
       ${r.reply ? `<div class="review-reply"><strong>Réponse du vendeur :</strong> ${UI.esc(r.reply.text)}</div>` : ""}
     </div>`;
+  }
+
+  // Rend un avis provenant du serveur (base de données) — lecture seule.
+  function serverReviewItem(r) {
+    const name = r.authorName || "Client";
+    const initials = name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+    return `<div class="review">
+      <div class="review-head">
+        <div class="review-avatar">${UI.esc(initials)}</div>
+        <div><strong>${UI.esc(name)}</strong> ${r.verified ? `<span class="verified-badge">✓ Achat vérifié</span>` : ""} ${UI.starsHTML(r.rating)}
+          <div class="notif-time">${UI.timeAgo(r.createdAt)}</div></div>
+      </div>
+      ${r.comment ? `<p style="margin:6px 0 0">${UI.esc(r.comment)}</p>` : ""}
+    </div>`;
+  }
+
+  /**
+   * Branche la note agrégée et les avis de la BASE (serveur) sur la fiche.
+   * Non destructif : ajoute un panneau « Avis en ligne » en tête de #reviewsBox
+   * et met à jour la pastille de note du produit. Sans backend, ne fait rien.
+   */
+  async function enhanceReviews(targetId, targetType) {
+    if (!window.MP.Api || !window.MP.Api.reviewsFor) return;
+    try { await window.MP.Api.ready; } catch (e) {}
+    if (!window.MP.Api.enabled) return;
+    let data;
+    try { data = await window.MP.Api.reviewsFor(targetType, targetId); } catch (e) { return; }
+    if (!data || !Array.isArray(data.items) || !data.items.length) return;
+    const box = document.getElementById("reviewsBox");
+    if (!box) return;
+    const count = (data.rating && data.rating.count) || data.items.length;
+    const avg = (data.rating && data.rating.avg) || (data.items.reduce((s, r) => s + (r.rating || 0), 0) / data.items.length);
+    const rows = data.items.slice(0, 20).map(serverReviewItem).join("");
+    const panel = document.createElement("div");
+    panel.style.cssText = "margin-bottom:16px;padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--bg-soft,transparent)";
+    panel.innerHTML = `<div class="flex-between wrap" style="margin-bottom:8px">
+        <span class="verified-badge">🛢️ Avis en ligne (base de données)</span>
+        <div><strong style="font-size:18px">${avg.toFixed(1)}</strong><span class="text-muted"> / 5 · ${count} avis</span> ${UI.starsHTML(avg)}</div>
+      </div>${rows}`;
+    box.insertBefore(panel, box.firstChild);
+    // Met à jour la pastille de note en haut de la fiche produit.
+    const badge = document.getElementById("pdRatingBadge");
+    if (badge) badge.innerHTML = UI.starsHTML(avg) + `<span class="text-muted" style="font-size:13px">(${count} avis en ligne)</span>`;
   }
 
   function wireReviews(targetId, targetType, ownerId) {
@@ -1736,6 +1780,7 @@
     const reportStoreBtn = document.getElementById("reportStoreBtn");
     if (reportStoreBtn) reportStoreBtn.addEventListener("click", () => openContentReportModal("store", store.id, store.name));
     wireReviews(store.id, "store", store.ownerId);
+    enhanceReviews(store.id, "store");
   }
 
   /** Signalement générique de contenu (boutique / question) → file de modération. */
