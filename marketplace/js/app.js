@@ -793,15 +793,16 @@
     layout(
       `<div class="page-head"><div>
         <div class="page-title">${q ? T("search.results") : T("search.explore")}</div>
-        <div class="page-sub">${q ? `${list.length} résultat(s) pour « ${UI.esc(q)} »` : T("search.exploreSub")}</div>
+        <div class="page-sub">${q ? `<span id="searchCount">${list.length}</span> résultat(s) pour « ${UI.esc(q)} »` : T("search.exploreSub")}</div>
       </div></div>
       <form id="searchForm" style="margin-bottom:18px">
         <div class="field"><input type="search" id="searchQ" placeholder="Que recherchez-vous ?" value="${UI.esc(q)}" /></div>
       </form>
       ${categoryChips("")}
-      ${list.length ? gridHTML(list) : (q ? noResultsHTML : gridHTML(list))}`
+      <div id="searchResults">${list.length ? gridHTML(list) : (q ? noResultsHTML : gridHTML(list))}</div>`
     );
     wireCategoryChips();
+    if (q) enhanceSearch(q);
     const form = document.getElementById("searchForm");
     form.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -809,6 +810,27 @@
       Router.go("#/search?q=" + encodeURIComponent(val));
     });
     V().querySelectorAll("[data-didyoumean]").forEach((b) => b.addEventListener("click", () => Router.go("#/search?q=" + encodeURIComponent(b.getAttribute("data-didyoumean")))));
+  }
+
+  /**
+   * Recherche plein texte serveur : réordonne (et complète) les résultats par
+   * pertinence, avec tolérance aux fautes de frappe. Remplace la grille si le
+   * serveur trouve des articles (utile quand la recherche locale ne trouve rien).
+   */
+  async function enhanceSearch(q) {
+    if (!window.MP.Api || !window.MP.Api.searchProducts) return;
+    try { await window.MP.Api.ready; } catch (e) {}
+    if (!window.MP.Api.enabled) return;
+    let ids;
+    try { ids = await window.MP.Api.searchProducts(q); } catch (e) { return; }
+    if (!ids) return;
+    const pubIds = new Set(Products.published().map((p) => p.id));
+    const prods = ids.map((id) => Products.get(id)).filter((p) => p && pubIds.has(p.id));
+    if (!prods.length) return; // ne pas écraser un résultat local par un vide
+    const results = document.getElementById("searchResults");
+    const count = document.getElementById("searchCount");
+    if (results) results.innerHTML = gridHTML(prods);
+    if (count) count.textContent = prods.length;
   }
 
   /** Distance de Levenshtein (tolérance aux fautes de frappe). */

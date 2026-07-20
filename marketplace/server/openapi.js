@@ -119,6 +119,16 @@ function build({ version = "1.0.0", baseUrl = "/api/v1" } = {}) {
           requestBody: { content: { "application/json": { schema: { type: "object", properties: { products: { type: "array", items: { $ref: "#/components/schemas/Product" } } } } } } },
         }),
       },
+      "/shop/products/search": {
+        get: op("Catalogue", "Recherche plein texte pondérée (pertinence + tolérance aux fautes, accents)", {
+          security: [],
+          parameters: [
+            { name: "q", in: "query", required: true, schema: { type: "string" }, description: "Termes de recherche." },
+            { name: "category", in: "query", schema: { type: "string" } },
+            ...pageParams,
+          ],
+        }),
+      },
       "/shop/products/{id}": {
         get: op("Catalogue", "Détail d'un produit", { security: [], parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }] }),
       },

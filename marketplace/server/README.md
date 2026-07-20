@@ -184,6 +184,16 @@ dans l'onglet **Retraits**. Endpoints : `GET /vendor/wallet`,
   jamais de pile, mais le support relie le ticket au log par l'identifiant.
   Variables : `LOG_LEVEL` (défaut `info`), `LOG_FORMAT` (`json`/`pretty`).
 
+### Recherche plein texte serveur (domaine D)
+`GET /products/search?q=` — recherche **pondérée par pertinence** (nom >
+catégorie > boutique > description), **insensible aux accents/casse** et
+**tolérante aux fautes de frappe** (distance de Levenshtein bornée). Bonus de
+couverture quand tous les termes correspondent ; score exposé (`_score`).
+Repli sans dépendance (le module `node:sqlite` ne garantit pas FTS5) — convient
+à l'échelle actuelle ; **production** : FTS5 ou Postgres `tsvector`. Le front
+utilise ce classement quand le serveur est présent (repli local sinon), ce qui
+rattrape notamment les requêtes mal orthographiées.
+
 ### Questions / réponses produit en base (domaine H)
 Q&R **partagées et persistées** (table `product_questions`), branchées sur la
 fiche produit du front :

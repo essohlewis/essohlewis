@@ -209,6 +209,11 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
     const { category, q, storeId } = req.query;
     res.json({ ok: true, ...page(req, shopdb.listProducts({ category, q, storeId, limit: 1000 })) });
   });
+  // Recherche plein texte pondérée (pertinence + tolérance aux fautes, accents).
+  router.get("/products/search", (req, res) => {
+    const { q, category, storeId } = req.query;
+    res.json({ ok: true, q: q || "", ...page(req, shopdb.searchProducts(q, { category, storeId, limit: 500 })) });
+  });
   router.get("/products/:id", (req, res) => {
     const p = shopdb.getProduct(req.params.id);
     if (!p) return res.status(404).json({ ok: false, error: "Produit introuvable." });

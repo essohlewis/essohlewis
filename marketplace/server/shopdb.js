@@ -179,6 +179,61 @@ function listProducts({ category, q, storeId, limit } = {}) {
   sql += " ORDER BY createdAt DESC LIMIT @limit"; args.limit = Math.min(parseInt(limit, 10) || 200, 500);
   return db.prepare(sql).all(args);
 }
+
+/* --------------------- Recherche plein texte (pertinence) ----------------- */
+// Repli sans dépendance (le module node:sqlite ne garantit pas FTS5). Convient
+// à l'échelle actuelle ; en production, préférer FTS5/Postgres tsvector.
+function fold(s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""); }
+function tokenize(s) { return fold(s).split(/[^a-z0-9]+/).filter((t) => t.length >= 2); }
+/** Distance de Levenshtein bornée (tolérance aux fautes de frappe). */
+function levenshtein(a, b) {
+  if (a === b) return 0;
+  const m = a.length, n = b.length;
+  if (!m) return n; if (!n) return m;
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    let cur = [i];
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost);
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+/**
+ * Recherche pondérée : nom > catégorie > boutique > description ; correspondance
+ * exacte/préfixe/sous-chaîne, puis tolérance aux fautes (Levenshtein). Insensible
+ * aux accents et à la casse. Renvoie les produits triés par pertinence (score>0).
+ */
+function searchProducts(q, { category, storeId, limit } = {}) {
+  const terms = tokenize(q);
+  const rows = listProducts({ category, storeId, limit: 500 });
+  if (!terms.length) return rows.slice(0, Math.min(parseInt(limit, 10) || 50, 500));
+  const FIELDS = [["name", 6], ["category", 3], ["storeName", 2], ["description", 1]];
+  const scored = [];
+  for (const p of rows) {
+    let score = 0, matchedTerms = 0;
+    for (const term of terms) {
+      let best = 0;
+      for (const [field, weight] of FIELDS) {
+        const words = tokenize(p[field]);
+        const hay = fold(p[field]);
+        if (hay.includes(term)) { best = Math.max(best, weight * (hay === term ? 3 : hay.startsWith(term) ? 2 : 1.5)); continue; }
+        // tolérance aux fautes : meilleure distance sur les mots du champ.
+        const maxDist = term.length <= 4 ? 1 : 2;
+        for (const w of words) {
+          const d = levenshtein(term, w);
+          if (d <= maxDist) best = Math.max(best, weight * (1 - d / (maxDist + 1)));
+        }
+      }
+      if (best > 0) { score += best; matchedTerms++; }
+    }
+    if (score > 0) { score += matchedTerms === terms.length ? 5 : 0; scored.push({ p, score }); } // bonus couverture totale
+  }
+  scored.sort((a, b) => b.score - a.score || b.p.createdAt - a.p.createdAt);
+  return scored.slice(0, Math.min(parseInt(limit, 10) || 50, 500)).map((s) => Object.assign({ _score: Math.round(s.score * 100) / 100 }, s.p));
+}
 function getProduct(id) { if (id == null || id === "") return null; return db.prepare("SELECT * FROM products WHERE id=?").get(String(id)) || null; }
 function countProducts() { return db.prepare("SELECT COUNT(*) c FROM products").get().c; }
 
@@ -666,7 +721,7 @@ module.exports = {
   createUser, authUser, getUser, publicUser,
   createSession, userIdForToken, refreshSession, destroySession, destroyUserSessions, revokeSession, listSessions,
   createOtp, verifyOtp, setEmailVerified, setPhoneVerified, setUserPassword, getUserByEmail, getUserByPhone, getUserRaw, setTwofa, setRole,
-  upsertProduct, listProducts, getProduct, countProducts,
+  upsertProduct, listProducts, searchProducts, getProduct, countProducts,
   getCart, setCart,
   createOrder, getOrder, listOrders, setOrderStatus, refundOrder, stats,
   addReview, listReviews, ratingFor, setReviewStatus,

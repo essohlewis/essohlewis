@@ -245,6 +245,16 @@ window.MP = window.MP || {};
     const j = await get("/products" + (qs ? "?" + qs : ""));
     return (j && j.items) || [];
   }
+  // Recherche plein texte serveur (pertinence + tolérance aux fautes).
+  // Renvoie les identifiants de produits classés par pertinence, ou null si indispo.
+  async function searchProducts(q, params) {
+    if (!API.enabled || !q) return null;
+    try {
+      const qs = new URLSearchParams(Object.assign({ q }, params || {})).toString();
+      const j = await get("/products/search?" + qs);
+      return j && j.ok ? (j.items || []).map((p) => p.id) : null;
+    } catch (e) { return null; }
+  }
   async function myOrders() {
     if (!API.enabled || !token()) return [];
     const j = await get("/orders");
@@ -288,6 +298,7 @@ window.MP = window.MP || {};
   API.pullSynced = pullSynced;
   API.reviewsFor = reviewsFor;
   API.products = products;      // fonction (le nombre est dans API.productCount)
+  API.searchProducts = searchProducts;
   API.myOrders = myOrders;
   API.loyalty = loyalty;
   API.questionsFor = questionsFor;
