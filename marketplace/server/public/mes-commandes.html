@@ -56,8 +56,9 @@
       }).join("") + `</div>`;
     }
     function payInfo(o) {
+      if (o.paymentStatus === "refunded") return `<span class="pill bg-red-100 text-red-700">↩️ Remboursée</span>`;
       if (o.paymentStatus === "paid") return `<span class="pill bg-accent-soft text-accent">✅ Payée en ligne</span>`;
-      if (o.paymentStatus === "pending") return `<a href="/paiement" class="pill bg-amber-100 text-amber-700 hover:bg-amber-200">💳 Paiement en attente — Payer →</a>`;
+      if (o.paymentStatus === "pending" && o.status !== "cancelled") return `<a href="/paiement" class="pill bg-amber-100 text-amber-700 hover:bg-amber-200">💳 Paiement en attente — Payer →</a>`;
       return `<span class="text-xs text-slate-400">à la livraison</span>`;
     }
     function card(o) {

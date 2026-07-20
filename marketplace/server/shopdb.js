@@ -250,6 +250,26 @@ function setOrderStatus(id, status) {
   db.prepare("UPDATE orders SET status=?,updatedAt=? WHERE id=?").run(status, now(), id);
   return getOrder(id);
 }
+/**
+ * Annule une commande et rembourse le paiement en ligne le cas échéant.
+ * Un remboursement retire aussi les fonds du portefeuille vendeur (la commande
+ * annulée est exclue de l'escrow/du disponible).
+ */
+function refundOrder(id, reason) {
+  const o = getOrder(id);
+  if (!o) return { error: "Commande introuvable." };
+  if (o.status === "cancelled" && o.paymentStatus === "refunded") return { error: "Déjà remboursée." };
+  let refunded = 0;
+  // Marque les paiements encaissés comme remboursés.
+  for (const p of paymentsForOrder(id)) {
+    if (p.status === "paid") { db.prepare("UPDATE payments SET status='refunded',updatedAt=? WHERE id=?").run(now(), p.id); refunded += p.amount; }
+  }
+  const wasPaid = o.paymentStatus === "paid" || refunded > 0;
+  db.prepare("UPDATE orders SET status='cancelled',paymentStatus=?,note=?,updatedAt=? WHERE id=?")
+    .run(wasPaid ? "refunded" : (o.paymentStatus === "cod" ? "cod" : "cancelled"),
+      reason ? (o.note ? o.note + " · " : "") + "Annulée : " + reason : o.note, now(), id);
+  return { order: getOrder(id), refunded, wasPaid };
+}
 function stats() {
   return {
     users: db.prepare("SELECT COUNT(*) c FROM users").get().c,
@@ -262,6 +282,7 @@ function stats() {
     paidOnline: db.prepare("SELECT COALESCE(SUM(amount),0) s FROM payments WHERE status='paid'").get().s,
     commission: Math.round(db.prepare("SELECT COALESCE(SUM(oi.price*oi.qty),0) g FROM order_items oi JOIN orders o ON o.id=oi.orderId WHERE o.status='delivered'").get().g * COMMISSION_RATE),
     payoutsPaid: db.prepare("SELECT COALESCE(SUM(amount),0) s FROM payouts WHERE status='paid'").get().s,
+    refunded: db.prepare("SELECT COALESCE(SUM(amount),0) s FROM payments WHERE status='refunded'").get().s,
     commissionRate: COMMISSION_RATE,
   };
 }
@@ -463,7 +484,7 @@ module.exports = {
   createSession, userIdForToken, destroySession,
   upsertProduct, listProducts, getProduct, countProducts,
   getCart, setCart,
-  createOrder, getOrder, listOrders, setOrderStatus, stats,
+  createOrder, getOrder, listOrders, setOrderStatus, refundOrder, stats,
   addReview, listReviews, ratingFor, setReviewStatus,
   upsertStore, getStoreById, getStoreByOwner, listStores, setStoreStatus, vendorSales,
   createPayment, getPayment, paymentsForOrder, listPayments, setPaymentStatus,

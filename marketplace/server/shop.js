@@ -242,6 +242,12 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
     if (!o) return res.status(400).json({ ok: false, error: "Statut invalide ou commande introuvable." });
     res.json({ ok: true, order: o });
   });
+  // Remboursement / annulation (rembourse le paiement en ligne le cas échéant).
+  router.post("/admin/orders/:id/refund", requireAdmin, (req, res) => {
+    const r = shopdb.refundOrder(req.params.id, (req.body || {}).reason);
+    if (r.error) return res.status(400).json({ ok: false, error: r.error });
+    res.json({ ok: true, order: r.order, refunded: r.refunded, wasPaid: r.wasPaid });
+  });
   router.get("/admin/stats", requireAdmin, (req, res) => res.json({ ok: true, stats: shopdb.stats() }));
 
   return router;
