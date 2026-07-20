@@ -15,6 +15,7 @@ const shopdb = require("./shopdb");
 const createShopRouter = require("./shop");
 const seedProducts = require("./seed");
 const security = require("./security");
+const openapi = require("./openapi");
 
 const PORT = process.env.PORT || 3000;
 const ADMIN_TOKEN = process.env.KYC_ADMIN_TOKEN || "admin-demo-token";
@@ -24,6 +25,19 @@ const MARKETPLACE_DIR = path.join(__dirname, "..");
 const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", true);              // req.ip / req.secure derrière un proxy TLS
+
+// Versionnement de l'API : /api/v1/* est le chemin canonique. On le réécrit
+// vers /api/* en amont de tout, si bien que sécurité, limiteurs et routeurs
+// existants le servent sans duplication. /api/* reste un alias rétro-compatible
+// (le front actuel et les intégrations en place continuent de fonctionner).
+const API_VERSION = "v1";
+app.use((req, res, next) => {
+  const p = `/api/${API_VERSION}`;
+  if (req.url === p) req.url = "/api";
+  else if (req.url.startsWith(p + "/")) req.url = "/api/" + req.url.slice(p.length + 1);
+  next();
+});
+
 app.use(security.httpsRedirect());          // HTTP→HTTPS si FORCE_HTTPS=1
 app.use(security.securityHeaders());        // CSP, HSTS, X-Frame-Options, …
 app.use("/api", security.cors());           // CORS restreint (ALLOWED_ORIGINS)
@@ -200,6 +214,14 @@ app.get("/api/kyc/image/:id/:kind", requireAdmin, (req, res) => {
   if (!fs.existsSync(p)) return res.sendStatus(404);
   res.type(name.endsWith(".png") ? "png" : "jpeg").sendFile(p);
 });
+
+/* ---------------------- Documentation de l'API --------------------- */
+// Spécification OpenAPI 3.0 (JSON) — atteignable en /api/openapi.json et
+// /api/v1/openapi.json (réécriture de version en amont).
+const OPENAPI_SPEC = openapi.build({ version: "1.0.0", baseUrl: `/api/${API_VERSION}` });
+app.get("/api/openapi.json", (req, res) => res.json(OPENAPI_SPEC));
+// Page de documentation navigable (renderer autonome, sans CDN — CSP-safe).
+app.get(["/api/docs", "/api-docs"], (req, res) => res.sendFile(path.join(__dirname, "public", "api-docs.html")));
 
 /* ------------------------- Pages Tailwind -------------------------- */
 app.get("/verify", (req, res) => res.sendFile(path.join(__dirname, "public", "verify.html")));

@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Marché CI — Documentation de l'API</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23f97316'/%3E%3Ctext x='16' y='22' font-size='15' font-family='sans-serif' font-weight='bold' fill='white' text-anchor='middle'%3ECI%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/tailwind.css" />
+  <style>
+    /* Petit renderer OpenAPI autonome (aucun CDN — compatible CSP stricte). */
+    .method { font: 600 11px/1 ui-monospace, monospace; letter-spacing: .04em; }
+    .m-get { background:#dcfce7; color:#166534 } .m-post{ background:#dbeafe; color:#1e40af }
+    .m-put{ background:#fef3c7; color:#92400e } .m-delete{ background:#fee2e2; color:#991b1b }
+    details[open] > summary .chev { transform: rotate(90deg); }
+    .chev { transition: transform .15s ease; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased">
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-5 py-5 flex items-center gap-3 flex-wrap">
+      <div class="w-9 h-9 rounded-lg bg-orange-500 text-white grid place-items-center font-bold">CI</div>
+      <div class="flex-1 min-w-0">
+        <h1 class="text-lg font-bold text-slate-900" id="apiTitle">Marché CI — API</h1>
+        <p class="text-sm text-slate-500" id="apiVer">Chargement…</p>
+      </div>
+      <a href="/api/openapi.json" class="text-sm font-medium text-orange-600 hover:underline">openapi.json</a>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-5 py-6">
+    <p id="apiDesc" class="text-sm text-slate-600 leading-relaxed mb-4"></p>
+    <div class="flex items-center gap-2 mb-5">
+      <input id="filter" type="search" placeholder="Filtrer les endpoints…" class="w-full sm:w-72 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+      <span id="count" class="text-xs text-slate-400"></span>
+    </div>
+    <div id="groups" class="space-y-6"></div>
+    <p id="err" class="hidden text-sm text-red-600"></p>
+  </main>
+
+  <footer class="max-w-5xl mx-auto px-5 py-8 text-xs text-slate-400">
+    Contrat servi sous <code>/api/v1</code> — <code>/api</code> reste un alias rétro-compatible.
+  </footer>
+
+  <script>
+  (function () {
+    var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]; }); };
+    var mClass = function (m) { return "m-" + m; };
+    var groupsEl = document.getElementById("groups");
+    var errEl = document.getElementById("err");
+    var ALL = []; // {tag, method, path, op}
+
+    function badge(m) {
+      return '<span class="method ' + mClass(m) + ' px-2 py-1 rounded uppercase">' + m + '</span>';
+    }
+    function secLabel(op) {
+      if (!op.security || !op.security.length) return '<span class="text-xs text-emerald-600 font-medium">public</span>';
+      var s = op.security[0] || {};
+      if (s.bearerAuth) return '<span class="text-xs text-slate-500">🔑 session</span>';
+      if (s.adminToken) return '<span class="text-xs text-purple-600">🛡️ admin</span>';
+      return "";
+    }
+    function paramsTable(op) {
+      var ps = op.parameters || [];
+      if (!ps.length) return "";
+      var rows = ps.map(function (p) {
+        var sc = p.schema || {};
+        var type = sc.type || (sc.$ref ? sc.$ref.split("/").pop() : "");
+        if (sc.enum) type += " (" + sc.enum.join(" | ") + ")";
+        return '<tr class="border-t border-slate-100"><td class="py-1 pr-3 font-mono text-xs">' + esc(p.name) +
+          (p.required ? ' <span class="text-red-500">*</span>' : "") + '</td><td class="py-1 pr-3 text-xs text-slate-500">' + esc(p.in) +
+          '</td><td class="py-1 pr-3 text-xs text-slate-500">' + esc(type) + '</td><td class="py-1 text-xs text-slate-500">' + esc(p.description || "") + '</td></tr>';
+      }).join("");
+      return '<div class="mt-2"><p class="text-xs font-semibold text-slate-500 mb-1">Paramètres</p><table class="w-full"><tbody>' + rows + '</tbody></table></div>';
+    }
+    function bodyBlock(op) {
+      var rb = op.requestBody;
+      if (!rb || !rb.content) return "";
+      var media = rb.content["application/json"];
+      var ref = media && media.schema && (media.schema.$ref || (media.schema.properties && "objet"));
+      var name = media && media.schema && media.schema.$ref ? media.schema.$ref.split("/").pop() : "corps JSON";
+      return '<div class="mt-2"><p class="text-xs font-semibold text-slate-500 mb-1">Corps (application/json)' + (rb.required ? ' <span class="text-red-500">requis</span>' : "") + '</p><code class="text-xs bg-slate-100 rounded px-2 py-1 inline-block">' + esc(name) + '</code></div>';
+    }
+    function endpointRow(e) {
+      var op = e.op;
+      var head = '<summary class="cursor-pointer select-none flex items-center gap-3 px-3 py-2 hover:bg-slate-50 rounded-lg">' +
+        '<span class="chev text-slate-400 text-xs">▸</span>' + badge(e.method) +
+        '<code class="text-sm text-slate-700 flex-1 min-w-0 truncate">' + esc(e.path) + '</code>' +
+        '<span class="text-xs text-slate-500 hidden sm:inline truncate max-w-[45%]">' + esc(op.summary || "") + '</span>' +
+        secLabel(op) + '</summary>';
+      var body = '<div class="px-9 pb-3 pt-1 text-sm">' +
+        (op.summary ? '<p class="text-slate-600">' + esc(op.summary) + '</p>' : "") +
+        paramsTable(op) + bodyBlock(op) + '</div>';
+      return '<details class="border border-slate-200 rounded-lg bg-white">' + head + body + '</details>';
+    }
+    function render(filterText) {
+      var f = (filterText || "").toLowerCase();
+      var byTag = {};
+      var shown = 0;
+      ALL.forEach(function (e) {
+        var hay = (e.path + " " + e.method + " " + (e.op.summary || "") + " " + e.tag).toLowerCase();
+        if (f && hay.indexOf(f) === -1) return;
+        (byTag[e.tag] = byTag[e.tag] || []).push(e); shown++;
+      });
+      var html = Object.keys(byTag).map(function (tag) {
+        var items = byTag[tag].map(endpointRow).join("");
+        return '<section><h2 class="text-sm font-bold text-slate-900 uppercase tracking-wide mb-2">' + esc(tag) +
+          ' <span class="text-slate-400 font-normal">(' + byTag[tag].length + ')</span></h2><div class="space-y-2">' + items + '</div></section>';
+      }).join("");
+      groupsEl.innerHTML = html || '<p class="text-sm text-slate-400">Aucun endpoint ne correspond.</p>';
+      document.getElementById("count").textContent = shown + " endpoint" + (shown > 1 ? "s" : "");
+    }
+
+    fetch("/api/openapi.json").then(function (r) { return r.json(); }).then(function (spec) {
+      document.getElementById("apiTitle").textContent = spec.info.title;
+      document.getElementById("apiVer").textContent = "Version " + spec.info.version + " · OpenAPI " + spec.openapi;
+      document.getElementById("apiDesc").textContent = spec.info.description || "";
+      var tagOrder = (spec.tags || []).map(function (t) { return t.name; });
+      Object.keys(spec.paths).forEach(function (path) {
+        var item = spec.paths[path];
+        ["get", "post", "put", "delete", "patch"].forEach(function (m) {
+          if (item[m]) {
+            var tag = (item[m].tags && item[m].tags[0]) || "Autres";
+            ALL.push({ tag: tag, method: m, path: path, op: item[m] });
+          }
+        });
+      });
+      // Tri par ordre des tags déclarés.
+      ALL.sort(function (a, b) {
+        var ia = tagOrder.indexOf(a.tag), ib = tagOrder.indexOf(b.tag);
+        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      });
+      render("");
+      document.getElementById("filter").addEventListener("input", function (e) { render(e.target.value); });
+    }).catch(function (e) {
+      errEl.textContent = "Impossible de charger la spécification : " + e.message;
+      errEl.classList.remove("hidden");
+    });
+  })();
+  </script>
+</body>
+</html>

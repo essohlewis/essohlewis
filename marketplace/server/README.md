@@ -152,6 +152,16 @@ dans l'onglet **Retraits**. Endpoints : `GET /vendor/wallet`,
   base en JSON (toutes les tables + `schemaVersion`) ; `POST /admin/restore`
   remplace intégralement le contenu des tables dans une transaction
   (`ROLLBACK` en cas d'erreur, base intacte). À archiver hors ligne.
+- **Versionnement de l'API** : le chemin **canonique est `/api/v1`** (ex.
+  `/api/v1/shop/products`, `/api/v1/kyc/health`). Une réécriture en amont mappe
+  `/api/v1/*` → `/api/*`, si bien que **`/api/*` reste un alias rétro-compatible**
+  (le front actuel et les intégrations en place continuent de fonctionner sans
+  changement). Les futures ruptures se feront sur `/api/v2` sans casser v1.
+- **Documentation OpenAPI/Swagger** : contrat **OpenAPI 3.0** généré sans
+  dépendance (`openapi.js`), servi en JSON sur `GET /api/openapi.json` et rendu
+  par une **page navigable** `/api/docs` (renderer autonome, sans CDN, conforme
+  à la CSP stricte). Recherche/filtre, regroupement par domaine, schémas de
+  sécurité (session `Bearer` + `X-Admin-Token`) documentés.
 
 ## Résultats de référence (validés)
 - Reconnaissance faciale : même personne → `match:true`, score ~87 ;
