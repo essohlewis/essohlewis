@@ -1,0 +1,600 @@
+<!--
+  ============================================================================
+  SAMSON GYM — Motion Design Logo Reveal
+  ============================================================================
+  Animation web autonome (un seul fichier). Aucune dépendance, aucun CDN.
+  Pur CSS + Canvas API + vanilla JS. Format vertical 1080x1920 (9:16).
+  Durée : 16 s d'animation, 2 s de pause, puis boucle.
+
+  ----------------------------------------------------------------------------
+  COMMENT ENREGISTRER L'ÉCRAN POUR EXPORTER EN VIDÉO (TikTok / Reels)
+  ----------------------------------------------------------------------------
+  Astuce : appuyez sur la touche  H  pour masquer le bouton "Rejouer" et
+  n'avoir que l'animation à l'écran avant de lancer l'enregistrement.
+
+  Option A — Enregistreur d'écran du navigateur / système :
+    • Windows : Xbox Game Bar (Win + G) → bouton d'enregistrement.
+    • macOS   : Maj (Shift) + Cmd + 5 → "Enregistrer une partie sélectionnée".
+    • Cadrez la zone verticale du logo (fond noir), lancez, puis appuyez sur
+      "Rejouer" pour capturer un cycle complet propre (16 s).
+
+  Option B — OBS Studio (recommandé pour la meilleure qualité) :
+    1. Ajoutez une source "Capture de fenêtre" ou "Capture de navigateur".
+    2. Réglez le canevas OBS sur 1080x1920 (Paramètres → Vidéo).
+    3. Ajustez la source pour remplir le cadre 9:16.
+    4. Sortie recommandée : 1080x1920, 60 fps, MP4/H.264, ~12–16 Mb/s.
+    5. Cliquez "Rejouer", démarrez l'enregistrement, laissez tourner 16 s.
+
+  Astuce bonus : ouvrez index.html?t=5.5 pour figer une image fixe à 5,5 s
+  (pratique pour capturer une affiche / vignette).
+  ============================================================================
+-->
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SAMSON GYM — Logo Reveal</title>
+<style>
+  :root{
+    --noir:#000000;
+    --orange:#FF6B00;
+    --orange-clair:#FF8C33;
+    --blanc:#FFFFFF;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{
+    width:100%;height:100%;
+    background:var(--noir);
+    overflow:hidden;
+  }
+  body{
+    display:flex;align-items:center;justify-content:center;
+    font-family:Impact,"Arial Black",sans-serif;
+  }
+  /* Cadre 9:16 centré, fond noir autour */
+  #stage{
+    position:relative;
+    height:100vh;
+    aspect-ratio:9/16;
+    max-width:100vw;
+    background:var(--noir);
+    box-shadow:0 0 120px rgba(255,107,0,.08);
+  }
+  #scene{
+    position:absolute;inset:0;
+    width:100%;height:100%;
+    display:block;
+  }
+  /* Bouton "Rejouer" discret, masquable pour l'enregistrement (touche H) */
+  #ui{
+    position:absolute;
+    left:50%;bottom:2.4%;
+    transform:translateX(-50%);
+    z-index:5;
+    display:flex;flex-direction:column;align-items:center;gap:6px;
+    transition:opacity .4s ease;
+  }
+  #ui.hidden{opacity:0;pointer-events:none}
+  #replay{
+    appearance:none;
+    font-family:Impact,"Arial Black",sans-serif;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    font-size:15px;
+    color:var(--orange-clair);
+    background:rgba(0,0,0,.35);
+    border:1px solid rgba(255,107,0,.55);
+    border-radius:40px;
+    padding:10px 22px;
+    cursor:pointer;
+    backdrop-filter:blur(2px);
+    transition:all .25s ease;
+  }
+  #replay:hover{
+    color:#fff;
+    background:rgba(255,107,0,.18);
+    border-color:var(--orange);
+    box-shadow:0 0 18px rgba(255,107,0,.5);
+  }
+  #hint{
+    font-family:Arial,sans-serif;
+    font-size:10px;letter-spacing:.08em;
+    color:rgba(255,255,255,.32);
+    text-transform:uppercase;
+  }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <canvas id="scene" width="1080" height="1920"></canvas>
+    <div id="ui">
+      <button id="replay" type="button">▸ Rejouer</button>
+      <span id="hint">Touche H : masquer</span>
+    </div>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  const W = 1080, H = 1920;
+  const canvas = document.getElementById('scene');
+  const ctx = canvas.getContext('2d');
+
+  // ---- Palette (stricte) --------------------------------------------------
+  const NOIR        = '#000000';
+  const ORANGE      = '#FF6B00';
+  const ORANGE_LT   = '#FF8C33';
+  const BLANC       = '#FFFFFF';
+
+  // ---- Timeline (ms) ------------------------------------------------------
+  const T_INTRO   = 3000;   // 0–3s  : particules qui convergent
+  const T_REVEAL  = 8000;   // 3–8s  : tracé du guerrier + flash couronne
+  const T_NAME    = 13000;  // 8–13s : "SAMSON" + barre + "GYM"
+  const T_SIGN    = 16000;  // 13–16s: slogan + pulsation lumineuse
+  const T_LOOP    = 18000;  // +2s de pause avant boucle
+  const REVEAL_STROKES_END = 7000; // strokes finis, puis flash couronne
+
+  // ---- Utilitaires easing -------------------------------------------------
+  const clamp = (v,a=0,b=1) => v<a?a:(v>b?b:v);
+  const easeInOutCubic = t => t<.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2;
+  const easeOutCubic   = t => 1-Math.pow(1-t,3);
+  const easeOutBack    = t => { const c1=1.70158, c3=c1+1; return 1+c3*Math.pow(t-1,3)+c1*Math.pow(t-1,2); };
+  const lerp = (a,b,t) => a+(b-a)*t;
+
+  // =========================================================================
+  //  GÉOMÉTRIE DU LOGO  (guerrier couronné + haltères, tracé ligne blanche)
+  //  Coordonnées dans l'espace canvas 1080x1920. Centre X = 540.
+  // =========================================================================
+  const MIR = x => W - x; // miroir horizontal
+
+  // Échantillonne une liste de segments -> polyligne dense de points [x,y]
+  function samplePath(segs, mirror=false){
+    const pts = [];
+    let cx=0, cy=0;
+    const push=(x,y)=>{ pts.push(mirror?[MIR(x),y]:[x,y]); };
+    for(const s of segs){
+      const t=s[0];
+      if(t==='M'){ cx=s[1]; cy=s[2]; push(cx,cy); }
+      else if(t==='L'){ push(s[1],s[2]); cx=s[1]; cy=s[2]; }
+      else if(t==='Q'){
+        const [_,x1,y1,x2,y2]=s, N=22;
+        for(let i=1;i<=N;i++){ const u=i/N, iu=1-u;
+          const x=iu*iu*cx+2*iu*u*x1+u*u*x2;
+          const y=iu*iu*cy+2*iu*u*y1+u*u*y2;
+          push(x,y);
+        }
+        cx=x2; cy=y2;
+      }
+      else if(t==='C'){
+        const [_,x1,y1,x2,y2,x3,y3]=s, N=30;
+        for(let i=1;i<=N;i++){ const u=i/N, iu=1-u;
+          const x=iu*iu*iu*cx+3*iu*iu*u*x1+3*iu*u*u*x2+u*u*u*x3;
+          const y=iu*iu*iu*cy+3*iu*iu*u*y1+3*iu*u*u*y2+u*u*u*y3;
+          push(x,y);
+        }
+        cx=x3; cy=y3;
+      }
+    }
+    return pts;
+  }
+  // Cercle -> polyligne (départ à droite, sens horaire)
+  function circlePts(cx,cy,r,mirror=false){
+    const pts=[], N=40;
+    for(let i=0;i<=N;i++){ const a=(i/N)*Math.PI*2;
+      const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r;
+      pts.push(mirror?[MIR(x),y]:[x,y]);
+    }
+    return pts;
+  }
+
+  // --- Définition des traits (ordre de tracé = ordre de révélation) --------
+  const torsoR = [
+    ['M',574,404],
+    ['Q',624,388,684,410],   // trapèze -> épaule (large)
+    ['Q',748,430,760,478],   // gros deltoïde
+    ['Q',748,516,700,518],   // creux de l'aisselle
+    ['Q',736,556,716,606],   // grand dorsal (haut, large)
+    ['Q',692,676,634,724],   // grand dorsal (bas)
+    ['Q',596,758,540,776]    // taper en V -> bas-ventre
+  ];
+  const pecR = [ ['M',540,584],['Q',606,646,662,582] ];   // pectoral (courbe pleine)
+  const armR_top = [ ['M',724,452],['Q',806,430,890,448] ]; // bras épais, horizontal
+  const armR_bot = [ ['M',700,516],['Q',796,512,884,472] ];
+  const neckR    = [ ['M',560,352],['Q',556,382,574,404] ];
+
+  // Couronne (5 pointes) — polyligne
+  const crownPoly = [
+    ['M',452,352],
+    ['L',458,286],['L',478,322],['L',499,272],['L',519,322],
+    ['L',540,256],['L',561,322],['L',581,272],['L',602,322],
+    ['L',622,286],['L',628,352],['L',452,352]
+  ];
+  const crownTips = [[458,286],[499,272],[540,256],[581,272],[622,286]];
+
+  // Construit la liste ordonnée des traits sous forme de polylignes
+  function buildStrokes(){
+    const raw = [];
+    const add=(pts,isCrown=false)=>{ if(pts.length>1) raw.push({pts,isCrown}); };
+
+    add(samplePath(torsoR));            // 1  torse (droite)
+    add(samplePath(torsoR,true));       // 2  torse (gauche)
+    add(samplePath([['M',512,352],['Q',540,374,568,352]])); // 3  mâchoire/tête
+    add(samplePath(neckR));             // 4  cou droit
+    add(samplePath(neckR,true));        // 5  cou gauche
+    add(samplePath([['M',540,466],['L',540,772]])); // 6  ligne centrale (sternum/abdos)
+    add(samplePath(pecR));              // 7  pectoral droit
+    add(samplePath(pecR,true));         // 8  pectoral gauche
+    add(samplePath(armR_top));          // 9  bras droit (haut)
+    add(samplePath(armR_bot));          // 10 bras droit (bas)
+    add(samplePath(armR_top,true));     // 11 bras gauche (haut)
+    add(samplePath(armR_bot,true));     // 12 bras gauche (bas)
+    // Haltères (droite puis gauche) : manche + 2 masses arrondies
+    add(samplePath([['M',878,470],['L',912,458]]));
+    add(circlePts(944,438,44));
+    add(circlePts(974,490,34));
+    add(samplePath([['M',878,470],['L',912,458]],true));
+    add(circlePts(944,438,44,true));
+    add(circlePts(974,490,34,true));
+    // Couronne en dernier (flash)
+    add(samplePath(crownPoly), true);   // isCrown = true
+    for(const [tx,ty] of crownTips){ const c=circlePts(tx,ty,8); raw.push({pts:c,isCrown:true}); }
+
+    // Longueurs cumulées
+    let total=0;
+    for(const s of raw){
+      let len=0;
+      for(let i=1;i<s.pts.length;i++){
+        len += Math.hypot(s.pts[i][0]-s.pts[i-1][0], s.pts[i][1]-s.pts[i-1][1]);
+      }
+      s.len=len; s.start=total; total+=len;
+    }
+    return {raw, total};
+  }
+  const STROKES = buildStrokes();
+
+  // Dessine une polyligne jusqu'à une longueur budget `budget` (px).
+  // Retourne le budget restant.
+  function strokePartial(pts, budget){
+    if(budget<=0) return 0;
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    let used=0;
+    for(let i=1;i<pts.length;i++){
+      const [x0,y0]=pts[i-1], [x1,y1]=pts[i];
+      const seg=Math.hypot(x1-x0,y1-y0);
+      if(used+seg<=budget){ ctx.lineTo(x1,y1); used+=seg; }
+      else{
+        const r=(budget-used)/seg;
+        ctx.lineTo(x0+(x1-x0)*r, y0+(y1-y0)*r);
+        used=budget; break;
+      }
+    }
+    ctx.stroke();
+    return budget-used;
+  }
+
+  // Dessine le guerrier. revealP ∈[0,1] = fraction de longueur tracée.
+  function drawWarrior(revealP, glow, crownFlash){
+    const targetLen = revealP * STROKES.total;
+    ctx.save();
+    ctx.lineJoin='round'; ctx.lineCap='round';
+    ctx.strokeStyle=BLANC;
+    ctx.lineWidth=9;
+    ctx.shadowColor=ORANGE;
+    ctx.shadowBlur=glow;
+    for(const s of STROKES.raw){
+      if(s.start>=targetLen) break;
+      const budget = Math.min(s.len, targetLen - s.start);
+      strokePartial(s.pts, budget);
+    }
+    ctx.restore();
+
+    // Flash orange sur la couronne (apparaît en dernier)
+    if(crownFlash>0){
+      ctx.save();
+      ctx.lineJoin='round'; ctx.lineCap='round';
+      ctx.lineWidth=11;
+      ctx.strokeStyle=ORANGE_LT;
+      ctx.shadowColor=ORANGE;
+      ctx.shadowBlur=40+70*crownFlash;
+      ctx.globalAlpha=crownFlash;
+      for(const s of STROKES.raw){ if(s.isCrown) strokePartial(s.pts, s.len); }
+      ctx.restore();
+      // coeur blanc
+      ctx.save();
+      ctx.lineJoin='round'; ctx.lineCap='round';
+      ctx.lineWidth=6; ctx.strokeStyle=BLANC;
+      ctx.globalAlpha=clamp(crownFlash*1.2);
+      for(const s of STROKES.raw){ if(s.isCrown) strokePartial(s.pts, s.len); }
+      ctx.restore();
+    }
+  }
+
+  // =========================================================================
+  //  SYSTÈME DE PARTICULES ORANGE
+  // =========================================================================
+  const CENTER = {x:540, y:540};
+  const particles = [];
+  function spawnParticle(intro){
+    const edge = Math.random();
+    particles.push({
+      x: Math.random()*W,
+      y: H*0.55 + Math.random()*H*0.5,
+      vx: (Math.random()-0.5)*0.4,
+      vy: -(0.5+Math.random()*1.4),
+      r: 1+Math.random()*3.2,
+      life: 0,
+      max: 220+Math.random()*260,
+      hot: Math.random()<0.5,
+      intro
+    });
+  }
+  for(let i=0;i<90;i++) spawnParticle(true);
+
+  function updateParticles(dt, tRatioIntro){
+    // maintien d'un flux
+    const target = tRatioIntro<1 ? 150 : 70;
+    while(particles.length<target) spawnParticle(tRatioIntro<1);
+    for(let i=particles.length-1;i>=0;i--){
+      const p=particles[i];
+      p.life+=dt;
+      if(tRatioIntro<1){
+        // convergence vers le centre pendant l'intro
+        const dx=CENTER.x-p.x, dy=CENTER.y-p.y;
+        const d=Math.hypot(dx,dy)||1;
+        const pull=0.055*(1-tRatioIntro);
+        p.vx+=(dx/d)*pull; p.vy+=(dy/d)*pull;
+      }
+      p.x+=p.vx*dt*0.06;
+      p.y+=p.vy*dt*0.06;
+      p.vx*=0.992;
+      if(p.life>p.max || p.y<-30){ particles.splice(i,1); }
+    }
+  }
+  function drawParticles(globalAlpha){
+    ctx.save();
+    ctx.globalCompositeOperation='lighter';
+    for(const p of particles){
+      const lifeR=p.life/p.max;
+      const a=Math.sin(Math.min(lifeR,1)*Math.PI)*0.85*globalAlpha;
+      if(a<=0) continue;
+      ctx.globalAlpha=a;
+      ctx.fillStyle=p.hot?ORANGE_LT:ORANGE;
+      ctx.shadowColor=ORANGE;
+      ctx.shadowBlur=14;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // =========================================================================
+  //  BRUME / FUMÉE ORANGE (dégradés animés) + VIGNETTAGE
+  // =========================================================================
+  function drawBrume(time, intensity){
+    ctx.save();
+    ctx.globalCompositeOperation='lighter';
+    const blobs=[
+      {x:540+Math.sin(time*0.0004)*160, y:640+Math.cos(time*0.0003)*120, r:520, a:0.10},
+      {x:300+Math.cos(time*0.00035)*120, y:1000+Math.sin(time*0.00045)*140, r:420, a:0.06},
+      {x:820+Math.sin(time*0.0005)*120, y:1200+Math.cos(time*0.0004)*120, r:440, a:0.06},
+    ];
+    for(const b of blobs){
+      const g=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r);
+      g.addColorStop(0,`rgba(255,107,0,${b.a*intensity})`);
+      g.addColorStop(1,'rgba(255,107,0,0)');
+      ctx.fillStyle=g;
+      ctx.fillRect(0,0,W,H);
+    }
+    ctx.restore();
+  }
+  function drawVignette(){
+    const g=ctx.createRadialGradient(540,900,300,540,900,1200);
+    g.addColorStop(0,'rgba(0,0,0,0)');
+    g.addColorStop(1,'rgba(0,0,0,0.85)');
+    ctx.fillStyle=g;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  // =========================================================================
+  //  TEXTE (light sweep + glow)  via calque hors-écran
+  // =========================================================================
+  const tmp = document.createElement('canvas');
+  tmp.width=W; tmp.height=460;
+  const tctx=tmp.getContext('2d');
+  function textLayer(text, fontPx, sweepX, weightW){
+    tctx.clearRect(0,0,W,460);
+    tctx.fillStyle=BLANC;
+    tctx.textAlign='center';
+    tctx.textBaseline='middle';
+    tctx.font=`${fontPx}px Impact,"Arial Black",sans-serif`;
+    // léger étirement condensé
+    tctx.save();
+    tctx.translate(540,230);
+    tctx.scale(1.0,1.06);
+    tctx.fillText(text,0,0);
+    tctx.restore();
+    if(sweepX!=null){
+      tctx.globalCompositeOperation='source-atop';
+      const g=tctx.createLinearGradient(sweepX-170,0,sweepX+170,0);
+      g.addColorStop(0,'rgba(255,140,51,0)');
+      g.addColorStop(0.5,'rgba(255,150,60,0.98)');
+      g.addColorStop(1,'rgba(255,140,51,0)');
+      tctx.fillStyle=g;
+      tctx.fillRect(0,0,W,460);
+      tctx.globalCompositeOperation='source-over';
+    }
+    return tmp;
+  }
+  // Dessine un calque texte centré verticalement sur `y`, avec glow.
+  function drawTextLayer(text, y, fontPx, {alpha=1, sweepX=null, glow=22, scale=1}={}){
+    const layer=textLayer(text, fontPx, sweepX);
+    ctx.save();
+    ctx.globalAlpha=alpha;
+    ctx.shadowColor=ORANGE_LT;
+    ctx.shadowBlur=glow;
+    if(scale!==1){
+      ctx.translate(540,y);
+      ctx.scale(scale,scale);
+      ctx.translate(-540,-y);
+    }
+    ctx.drawImage(layer, 0, y-230);
+    ctx.restore();
+  }
+
+  // Barre orange qui se trace sous "SAMSON"
+  function drawBar(y, p, glow){
+    if(p<=0) return;
+    const half=430*easeOutCubic(p);
+    ctx.save();
+    ctx.strokeStyle=ORANGE;
+    ctx.lineCap='round';
+    ctx.lineWidth=10;
+    ctx.shadowColor=ORANGE;
+    ctx.shadowBlur=glow;
+    ctx.beginPath();
+    ctx.moveTo(540-half,y);
+    ctx.lineTo(540+half,y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // =========================================================================
+  //  RENDU D'UNE FRAME  (t en ms depuis le début du cycle)
+  // =========================================================================
+  function render(t, absTime){
+    // fond noir pur
+    ctx.fillStyle=NOIR;
+    ctx.fillRect(0,0,W,H);
+
+    const introRatio = clamp(t/T_INTRO);
+
+    // Brume + particules (arrière-plan constant, atténué en fin)
+    const brumeI = t<T_INTRO ? lerp(0.4,1,introRatio) : 1;
+    drawBrume(absTime, brumeI);
+    drawParticles(t<T_INTRO ? introRatio*0.9+0.1 : 0.6);
+
+    // ---- Révélation du guerrier (3–8s) ----
+    let revealP=0, crownFlash=0, warriorGlow=18;
+    if(t>=T_INTRO){
+      revealP = easeInOutCubic(clamp((t-T_INTRO)/(REVEAL_STROKES_END-T_INTRO)));
+      if(t>=REVEAL_STROKES_END){
+        const f=clamp((t-REVEAL_STROKES_END)/(T_REVEAL-REVEAL_STROKES_END));
+        crownFlash=Math.sin(f*Math.PI); // pic puis retombée
+      }
+    }
+
+    // ---- Pulsation finale (glow qui respire) ----
+    let breathe=0;
+    if(t>=T_SIGN-2000){
+      breathe=(Math.sin((absTime)*0.004)*0.5+0.5);
+      warriorGlow=18+breathe*34;
+    } else if(t>=T_INTRO){
+      warriorGlow=18+crownFlash*20;
+    }
+
+    if(revealP>0) drawWarrior(revealP, warriorGlow, crownFlash);
+
+    // ---- "SAMSON" (8–13s) : balayage lumineux ----
+    if(t>=T_NAME-5000){
+      const local=clamp((t-(T_NAME-5000))/2500);           // 8 -> 10.5s
+      const alpha=easeOutCubic(local);
+      const sweep = local<1 ? lerp(120,960,easeInOutCubic(local)) : null;
+      const glow = 20 + breathe*26;
+      drawTextLayer('SAMSON', 1090, 232, {alpha, sweepX:sweep, glow});
+
+      // barre orange (10 -> 11s)
+      const barP=clamp((t-(T_NAME-3000))/1000);
+      drawBar(1200, barP, 20+breathe*22);
+
+      // "GYM" avec léger zoom (11 -> 12.5s)
+      const gLocal=clamp((t-(T_NAME-2000))/1500);
+      if(gLocal>0){
+        const gAlpha=easeOutCubic(gLocal);
+        const gScale=lerp(0.72,1,easeOutBack(clamp(gLocal)));
+        drawTextLayer('GYM', 1380, 150, {alpha:gAlpha, glow:16+breathe*18, scale:gScale});
+      }
+    }
+
+    // ---- Slogan (13–16s) ----
+    if(t>=T_SIGN-3000){
+      const sLocal=clamp((t-(T_SIGN-3000))/1500);           // 13 -> 14.5s
+      const sAlpha=easeOutCubic(sLocal);
+      ctx.save();
+      ctx.globalAlpha=sAlpha;
+      ctx.fillStyle=ORANGE_LT;
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.font='62px Impact,"Arial Black",sans-serif';
+      ctx.shadowColor=ORANGE;
+      ctx.shadowBlur=18+breathe*20;
+      const yy=1560;
+      ctx.save(); ctx.translate(540,yy); ctx.scale(1.0,1.05);
+      ctx.fillText('RÉVEILLE LA BÊTE EN TOI',0,0);
+      ctx.restore();
+      ctx.restore();
+    }
+
+    // Vignettage par-dessus (toujours), renforcé en intro
+    ctx.save();
+    ctx.globalAlpha = t<T_INTRO ? lerp(1,0.75,introRatio) : 0.75;
+    drawVignette();
+    ctx.restore();
+
+    // Léger flash blanc global au moment du flash couronne
+    if(crownFlash>0){
+      ctx.save();
+      ctx.globalAlpha=crownFlash*0.10;
+      ctx.fillStyle=BLANC;
+      ctx.fillRect(0,0,W,H);
+      ctx.restore();
+    }
+  }
+
+  // =========================================================================
+  //  BOUCLE D'ANIMATION
+  // =========================================================================
+  let startTime=null, lastTime=null;
+  function frame(now){
+    if(startTime==null){ startTime=now; lastTime=now; }
+    let t = now - startTime;
+    const dt = Math.min(50, now-lastTime);
+    lastTime=now;
+
+    if(t>=T_LOOP){ startTime=now; t=0; }
+
+    updateParticles(dt, clamp(t/T_INTRO));
+    render(t, now);
+    rafId=requestAnimationFrame(frame);
+  }
+
+  let rafId=null;
+  // Rendu d'une image fixe : index.html?t=SECONDES
+  const params=new URLSearchParams(location.search);
+  if(params.has('t')){
+    const secs=parseFloat(params.get('t'))||0;
+    const t=clamp(secs*1000,0,T_LOOP-1);
+    // avancer les particules de façon déterministe
+    for(let i=0;i<Math.floor(t/16);i++) updateParticles(16, clamp((i*16)/T_INTRO));
+    render(t, secs*1000);
+  } else {
+    rafId=requestAnimationFrame(frame);
+  }
+
+  // ---- Contrôles ----
+  const ui=document.getElementById('ui');
+  document.getElementById('replay').addEventListener('click',()=>{
+    startTime=null;
+    if(!rafId && !params.has('t')) rafId=requestAnimationFrame(frame);
+  });
+  window.addEventListener('keydown',(e)=>{
+    if(e.key==='h'||e.key==='H') ui.classList.toggle('hidden');
+    if(e.key==='r'||e.key==='R'){ startTime=null; }
+  });
+})();
+</script>
+</body>
+</html>
