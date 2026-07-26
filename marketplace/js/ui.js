@@ -296,10 +296,16 @@ window.MP = window.MP || {};
     catch (e) { return {}; }
   }
 
-  /** Catégories effectives : personnalisées par l'admin sinon défaut. */
+  /**
+   * Catégories effectives. Priorité : personnalisation admin locale >
+   * catégories du serveur (CMS en base, mises en cache par l'API) > défaut.
+   */
   function categories() {
     const c = _settings().categories;
-    return Array.isArray(c) && c.length ? c : CATEGORIES_DEFAULT;
+    if (Array.isArray(c) && c.length) return c;
+    const server = window.MP.Api && window.MP.Api.categories && window.MP.Api.categories();
+    if (Array.isArray(server) && server.length) return server;
+    return CATEGORIES_DEFAULT;
   }
 
   /** Communes effectives : personnalisées par l'admin sinon défaut. */

@@ -180,6 +180,53 @@ function listProducts({ category, q, storeId, limit } = {}) {
   return db.prepare(sql).all(args);
 }
 
+/* --------------------- Catégories (CMS, arborescence) --------------------- */
+// Jeu par défaut (aligné sur le front) — inséré au premier démarrage si vide.
+const CATEGORIES_DEFAULT = [
+  { id: "mode", label: "Mode & Vêtements", icon: "👗" },
+  { id: "electronique", label: "Électronique", icon: "📱" },
+  { id: "maison", label: "Maison & Déco", icon: "🛋️" },
+  { id: "beaute", label: "Beauté & Soins", icon: "💄" },
+  { id: "alimentation", label: "Alimentation", icon: "🥘" },
+  { id: "accessoires", label: "Accessoires", icon: "👜" },
+  { id: "enfants", label: "Enfants & Bébé", icon: "🧸" },
+  { id: "sport", label: "Sport & Loisirs", icon: "⚽" },
+];
+function countCategories() { return db.prepare("SELECT COUNT(*) c FROM categories").get().c; }
+function seedCategories() {
+  if (countCategories() > 0) return 0;
+  const ins = db.prepare("INSERT INTO categories (id,label,icon,parentId,sortOrder,active,createdAt) VALUES (@id,@label,@icon,@parentId,@sortOrder,1,@createdAt)");
+  CATEGORIES_DEFAULT.forEach((c, i) => ins.run({ id: c.id, label: c.label, icon: c.icon, parentId: null, sortOrder: i, createdAt: now() }));
+  return CATEGORIES_DEFAULT.length;
+}
+function listCategories({ activeOnly = true } = {}) {
+  const sql = "SELECT * FROM categories" + (activeOnly ? " WHERE active=1" : "") + " ORDER BY sortOrder ASC, label ASC";
+  return db.prepare(sql).all();
+}
+/** Arborescence : racines avec leurs enfants (children). */
+function categoryTree({ activeOnly = true } = {}) {
+  const all = listCategories({ activeOnly });
+  const byId = {}; all.forEach((c) => (byId[c.id] = Object.assign({ children: [] }, c)));
+  const roots = [];
+  all.forEach((c) => { const node = byId[c.id]; if (c.parentId && byId[c.parentId]) byId[c.parentId].children.push(node); else roots.push(node); });
+  return roots;
+}
+function upsertCategory(c) {
+  if (!c || !c.id || !String(c.label || "").trim()) return { error: "Catégorie invalide (id + libellé requis)." };
+  const ex = db.prepare("SELECT id FROM categories WHERE id=?").get(c.id);
+  if (ex) db.prepare("UPDATE categories SET label=@label, icon=@icon, parentId=@parentId, sortOrder=@sortOrder, active=@active WHERE id=@id")
+    .run({ id: c.id, label: c.label, icon: c.icon || "", parentId: c.parentId || null, sortOrder: parseInt(c.sortOrder, 10) || 0, active: c.active === false ? 0 : 1 });
+  else db.prepare("INSERT INTO categories (id,label,icon,parentId,sortOrder,active,createdAt) VALUES (@id,@label,@icon,@parentId,@sortOrder,@active,@createdAt)")
+    .run({ id: c.id, label: c.label, icon: c.icon || "", parentId: c.parentId || null, sortOrder: parseInt(c.sortOrder, 10) || 0, active: c.active === false ? 0 : 1, createdAt: now() });
+  return { ok: true, category: db.prepare("SELECT * FROM categories WHERE id=?").get(c.id) };
+}
+function deleteCategory(id) {
+  if (!id) return { error: "id requis" };
+  db.prepare("UPDATE categories SET parentId=NULL WHERE parentId=?").run(id); // détache les enfants
+  db.prepare("DELETE FROM categories WHERE id=?").run(id);
+  return { ok: true };
+}
+
 /* --------------------------- Facettes (filtres) --------------------------- */
 const PRICE_BUCKETS = [
   { id: "0-5000", label: "Moins de 5 000 FCFA", min: 0, max: 5000 },
@@ -769,7 +816,7 @@ function listPushSubs(userId) {
 function countPushSubs() { return db.prepare("SELECT COUNT(*) c FROM push_subs").get().c; }
 
 /* --------------------------- Sauvegarde & restauration ------------------- */
-const BACKUP_TABLES = ["users", "products", "carts", "orders", "order_items", "payments", "payouts", "stores", "sessions", "reviews", "documents", "push_subs", "loyalty_ledger", "product_questions"];
+const BACKUP_TABLES = ["users", "products", "carts", "orders", "order_items", "payments", "payouts", "stores", "sessions", "reviews", "documents", "push_subs", "loyalty_ledger", "product_questions", "categories"];
 function backup() {
   const out = { app: "marche-ci", schemaVersion: migrations.currentVersion(db), exportedAt: now(), tables: {} };
   for (const t of BACKUP_TABLES) out.tables[t] = db.prepare(`SELECT * FROM ${t}`).all();
@@ -805,6 +852,7 @@ module.exports = {
   createOtp, verifyOtp, setEmailVerified, setPhoneVerified, setUserPassword, getUserByEmail, getUserByPhone, getUserRaw, setTwofa, setRole,
   upsertProduct, listProducts, searchProducts, getProduct, countProducts,
   popularProducts, boughtTogether, recommendFor, facets,
+  seedCategories, countCategories, listCategories, categoryTree, upsertCategory, deleteCategory,
   getCart, setCart,
   createOrder, getOrder, listOrders, setOrderStatus, refundOrder, stats,
   addReview, listReviews, ratingFor, setReviewStatus,

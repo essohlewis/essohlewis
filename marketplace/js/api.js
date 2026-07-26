@@ -51,6 +51,7 @@ window.MP = window.MP || {};
         const j = await (await fetch(b + "/health", { cache: "no-store" })).json();
         API.enabled = !!(j && j.ok && j.db);
         API.productCount = (j && j.products) || 0;
+        if (API.enabled) { try { await loadCategories(); } catch (e) {} } // catégories CMS en cache
         if (API.enabled && token()) { try { await pullCollections(); await pullSynced(); } catch (e) {} }
         // Synchro multi‑appareils : re-tirer favoris/souhaits au retour sur l'onglet.
         if (API.enabled) {
@@ -269,6 +270,23 @@ window.MP = window.MP || {};
     if (!API.enabled) return null;
     try { const qs = new URLSearchParams(params || {}).toString(); const j = await get("/products/facets" + (qs ? "?" + qs : "")); return j && j.ok ? j : null; } catch (e) { return null; }
   }
+
+  /* ------------------------------ Catégories (CMS) --------------------------- */
+  const CATS_CACHE = "marchesci_serverCats";
+  // Récupère les catégories du serveur et les met en cache (lues par UI.categories()).
+  async function loadCategories() {
+    if (!API.enabled) return null;
+    try {
+      const j = await get("/categories");
+      if (j && j.ok && Array.isArray(j.items) && j.items.length) {
+        const cats = j.items.map((c) => ({ id: c.id, label: c.label, icon: c.icon, parentId: c.parentId || null }));
+        try { localStorage.setItem(CATS_CACHE, JSON.stringify(cats)); } catch (e) {}
+        return { items: cats, tree: j.tree || [] };
+      }
+    } catch (e) {}
+    return null;
+  }
+  function categories() { try { return JSON.parse(localStorage.getItem(CATS_CACHE) || "null"); } catch (e) { return null; } }
   async function myOrders() {
     if (!API.enabled || !token()) return [];
     const j = await get("/orders");
@@ -316,6 +334,8 @@ window.MP = window.MP || {};
   API.relatedProducts = relatedProducts;
   API.recommendations = recommendations;
   API.facets = facets;
+  API.loadCategories = loadCategories;
+  API.categories = categories;   // catégories serveur en cache (ou null)
   API.myOrders = myOrders;
   API.loyalty = loyalty;
   API.questionsFor = questionsFor;

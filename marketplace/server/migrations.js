@@ -143,6 +143,19 @@ const MIGRATIONS = [
       `);
     },
   },
+  {
+    version: 6,
+    name: "categories-cms",
+    up(db) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS categories (
+          id TEXT PRIMARY KEY, label TEXT, icon TEXT, parentId TEXT,
+          sortOrder INTEGER DEFAULT 0, active INTEGER DEFAULT 1, createdAt INTEGER
+        );
+        CREATE INDEX IF NOT EXISTS idx_cat_parent ON categories(parentId, sortOrder);
+      `);
+    },
+  },
 ];
 
 function currentVersion(db) {

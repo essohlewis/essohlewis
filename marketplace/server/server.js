@@ -75,6 +75,7 @@ let SHOP_AVAILABLE = false;
 try {
   SHOP_AVAILABLE = shopdb.init();
   if (SHOP_AVAILABLE && shopdb.countProducts() === 0) { seedProducts.forEach((p) => shopdb.upsertProduct(p)); logger.info(`catalogue initialisé (${seedProducts.length} produits)`, { scope: "shop" }); }
+  if (SHOP_AVAILABLE) { const nc = shopdb.seedCategories(); if (nc) logger.info(`catégories initialisées (${nc})`, { scope: "shop" }); }
   logger.info(`base de données client : ${SHOP_AVAILABLE ? "SQLite prête (" + shopdb.countProducts() + " produits)" : "indisponible (node:sqlite absent)"}`, { scope: "shop", available: SHOP_AVAILABLE });
 } catch (e) { logger.error("base de données indisponible", { scope: "shop", err: e.message }); }
 // Statut KYC d'une boutique (lecture directe du store KYC) — sert à bloquer la

@@ -216,6 +216,20 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
   });
   // Facettes : compteurs par catégorie / boutique / tranche de prix sur le résultat.
   router.get("/products/facets", (req, res) => res.json(Object.assign({ ok: true }, shopdb.facets({ q: req.query.q, storeId: req.query.storeId }))));
+
+  /* --------------------- Catégories (CMS + arborescence) --------------- */
+  router.get("/categories", (req, res) => res.json({ ok: true, items: shopdb.listCategories(), tree: shopdb.categoryTree() }));
+  router.get("/admin/categories", requireAdmin, (req, res) => res.json({ ok: true, items: shopdb.listCategories({ activeOnly: false }), tree: shopdb.categoryTree({ activeOnly: false }) }));
+  router.post("/admin/categories", requireAdmin, (req, res) => {
+    const r = shopdb.upsertCategory(req.body || {});
+    if (r.error) return res.status(400).json({ ok: false, error: r.error });
+    res.json({ ok: true, category: r.category });
+  });
+  router.post("/admin/categories/:id/delete", requireAdmin, (req, res) => {
+    const r = shopdb.deleteCategory(req.params.id);
+    if (r.error) return res.status(400).json({ ok: false, error: r.error });
+    res.json({ ok: true });
+  });
   // Recommandations personnalisées (catégories déjà achetées ; repli populaires).
   router.get("/recommendations", maybeAuth, (req, res) => res.json({ ok: true, items: shopdb.recommendFor(req.userId, req.query.limit) }));
   router.get("/products/:id", (req, res) => {

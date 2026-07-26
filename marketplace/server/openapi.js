@@ -145,6 +145,14 @@ function build({ version = "1.0.0", baseUrl = "/api/v1" } = {}) {
           security: [], parameters: [{ name: "q", in: "query", schema: { type: "string" } }, { name: "storeId", in: "query", schema: { type: "string" } }],
         }),
       },
+      "/shop/categories": { get: op("Catalogue", "Catégories (CMS) — liste plate + arborescence", { security: [] }) },
+      "/shop/admin/categories": {
+        get: op("Administration", "Toutes les catégories (dont inactives) + arborescence", { security: adminAuth }),
+        post: op("Administration", "Créer / mettre à jour une catégorie", { security: adminAuth }),
+      },
+      "/shop/admin/categories/{id}/delete": {
+        post: op("Administration", "Supprimer une catégorie (les enfants sont détachés)", { security: adminAuth, parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }] }),
+      },
       "/shop/reviews": {
         get: op("Catalogue", "Avis (paginés) d'une cible + note moyenne", {
           security: [],

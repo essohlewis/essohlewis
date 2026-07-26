@@ -184,6 +184,18 @@ dans l'onglet **Retraits**. Endpoints : `GET /vendor/wallet`,
   jamais de pile, mais le support relie le ticket au log par l'identifiant.
   Variables : `LOG_LEVEL` (défaut `info`), `LOG_FORMAT` (`json`/`pretty`).
 
+### Catégories & arborescence en base (domaine D — CMS)
+Catégories gérées **en base** (table `categories`, semées au premier démarrage
+avec les 8 catégories par défaut), avec **arborescence** (`parentId`) :
+- `GET /categories` — liste plate (actives) + `tree` (racines → `children`).
+- Admin : `GET /admin/categories` (dont inactives), `POST /admin/categories`
+  (créer/mettre à jour : `id`, `label`, `icon`, `parentId`, `sortOrder`,
+  `active`), `POST /admin/categories/:id/delete` (les enfants sont **détachés**).
+- **Front** : l'API met les catégories serveur en cache ; `UI.categories()` les
+  utilise en priorité (personnalisation admin locale > **serveur (CMS)** >
+  défaut), donc renommer/ajouter une catégorie en base se reflète dans toute la
+  marketplace. Repli défaut sans backend (`file://`).
+
 ### Filtres & tri à facettes (domaine D)
 `GET /products/facets?q=&storeId=` renvoie, **sur l'ensemble de résultats**, le
 **nombre de produits par catégorie, par boutique et par tranche de prix**
