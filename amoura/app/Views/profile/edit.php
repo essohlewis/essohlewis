@@ -64,6 +64,24 @@ $languages = implode(', ', json_decode($raw['languages'] ?? '[]', true) ?: []);
       <div class="field grow"><label>Profession</label><input class="input" name="job_title" value="<?= e($raw['job_title'] ?? '') ?>"></div>
       <div class="field grow"><label>Formation</label><input class="input" name="education" value="<?= e($raw['education'] ?? '') ?>"></div>
     </div>
+    <h3 style="margin-top:8px">Style de vie</h3>
+    <div class="row wrap">
+      <?php
+        $sel = fn($f, $v) => ($raw[$f] ?? '') === $v ? 'selected' : '';
+        $lifestyle = [
+          'smoking' => ['label'=>'Tabac', 'opts'=>['no'=>'Non','sometimes'=>'Parfois','yes'=>'Oui']],
+          'drinking' => ['label'=>'Alcool', 'opts'=>['no'=>'Non','sometimes'=>'Parfois','yes'=>'Oui']],
+          'children' => ['label'=>'Enfants', 'opts'=>['no'=>'Non','someday'=>'Un jour','have'=>'J\'en ai','have_more'=>'J\'en veux plus']],
+          'relationship_goal' => ['label'=>'Objectif', 'opts'=>['serious'=>'Sérieux','casual'=>'Décontracté','friends'=>'Amitié','unsure'=>'Je ne sais pas']],
+        ];
+        foreach ($lifestyle as $field => $cfg): ?>
+        <div class="field" style="min-width:150px"><label><?= $cfg['label'] ?></label>
+          <select class="select" name="<?= $field ?>"><option value="">—</option>
+            <?php foreach ($cfg['opts'] as $v => $lab): ?><option value="<?= $v ?>" <?= $sel($field, $v) ?>><?= $lab ?></option><?php endforeach; ?>
+          </select></div>
+      <?php endforeach; ?>
+      <div class="field" style="min-width:150px"><label>Religion</label><input class="input" name="religion" value="<?= e($raw['religion'] ?? '') ?>"></div>
+    </div>
     <input type="hidden" name="latitude" id="lat" value="<?= e($raw['latitude'] ?? '') ?>">
     <input type="hidden" name="longitude" id="lng" value="<?= e($raw['longitude'] ?? '') ?>">
     <div class="row">

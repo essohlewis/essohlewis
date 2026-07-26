@@ -21,13 +21,24 @@ final class NotificationController extends Controller
     {
         $user = $this->requireAuth($request);
         $model = new Notification();
-        $items = $model->forUser((int) $user['id']);
-        foreach ($items as &$n) {
+        $limit = 30;
+        $before = \Amoura\Core\Paginator::decode($request->query('cursor'));
+        $rows = $model->forUser((int) $user['id'], $limit, $before);
+        $page = \Amoura\Core\Paginator::page($rows, $limit, fn($n) => (int) $n['id']);
+
+        $items = array_map(function ($n) {
             $n['avatar'] = avatar_url($n['actor_avatar'] ?? null);
             $n['ago'] = time_ago($n['created_at']);
             $n['data'] = json_decode($n['data'] ?? '{}', true) ?: [];
-        }
-        $this->json(['ok' => true, 'notifications' => $items, 'unread' => $model->unreadCount((int) $user['id'])]);
+            return $n;
+        }, $page['data']);
+
+        $this->json([
+            'ok' => true,
+            'notifications' => $items,
+            'unread' => $model->unreadCount((int) $user['id']),
+            'next_cursor' => $page['next_cursor'],
+        ]);
     }
 
     public function markRead(Request $request): void

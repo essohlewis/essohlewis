@@ -56,11 +56,25 @@ final class SubscriptionController extends Controller
             $method = CinetPayGateway::operatorFromPhone($phone);
         }
 
+        // Coupon de réduction éventuel.
+        $amount = (int) $plan['price_cents'];
+        $couponCode = trim((string) $request->input('coupon'));
+        $meta = [];
+        if ($couponCode !== '') {
+            $coupon = (new \Amoura\Models\Coupon())->valid($couponCode);
+            if ($coupon) {
+                $amount = \Amoura\Models\Coupon::apply($coupon, $amount);
+                (new \Amoura\Models\Coupon())->redeem((int) $coupon['id']);
+                $meta['coupon'] = $coupon['code'];
+            }
+        }
+
         // Transaction en base (source de vérité côté serveur).
         $txModel = new Transaction();
-        $txId = $txModel->initiate($uid, (int) $plan['id'], (int) $plan['price_cents'], (string) $plan['currency'], $gateway, [
+        $txId = $txModel->initiate($uid, (int) $plan['id'], $amount, (string) $plan['currency'], $gateway, [
             'phone' => $phone,
             'payment_method' => $method,
+            'metadata' => $meta ? json_encode($meta) : null,
         ]);
         $tx = $txModel->find($txId);
 
@@ -119,6 +133,32 @@ final class SubscriptionController extends Controller
             Session::flash('error', 'Paiement non confirmé. Si vous avez été débité, contactez le support.');
         }
         $this->redirect($back);
+    }
+
+    /** Historique de facturation de l'utilisateur (abonnements + achats). */
+    public function history(Request $request): void
+    {
+        $user = $this->requireAuth($request);
+        $this->view('subscription/history', [
+            'transactions' => (new Transaction())->forUser((int) $user['id']),
+        ]);
+    }
+
+    /** Reçu imprimable d'une transaction payée (mise en page dédiée). */
+    public function receipt(Request $request, array $params): void
+    {
+        $user = $this->requireAuth($request);
+        $tx = (new Transaction())->receiptFor((int) ($params['id'] ?? 0), (int) $user['id']);
+        if (!$tx) {
+            Session::flash('error', 'Reçu introuvable.');
+            $this->redirect('/premium/history');
+        }
+        // Layout minimal (imprimable) plutôt que la coque applicative.
+        $this->view('subscription/receipt', [
+            'tx' => $tx,
+            'user' => $user,
+            'appName' => (string) Env::get('APP_NAME', 'Amoura'),
+        ], 'layouts/receipt');
     }
 
     public function cancel(Request $request): void

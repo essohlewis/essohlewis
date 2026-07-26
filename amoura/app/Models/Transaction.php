@@ -74,4 +74,33 @@ final class Transaction extends Model
             [$limit, $offset]
         )->fetchAll();
     }
+
+    /** Historique de facturation d'un utilisateur (avec libellé d'article). */
+    public function forUser(int $userId, int $limit = 50): array
+    {
+        return $this->run(
+            'SELECT t.*, p.name AS plan_name, pr.name AS product_name
+             FROM transactions t
+             LEFT JOIN plans p    ON p.id = t.plan_id
+             LEFT JOIN products pr ON pr.id = t.product_id
+             WHERE t.user_id = ?
+             ORDER BY t.created_at DESC LIMIT ?',
+            [$userId, $limit]
+        )->fetchAll();
+    }
+
+    /** Transaction payée d'un utilisateur, pour l'édition d'un reçu (sinon null). */
+    public function receiptFor(int $txId, int $userId): ?array
+    {
+        $row = $this->run(
+            'SELECT t.*, p.name AS plan_name, pr.name AS product_name
+             FROM transactions t
+             LEFT JOIN plans p    ON p.id = t.plan_id
+             LEFT JOIN products pr ON pr.id = t.product_id
+             WHERE t.id = ? AND t.user_id = ? AND t.status = "paid"
+             LIMIT 1',
+            [$txId, $userId]
+        )->fetch();
+        return $row ?: null;
+    }
 }

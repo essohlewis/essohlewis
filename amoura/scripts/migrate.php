@@ -43,6 +43,22 @@ function migrationFiles(string $dir): array
     return $files;
 }
 
+/**
+ * Exécute un script SQL multi-instructions de façon fiable.
+ * PDO::exec() peut s'arrêter en cours de route sur de longs scripts ; query()
+ * + nextRowset() force l'exécution de TOUTES les instructions et remonte les erreurs.
+ */
+function runSqlScript(PDO $pdo, string $sql): void
+{
+    $stmt = $pdo->query($sql);
+    if ($stmt === false) {
+        return;
+    }
+    do {
+        $stmt->closeCursor();
+    } while ($stmt->nextRowset());
+}
+
 function ensureMigrationsTable(PDO $db): void
 {
     $db->exec(
@@ -81,9 +97,9 @@ try {
         echo "Base supprimée.\n";
         $pdo->exec("CREATE DATABASE IF NOT EXISTS `{$name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
         $pdo->exec("USE `{$name}`");
-        $pdo->exec(file_get_contents(__DIR__ . '/../database/schema.sql'));
+        runSqlScript($pdo, file_get_contents(__DIR__ . "/../database/schema.sql"));
         echo "Schéma appliqué.\n";
-        $pdo->exec(file_get_contents(__DIR__ . '/../database/seed.sql'));
+        runSqlScript($pdo, file_get_contents(__DIR__ . "/../database/seed.sql"));
         echo "Données de démarrage insérées.\n";
 
         // Baseline : le schéma reflète déjà toutes les migrations existantes.
@@ -117,7 +133,7 @@ try {
         echo "→ Application de {$file}… ";
         $sql = file_get_contents($migrationsDir . '/' . $file);
         try {
-            $db->exec($sql);
+            runSqlScript($db, $sql);
             $insert->execute([$file]);
             echo "ok\n";
         } catch (\Throwable $e) {

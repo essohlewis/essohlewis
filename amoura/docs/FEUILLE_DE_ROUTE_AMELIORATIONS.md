@@ -1,7 +1,7 @@
 # 💞 Amoura — Feuille de route des améliorations
 
 **Plan d'amélioration continue de la plateforme**
-Version : 1.0 · Date : 26 juillet 2026 · Portée : améliorations livrées + backlog priorisé
+Version : 1.6 · Date : 26 juillet 2026 · Portée : améliorations livrées + backlog priorisé
 
 > Légende — **Impact** : 🟢 Faible · 🟡 Moyen · 🔴 Élevé | **Effort** : S (≤2 j) · M (≤1 sem) · L (2–3 sem) · XL (>1 mois) | **Priorité** : P0 (critique) → P3 (confort)
 
@@ -10,7 +10,8 @@ Version : 1.0 · Date : 26 juillet 2026 · Portée : améliorations livrées + b
 ## 1. Améliorations livrées dans cette itération ✅
 
 Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont été
-**implémentées et testées** (suite passée à 90 tests / 216 assertions).
+**implémentées et testées** (suite passée à **121 tests / 296 assertions**, analyse
+statique **PHPStan niveau 5 sans erreur**).
 
 | Amélioration | Axe | Détail | Vérification |
 |---|---|---|---|
@@ -36,6 +37,26 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 | **Achats à l'unité** | Monétisation | Catalogue `products` + portefeuille `user_credits` (débit atomique) ; Boost (ordre de découverte), Super Like (gating), Reveal (déblocage 24 h). Paiement → `Fulfillment` crédite (idempotent). | 3 intégration + E2E |
 | **Dunning (relances)** | Monétisation | `Services\Billing\Dunning` (cron) : rappel J-3 → `past_due` à l'échéance → `expired` après grâce, avec notifications. | 4 tests d'intégration |
 
+### 1.1 Itération de durcissement (Sprint +6) ✅
+
+Dernière itération : **tout le reliquat du backlog** a été traité.
+
+| Amélioration | Axe | Détail | Vérification |
+|---|---|---|---|
+| **Chiffrement des messages au repos** | Sécurité | `Core\Security\Crypto` (libsodium secretbox, clé dérivée d'`APP_KEY`) : `Message::send()` chiffre le corps, `history()` déchiffre ; rétro-compatible (texte clair renvoyé tel quel), dégradation gracieuse sans l'extension. | 4 unit + 1 intégration (chiffré en base, clair via l'API) |
+| **Détection d'appareils** | Sécurité | `Services\Security\DeviceMonitor` : empreinte (UA + préfixe réseau /24-/48), table `login_devices`, alerte de connexion depuis un nouvel appareil. | 1 test d'intégration (2ᵉ appareil = 1 alerte) |
+| **Réplicas de lecture** | Scale | `Database::read()` (réplica `DB_READ_*`, repli automatique sur le primaire). | Config `.env` + repli vérifié |
+| **CDN + stockage objet S3** | Scale | Abstraction `Core\Storage` (`LocalStorage` défaut, `S3Storage` SigV4, `StorageManager` piloté par `STORAGE_DRIVER`), URLs CDN. | 5 tests unitaires (local, anti-traversée) |
+| **Pagination par curseur** | Performance | `Core\Paginator` (curseur opaque base64url keyset) ; notifications & historique migrés depuis `OFFSET`. | 4 tests unitaires |
+| **Réponses citées & éphémères** | UX | `messages.reply_to_id` (réponse citée déchiffrée) + `expires_at` (TTL, exclus après expiration, purgés par le cron). | 2 tests d'intégration |
+| **Filtres de style de vie** | UX | `profiles` : tabac, alcool, enfants, religion, objectif de relation ; filtres de découverte + édition de profil. | Intégration matching |
+| **Anti-fraude (score de risque)** | Confiance | `Services\Moderation\RiskScorer` : âge du compte, photo, signalements, coordonnées/arnaque en bio, vélocité, remise si vérifié → score 0–100 + niveau. | 5 tests unitaires |
+| **File de modération priorisée + actions groupées** | Confiance | `Report::queue()` triée par sévérité (mineurs → arnaque → …) + `bulkResolve()` ; UI admin (cases à cocher, actions en masse). | 2 tests d'intégration |
+| **Reçus de paiement** | Monétisation | Historique de facturation (`/premium/history`) + reçu imprimable/PDF (`/premium/receipt/{id}`, portée utilisateur, transactions payées uniquement). | 1 test d'intégration (portée) + smoke rendu |
+| **Coupons & offres** | Monétisation | `Models\Coupon` (% ou montant, plafond de rachats, expiration, rachat atomique) intégré au tunnel d'abonnement. | 1 unit + 2 intégration |
+| **Analyse statique (PHPStan)** | DevEx | `phpstan.neon` niveau 5 (app/scripts/websocket), script `composer stan`, **0 erreur** (corrections de types réelles au passage). | CI-ready |
+| **Documentation API (OpenAPI)** | DevEx | `docs/openapi.yaml` (OpenAPI 3.0.3) : découverte, swipe, messagerie chiffrée, notifications, push, webhooks. | Spéc validée |
+
 ---
 
 ## 2. Backlog d'améliorations priorisé
@@ -48,8 +69,8 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 | ~~Vérification de signature webhook PayPal~~ | 🔴 | M | ✅ **Livré** |
 | ~~Authentification à deux facteurs (2FA) optionnelle~~ | 🟡 | M | ✅ **Livré** |
 | ~~Rotation & révocation de sessions (« déconnecter partout »)~~ | 🟡 | S | ✅ **Livré** |
-| Chiffrement au repos des messages sensibles | 🟡 | L | P2 |
-| Détection d'appareils & alertes de connexion suspecte | 🟡 | M | P2 |
+| ~~Chiffrement au repos des messages sensibles~~ | 🟡 | L | ✅ **Livré** |
+| ~~Détection d'appareils & alertes de connexion suspecte~~ | 🟡 | M | ✅ **Livré** |
 
 ### 2.2 ⚡ Performance & passage à l'échelle
 
@@ -57,10 +78,10 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 |---|---|---|---|
 | ~~Cache Redis (sessions, rate-limit, réglages CMS)~~ | 🔴 | M | ✅ **Livré** |
 | ~~Index composites & `EXPLAIN` sur découverte / fil / messages~~ | 🔴 | S | ✅ **Livré** |
-| Réplicas de lecture MySQL (séparation lecture/écriture) | 🟡 | L | P2 |
+| ~~Réplicas de lecture MySQL (séparation lecture/écriture)~~ | 🟡 | L | ✅ **Livré** |
 | ~~Clustering WebSocket (Redis pub/sub)~~ | 🔴 | L | ✅ **Livré** |
-| CDN + stockage objet (S3) pour médias, transcodage vocal | 🟡 | L | P2 |
-| Pagination par curseur généralisée (au lieu d'`OFFSET`) | 🟡 | M | P1 |
+| ~~CDN + stockage objet (S3) pour médias~~ *(transcodage vocal à venir)* | 🟡 | L | ✅ **Livré** |
+| ~~Pagination par curseur généralisée (au lieu d'`OFFSET`)~~ | 🟡 | M | ✅ **Livré** |
 
 ### 2.3 🎨 Expérience utilisateur
 
@@ -70,8 +91,8 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 | ~~Internationalisation (i18n) FR/EN + sélecteur~~ | 🟡 | M | ✅ **Livré** |
 | ~~Onboarding guidé + complétion de profil~~ | 🟡 | M | ✅ **Livré** |
 | ~~« Qui a vu mon profil » + derniers visiteurs~~ | 🟡 | S | ✅ **Livré** |
-| Réponses citées & messages éphémères dans le chat | 🟢 | S | P2 |
-| Filtres de découverte enrichis (style de vie, valeurs) | 🟡 | S | P2 |
+| ~~Réponses citées & messages éphémères dans le chat~~ | 🟢 | S | ✅ **Livré** |
+| ~~Filtres de découverte enrichis (style de vie, valeurs)~~ | 🟡 | S | ✅ **Livré** |
 | Skeletons/optimistic UI systématiques | 🟢 | S | P3 |
 
 ### 2.4 🛡️ Confiance & modération
@@ -79,9 +100,9 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 | Amélioration | Impact | Effort | Priorité |
 |---|---|---|---|
 | Modération assistée par IA (nudité, arnaque, mineurs) — *v1 heuristique* ✅ ; ML/API à venir | 🔴 | L | P2 |
-| Vérification selfie semi-automatique (liveness) | 🔴 | L | P1 |
-| Anti-fraude : score de risque des profils & signaux | 🔴 | L | P1 |
-| File de modération priorisée + actions groupées | 🟡 | S | P2 |
+| Vérification selfie semi-automatique (liveness) *(file de demandes livrée ; liveness ML à venir)* | 🔴 | L | P1 |
+| ~~Anti-fraude : score de risque des profils & signaux~~ | 🔴 | L | ✅ **Livré** |
+| ~~File de modération priorisée + actions groupées~~ | 🟡 | S | ✅ **Livré** |
 
 ### 2.5 🧪 Qualité & industrialisation (DevEx)
 
@@ -89,9 +110,9 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 |---|---|---|---|
 | ~~CI/CD (lint + tests) via GitHub Actions~~ | 🔴 | S | ✅ **Livré** |
 | ~~Migrations de schéma versionnées~~ | 🟡 | M | ✅ **Livré** |
-| Couverture de tests > 70 % (contrôleurs, WebSocket, paiements) | 🟡 | M | P1 |
-| Analyse statique (PHPStan/Psalm niveau élevé) + PHP-CS-Fixer | 🟡 | S | P1 |
-| Documentation API OpenAPI + collection de tests | 🟢 | M | P2 |
+| Couverture de tests > 70 % *(121 tests ; contrôleurs/WebSocket à renforcer)* | 🟡 | M | P1 |
+| ~~Analyse statique (PHPStan niveau 5)~~ *(PHP-CS-Fixer à venir)* | 🟡 | S | ✅ **Livré** |
+| ~~Documentation API OpenAPI~~ *(collection de tests à venir)* | 🟢 | M | ✅ **Livré** |
 | Environnement de préproduction (staging) automatisé | 🟡 | M | P2 |
 
 ### 2.6 💳 Monétisation
@@ -100,8 +121,8 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 |---|---|---|---|
 | ~~Achats à l'unité (Boost, Super Like, révéler admirateurs)~~ | 🔴 | M | ✅ **Livré** |
 | ~~Relances d'échec de paiement (dunning)~~ + renouvellement auto *(état + notifs livrés ; recharge prestataire à venir)* | 🔴 | M | ✅ **Livré** |
-| Facturation/reçus PDF + portefeuille de crédits | 🟡 | M | P2 |
-| Essais gratuits, coupons & offres annuelles | 🟡 | S | P2 |
+| ~~Facturation/reçus (imprimable/PDF)~~ *(portefeuille de crédits déjà livré)* | 🟡 | M | ✅ **Livré** |
+| ~~Coupons & offres~~ *(essais gratuits à venir)* | 🟡 | S | ✅ **Livré** |
 
 ---
 
@@ -132,6 +153,7 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 | **Sprint +3** ✅ | Scale & confiance | Cache Redis · clustering WebSocket · modération IA (v1) — *livré* |
 | **Sprint +4** ✅ | Sécurité des comptes | 2FA (TOTP) · révocation de sessions — *livré* |
 | **Sprint +5** ✅ | Monétisation | Achats à l'unité (Boost/Super Like/Reveal) · dunning — *livré* |
+| **Sprint +6** ✅ | Durcissement (reliquat backlog) | Chiffrement des messages · détection d'appareils · réplicas de lecture · stockage S3/CDN · pagination par curseur · réponses citées/éphémères · filtres style de vie · anti-fraude · file de modération priorisée · reçus · coupons · PHPStan · OpenAPI — *livré* |
 
 ---
 

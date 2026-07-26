@@ -1,0 +1,176 @@
+openapi: 3.0.3
+info:
+  title: Amoura — API interne
+  description: >
+    API REST interne d'Amoura (plateforme SaaS de rencontres). Authentification
+    par session (cookie). Les requêtes mutatives exigent l'en-tête `X-CSRF-Token`.
+  version: "1.6.0"
+servers:
+  - url: /
+    description: Même origine que l'application
+tags:
+  - name: Découverte
+  - name: Messagerie
+  - name: Social
+  - name: Temps réel
+  - name: Notifications
+  - name: Paiements
+  - name: Push
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: amoura_sess
+  parameters:
+    Csrf:
+      name: X-CSRF-Token
+      in: header
+      required: true
+      schema: { type: string }
+  responses:
+    Unauthorized: { description: Authentification requise }
+    Forbidden: { description: Accès refusé }
+  schemas:
+    Ok:
+      type: object
+      properties: { ok: { type: boolean, example: true } }
+    Error:
+      type: object
+      properties:
+        ok: { type: boolean, example: false }
+        error: { type: string }
+    Profile:
+      type: object
+      properties:
+        id: { type: integer }
+        display_name: { type: string }
+        age: { type: integer, nullable: true }
+        avatar: { type: string }
+        is_verified: { type: boolean }
+        is_online: { type: boolean }
+        interests: { type: array, items: { type: string } }
+        affinity: { type: number, description: Score d'affinité (recommandation) }
+        distance_km: { type: number, nullable: true }
+
+security:
+  - sessionCookie: []
+
+paths:
+  /api/discover:
+    get:
+      tags: [Découverte]
+      summary: Fil de découverte reclassé par affinité
+      parameters:
+        - { name: gender, in: query, schema: { type: string } }
+        - { name: min_age, in: query, schema: { type: integer } }
+        - { name: max_age, in: query, schema: { type: integer } }
+        - { name: distance_km, in: query, schema: { type: integer } }
+        - { name: smoking, in: query, schema: { type: string, enum: [no, sometimes, yes] } }
+        - { name: relationship_goal, in: query, schema: { type: string, enum: [casual, serious, friends, unsure] } }
+      responses:
+        "200":
+          description: Liste de profils
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  profiles: { type: array, items: { $ref: "#/components/schemas/Profile" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/swipe:
+    post:
+      tags: [Découverte]
+      summary: Like / pass / superlike (détecte le match ; superlike consomme un crédit)
+      parameters: [ { $ref: "#/components/parameters/Csrf" } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [target_id, action]
+              properties:
+                target_id: { type: integer }
+                action: { type: string, enum: [like, pass, superlike] }
+      responses:
+        "200":
+          description: Résultat du swipe
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  matched: { type: boolean }
+                  conversation_id: { type: integer, nullable: true }
+        "402": { description: Quota atteint ou crédit manquant (upgrade/store) }
+  /api/conversations/{id}/messages:
+    get:
+      tags: [Messagerie]
+      summary: Historique (déchiffré, hors éphémères expirés)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+        - { name: before, in: query, schema: { type: integer } }
+      responses:
+        "200": { description: Messages }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Messagerie]
+      summary: Envoi d'un message (chiffré au repos ; réponse citée / éphémère)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+        - { $ref: "#/components/parameters/Csrf" }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body: { type: string }
+                reply_to_id: { type: integer, nullable: true }
+                ttl: { type: integer, description: "Durée de vie (s) pour un message éphémère" }
+      responses:
+        "200": { description: Message créé }
+  /api/feed:
+    get:
+      tags: [Social]
+      summary: Fil de publications (modération automatique appliquée)
+      responses: { "200": { description: Publications } }
+  /api/notifications:
+    get:
+      tags: [Notifications]
+      summary: Notifications paginées par curseur
+      parameters:
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Page de notifications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  unread: { type: integer }
+                  next_cursor: { type: string, nullable: true }
+  /api/ws-ticket:
+    get:
+      tags: [Temps réel]
+      summary: Ticket signé d'authentification WebSocket
+      responses: { "200": { description: "{ ticket, ws_url }" } }
+  /api/push/subscribe:
+    post:
+      tags: [Push]
+      summary: Enregistre un abonnement Web Push
+      parameters: [ { $ref: "#/components/parameters/Csrf" } ]
+      responses: { "200": { $ref: "#/components/schemas/Ok" } }
+  /webhooks/{gateway}:
+    post:
+      tags: [Paiements]
+      summary: Webhook prestataire (signature vérifiée + re-check serveur, idempotent)
+      parameters:
+        - { name: gateway, in: path, required: true, schema: { type: string, enum: [stripe, paypal, cinetpay, paydunya] } }
+      responses: { "200": { description: Accusé de réception } }

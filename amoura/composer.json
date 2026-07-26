@@ -34,9 +34,11 @@
     "scripts": {
         "ws": "php websocket/server.php",
         "serve": "php -S localhost:8080 -t public server.php",
-        "test": "phpunit"
+        "test": "phpunit",
+        "stan": "phpstan analyse"
     },
     "require-dev": {
-        "phpunit/phpunit": "^11"
+        "phpunit/phpunit": "^11",
+        "phpstan/phpstan": "^2"
     }
 }

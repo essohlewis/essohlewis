@@ -53,6 +53,13 @@ final class Matching extends Model
             $where[] = 'u.birthdate >= DATE_SUB(CURDATE(), INTERVAL ? YEAR)';
             $params[] = (int) $filters['max_age'];
         }
+        // Filtres de style de vie / valeurs (Sprint +6).
+        foreach (['smoking', 'drinking', 'children', 'relationship_goal'] as $lifestyle) {
+            if (!empty($filters[$lifestyle])) {
+                $where[] = "p.{$lifestyle} = ?";
+                $params[] = $filters[$lifestyle];
+            }
+        }
 
         // Distance géographique approximative (formule de Haversine) si coordonnées fournies.
         $distanceSelect = 'NULL AS distance_km';

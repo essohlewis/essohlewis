@@ -123,4 +123,40 @@ HTML;
     {
         self::$instance = $pdo;
     }
+
+    private static ?PDO $reader = null;
+
+    /**
+     * Connexion en lecture (réplica). Utilise DB_READ_HOST si défini, sinon la
+     * connexion primaire. Sépare la charge de lecture des écritures (Sprint +6).
+     */
+    public static function read(): PDO
+    {
+        $readHost = (string) Env::get('DB_READ_HOST', '');
+        if ($readHost === '') {
+            return self::connection(); // pas de réplica → primaire
+        }
+        if (self::$reader instanceof PDO) {
+            return self::$reader;
+        }
+        $port = (string) Env::get('DB_READ_PORT', Env::get('DB_PORT', '3306'));
+        $name = (string) Env::get('DB_NAME', 'amoura');
+        $charset = (string) Env::get('DB_CHARSET', 'utf8mb4');
+        try {
+            self::$reader = new PDO(
+                "mysql:host={$readHost};port={$port};dbname={$name};charset={$charset}",
+                (string) Env::get('DB_READ_USER', Env::get('DB_USER', 'root')),
+                (string) Env::get('DB_READ_PASS', Env::get('DB_PASS', '')),
+                [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES => false,
+                ]
+            );
+            return self::$reader;
+        } catch (PDOException $e) {
+            // Réplica indisponible → repli sur le primaire (résilience).
+            return self::connection();
+        }
+    }
 }

@@ -29,7 +29,7 @@ final class RedisSessionHandler implements SessionHandlerInterface
         return true;
     }
 
-    public function read(string $id): string|false
+    public function read(string $id): string
     {
         $data = $this->redis->get($this->prefix . $id);
         return $data === false ? '' : (string) $data;
@@ -46,7 +46,7 @@ final class RedisSessionHandler implements SessionHandlerInterface
         return true;
     }
 
-    public function gc(int $maxLifetime): int|false
+    public function gc(int $maxLifetime): int
     {
         // Le TTL Redis expire les sessions automatiquement — rien à balayer.
         return 0;

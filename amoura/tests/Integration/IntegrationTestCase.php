@@ -37,8 +37,10 @@ abstract class IntegrationTestCase extends TestCase
         $root->exec("DROP DATABASE IF EXISTS `{$name}`");
         $root->exec("CREATE DATABASE `{$name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
         $root->exec("USE `{$name}`");
-        $root->exec(file_get_contents($base . '/schema.sql'));
-        $root->exec(file_get_contents($base . '/seed.sql'));
+        // PDO::exec() peut tronquer un long script multi-instructions ; query()
+        // + nextRowset() garantit l'exécution complète du schéma et des données.
+        $this->runScript($root, file_get_contents($base . '/schema.sql'));
+        $this->runScript($root, file_get_contents($base . '/seed.sql'));
 
         $this->db = new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4", $user, $pass, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -46,6 +48,18 @@ abstract class IntegrationTestCase extends TestCase
             PDO::ATTR_EMULATE_PREPARES => false,
         ]);
         Database::setConnection($this->db);
+    }
+
+    /** Exécute de façon fiable un script SQL multi-instructions. */
+    protected function runScript(PDO $pdo, string $sql): void
+    {
+        $stmt = $pdo->query($sql);
+        if ($stmt === false) {
+            return;
+        }
+        do {
+            $stmt->closeCursor();
+        } while ($stmt->nextRowset());
     }
 
     /** Crée un utilisateur actif prêt pour les tests. */

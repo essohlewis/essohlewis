@@ -48,6 +48,11 @@ final class Maintenance
             'DELETE FROM messages WHERE deleted_at IS NOT NULL AND deleted_at < DATE_SUB(NOW(), INTERVAL 30 DAY)'
         )->rowCount();
 
+        // 7) Messages éphémères expirés (suppression définitive).
+        $deleted['ephemeral'] = $db->query(
+            'DELETE FROM messages WHERE expires_at IS NOT NULL AND expires_at < NOW()'
+        )->rowCount();
+
         return $deleted;
     }
 }

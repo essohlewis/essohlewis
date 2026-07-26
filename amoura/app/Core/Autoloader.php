@@ -15,7 +15,10 @@ final class Autoloader
 
     public function register(): void
     {
-        spl_autoload_register([$this, 'load']);
+        // Closure : la valeur de retour d'un autoloader est ignorée par PHP.
+        spl_autoload_register(function (string $class): void {
+            $this->load($class);
+        });
     }
 
     public function addNamespace(string $prefix, string $baseDir): void

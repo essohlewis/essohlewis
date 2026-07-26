@@ -37,6 +37,9 @@ $gatewayLabels = ['stripe'=>'💳 Carte (Stripe)','paypal'=>'🅿️ PayPal','ci
       </div>
     <?php endforeach; ?>
   </div>
+  <p style="text-align:center;margin-top:24px">
+    <a class="link" href="/premium/history">📄 Voir mon historique de facturation & mes reçus</a>
+  </p>
 </div>
 
 <dialog id="checkoutDialog" class="card" style="border:none;border-radius:var(--r-lg);max-width:420px;width:90%">
@@ -51,6 +54,8 @@ $gatewayLabels = ['stripe'=>'💳 Carte (Stripe)','paypal'=>'🅿️ PayPal','ci
     <div class="field" id="phoneField" style="display:none"><label>Numéro Mobile Money</label>
       <input class="input" name="phone" placeholder="07 xx xx xx xx">
       <div class="hint">07 → Orange · 05 → MTN · 01 → Moov</div></div>
+    <div class="field"><label>Code promo (facultatif)</label>
+      <input class="input" name="coupon" placeholder="AMOURA10" style="text-transform:uppercase"></div>
     <div class="row between">
       <button type="button" class="btn btn-ghost" data-modal-close="checkoutDialog">Annuler</button>
       <button class="btn btn-primary">Payer</button>

@@ -53,6 +53,10 @@ final class DiscoverController extends Controller
             'distance_km' => $request->query('distance_km'),
             'lat' => $request->query('lat'),
             'lng' => $request->query('lng'),
+            'smoking' => $request->query('smoking'),
+            'drinking' => $request->query('drinking'),
+            'children' => $request->query('children'),
+            'relationship_goal' => $request->query('relationship_goal'),
         ];
         // On récupère un vivier élargi puis on le reclasse par affinité (Phase 2).
         $profiles = (new Matching())->discover(

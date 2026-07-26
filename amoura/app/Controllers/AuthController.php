@@ -186,6 +186,7 @@ final class AuthController extends Controller
 
         Auth::login((int) $user['id']);
         (new ActivityLog())->record((int) $user['id'], 'user.login', 'user', (int) $user['id'], [], $request->ip());
+        \Amoura\Services\Security\DeviceMonitor::track((int) $user['id'], $request->userAgent(), $request->ip());
 
         $intended = Session::get('intended_url', '/app');
         Session::forget('intended_url');
@@ -224,6 +225,7 @@ final class AuthController extends Controller
         Session::forget('pending_2fa_user');
         Auth::login($userId);
         (new ActivityLog())->record($userId, 'user.login_2fa', 'user', $userId, [], $request->ip());
+        \Amoura\Services\Security\DeviceMonitor::track($userId, $request->userAgent(), $request->ip());
 
         $intended = Session::get('intended_url', '/app');
         Session::forget('intended_url');

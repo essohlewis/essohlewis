@@ -112,7 +112,7 @@ return function (Router $r): void {
     $r->delete('/api/posts/{id}', 'Amoura\Controllers\PostController@delete', $authCsrf);
     $r->get('/api/stories', 'Amoura\Controllers\StoryController@feed', $auth);
     $r->post('/api/stories', 'Amoura\Controllers\StoryController@create', $authCsrf);
-    $r->post('/api/stories/{id}/view', 'Amoura\Controllers\StoryController@view', $authCsrf);
+    $r->post('/api/stories/{id}/view', 'Amoura\Controllers\StoryController@markViewed', $authCsrf);
 
     // Notifications
     $r->get('/notifications', 'Amoura\Controllers\NotificationController@index', $auth);
@@ -123,6 +123,8 @@ return function (Router $r): void {
     $r->get('/premium', 'Amoura\Controllers\SubscriptionController@plans', $auth);
     $r->post('/premium/subscribe', 'Amoura\Controllers\SubscriptionController@subscribe', $authCsrf);
     $r->get('/premium/return', 'Amoura\Controllers\SubscriptionController@paymentReturn', $auth);
+    $r->get('/premium/history', 'Amoura\Controllers\SubscriptionController@history', $auth);
+    $r->get('/premium/receipt/{id}', 'Amoura\Controllers\SubscriptionController@receipt', $auth);
     $r->post('/premium/cancel', 'Amoura\Controllers\SubscriptionController@cancel', $authCsrf);
     // Webhooks (pas de CSRF : source externe ; vérifiés par signature/re-check serveur)
     $r->post('/webhooks/{gateway}', 'Amoura\Controllers\WebhookController@handle');
@@ -158,6 +160,7 @@ return function (Router $r): void {
 
         $r->get('/moderation', 'Amoura\Controllers\Admin\ModerationController@index', $staff);
         $r->post('/moderation/reports/{id}', 'Amoura\Controllers\Admin\ModerationController@resolve', $staffCsrf);
+        $r->post('/moderation/bulk', 'Amoura\Controllers\Admin\ModerationController@bulk', $staffCsrf);
         $r->post('/moderation/photos/{id}', 'Amoura\Controllers\Admin\ModerationController@photo', $staffCsrf);
 
         $r->get('/billing', 'Amoura\Controllers\Admin\BillingController@index', $staff);

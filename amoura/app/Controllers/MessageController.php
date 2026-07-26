@@ -77,8 +77,14 @@ final class MessageController extends Controller
         if ($body === '') {
             $this->json(['ok' => false, 'error' => 'Message vide.'], 422);
         }
+        $replyTo = (int) $request->input('reply_to_id', 0);
+        $ttl = (int) $request->input('ttl', 0); // secondes (message éphémère)
 
-        $messageId = (new Message())->send($conversationId, (int) $user['id'], ['type' => 'text', 'body' => $body]);
+        $messageId = (new Message())->send($conversationId, (int) $user['id'], [
+            'type' => 'text', 'body' => $body,
+            'reply_to_id' => $replyTo ?: null,
+            'ttl' => $ttl > 0 ? min($ttl, 86400) : 0,
+        ]);
         $this->notifyRecipient($conv, $conversationId, (int) $user['id']);
 
         $this->json([
@@ -88,6 +94,8 @@ final class MessageController extends Controller
                 'sender_id' => (int) $user['id'],
                 'type' => 'text',
                 'body' => $body,
+                'reply_to_id' => $replyTo ?: null,
+                'expires_at' => $ttl > 0 ? date('Y-m-d H:i:s', time() + min($ttl, 86400)) : null,
                 'created_at' => date('Y-m-d H:i:s'),
             ],
         ]);

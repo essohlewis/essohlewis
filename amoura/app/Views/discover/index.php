@@ -42,6 +42,9 @@ $scripts = ['discover.js'];
     <div class="field" style="margin:0"><label>Âge max</label><input class="input" type="number" name="max_age" min="18" max="99" style="width:90px"></div>
     <div class="field" style="margin:0"><label>Ville</label><input class="input" name="city" style="width:130px"></div>
     <div class="field" style="margin:0"><label>Distance (km)</label><input class="input" type="number" name="distance_km" min="1" style="width:110px" <?= $is_premium ? '' : 'disabled title="Premium"' ?>></div>
+    <div class="field" style="margin:0"><label>Tabac</label><select class="select" name="smoking"><option value="">Peu importe</option><option value="no">Non</option><option value="sometimes">Parfois</option><option value="yes">Oui</option></select></div>
+    <div class="field" style="margin:0"><label>Alcool</label><select class="select" name="drinking"><option value="">Peu importe</option><option value="no">Non</option><option value="sometimes">Parfois</option><option value="yes">Oui</option></select></div>
+    <div class="field" style="margin:0"><label>Objectif</label><select class="select" name="relationship_goal"><option value="">Peu importe</option><option value="serious">Sérieux</option><option value="casual">Décontracté</option><option value="friends">Amitié</option></select></div>
     <button class="btn btn-primary">Appliquer</button>
   </form>
 </div>

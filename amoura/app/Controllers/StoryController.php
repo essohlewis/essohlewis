@@ -37,7 +37,7 @@ final class StoryController extends Controller
 
         if ($type === 'text') {
             $data['background'] = Sanitizer::text((string) $request->input('background'), 30);
-            if (($data['caption'] ?? '') === '') {
+            if ($data['caption'] === '') {
                 $this->json(['ok' => false, 'error' => 'Texte requis.'], 422);
             }
         } else {
@@ -56,7 +56,8 @@ final class StoryController extends Controller
         $this->json(['ok' => true, 'story_id' => $storyId]);
     }
 
-    public function view(Request $request, array $params): void
+    /** Marque une story comme vue (nommée markViewed pour ne pas masquer Controller::view()). */
+    public function markViewed(Request $request, array $params): void
     {
         $user = $this->requireAuth($request);
         (new Story())->markViewed((int) $params['id'], (int) $user['id']);

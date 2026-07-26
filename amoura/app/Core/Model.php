@@ -89,7 +89,10 @@ abstract class Model
         $params[] = $id;
         $sql = "UPDATE {$this->table} SET " . implode(', ', $sets)
              . " WHERE {$this->primaryKey} = ?";
-        return $this->run($sql, $params)->rowCount() >= 0;
+        // run() lève une exception en cas d'échec ; y parvenir = succès (0 ligne
+        // modifiée reste un succès, ex. valeurs identiques).
+        $this->run($sql, $params);
+        return true;
     }
 
     public function delete(int|string $id): bool

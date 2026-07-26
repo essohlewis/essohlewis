@@ -35,6 +35,22 @@ final class ModerationController extends Controller
         $this->redirect('/admin/moderation');
     }
 
+    /** Traitement groupé de signalements sélectionnés. */
+    public function bulk(Request $request): void
+    {
+        $staff = $this->requirePermission($request, 'moderation.action');
+        $status = (string) $request->input('status');
+        if (!in_array($status, ['actioned', 'dismissed'], true)) {
+            Session::flash('error', 'Action invalide.');
+            $this->redirect('/admin/moderation');
+        }
+        $ids = (array) $request->input('ids', []);
+        $n = (new Report())->bulkResolve($ids, (int) $staff['id'], $status);
+        (new ActivityLog())->record((int) $staff['id'], 'report.bulk', null, null, ['count' => $n, 'status' => $status], $request->ip());
+        Session::flash('success', "{$n} signalement(s) traité(s).");
+        $this->redirect('/admin/moderation');
+    }
+
     /** Approuve ou rejette une photo en attente. */
     public function photo(Request $request, array $params): void
     {

@@ -89,6 +89,11 @@ CREATE TABLE profiles (
     interests      JSON            NULL,                 -- ["voyage","musique",...]
     job_title      VARCHAR(120)    NULL,
     education      VARCHAR(120)    NULL,
+    smoking        ENUM('no','sometimes','yes') NULL,
+    drinking       ENUM('no','sometimes','yes') NULL,
+    children       ENUM('no','someday','have','have_more') NULL,
+    religion       VARCHAR(40)     NULL,
+    relationship_goal ENUM('casual','serious','friends','unsure') NULL,
     cover_photo_id BIGINT UNSIGNED NULL,
     avatar_photo_id BIGINT UNSIGNED NULL,
     completion     TINYINT UNSIGNED NOT NULL DEFAULT 0,  -- % complétude
@@ -270,20 +275,24 @@ CREATE TABLE conversation_members (
 CREATE TABLE messages (
     id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     conversation_id BIGINT UNSIGNED NOT NULL,
+    reply_to_id   BIGINT UNSIGNED NULL,                 -- réponse citée
     sender_id     BIGINT UNSIGNED NOT NULL,
     type          ENUM('text','image','voice','call_event','system') NOT NULL DEFAULT 'text',
-    body          TEXT            NULL,                 -- texte (chiffré au repos si sensible)
+    body          TEXT            NULL,                 -- texte (chiffré au repos, cf. Core\Security\Crypto)
     media_path    VARCHAR(255)    NULL,                 -- image ou audio
     media_meta    JSON            NULL,                 -- {duration, waveform[], width, height}
     delivered_at  TIMESTAMP       NULL,
     read_at       TIMESTAMP       NULL,
+    expires_at    TIMESTAMP       NULL,                 -- message éphémère
     edited_at     TIMESTAMP       NULL,
     deleted_at    TIMESTAMP       NULL,
     created_at    TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_msg_conv (conversation_id, id),
     KEY idx_msg_sender (sender_id),
+    KEY idx_msg_expires (expires_at),
     CONSTRAINT fk_msg_conv   FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+    CONSTRAINT fk_msg_reply  FOREIGN KEY (reply_to_id) REFERENCES messages(id) ON DELETE SET NULL,
     CONSTRAINT fk_msg_sender FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -571,6 +580,50 @@ CREATE TABLE activity_logs (
     KEY idx_log_user (user_id, created_at),
     KEY idx_log_action (action, created_at),
     CONSTRAINT fk_log_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------------------------------
+--  COUPONS · APPAREILS · VÉRIFICATION (Sprint +6)
+-- -----------------------------------------------------------------------------
+CREATE TABLE coupons (
+    id           INT UNSIGNED   NOT NULL AUTO_INCREMENT,
+    code         VARCHAR(40)    NOT NULL,
+    percent_off  TINYINT UNSIGNED NULL,
+    amount_off   INT UNSIGNED   NULL,
+    max_redemptions INT UNSIGNED NULL,
+    redeemed     INT UNSIGNED   NOT NULL DEFAULT 0,
+    expires_at   TIMESTAMP      NULL,
+    is_active    TINYINT(1)     NOT NULL DEFAULT 1,
+    created_at   TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_coupon_code (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE login_devices (
+    id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id      BIGINT UNSIGNED NOT NULL,
+    fingerprint  CHAR(64)       NOT NULL,
+    user_agent   VARCHAR(255)   NULL,
+    last_ip      VARBINARY(16)  NULL,
+    first_seen_at TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_seen_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_device (user_id, fingerprint),
+    CONSTRAINT fk_device_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE verification_requests (
+    id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id      BIGINT UNSIGNED NOT NULL,
+    selfie_path  VARCHAR(255)   NOT NULL,
+    auto_score   TINYINT        NULL,
+    status       ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+    handled_by   BIGINT UNSIGNED NULL,
+    handled_at   TIMESTAMP      NULL,
+    created_at   TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_verif_status (status, created_at),
+    CONSTRAINT fk_verif_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------

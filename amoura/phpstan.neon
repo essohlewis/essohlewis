@@ -1,0 +1,26 @@
+parameters:
+    level: 5
+    paths:
+        - app
+        - scripts
+        - websocket
+    excludePaths:
+        # Les vues sont des gabarits rendus via extract($data) : leurs variables
+        # sont injectées dynamiquement et ne peuvent pas être analysées statiquement.
+        - app/Views/*
+    bootstrapFiles:
+        - vendor/autoload.php
+    # Les motifs d'ignore liés à des extensions optionnelles (sodium, redis) ne
+    # correspondent pas toujours selon l'environnement d'analyse : ne pas échouer.
+    reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+        # libsodium est optionnel (dégradation gracieuse via function_exists()).
+        - identifier: function.notFound
+          path: app/Core/Security/Crypto.php
+        - '#Constant SODIUM_CRYPTO_SECRETBOX_[A-Z]+ not found#'
+        # Ratchet attache des propriétés dynamiques à la connexion (convention
+        # documentée : identité applicative portée par l'objet connexion).
+        - '#Access to an undefined property Ratchet\\ConnectionInterface::\$(httpRequest|userId|resourceId)#'
+        # Le client Redis « lazy » de clue/reactphp-redis expose les commandes
+        # (publish/subscribe…) via des méthodes magiques.
+        - '#Call to an undefined method Clue\\React\\Redis\\Client::(publish|subscribe)\(\)#'
