@@ -1,0 +1,29 @@
+{
+    "name": "amoura/platform",
+    "description": "Amoura — plateforme SaaS de rencontres en ligne (PHP MVC pur, sans framework)",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": ">=8.2",
+        "ext-pdo": "*",
+        "ext-json": "*",
+        "ext-mbstring": "*",
+        "cboden/ratchet": "^0.4.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "Amoura\\": "app/",
+            "Amoura\\Websocket\\": "websocket/"
+        },
+        "files": [
+            "app/Helpers/functions.php"
+        ]
+    },
+    "config": {
+        "optimize-autoloader": true
+    },
+    "scripts": {
+        "ws": "php websocket/server.php",
+        "serve": "php -S localhost:8080 -t public public/index.php"
+    }
+}

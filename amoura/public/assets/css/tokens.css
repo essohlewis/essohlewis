@@ -1,0 +1,122 @@
+/* =============================================================================
+   AMOURA — Design tokens
+   Palette premium : corail/rose chaleureux + accents violets.
+   Thème clair par défaut, thème sombre via [data-theme="dark"] ou prefers.
+   ========================================================================== */
+
+:root {
+  /* Couleurs de marque */
+  --brand-500: #ff5a7e;   /* corail-rose principal */
+  --brand-600: #f6416c;
+  --brand-400: #ff7d98;
+  --brand-300: #ffa5b8;
+  --accent-500: #8b5cf6;  /* violet */
+  --accent-600: #7c3aed;
+  --gradient-brand: linear-gradient(135deg, #ff5a7e 0%, #ff8a5b 55%, #8b5cf6 130%);
+  --gradient-brand-soft: linear-gradient(135deg, #ffe4ea 0%, #f3e8ff 100%);
+
+  /* Sémantique */
+  --success: #16a34a;
+  --warning: #f59e0b;
+  --danger:  #ef4444;
+  --info:    #0ea5e9;
+
+  /* Surfaces (clair) */
+  --bg:            #fbfafc;
+  --bg-elevated:   #ffffff;
+  --bg-subtle:     #f4f2f7;
+  --bg-inset:      #efedf3;
+  --surface-hover: #f7f5fa;
+
+  /* Texte */
+  --text:        #1c1626;
+  --text-muted:  #6b6577;
+  --text-subtle: #9a94a6;
+  --text-invert: #ffffff;
+
+  /* Bordures */
+  --border:        #e8e4ee;
+  --border-strong: #d6d0e0;
+
+  /* Bulles de chat */
+  --bubble-me:    var(--gradient-brand);
+  --bubble-me-text: #ffffff;
+  --bubble-them:  #ffffff;
+  --bubble-them-text: #1c1626;
+
+  /* Rayons */
+  --r-xs: 6px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --r-full: 999px;
+
+  /* Ombres douces */
+  --shadow-sm: 0 1px 2px rgba(28, 22, 38, .06), 0 1px 3px rgba(28, 22, 38, .04);
+  --shadow-md: 0 4px 12px rgba(28, 22, 38, .08), 0 2px 4px rgba(28, 22, 38, .04);
+  --shadow-lg: 0 12px 32px rgba(28, 22, 38, .12), 0 4px 8px rgba(28, 22, 38, .06);
+  --shadow-brand: 0 8px 24px rgba(255, 90, 126, .35);
+
+  /* Espacements */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px;
+
+  /* Typographie */
+  --font-ui: "Inter", "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Poppins", "Inter", system-ui, sans-serif;
+  --fs-xs: .75rem; --fs-sm: .875rem; --fs-base: 1rem;
+  --fs-lg: 1.125rem; --fs-xl: 1.375rem; --fs-2xl: 1.75rem; --fs-3xl: 2.25rem; --fs-4xl: 3rem;
+
+  /* Transitions */
+  --t-fast: 120ms cubic-bezier(.4, 0, .2, 1);
+  --t-base: 200ms cubic-bezier(.4, 0, .2, 1);
+  --t-slow: 320ms cubic-bezier(.4, 0, .2, 1);
+  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+
+  /* Disposition */
+  --header-h: 64px;
+  --sidebar-w: 260px;
+  --container: 1120px;
+}
+
+/* ---- Thème sombre ---- */
+:root[data-theme="dark"] {
+  --bg:            #131019;
+  --bg-elevated:   #1c1826;
+  --bg-subtle:     #221d2e;
+  --bg-inset:      #171320;
+  --surface-hover: #252031;
+
+  --text:        #f3f0f7;
+  --text-muted:  #a79fb5;
+  --text-subtle: #766e85;
+  --text-invert: #1c1626;
+
+  --border:        #302a3d;
+  --border-strong: #3d3650;
+
+  --bubble-them:  #262030;
+  --bubble-them-text: #f3f0f7;
+
+  --gradient-brand-soft: linear-gradient(135deg, #2a1b28 0%, #241d33 100%);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, .4);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, .5);
+}
+
+/* Suit la préférence système si aucun thème explicite n'est fixé. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131019; --bg-elevated: #1c1826; --bg-subtle: #221d2e; --bg-inset: #171320;
+    --surface-hover: #252031;
+    --text: #f3f0f7; --text-muted: #a79fb5; --text-subtle: #766e85; --text-invert: #1c1626;
+    --border: #302a3d; --border-strong: #3d3650;
+    --bubble-them: #262030; --bubble-them-text: #f3f0f7;
+    --gradient-brand-soft: linear-gradient(135deg, #2a1b28 0%, #241d33 100%);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.3);
+    --shadow-md: 0 4px 12px rgba(0,0,0,.4);
+    --shadow-lg: 0 12px 32px rgba(0,0,0,.5);
+  }
+}
