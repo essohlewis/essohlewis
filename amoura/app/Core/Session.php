@@ -13,15 +13,26 @@ final class Session
         if (session_status() === PHP_SESSION_ACTIVE) {
             return;
         }
+        $lifetime = Env::int('SESSION_LIFETIME', 120) * 60;
         $secure = str_starts_with((string) Env::get('APP_URL', ''), 'https');
         session_set_cookie_params([
-            'lifetime' => Env::int('SESSION_LIFETIME', 120) * 60,
+            'lifetime' => $lifetime,
             'path'     => '/',
             'secure'   => $secure,
             'httponly' => true,
             'samesite' => 'Lax',
         ]);
         session_name('amoura_sess');
+
+        // Multi-instance : stocke les sessions dans Redis quand il est le pilote de cache.
+        $store = \Amoura\Core\Cache\Cache::store();
+        if ($store instanceof \Amoura\Core\Cache\RedisStore) {
+            session_set_save_handler(
+                new RedisSessionHandler($store->client(), $lifetime ?: 7200),
+                true
+            );
+        }
+
         session_start();
 
         // Régénération périodique de l'identifiant pour limiter la fixation de session.

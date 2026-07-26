@@ -12,18 +12,23 @@ final class Setting extends Model
     private static array $cache = [];
 
     /**
-     * Tous les paramètres sous forme clé => valeur typée (avec cache par requête).
-     * Nommé `values()` pour ne pas entrer en conflit avec Model::all(int,int).
+     * Tous les paramètres sous forme clé => valeur typée.
+     * Cache à deux niveaux : mémoire (requête) + cache partagé (Redis si configuré,
+     * sinon mémoire) avec TTL, pour éviter une requête SQL à chaque page.
      */
     public function values(): array
     {
         if (self::$cache) {
             return self::$cache;
         }
-        $rows = $this->db->query('SELECT `key`, value, type FROM settings')->fetchAll();
-        foreach ($rows as $row) {
-            self::$cache[$row['key']] = $this->cast($row['value'], $row['type']);
-        }
+        self::$cache = \Amoura\Core\Cache\Cache::remember('settings:all', 300, function () {
+            $rows = $this->db->query('SELECT `key`, value, type FROM settings')->fetchAll();
+            $out = [];
+            foreach ($rows as $row) {
+                $out[$row['key']] = $this->cast($row['value'], $row['type']);
+            }
+            return $out;
+        });
         return self::$cache;
     }
 
@@ -41,8 +46,8 @@ final class Setting extends Model
              ON DUPLICATE KEY UPDATE value = VALUES(value)',
             [$key, $stored]
         );
-        unset(self::$cache[$key]);
-        self::$cache = []; // invalide le cache
+        self::$cache = [];                                   // cache mémoire (requête)
+        \Amoura\Core\Cache\Cache::forget('settings:all');    // cache partagé (Redis/mémoire)
     }
 
     public function grouped(): array

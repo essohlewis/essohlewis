@@ -27,9 +27,26 @@ final class ChatServer implements MessageComponentInterface
     /** @var array<int,array<int,ConnectionInterface>> userId => [resourceId => conn] (multi-onglets) */
     private array $userConnections = [];
 
-    public function __construct()
+    private ?\Amoura\Websocket\Bus\Bus $bus;
+
+    public function __construct(?\Amoura\Websocket\Bus\Bus $bus = null)
     {
         $this->clients = new \SplObjectStorage();
+        // Le bus relaie les messages entre instances (clustering). Par défaut : local.
+        $this->bus = $bus ?? new \Amoura\Websocket\Bus\LocalBus();
+        $this->bus->onDeliver([$this, 'deliverLocal']);
+    }
+
+    /** Distribue un message aux connexions locales de l'utilisateur (appelé par le bus). */
+    public function deliverLocal(int $userId, array $payload): void
+    {
+        if ($userId <= 0 || empty($this->userConnections[$userId])) {
+            return;
+        }
+        $json = json_encode($payload);
+        foreach ($this->userConnections[$userId] as $conn) {
+            $conn->send($json);
+        }
     }
 
     public function onOpen(ConnectionInterface $conn): void
@@ -72,7 +89,7 @@ final class ChatServer implements MessageComponentInterface
             // ── Chat ────────────────────────────────────────────────
             case 'message':
                 // Le message est déjà persisté via REST ; ici on le relaie en direct.
-                $this->relayToUser((int) ($data['to'] ?? 0), [
+                $this->bus->publish((int) ($data['to'] ?? 0), [
                     'type' => 'message',
                     'conversation_id' => $data['conversation_id'] ?? null,
                     'message' => $data['message'] ?? null,
@@ -81,7 +98,7 @@ final class ChatServer implements MessageComponentInterface
                 break;
 
             case 'typing':
-                $this->relayToUser((int) ($data['to'] ?? 0), [
+                $this->bus->publish((int) ($data['to'] ?? 0), [
                     'type' => 'typing',
                     'conversation_id' => $data['conversation_id'] ?? null,
                     'from' => $userId,
@@ -90,7 +107,7 @@ final class ChatServer implements MessageComponentInterface
                 break;
 
             case 'read':
-                $this->relayToUser((int) ($data['to'] ?? 0), [
+                $this->bus->publish((int) ($data['to'] ?? 0), [
                     'type' => 'read',
                     'conversation_id' => $data['conversation_id'] ?? null,
                     'last_message_id' => $data['last_message_id'] ?? null,
@@ -100,7 +117,7 @@ final class ChatServer implements MessageComponentInterface
 
             // ── Notifications ───────────────────────────────────────
             case 'notify':
-                $this->relayToUser((int) ($data['to'] ?? 0), [
+                $this->bus->publish((int) ($data['to'] ?? 0), [
                     'type' => 'notification',
                     'payload' => $data['payload'] ?? [],
                     'from' => $userId,
@@ -114,7 +131,7 @@ final class ChatServer implements MessageComponentInterface
             case 'call:hangup':
             case 'call:reject':
                 // Relais transparent des messages de signaling au pair désigné.
-                $this->relayToUser((int) ($data['to'] ?? 0), [
+                $this->bus->publish((int) ($data['to'] ?? 0), [
                     'type' => $data['type'],
                     'call_id' => $data['call_id'] ?? null,
                     'kind' => $data['kind'] ?? null,
@@ -145,19 +162,7 @@ final class ChatServer implements MessageComponentInterface
         $conn->close();
     }
 
-    /** Envoie un message à toutes les connexions d'un utilisateur (multi-onglets). */
-    private function relayToUser(int $userId, array $payload): void
-    {
-        if ($userId <= 0 || empty($this->userConnections[$userId])) {
-            return;
-        }
-        $json = json_encode($payload);
-        foreach ($this->userConnections[$userId] as $conn) {
-            $conn->send($json);
-        }
-    }
-
-    /** Notifie les correspondants du changement de présence (simplifié : tout le monde). */
+    /** Notifie les correspondants du changement de présence (local au nœud). */
     private function broadcastPresence(int $userId, bool $online): void
     {
         $payload = json_encode(['type' => 'presence', 'user_id' => $userId, 'online' => $online]);

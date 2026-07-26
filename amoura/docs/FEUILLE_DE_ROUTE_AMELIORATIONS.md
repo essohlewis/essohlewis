@@ -10,7 +10,7 @@ Version : 1.0 · Date : 26 juillet 2026 · Portée : améliorations livrées + b
 ## 1. Améliorations livrées dans cette itération ✅
 
 Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont été
-**implémentées et testées** (suite passée à 56 tests / 121 assertions).
+**implémentées et testées** (suite passée à 74 tests / 165 assertions).
 
 | Amélioration | Axe | Détail | Vérification |
 |---|---|---|---|
@@ -28,6 +28,9 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 | **i18n FR/EN** | UX | `Core\I18n` + fichiers de langue + helper `t()` + détection cookie/Accept-Language + sélecteur de langue ; nav/accueil/connexion traduits. | 5 tests unitaires |
 | **Onboarding guidé** | UX | Carte de complétion de profil (étapes cochables) sur la découverte tant que < 100 %. | Smoke test (rendu) |
 | **Notifications Web Push** | UX / Engagement | VAPID + abonnements (`push_subscriptions`), service worker (`push`/`notificationclick`), `PushService` (dégradation gracieuse), câblé aux messages. | 1 intégration + envoi vérifié |
+| **Cache Redis** | Performance / Scale | Abstraction `Core\Cache` (Redis + repli mémoire), réglages CMS mis en cache, **sessions partagées** (handler Redis), **rate-limiter distribué** (INCR atomique). | 5 unit + 3 intégration (Redis réel) |
+| **Clustering WebSocket** | Scale | Bus pub/sub (`websocket/Bus` : Redis via clue/redis-react + repli local mono-instance) ; le serveur relaie les messages entre instances. | Boot vérifié (local + Redis) |
+| **Modération IA v1** | Confiance | `Services\Moderation\ContentModerator` (interface `Moderator` échangeable) : coordonnées, arnaques, harcèlement, sollicitation, spam → score + action ; publications à risque bloquées ou mises en file de revue. | 8 unit + 2 intégration + E2E |
 
 ---
 
@@ -48,10 +51,10 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 
 | Amélioration | Impact | Effort | Priorité |
 |---|---|---|---|
-| Cache Redis (sessions, rate-limit, réglages CMS) | 🔴 | M | **P0** |
+| ~~Cache Redis (sessions, rate-limit, réglages CMS)~~ | 🔴 | M | ✅ **Livré** |
 | ~~Index composites & `EXPLAIN` sur découverte / fil / messages~~ | 🔴 | S | ✅ **Livré** |
 | Réplicas de lecture MySQL (séparation lecture/écriture) | 🟡 | L | P2 |
-| Clustering WebSocket (Redis pub/sub) pour le multi-instance | 🔴 | L | P1 |
+| ~~Clustering WebSocket (Redis pub/sub)~~ | 🔴 | L | ✅ **Livré** |
 | CDN + stockage objet (S3) pour médias, transcodage vocal | 🟡 | L | P2 |
 | Pagination par curseur généralisée (au lieu d'`OFFSET`) | 🟡 | M | P1 |
 
@@ -71,7 +74,7 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 
 | Amélioration | Impact | Effort | Priorité |
 |---|---|---|---|
-| Modération assistée par IA (nudité, arnaque, mineurs) | 🔴 | L | P1 |
+| Modération assistée par IA (nudité, arnaque, mineurs) — *v1 heuristique* ✅ ; ML/API à venir | 🔴 | L | P2 |
 | Vérification selfie semi-automatique (liveness) | 🔴 | L | P1 |
 | Anti-fraude : score de risque des profils & signaux | 🔴 | L | P1 |
 | File de modération priorisée + actions groupées | 🟡 | S | P2 |
@@ -122,7 +125,7 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 |---|---|---|
 | **Sprint +1** ✅ | Socle production | CI/CD · index & `EXPLAIN` · nonces CSP · signature webhook PayPal — *livré* |
 | **Sprint +2** ✅ | Engagement | Web Push · i18n FR/EN · onboarding · « qui a vu mon profil » — *livré* |
-| **Sprint +3** | Scale & confiance | Cache Redis · clustering WebSocket · modération IA (v1) |
+| **Sprint +3** ✅ | Scale & confiance | Cache Redis · clustering WebSocket · modération IA (v1) — *livré* |
 
 ---
 

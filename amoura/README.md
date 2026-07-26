@@ -21,6 +21,8 @@ WebSocket (Ratchet) pour le temps réel et le signaling WebRTC.
 | Appels A/V | **WebRTC** pair‑à‑pair + STUN/TURN (coturn) pour la traversée NAT |
 | Messages vocaux | `MediaRecorder` (navigateur) → upload → stockage serveur, waveform |
 | Paiements | Stripe, PayPal, **CinetPay & PayDunya** (Mobile Money Afrique de l'Ouest) |
+| Cache & scale | **Redis** optionnel (cache, sessions partagées, rate-limit distribué) + **clustering WebSocket** (pub/sub) |
+| Confiance | **Modération de contenu v1** (classifieur heuristique échangeable), file de revue, signalements |
 
 ---
 

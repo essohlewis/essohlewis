@@ -16,6 +16,17 @@ final class RateLimiter
      */
     public static function attempt(string $bucket, int $maxAttempts, int $windowSeconds = 60): bool
     {
+        // Chemin rapide distribué : compteur atomique Redis (INCR + EXPIRE).
+        $store = \Amoura\Core\Cache\Cache::store();
+        if ($store instanceof \Amoura\Core\Cache\RedisStore) {
+            $key = 'rl:' . $bucket;
+            $hits = $store->increment($key);
+            if ($hits === 1) {
+                $store->expire($key, $windowSeconds); // démarre la fenêtre
+            }
+            return $hits <= $maxAttempts;
+        }
+
         $db = Database::connection();
         $now = time();
 

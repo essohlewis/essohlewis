@@ -59,8 +59,24 @@ final class PostController extends Controller
             $this->json(['ok' => false, 'error' => 'Publication vide.'], 422);
         }
 
-        $postId = (new Post())->createWithMedia((int) $user['id'], $body, $visibility, $mediaPaths);
-        $this->json(['ok' => true, 'post_id' => $postId]);
+        // Modération automatique (v1) : bloque le contenu à haut risque,
+        // met en file de revue le contenu douteux, publie le reste.
+        $verdict = (new \Amoura\Services\Moderation\ContentModerator())->analyze($body);
+        if ($verdict['action'] === 'block') {
+            (new \Amoura\Models\ActivityLog())->record((int) $user['id'], 'post.blocked', 'user', (int) $user['id'], ['flags' => $verdict['flags'], 'score' => $verdict['score']], $request->ip());
+            $this->json(['ok' => false, 'error' => 'Votre publication enfreint nos règles (contenu bloqué).'], 422);
+        }
+        $moderation = $verdict['action'] === 'review' ? 'pending' : 'approved';
+
+        $postId = (new Post())->createWithMedia((int) $user['id'], $body, $visibility, $mediaPaths, $moderation);
+
+        // Contenu douteux : trace pour la file de modération.
+        if ($moderation === 'pending') {
+            (new \Amoura\Models\Report())->file((int) $user['id'], 'post', $postId, 'spam',
+                'Auto-modération: ' . implode(', ', $verdict['flags']) . ' (score ' . $verdict['score'] . ')');
+        }
+
+        $this->json(['ok' => true, 'post_id' => $postId, 'pending' => $moderation === 'pending']);
     }
 
     public function like(Request $request, array $params): void

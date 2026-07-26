@@ -10,11 +10,11 @@ final class Post extends Model
 {
     protected string $table = 'posts';
 
-    public function createWithMedia(int $userId, string $body, string $visibility, array $mediaPaths = []): int
+    public function createWithMedia(int $userId, string $body, string $visibility, array $mediaPaths = [], string $moderation = 'approved'): int
     {
-        return $this->transaction(function ($db) use ($userId, $body, $visibility, $mediaPaths) {
-            $db->prepare('INSERT INTO posts (user_id, body, visibility) VALUES (?, ?, ?)')
-               ->execute([$userId, $body, $visibility]);
+        return $this->transaction(function ($db) use ($userId, $body, $visibility, $mediaPaths, $moderation) {
+            $db->prepare('INSERT INTO posts (user_id, body, visibility, moderation) VALUES (?, ?, ?, ?)')
+               ->execute([$userId, $body, $visibility, $moderation]);
             $postId = (int) $db->lastInsertId();
             $pos = 0;
             $stmt = $db->prepare('INSERT INTO post_media (post_id, path, position) VALUES (?, ?, ?)');

@@ -41,11 +41,26 @@ date_default_timezone_set((string) Env::get('APP_TIMEZONE', 'UTC'));
 $host = (string) Env::get('WS_HOST', '0.0.0.0');
 $port = Env::int('WS_PORT', 8090);
 
+// Bus temps réel : Redis pub/sub pour le clustering multi-instance, sinon local.
+$busDriver = strtolower((string) Env::get('REALTIME_BUS', 'local'));
+if ($busDriver === 'redis') {
+    $redisUri = 'redis://' . Env::get('REDIS_HOST', '127.0.0.1') . ':' . Env::int('REDIS_PORT', 6379);
+    $bus = new \Amoura\Websocket\Bus\RedisBus($redisUri, (string) Env::get('REDIS_CHANNEL', 'amoura:realtime'));
+    echo "Bus temps réel : Redis ({$redisUri})\n";
+} else {
+    $bus = new \Amoura\Websocket\Bus\LocalBus();
+    echo "Bus temps réel : local (mono-instance)\n";
+}
+
 echo "Amoura WebSocket en écoute sur {$host}:{$port}\n";
 
 $server = IoServer::factory(
-    new HttpServer(new WsServer(new ChatServer())),
+    new HttpServer(new WsServer(new ChatServer($bus))),
     $port,
     $host
 );
+
+// Démarre le bus dans la boucle d'événements du serveur.
+$bus->start($server->loop);
+
 $server->run();
