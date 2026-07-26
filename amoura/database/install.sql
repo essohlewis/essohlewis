@@ -54,6 +54,8 @@ CREATE TABLE users (
     totp_secret        VARCHAR(64)     NULL,                 -- secret Base32 (2FA TOTP)
     totp_enabled       TINYINT(1)      NOT NULL DEFAULT 0,
     sessions_valid_after TIMESTAMP     NULL,                 -- « déconnecter partout » : révoque les sessions antérieures
+    boosted_until      TIMESTAMP       NULL,                 -- boost de profil actif jusqu'à
+    reveal_until       TIMESTAMP       NULL,                 -- accès « qui m'a liké » débloqué jusqu'à
     last_active_at     TIMESTAMP       NULL,
     is_online          TINYINT(1)      NOT NULL DEFAULT 0,
     gdpr_consent_at    TIMESTAMP       NULL,
@@ -445,9 +447,11 @@ CREATE TABLE subscriptions (
     started_at    TIMESTAMP       NULL,
     current_period_end TIMESTAMP  NULL,
     canceled_at   TIMESTAMP       NULL,
+    reminder_sent_at TIMESTAMP    NULL,                 -- dunning : dernière relance envoyée
     created_at    TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_sub_user (user_id, status),
+    KEY idx_sub_period (status, current_period_end),
     CONSTRAINT fk_sub_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_sub_plan FOREIGN KEY (plan_id) REFERENCES plans(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -457,6 +461,7 @@ CREATE TABLE transactions (
     user_id       BIGINT UNSIGNED NOT NULL,
     subscription_id BIGINT UNSIGNED NULL,
     plan_id       INT UNSIGNED    NULL,
+    product_id    INT UNSIGNED    NULL,                 -- achat à l'unité (consommable) le cas échéant
     gateway       ENUM('stripe','paypal','cinetpay','paydunya','manual') NOT NULL,
     gateway_ref   VARCHAR(190)    NULL,                 -- transaction id / token prestataire
     amount_cents  INT UNSIGNED    NOT NULL,
@@ -474,6 +479,36 @@ CREATE TABLE transactions (
     CONSTRAINT fk_tx_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_tx_sub  FOREIGN KEY (subscription_id) REFERENCES subscriptions(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------------------------------
+--  ACHATS À L'UNITÉ (consommables) & PORTEFEUILLE DE CRÉDITS
+-- -----------------------------------------------------------------------------
+CREATE TABLE products (
+    id          INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+    slug        VARCHAR(50)     NOT NULL,
+    name        VARCHAR(100)    NOT NULL,
+    description VARCHAR(255)    NULL,
+    item        ENUM('boost','superlike','reveal') NOT NULL,   -- type de crédit accordé
+    quantity    INT UNSIGNED    NOT NULL DEFAULT 1,             -- unités accordées à l'achat
+    price_cents INT UNSIGNED    NOT NULL,
+    currency    CHAR(3)         NOT NULL DEFAULT 'XOF',
+    is_active   TINYINT(1)      NOT NULL DEFAULT 1,
+    position    TINYINT         NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_product_slug (slug)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE user_credits (
+    user_id     BIGINT UNSIGNED NOT NULL,
+    item        ENUM('boost','superlike','reveal') NOT NULL,
+    balance     INT UNSIGNED    NOT NULL DEFAULT 0,
+    updated_at  TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, item),
+    CONSTRAINT fk_credits_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE transactions
+    ADD CONSTRAINT fk_tx_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL;
 
 -- -----------------------------------------------------------------------------
 --  MODÉRATION / SIGNALEMENTS
@@ -606,6 +641,14 @@ INSERT INTO settings (`key`, value, type, `group`) VALUES
   ('vapid_private_key','','secret','push'),
   ('vapid_subject','mailto:no-reply@amoura.example','string','push'),
   ('default_locale','fr','string','general');
+
+-- Catalogue de consommables (achats à l'unité) ------------------------------
+INSERT INTO products (slug, name, description, item, quantity, price_cents, currency, position) VALUES
+  ('boost-1',      'Boost x1',            'Mettez votre profil en avant pendant 30 min', 'boost',     1, 100000, 'XOF', 0),
+  ('boost-5',      'Pack 5 Boosts',       'Cinq boosts à utiliser quand vous voulez',    'boost',     5, 400000, 'XOF', 1),
+  ('superlike-5',  'Pack 5 Super Likes',  'Sortez du lot avec le Super Like',            'superlike', 5, 150000, 'XOF', 2),
+  ('superlike-15', 'Pack 15 Super Likes', 'Le pack malin',                               'superlike', 15, 350000, 'XOF', 3),
+  ('reveal-1',     'Révéler mes admirateurs', 'Voir qui vous a liké pendant 24 h',       'reveal',    1, 200000, 'XOF', 4);
 
 -- Pages statiques éditables -------------------------------------------------
 INSERT INTO pages (slug, title, content) VALUES

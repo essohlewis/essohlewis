@@ -9,7 +9,7 @@ final class Transaction extends Model
 {
     protected string $table = 'transactions';
 
-    public function initiate(int $userId, int $planId, int $amountCents, string $currency, string $gateway, array $extra = []): int
+    public function initiate(int $userId, ?int $planId, int $amountCents, string $currency, string $gateway, array $extra = []): int
     {
         return $this->create(array_merge([
             'user_id' => $userId,

@@ -127,6 +127,12 @@ return function (Router $r): void {
     // Webhooks (pas de CSRF : source externe ; vérifiés par signature/re-check serveur)
     $r->post('/webhooks/{gateway}', 'Amoura\Controllers\WebhookController@handle');
 
+    // Boutique (achats à l'unité : Boost, Super Like, Reveal)
+    $r->get('/store', 'Amoura\Controllers\StoreController@index', $auth);
+    $r->post('/store/buy', 'Amoura\Controllers\StoreController@buy', $authCsrf);
+    $r->post('/store/boost', 'Amoura\Controllers\StoreController@useBoost', $authCsrf);
+    $r->post('/store/reveal', 'Amoura\Controllers\StoreController@useReveal', $authCsrf);
+
     // Sécurité du compte (2FA + sessions)
     $r->get('/settings/security', 'Amoura\Controllers\SecurityController@index', $auth);
     $r->post('/settings/2fa/setup', 'Amoura\Controllers\SecurityController@setupTotp', $authCsrf);

@@ -80,7 +80,7 @@ final class Matching extends Model
              LEFT JOIN photos ph ON ph.id = p.avatar_photo_id
              WHERE " . implode(' AND ', $where) . "
              {$having}
-             ORDER BY u.is_online DESC, u.last_active_at DESC
+             ORDER BY (u.boosted_until > NOW()) DESC, u.is_online DESC, u.last_active_at DESC
              LIMIT ?";
         $params[] = $limit;
 

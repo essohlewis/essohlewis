@@ -95,10 +95,21 @@ final class DiscoverController extends Controller
             $this->json(['ok' => false, 'error' => 'Action invalide.'], 422);
         }
 
+        // Super Like : consomme un crédit (achat à l'unité) de façon atomique.
+        if ($action === 'superlike') {
+            if (!(new \Amoura\Models\Credit())->consume($uid, 'superlike')) {
+                $this->json([
+                    'ok' => false,
+                    'error' => 'Aucun Super Like disponible.',
+                    'store' => true,
+                ], 402);
+            }
+        }
+
         // Quota de likes pour les comptes gratuits.
         $subs = new Subscription();
         $unlimited = $subs->hasFeature($uid, 'unlimited_likes');
-        if (!$unlimited && $action !== 'pass') {
+        if (!$unlimited && $action === 'like') {
             $today = (new Swipe())->likesTodayCount($uid);
             if ($today >= self::FREE_DAILY_LIKES) {
                 $this->json([
@@ -132,7 +143,9 @@ final class DiscoverController extends Controller
     {
         $user = $this->requireAuth($request);
         $uid = (int) $user['id'];
-        $isPremium = (new Subscription())->hasFeature($uid, 'see_who_liked');
+        // Débloqué par un abonnement Premium OU par un crédit « révéler » actif (24 h).
+        $revealed = !empty($user['reveal_until']) && strtotime($user['reveal_until']) > time();
+        $isPremium = $revealed || (new Subscription())->hasFeature($uid, 'see_who_liked');
         $admirers = (new Swipe())->admirers($uid);
         foreach ($admirers as &$a) {
             $a['age'] = age_from($a['birthdate'] ?? null);

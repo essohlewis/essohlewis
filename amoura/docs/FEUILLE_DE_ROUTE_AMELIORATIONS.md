@@ -10,7 +10,7 @@ Version : 1.0 · Date : 26 juillet 2026 · Portée : améliorations livrées + b
 ## 1. Améliorations livrées dans cette itération ✅
 
 Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont été
-**implémentées et testées** (suite passée à 83 tests / 194 assertions).
+**implémentées et testées** (suite passée à 90 tests / 216 assertions).
 
 | Amélioration | Axe | Détail | Vérification |
 |---|---|---|---|
@@ -33,6 +33,8 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 | **Modération IA v1** | Confiance | `Services\Moderation\ContentModerator` (interface `Moderator` échangeable) : coordonnées, arnaques, harcèlement, sollicitation, spam → score + action ; publications à risque bloquées ou mises en file de revue. | 8 unit + 2 intégration + E2E |
 | **2FA (TOTP)** | Sécurité | `Core\Security\Totp` conforme RFC 6238 (Google Authenticator/Authy) : configuration, activation, connexion en deux étapes, désactivation par mot de passe. | 7 unit + 1 intégration + E2E |
 | **Révocation de sessions** | Sécurité | « Déconnecter partout » via `sessions_valid_after` (comparaison stricte) ; la session courante est préservée. | 2 intégration + E2E (2 sessions) |
+| **Achats à l'unité** | Monétisation | Catalogue `products` + portefeuille `user_credits` (débit atomique) ; Boost (ordre de découverte), Super Like (gating), Reveal (déblocage 24 h). Paiement → `Fulfillment` crédite (idempotent). | 3 intégration + E2E |
+| **Dunning (relances)** | Monétisation | `Services\Billing\Dunning` (cron) : rappel J-3 → `past_due` à l'échéance → `expired` après grâce, avec notifications. | 4 tests d'intégration |
 
 ---
 
@@ -96,8 +98,8 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 
 | Amélioration | Impact | Effort | Priorité |
 |---|---|---|---|
-| Achats à l'unité (Boost, Super Like, révéler admirateurs) | 🔴 | M | P1 |
-| Renouvellement auto + relances d'échec de paiement (dunning) | 🔴 | M | P1 |
+| ~~Achats à l'unité (Boost, Super Like, révéler admirateurs)~~ | 🔴 | M | ✅ **Livré** |
+| ~~Relances d'échec de paiement (dunning)~~ + renouvellement auto *(état + notifs livrés ; recharge prestataire à venir)* | 🔴 | M | ✅ **Livré** |
 | Facturation/reçus PDF + portefeuille de crédits | 🟡 | M | P2 |
 | Essais gratuits, coupons & offres annuelles | 🟡 | S | P2 |
 
@@ -129,6 +131,7 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 | **Sprint +2** ✅ | Engagement | Web Push · i18n FR/EN · onboarding · « qui a vu mon profil » — *livré* |
 | **Sprint +3** ✅ | Scale & confiance | Cache Redis · clustering WebSocket · modération IA (v1) — *livré* |
 | **Sprint +4** ✅ | Sécurité des comptes | 2FA (TOTP) · révocation de sessions — *livré* |
+| **Sprint +5** ✅ | Monétisation | Achats à l'unité (Boost/Super Like/Reveal) · dunning — *livré* |
 
 ---
 

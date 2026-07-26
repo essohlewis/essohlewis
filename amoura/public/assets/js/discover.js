@@ -106,8 +106,9 @@
       }
     } catch (e) {
       if (e.status === 402) {
-        Amoura.toast("Limite de likes atteinte — passez Premium !");
-        setTimeout(() => (location.href = "/premium"), 1200);
+        const toStore = e.data && e.data.store;
+        Amoura.toast(e.message || (toStore ? "Plus de Super Likes" : "Passez Premium !"));
+        setTimeout(() => (location.href = toStore ? "/store" : "/premium"), 1200);
       } else { Amoura.toast(e.message); }
     }
     if (queue.length < 3) load();

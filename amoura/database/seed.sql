@@ -49,6 +49,14 @@ INSERT INTO settings (`key`, value, type, `group`) VALUES
   ('vapid_subject','mailto:no-reply@amoura.example','string','push'),
   ('default_locale','fr','string','general');
 
+-- Catalogue de consommables (achats à l'unité) ------------------------------
+INSERT INTO products (slug, name, description, item, quantity, price_cents, currency, position) VALUES
+  ('boost-1',      'Boost x1',            'Mettez votre profil en avant pendant 30 min', 'boost',     1, 100000, 'XOF', 0),
+  ('boost-5',      'Pack 5 Boosts',       'Cinq boosts à utiliser quand vous voulez',    'boost',     5, 400000, 'XOF', 1),
+  ('superlike-5',  'Pack 5 Super Likes',  'Sortez du lot avec le Super Like',            'superlike', 5, 150000, 'XOF', 2),
+  ('superlike-15', 'Pack 15 Super Likes', 'Le pack malin',                               'superlike', 15, 350000, 'XOF', 3),
+  ('reveal-1',     'Révéler mes admirateurs', 'Voir qui vous a liké pendant 24 h',       'reveal',    1, 200000, 'XOF', 4);
+
 -- Pages statiques éditables -------------------------------------------------
 INSERT INTO pages (slug, title, content) VALUES
   ('terms','Conditions générales d''utilisation','<h1>CGU</h1><p>Contenu à éditer depuis l''admin.</p>'),

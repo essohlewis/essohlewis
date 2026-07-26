@@ -8,6 +8,7 @@ $scripts = ['discover.js'];
   <div class="row">
     <a href="/likes" class="btn btn-ghost btn-sm">❤️ <?= (int) $admirers_count ?></a>
     <a href="/visitors" class="btn btn-ghost btn-sm" title="<?= e(t('visitors.title')) ?>">👀</a>
+    <a href="/store" class="btn btn-ghost btn-sm" title="Boutique">🛒</a>
     <button class="btn btn-ghost btn-sm" data-toggle="filterPanel">⚙️</button>
   </div>
 </div>

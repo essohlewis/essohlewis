@@ -97,13 +97,16 @@ final class SubscriptionController extends Controller
         $txModel = new Transaction();
         $tx = $txModel->find($txId);
 
+        // Redirige vers la boutique pour un achat à l'unité, sinon vers Premium.
+        $back = !empty($tx['product_id']) ? '/store' : '/premium';
+
         if (!$tx || (int) $tx['user_id'] !== (int) $user['id']) {
             Session::flash('error', 'Transaction introuvable.');
             $this->redirect('/premium');
         }
         if ($tx['status'] === 'paid') {
-            Session::flash('success', 'Votre abonnement est actif !');
-            $this->redirect('/premium');
+            Session::flash('success', 'Paiement déjà confirmé.');
+            $this->redirect($back);
         }
 
         $gateway = GatewayFactory::make((string) $tx['gateway']);
@@ -111,11 +114,11 @@ final class SubscriptionController extends Controller
 
         if ($check['ok'] && $check['paid']) {
             $this->fulfill($tx, (string) ($check['reference'] ?? $tx['gateway_ref']));
-            Session::flash('success', 'Paiement confirmé, abonnement activé !');
+            Session::flash('success', 'Paiement confirmé ✅');
         } else {
             Session::flash('error', 'Paiement non confirmé. Si vous avez été débité, contactez le support.');
         }
-        $this->redirect('/premium');
+        $this->redirect($back);
     }
 
     public function cancel(Request $request): void
@@ -128,25 +131,12 @@ final class SubscriptionController extends Controller
     }
 
     /**
-     * Active l'abonnement de façon idempotente après un paiement vérifié.
-     * Appelé par le retour ET par le webhook — d'où l'idempotence via markPaid().
+     * Exécute un paiement vérifié (abonnement OU achat à l'unité), de façon
+     * idempotente. Appelé par le retour navigateur ET par le webhook.
+     * Délègue au service de facturation (gère plan_id ou product_id).
      */
     public static function fulfill(array $tx, string $gatewayRef): void
     {
-        $txModel = new Transaction();
-        // markPaid renvoie true uniquement lors de la PREMIÈRE confirmation.
-        if (!$txModel->markPaid((int) $tx['id'], $gatewayRef)) {
-            return;
-        }
-        $plan = (new Plan())->find((int) $tx['plan_id']);
-        if (!$plan) {
-            return;
-        }
-        $subId = (new Subscription())->activate(
-            (int) $tx['user_id'], (int) $plan['id'], (string) $tx['gateway'], $gatewayRef, (string) $plan['interval']
-        );
-        $txModel->update((int) $tx['id'], ['subscription_id' => $subId]);
-        (new Notification())->push((int) $tx['user_id'], 'payment', null, ['plan' => $plan['name']]);
-        (new ActivityLog())->record((int) $tx['user_id'], 'payment.completed', 'transaction', (int) $tx['id'], ['plan' => $plan['slug']]);
+        \Amoura\Services\Billing\Fulfillment::complete($tx, $gatewayRef);
     }
 }
