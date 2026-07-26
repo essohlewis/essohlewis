@@ -39,7 +39,7 @@ $money = fn($c) => number_format($c / 100, 0, ',', ' '); ?>
         <td><span class="badge <?= $t['status']==='paid'?'badge-online':'' ?>"><?= e($t['status']) ?></span></td>
         <td class="muted"><?= date('d/m/Y H:i', strtotime($t['created_at'])) ?></td>
         <td><?php if ($t['status']==='paid'): ?>
-          <form method="POST" action="/admin/billing/transactions/<?= (int) $t['id'] ?>/refund" onsubmit="return confirm('Rembourser ?')">
+          <form method="POST" action="/admin/billing/transactions/<?= (int) $t['id'] ?>/refund" data-confirm="Rembourser ?">
             <?= csrf_field() ?><button class="btn btn-sm btn-ghost">Rembourser</button></form>
         <?php endif; ?></td>
       </tr>

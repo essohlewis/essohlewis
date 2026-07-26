@@ -40,15 +40,15 @@ final class Response
         header('Referrer-Policy: strict-origin-when-cross-origin');
         header('X-XSS-Protection: 0'); // désactivé au profit de la CSP
         header("Permissions-Policy: camera=(self), microphone=(self), geolocation=(self)");
-        // CSP : autorise WebRTC/WebSocket ; 'unsafe-inline' réduit au strict minimum côté vues.
+        // CSP durcie : scripts autorisés par nonce par requête (plus de 'unsafe-inline').
+        // Les gestionnaires d'événements sont délégués via data-attributes (ui.js) ;
+        // 'unsafe-inline' n'est conservé que pour les styles (styles inline nombreux).
         $ws = Env::get('WS_PUBLIC_URL', 'ws://localhost:8090');
-        // Note : 'unsafe-inline' pour les scripts est requis par les gestionnaires
-        // inline (onclick=) et les petits blocs <script> des vues vanilla. Pour un
-        // durcissement maximal, migrez vers des nonces + handlers externes.
+        $nonce = \Amoura\Core\Security\Nonce::get();
         header(
             "Content-Security-Policy: default-src 'self'; "
             . "img-src 'self' data: blob:; media-src 'self' blob:; "
-            . "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
+            . "script-src 'self' 'nonce-{$nonce}'; style-src 'self' 'unsafe-inline'; "
             . "connect-src 'self' {$ws} wss:; frame-ancestors 'none'; base-uri 'self'"
         );
     }

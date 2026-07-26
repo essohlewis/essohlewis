@@ -5,6 +5,7 @@ namespace Amoura\Tests\Unit;
 
 use Amoura\Services\Payment\CinetPayGateway;
 use Amoura\Services\Payment\GatewayFactory;
+use Amoura\Services\Payment\PaypalGateway;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -39,5 +40,15 @@ final class PaymentTest extends TestCase
         // match() lève l'exception avant toute instanciation de passerelle.
         $this->expectException(\InvalidArgumentException::class);
         GatewayFactory::make('bitcoin-magique');
+    }
+
+    public function testPaypalHeaderNormalizationIsCaseInsensitive(): void
+    {
+        $normalized = PaypalGateway::normalizeHeaders([
+            'PayPal-Transmission-Id' => 'abc',
+            'PAYPAL-CERT-URL' => 'https://x',
+        ]);
+        $this->assertSame('abc', $normalized['paypal-transmission-id']);
+        $this->assertSame('https://x', $normalized['paypal-cert-url']);
     }
 }

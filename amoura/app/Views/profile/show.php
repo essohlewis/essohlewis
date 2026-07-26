@@ -34,7 +34,7 @@ $primary = $photos[0]['path'] ?? ($profile['avatar_path'] ?? null);
         <a href="/messages" class="btn btn-primary grow">💬 Message</a>
         <button class="btn btn-ghost" data-call-start="audio" data-peer="<?= (int) $profile['id'] ?>">📞</button>
         <button class="btn btn-ghost" data-call-start="video" data-peer="<?= (int) $profile['id'] ?>">📹</button>
-        <button class="btn btn-ghost" onclick="reportUser(<?= (int) $profile['id'] ?>)" title="Signaler">⚑</button>
+        <button class="btn btn-ghost" data-action="reportUser" data-arg="<?= (int) $profile['id'] ?>" title="Signaler">⚑</button>
       </div>
     <?php endif; ?>
 
@@ -65,7 +65,7 @@ $primary = $photos[0]['path'] ?? ($profile['avatar_path'] ?? null);
     <?php endif; ?>
   </div>
 </div>
-<script>
+<script <?= \Amoura\Core\Security\Nonce::attr() ?>>
 function reportUser(id){
   const reason = prompt("Motif du signalement (fake, harassment, nudity, scam, underage, spam, other) :", "fake");
   if(!reason) return;

@@ -18,7 +18,7 @@ $pageTitle = isset($title) ? $title . ' · ' . $siteName : $siteName;
 <link rel="apple-touch-icon" href="/assets/img/logo.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="/assets/css/app.css">
-<script>
+<script <?= \Amoura\Core\Security\Nonce::attr() ?>>
 // Enregistrement du Service Worker (PWA installable + coquille hors-ligne).
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("/service-worker.js").catch(() => {}));

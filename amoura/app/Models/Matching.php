@@ -87,7 +87,12 @@ final class Matching extends Model
         return $this->run($sql, $params)->fetchAll();
     }
 
-    /** Liste des matchs actifs d'un utilisateur, avec l'autre membre et le dernier message. */
+    /**
+     * Liste des matchs actifs d'un utilisateur, avec l'autre membre et le dernier message.
+     * On sélectionne d'abord les ids de matchs via une UNION (chaque branche utilise
+     * son index composite idx_match_lo_status / idx_match_hi_status) plutôt qu'un OR
+     * qui dégénère en balayage complet de la table.
+     */
     public function forUser(int $userId): array
     {
         return $this->run(
@@ -99,12 +104,15 @@ final class Matching extends Model
                      JOIN conversation_members cm ON cm.conversation_id = msg.conversation_id AND cm.user_id = ?
                      WHERE msg.conversation_id = c.id AND msg.sender_id <> ?
                        AND (cm.last_read_message_id IS NULL OR msg.id > cm.last_read_message_id)) AS unread
-             FROM matches m
+             FROM (
+                    SELECT id, user_lo, user_hi, matched_at FROM matches WHERE user_lo = ? AND status = "active"
+                    UNION
+                    SELECT id, user_lo, user_hi, matched_at FROM matches WHERE user_hi = ? AND status = "active"
+             ) m
              JOIN users other ON other.id = IF(m.user_lo = ?, m.user_hi, m.user_lo)
              LEFT JOIN conversations c ON c.match_id = m.id
              LEFT JOIN profiles p ON p.user_id = other.id
              LEFT JOIN photos ph ON ph.id = p.avatar_photo_id
-             WHERE (m.user_lo = ? OR m.user_hi = ?) AND m.status = "active"
              ORDER BY c.last_message_at IS NULL, c.last_message_at DESC, m.matched_at DESC',
             [$userId, $userId, $userId, $userId, $userId]
         )->fetchAll();

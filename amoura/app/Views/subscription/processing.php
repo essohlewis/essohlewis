@@ -4,7 +4,7 @@
   <h2>Paiement en cours…</h2>
   <p class="muted">Nous confirmons votre paiement. Cette page se rafraîchira automatiquement.</p>
 </div>
-<script>
+<script <?= \Amoura\Core\Security\Nonce::attr() ?>>
   // Vérification serveur périodique (le retour prestataire ne suffit jamais à activer).
   setTimeout(() => location.href = '/premium/return?tx=<?= (int) $tx ?>', 4000);
 </script>

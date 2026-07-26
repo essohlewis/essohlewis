@@ -8,7 +8,7 @@ $gatewayLabels = ['stripe'=>'💳 Carte (Stripe)','paypal'=>'🅿️ PayPal','ci
   <?php if ($current): ?>
     <div class="alert alert-success">Abonnement actif : <b><?= e($current['plan_name']) ?></b>
       <?= $current['current_period_end'] ? ' jusqu\'au ' . date('d/m/Y', strtotime($current['current_period_end'])) : '' ?>.
-      <form method="POST" action="/premium/cancel" style="display:inline" onsubmit="return confirm('Annuler ?')">
+      <form method="POST" action="/premium/cancel" style="display:inline" data-confirm="Annuler ?">
         <?= csrf_field() ?><button class="btn btn-sm btn-ghost">Annuler</button></form>
     </div>
   <?php endif; ?>
@@ -30,7 +30,7 @@ $gatewayLabels = ['stripe'=>'💳 Carte (Stripe)','paypal'=>'🅿️ PayPal','ci
           <?php if (!empty($f['incognito'])): ?><li>✅ Mode incognito</li><?php endif; ?>
         </ul>
         <?php if ($plan['price_cents']>0 && (!$current || $current['plan_slug']!==$plan['slug'])): ?>
-          <button class="btn btn-primary btn-block" onclick="openCheckout('<?= e($plan['slug']) ?>')" style="margin-top:12px">Choisir</button>
+          <button class="btn btn-primary btn-block" data-action="openCheckout" data-arg="<?= e($plan['slug']) ?>" style="margin-top:12px">Choisir</button>
         <?php elseif ($plan['price_cents']==0): ?>
           <button class="btn btn-ghost btn-block" disabled style="margin-top:12px">Offre de base</button>
         <?php endif; ?>
@@ -45,20 +45,21 @@ $gatewayLabels = ['stripe'=>'💳 Carte (Stripe)','paypal'=>'🅿️ PayPal','ci
     <?= csrf_field() ?>
     <input type="hidden" name="plan" id="checkoutPlan">
     <div class="field"><label>Moyen de paiement</label>
-      <select class="select" name="gateway" id="gatewaySelect" onchange="togglePhone()">
+      <select class="select" name="gateway" id="gatewaySelect" data-action-change="togglePhone">
         <?php foreach ($gateways as $g): ?><option value="<?= e($g) ?>"><?= $gatewayLabels[$g] ?? e($g) ?></option><?php endforeach; ?>
       </select></div>
     <div class="field" id="phoneField" style="display:none"><label>Numéro Mobile Money</label>
       <input class="input" name="phone" placeholder="07 xx xx xx xx">
       <div class="hint">07 → Orange · 05 → MTN · 01 → Moov</div></div>
     <div class="row between">
-      <button type="button" class="btn btn-ghost" onclick="checkoutDialog.close()">Annuler</button>
+      <button type="button" class="btn btn-ghost" data-modal-close="checkoutDialog">Annuler</button>
       <button class="btn btn-primary">Payer</button>
     </div>
   </form>
 </dialog>
-<script>
-function openCheckout(slug){ document.getElementById('checkoutPlan').value=slug; togglePhone(); checkoutDialog.showModal(); }
+<script <?= \Amoura\Core\Security\Nonce::attr() ?>>
+function openCheckout(slug){ document.getElementById('checkoutPlan').value=slug; togglePhone();
+  document.getElementById('checkoutDialog').showModal(); }
 function togglePhone(){ const g=document.getElementById('gatewaySelect').value;
   document.getElementById('phoneField').style.display=(g==='cinetpay'||g==='paydunya')?'block':'none'; }
 </script>

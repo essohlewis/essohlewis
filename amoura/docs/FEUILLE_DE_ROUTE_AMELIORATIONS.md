@@ -10,7 +10,7 @@ Version : 1.0 · Date : 26 juillet 2026 · Portée : améliorations livrées + b
 ## 1. Améliorations livrées dans cette itération ✅
 
 Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont été
-**implémentées et testées** (suite passée à 43 tests / 95 assertions).
+**implémentées et testées** (suite passée à 47 tests / 103 assertions).
 
 | Amélioration | Axe | Détail | Vérification |
 |---|---|---|---|
@@ -20,6 +20,10 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 | **PWA installable + hors-ligne** | UX / Mobile | `manifest.webmanifest`, `service-worker.js` (cache-first assets, network-first API, repli `offline.html`), icônes 192/512, enregistrement auto. | Smoke test HTTP (200 sur tous les fichiers) |
 | **Serveur de dev correct** | DevEx | `server.php` sert les fichiers statiques + PWA en développement (les assets ne partaient plus en 404 hors Apache). | Smoke test (assets 200) |
 | **CI/CD (GitHub Actions)** | DevEx | `.github/workflows/amoura-ci.yml` : lint PHP + tests unitaires & d'intégration (service MySQL) à chaque push/PR. | Workflow validé (yaml + étapes) |
+| **Index & requêtes optimisés** | Performance | Nouveaux index composites (matchs, swipes, stories, posts) + réécriture `forUser` en UNION (2 lookups indexés au lieu d'un scan). Vérifié via `EXPLAIN`. | EXPLAIN + tests d'intégration |
+| **Migrations versionnées** | DevEx | `database/migrations/` + runner (`migrate` / `--fresh` baseline / `status`) suivi dans `schema_migrations`. | Testé (fresh + BDD existante) |
+| **Signature webhook PayPal** | Sécurité | `verifyWebhookSignature` via l'API `/v1/notifications/verify-webhook-signature` (fail-closed). | 1 test unit + 2 intégration |
+| **CSP par nonce** | Sécurité | Suppression de `'unsafe-inline'` (scripts) : nonce par requête + délégation d'événements (`ui.js`, 17 handlers migrés). | Smoke test (nonce en-tête = balises) |
 
 ---
 
@@ -29,8 +33,8 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 
 | Amélioration | Impact | Effort | Priorité |
 |---|---|---|---|
-| Nonces CSP + suppression des scripts/handlers inline | 🔴 | L | **P0** |
-| Vérification de signature webhook PayPal (endpoint dédié) | 🔴 | M | **P0** |
+| ~~Nonces CSP + suppression des handlers inline~~ | 🔴 | L | ✅ **Livré** |
+| ~~Vérification de signature webhook PayPal~~ | 🔴 | M | ✅ **Livré** |
 | Authentification à deux facteurs (2FA) optionnelle | 🟡 | M | P1 |
 | Rotation & révocation de sessions (« déconnecter partout ») | 🟡 | S | P1 |
 | Chiffrement au repos des messages sensibles | 🟡 | L | P2 |
@@ -41,7 +45,7 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 | Amélioration | Impact | Effort | Priorité |
 |---|---|---|---|
 | Cache Redis (sessions, rate-limit, réglages CMS) | 🔴 | M | **P0** |
-| Index composites & `EXPLAIN` sur découverte / fil / messages | 🔴 | S | **P0** |
+| ~~Index composites & `EXPLAIN` sur découverte / fil / messages~~ | 🔴 | S | ✅ **Livré** |
 | Réplicas de lecture MySQL (séparation lecture/écriture) | 🟡 | L | P2 |
 | Clustering WebSocket (Redis pub/sub) pour le multi-instance | 🔴 | L | P1 |
 | CDN + stockage objet (S3) pour médias, transcodage vocal | 🟡 | L | P2 |
@@ -73,7 +77,7 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 | Amélioration | Impact | Effort | Priorité |
 |---|---|---|---|
 | ~~CI/CD (lint + tests) via GitHub Actions~~ | 🔴 | S | ✅ **Livré** |
-| Migrations de schéma versionnées (au lieu du monolithe SQL) | 🟡 | M | P1 |
+| ~~Migrations de schéma versionnées~~ | 🟡 | M | ✅ **Livré** |
 | Couverture de tests > 70 % (contrôleurs, WebSocket, paiements) | 🟡 | M | P1 |
 | Analyse statique (PHPStan/Psalm niveau élevé) + PHP-CS-Fixer | 🟡 | S | P1 |
 | Documentation API OpenAPI + collection de tests | 🟢 | M | P2 |
@@ -112,7 +116,7 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 
 | Sprint | Thème | Contenu clé |
 |---|---|---|
-| **Sprint +1** | Socle production | CI/CD · index & `EXPLAIN` · nonces CSP · signature webhook PayPal |
+| **Sprint +1** ✅ | Socle production | CI/CD · index & `EXPLAIN` · nonces CSP · signature webhook PayPal — *livré* |
 | **Sprint +2** | Engagement | Web Push · i18n FR/EN · onboarding · « qui a vu mon profil » |
 | **Sprint +3** | Scale & confiance | Cache Redis · clustering WebSocket · modération IA (v1) |
 

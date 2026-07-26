@@ -19,8 +19,8 @@ $languages = implode(', ', json_decode($raw['languages'] ?? '[]', true) ?: []);
         <div class="cell" data-photo="<?= (int) $ph['id'] ?>">
           <img src="<?= e('/uploads/' . ($ph['thumb_path'] ?: $ph['path'])) ?>" alt="">
           <div style="position:absolute;top:4px;right:4px;display:flex;gap:4px">
-            <?php if (!$ph['is_primary']): ?><button class="btn btn-sm" onclick="setPrimary(<?= (int) $ph['id'] ?>)" title="Photo principale">★</button><?php endif; ?>
-            <button class="btn btn-sm btn-danger" onclick="delPhoto(<?= (int) $ph['id'] ?>)">✕</button>
+            <?php if (!$ph['is_primary']): ?><button class="btn btn-sm" data-action="setPrimary" data-arg="<?= (int) $ph['id'] ?>" title="Photo principale">★</button><?php endif; ?>
+            <button class="btn btn-sm btn-danger" data-action="delPhoto" data-arg="<?= (int) $ph['id'] ?>">✕</button>
           </div>
           <?php if ($ph['is_primary']): ?><span class="badge badge-premium" style="position:absolute;bottom:4px;left:4px">Principale</span><?php endif; ?>
         </div>
@@ -68,7 +68,7 @@ $languages = implode(', ', json_decode($raw['languages'] ?? '[]', true) ?: []);
     <input type="hidden" name="longitude" id="lng" value="<?= e($raw['longitude'] ?? '') ?>">
     <div class="row">
       <button class="btn btn-primary grow">Enregistrer</button>
-      <button type="button" class="btn btn-ghost" onclick="geolocate()">📍 Ma position</button>
+      <button type="button" class="btn btn-ghost" data-action="geolocate">📍 Ma position</button>
     </div>
   </form>
 
@@ -94,19 +94,17 @@ $languages = implode(', ', json_decode($raw['languages'] ?? '[]', true) ?: []);
   <!-- Vérification + RGPD -->
   <div class="card stack">
     <h3>Vérification & données</h3>
-    <form onsubmit="return verifyProfile(event)">
-      <label class="btn btn-ghost btn-block">📸 Demander le badge vérifié (selfie)
-        <input type="file" id="selfieInput" accept="image/*" hidden></label>
-    </form>
+    <label class="btn btn-ghost btn-block">📸 Demander le badge vérifié (selfie)
+      <input type="file" id="selfieInput" accept="image/*" hidden></label>
     <a href="/settings/data/export" class="btn btn-ghost btn-block">⬇️ Exporter mes données (RGPD)</a>
-    <form method="POST" action="/settings/data/delete" onsubmit="return confirm('Supprimer définitivement votre compte ?')">
+    <form method="POST" action="/settings/data/delete" data-confirm="Supprimer définitivement votre compte ?">
       <?= csrf_field() ?>
       <button class="btn btn-danger btn-block">Supprimer mon compte</button>
     </form>
   </div>
 </div>
 
-<script>
+<script <?= \Amoura\Core\Security\Nonce::attr() ?>>
 document.getElementById('photoInput').addEventListener('change', async (e)=>{
   if(!e.target.files[0]) return;
   const fd = new FormData(); fd.append('photo', e.target.files[0]);
@@ -117,9 +115,10 @@ async function delPhoto(id){ if(!confirm('Supprimer cette photo ?'))return; awai
 function geolocate(){ navigator.geolocation?.getCurrentPosition(p=>{
   document.getElementById('lat').value=p.coords.latitude; document.getElementById('lng').value=p.coords.longitude;
   Amoura.toast('Position enregistrée, cliquez sur Enregistrer.'); }); }
-async function verifyProfile(e){ e.preventDefault();
-  const input=document.getElementById('selfieInput'); if(!input.files[0]){input.click();return false;}
-  const fd=new FormData(); fd.append('selfie',input.files[0]);
-  try{const r=await Api.upload('/profile/verify',fd); Amoura.toast(r.message);}catch(err){Amoura.toast(err.message);} return false; }
-document.getElementById('selfieInput').addEventListener('change',()=>verifyProfile(new Event('x')));
+// Envoi du selfie de vérification dès qu'un fichier est choisi.
+document.getElementById('selfieInput').addEventListener('change', async (e)=>{
+  if(!e.target.files[0]) return;
+  const fd=new FormData(); fd.append('selfie', e.target.files[0]);
+  try{ const r=await Api.upload('/profile/verify',fd); Amoura.toast(r.message);}catch(err){ Amoura.toast(err.message);}
+});
 </script>

@@ -1,20 +1,13 @@
 -- =============================================================================
 --  AMOURA — Installation « tout-en-un » (XAMPP / WAMP / phpMyAdmin)
---  Importez CE fichier dans phpMyAdmin (onglet Importer) en étant connecté
---  en tant que root. Il crée : la base, l'utilisateur applicatif, le schéma
---  et les données de démarrage — en une seule opération.
---
---  Ensuite, dans un terminal :
+--  Importez CE fichier dans phpMyAdmin (connecté en root). Il crée la base,
+--  l'utilisateur applicatif, le schéma et les données en une seule opération.
 --     php scripts/make_admin.php admin@amoura.example "Admin@1234"
 -- =============================================================================
-
 CREATE DATABASE IF NOT EXISTS `amoura` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- Utilisateur applicatif attendu par .env.example (DB_USER=amoura / DB_PASS=secret).
 CREATE USER IF NOT EXISTS 'amoura'@'localhost' IDENTIFIED BY 'secret';
 GRANT ALL PRIVILEGES ON `amoura`.* TO 'amoura'@'localhost';
 FLUSH PRIVILEGES;
-
 USE `amoura`;
 
 -- =============================================================================
@@ -182,6 +175,7 @@ CREATE TABLE swipes (
     PRIMARY KEY (id),
     UNIQUE KEY uq_swipe (actor_id, target_id),
     KEY idx_swipe_target (target_id, action),
+    KEY idx_swipe_actor_date (actor_id, created_at),
     CONSTRAINT fk_swipe_actor  FOREIGN KEY (actor_id)  REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_swipe_target FOREIGN KEY (target_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -194,7 +188,8 @@ CREATE TABLE matches (
     matched_at    TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_match_pair (user_lo, user_hi),
-    KEY idx_match_hi (user_hi),
+    KEY idx_match_lo_status (user_lo, status),
+    KEY idx_match_hi_status (user_hi, status),
     CONSTRAINT fk_match_lo FOREIGN KEY (user_lo) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_match_hi FOREIGN KEY (user_hi) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -300,6 +295,7 @@ CREATE TABLE stories (
     created_at    TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_story_user (user_id, expires_at),
+    KEY idx_story_expires (expires_at),
     CONSTRAINT fk_story_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -329,6 +325,7 @@ CREATE TABLE posts (
     PRIMARY KEY (id),
     KEY idx_post_user (user_id, created_at),
     KEY idx_post_feed (visibility, created_at),
+    KEY idx_post_mod_id (moderation, deleted_at, id),
     CONSTRAINT fk_post_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -563,6 +560,8 @@ INSERT INTO settings (`key`, value, type, `group`) VALUES
   ('stripe_public_key','','secret','payments'),
   ('stripe_secret_key','','secret','payments'),
   ('paypal_client_id','','secret','payments'),
+  ('paypal_secret','','secret','payments'),
+  ('paypal_webhook_id','','secret','payments'),
   ('cinetpay_api_key','','secret','payments'),
   ('cinetpay_site_id','','secret','payments'),
   ('paydunya_master_key','','secret','payments'),

@@ -3,7 +3,7 @@
   <!-- Statuts (stories) -->
   <div class="card" style="margin-bottom:20px">
     <div class="stories-bar" id="storiesBar">
-      <div class="story-item story-add-item" onclick="document.getElementById('storyDialog').showModal()">
+      <div class="story-item story-add-item" data-modal-open="storyDialog">
         <div class="story-add">+</div><span>Mon statut</span>
       </div>
     </div>
@@ -37,8 +37,8 @@
   <form id="storyForm" enctype="multipart/form-data" class="stack">
     <?= csrf_field() ?>
     <div class="row">
-      <label class="checkbox"><input type="radio" name="type" value="image" checked onchange="toggleStoryType()"> Image</label>
-      <label class="checkbox"><input type="radio" name="type" value="text" onchange="toggleStoryType()"> Texte</label>
+      <label class="checkbox"><input type="radio" name="type" value="image" checked data-action-change="toggleStoryType"> Image</label>
+      <label class="checkbox"><input type="radio" name="type" value="text" data-action-change="toggleStoryType"> Texte</label>
     </div>
     <div id="storyImageField"><input type="file" name="media" accept="image/*" class="input"></div>
     <div id="storyTextField" style="display:none">
@@ -46,13 +46,13 @@
     </div>
     <textarea class="textarea" name="caption" placeholder="Légende / texte…" maxlength="500"></textarea>
     <div class="row between">
-      <button type="button" class="btn btn-ghost" onclick="document.getElementById('storyDialog').close()">Annuler</button>
-      <button class="btn btn-primary" onclick="document.getElementById('storyDialog').close()">Publier</button>
+      <button type="button" class="btn btn-ghost" data-modal-close="storyDialog">Annuler</button>
+      <button class="btn btn-primary" data-modal-close="storyDialog">Publier</button>
     </div>
   </form>
 </dialog>
 
-<script>
+<script <?= \Amoura\Core\Security\Nonce::attr() ?>>
 function toggleStoryType(){
   const t = document.querySelector('input[name=type]:checked').value;
   document.getElementById('storyImageField').style.display = t==='image'?'block':'none';

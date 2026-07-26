@@ -7,7 +7,7 @@ $scripts = ['discover.js'];
   <h1>Découvrir</h1>
   <div class="row">
     <a href="/likes" class="btn btn-ghost btn-sm">❤️ <?= (int) $admirers_count ?> j'aime</a>
-    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('filterPanel').classList.toggle('hidden')">⚙️ Filtres</button>
+    <button class="btn btn-ghost btn-sm" data-toggle="filterPanel">⚙️ Filtres</button>
   </div>
 </div>
 

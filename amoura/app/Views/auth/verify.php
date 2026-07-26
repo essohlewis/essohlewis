@@ -11,7 +11,7 @@
 <p class="muted text-center" style="margin-top:20px">
   <button class="btn btn-ghost btn-sm" id="resendBtn">Renvoyer le code</button>
 </p>
-<script>
+<script <?= \Amoura\Core\Security\Nonce::attr() ?>>
 document.getElementById('resendBtn')?.addEventListener('click', async (e) => {
   e.preventDefault();
   try { await Api.post('/verify/resend'); Amoura.toast('Nouveau code envoyé.'); }

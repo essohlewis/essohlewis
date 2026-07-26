@@ -37,6 +37,8 @@ INSERT INTO settings (`key`, value, type, `group`) VALUES
   ('stripe_public_key','','secret','payments'),
   ('stripe_secret_key','','secret','payments'),
   ('paypal_client_id','','secret','payments'),
+  ('paypal_secret','','secret','payments'),
+  ('paypal_webhook_id','','secret','payments'),
   ('cinetpay_api_key','','secret','payments'),
   ('cinetpay_site_id','','secret','payments'),
   ('paydunya_master_key','','secret','payments'),

@@ -5,6 +5,7 @@ namespace Amoura\Tests\Unit;
 
 use Amoura\Core\Security\Auth;
 use Amoura\Core\Security\Csrf;
+use Amoura\Core\Security\Nonce;
 use Amoura\Core\Security\Sanitizer;
 use Amoura\Core\Security\WsTicket;
 use PHPUnit\Framework\TestCase;
@@ -55,6 +56,16 @@ final class SecurityTest extends TestCase
         $ticket = WsTicket::issue(1);
         $this->assertNull(WsTicket::verify($ticket . 'x'));
         $this->assertNull(WsTicket::verify('nimportequoi'));
+    }
+
+    public function testCspNonceIsStableWithinRequestAndEmbeddable(): void
+    {
+        $nonce = Nonce::get();
+        $this->assertNotEmpty($nonce);
+        $this->assertSame($nonce, Nonce::get(), 'un seul nonce par requête');
+        $this->assertStringContainsString('nonce="' . $nonce . '"', Nonce::attr());
+        // Base64 valide (16 octets → 24 caractères avec padding).
+        $this->assertNotFalse(base64_decode($nonce, true));
     }
 
     public function testCsrfTokenGenerationAndConstantTimeCompare(): void

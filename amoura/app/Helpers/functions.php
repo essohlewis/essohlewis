@@ -4,6 +4,7 @@ declare(strict_types=1);
 use Amoura\Core\Env;
 use Amoura\Core\Security\Sanitizer;
 use Amoura\Core\Security\Csrf;
+use Amoura\Core\Security\Nonce;
 
 /**
  * Helpers globaux disponibles partout (chargés via Composer "files" ou bootstrap).
@@ -36,6 +37,14 @@ if (!function_exists('csrf_field')) {
     function csrf_field(): string
     {
         return Csrf::field();
+    }
+}
+
+if (!function_exists('csp_nonce')) {
+    /** Nonce CSP de la requête courante (pour les balises <script> inline). */
+    function csp_nonce(): string
+    {
+        return Nonce::get();
     }
 }
 

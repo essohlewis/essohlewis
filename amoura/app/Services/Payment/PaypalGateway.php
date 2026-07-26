@@ -81,9 +81,58 @@ final class PaypalGateway implements PaymentGateway
                 'error' => $paid ? null : 'Paiement non confirmé.'];
     }
 
+    /**
+     * Vérifie l'authenticité d'un webhook PayPal via l'API officielle
+     * /v1/notifications/verify-webhook-signature (échec fermé : false par défaut).
+     */
     public function verifyWebhookSignature(string $payload, array $headers): bool
     {
-        // À implémenter avec l'endpoint /v1/notifications/verify-webhook-signature.
-        return true;
+        $webhookId = (string) $this->settings->get('paypal_webhook_id', '');
+        if ($webhookId === '') {
+            return false; // non configuré → on refuse plutôt que d'accepter aveuglément
+        }
+
+        $h = self::normalizeHeaders($headers);
+        $required = [
+            'paypal-transmission-id', 'paypal-transmission-time',
+            'paypal-transmission-sig', 'paypal-cert-url', 'paypal-auth-algo',
+        ];
+        foreach ($required as $key) {
+            if (empty($h[$key])) {
+                return false;
+            }
+        }
+
+        $event = json_decode($payload, true);
+        if (!is_array($event)) {
+            return false;
+        }
+
+        $token = $this->accessToken();
+        if (!$token) {
+            return false;
+        }
+
+        $res = Http::post(self::BASE . '/v1/notifications/verify-webhook-signature', [
+            'transmission_id'   => $h['paypal-transmission-id'],
+            'transmission_time' => $h['paypal-transmission-time'],
+            'transmission_sig'  => $h['paypal-transmission-sig'],
+            'cert_url'          => $h['paypal-cert-url'],
+            'auth_algo'         => $h['paypal-auth-algo'],
+            'webhook_id'        => $webhookId,
+            'webhook_event'     => $event,
+        ], ['Authorization: Bearer ' . $token]);
+
+        return ($res['body']['verification_status'] ?? '') === 'SUCCESS';
+    }
+
+    /** Normalise les noms d'en-têtes en minuscules (getallheaders varie selon le serveur). */
+    public static function normalizeHeaders(array $headers): array
+    {
+        $out = [];
+        foreach ($headers as $name => $value) {
+            $out[strtolower((string) $name)] = $value;
+        }
+        return $out;
     }
 }

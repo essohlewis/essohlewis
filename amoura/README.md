@@ -166,7 +166,7 @@ et **activation d'abonnement idempotente** (webhook + retour navigateur).
 ## 🔒 Sécurité & conformité
 
 - **Injection SQL** : requêtes préparées PDO partout ; noms de colonnes validés (`assertColumn`).
-- **XSS** : échappement systématique en sortie (`e()`), liste blanche HTML pour le contenu riche, **CSP** stricte.
+- **XSS** : échappement systématique en sortie (`e()`), liste blanche HTML pour le contenu riche, **CSP stricte par nonce** (sans `unsafe-inline` pour les scripts).
 - **CSRF** : jeton synchronisé vérifié sur toute requête mutative (`VerifyCsrf`).
 - **Mots de passe** : **Argon2id** (64 Mo / t=4), ré‑hachage transparent.
 - **Sessions** : cookies `HttpOnly` + `SameSite`, régénération d'ID, anti‑fixation.
