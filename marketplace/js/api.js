@@ -302,6 +302,11 @@ window.MP = window.MP || {};
     if (!API.enabled || !token()) return null;
     try { const j = await get("/vendor/products"); return j && j.ok ? (j.items || []) : null; } catch (e) { return null; }
   }
+  // Analytique vendeur (serveur) : { summary, topProducts, byStatus, salesByDay } ou null.
+  async function vendorAnalytics(days) {
+    if (!API.enabled || !token()) return null;
+    try { const j = await get("/vendor/analytics?days=" + (days || 30)); return j && j.ok ? j.analytics : null; } catch (e) { return null; }
+  }
   async function myOrders() {
     if (!API.enabled || !token()) return [];
     const j = await get("/orders");
@@ -354,6 +359,7 @@ window.MP = window.MP || {};
   API.saveVendorProduct = saveVendorProduct;
   API.deleteVendorProduct = deleteVendorProduct;
   API.vendorProducts = vendorProducts;
+  API.vendorAnalytics = vendorAnalytics;
   API.myOrders = myOrders;
   API.loyalty = loyalty;
   API.questionsFor = questionsFor;

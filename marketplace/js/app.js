@@ -3690,6 +3690,8 @@
         ${pending ? `<div class="cod-note mt-16"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg>
           <span><strong>${pending} commande(s) en attente</strong> — <a href="#/seller/orders" style="color:var(--brand);font-weight:700">à traiter maintenant</a>.</span></div>` : ""}
 
+        ${canFin ? `<div id="vendorAnalytics"></div>` : ""}
+
         <div class="seller-cols mt-16">
           ${canFin ? `<div class="card card-pad">
             <div class="panel-head"><h3>Ventes des 7 derniers jours</h3><span class="text-muted" style="font-size:13px">${UI.fcfa(sales7.reduce((s, d) => s + d.value, 0))}</span></div>
@@ -3781,6 +3783,43 @@
     if (dashKyc) dashKyc.addEventListener("click", () => startKycVerification(store, () => viewSellerDashboard()));
     // Synchronise le statut de vérification depuis le backend (si présent).
     syncKycStatus(store).then((changed) => { if (changed) viewSellerDashboard(); });
+    renderVendorAnalytics();
+  }
+
+  /** Analytique vendeur calculée en base (CA, meilleurs produits, série). */
+  async function renderVendorAnalytics() {
+    const box = document.getElementById("vendorAnalytics");
+    if (!box || !(window.MP.Api && window.MP.Api.vendorAnalytics)) return;
+    try { await window.MP.Api.ready; } catch (e) {}
+    if (!window.MP.Api.enabled) return;
+    let a;
+    try { a = await window.MP.Api.vendorAnalytics(30); } catch (e) { return; }
+    if (!a || !a.summary || !a.summary.orders) return; // rien à montrer sans ventes en base
+    const s = a.summary;
+    const kpi = (val, lbl, sub) => `<div class="card card-pad" style="text-align:center;padding:14px">
+      <div style="font-size:20px;font-weight:800">${val}</div><div class="text-muted" style="font-size:12px">${lbl}</div>${sub ? `<div class="text-muted" style="font-size:11px">${sub}</div>` : ""}</div>`;
+    const maxDay = Math.max(1, ...a.salesByDay.map((d) => d.amount));
+    const spark = a.salesByDay.slice(-30).map((d) => `<div title="${d.date} : ${UI.fcfa(d.amount)}" style="flex:1;height:${Math.round((d.amount / maxDay) * 100)}%;min-height:2px;background:var(--brand);border-radius:2px 2px 0 0;opacity:${d.amount ? 1 : .25}"></div>`).join("");
+    const top = a.topProducts.slice(0, 5).map((p) => `<div class="flex-between" style="padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
+      <span>${UI.esc(p.name)}</span><span><strong>${UI.fcfa(p.revenue)}</strong> <span class="text-muted">· ${p.units} vendu(s)</span></span></div>`).join("") || `<p class="text-muted" style="margin:0;font-size:13px">Aucune vente.</p>`;
+    box.innerHTML = `<div class="mt-16">
+      <div class="section-title">📊 Analytique (30 j, depuis la base)</div>
+      <div class="stat-grid">
+        ${kpi(UI.fcfa(s.gross), "Chiffre d'affaires brut")}
+        ${kpi(UI.fcfa(s.net), "Net encaissé", "commission " + UI.fcfa(s.commission))}
+        ${kpi(s.orders, "Commandes", "panier moyen " + UI.fcfa(s.avgOrderValue))}
+        ${kpi(s.deliveryRate + " %", "Taux de livraison", s.cancelRate + " % annulées")}
+      </div>
+      <div class="seller-cols mt-16">
+        <div class="card card-pad">
+          <div class="panel-head"><h3>Ventes des 30 derniers jours</h3></div>
+          <div style="display:flex;align-items:flex-end;gap:2px;height:80px">${spark}</div>
+        </div>
+        <div class="card card-pad">
+          <div class="panel-head"><h3>Meilleurs produits</h3></div>${top}
+        </div>
+      </div>
+    </div>`;
   }
 
   /** Récupère le statut KYC (backend) et le reflète sur la boutique locale. */

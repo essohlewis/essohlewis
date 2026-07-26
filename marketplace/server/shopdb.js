@@ -593,6 +593,43 @@ function setStoreStatus(id, status) {
   db.prepare("UPDATE stores SET status=?,updatedAt=? WHERE id=?").run(status, now(), id);
   return getStoreById(id);
 }
+/**
+ * Analytique vendeur : synthèse (CA brut/net/commission, commandes, unités,
+ * panier moyen, taux de livraison/annulation), meilleurs produits, ventilation
+ * par statut et série journalière sur N jours. Calculé depuis les commandes.
+ */
+function vendorAnalytics(storeId, days) {
+  const N = Math.min(Math.max(parseInt(days, 10) || 30, 7), 365);
+  const sinceMs = now() - N * 86400000;
+  const s = db.prepare(`SELECT COUNT(DISTINCT oi.orderId) orders, COALESCE(SUM(oi.qty),0) units,
+      COALESCE(SUM(oi.price*oi.qty),0) gross,
+      COALESCE(SUM(CASE WHEN o.status='delivered' THEN oi.price*oi.qty ELSE 0 END),0) delivered,
+      COALESCE(SUM(CASE WHEN o.status='cancelled' THEN oi.price*oi.qty ELSE 0 END),0) cancelled,
+      COALESCE(SUM(CASE WHEN o.status IN('confirmed','shipped','delivered') THEN oi.price*oi.qty ELSE 0 END),0) revenue
+    FROM order_items oi JOIN orders o ON o.id=oi.orderId WHERE oi.storeId=?`).get(storeId);
+  const deliveredOrders = db.prepare("SELECT COUNT(DISTINCT oi.orderId) n FROM order_items oi JOIN orders o ON o.id=oi.orderId WHERE oi.storeId=? AND o.status='delivered'").get(storeId).n;
+  const cancelledOrders = db.prepare("SELECT COUNT(DISTINCT oi.orderId) n FROM order_items oi JOIN orders o ON o.id=oi.orderId WHERE oi.storeId=? AND o.status='cancelled'").get(storeId).n;
+  const commission = Math.round(s.delivered * COMMISSION_RATE);
+  const summary = {
+    orders: s.orders, units: s.units, gross: s.gross, revenue: s.revenue,
+    deliveredGross: s.delivered, commission, net: s.delivered - commission, cancelled: s.cancelled,
+    avgOrderValue: s.orders ? Math.round(s.gross / s.orders) : 0,
+    deliveryRate: s.orders ? Math.round((deliveredOrders / s.orders) * 100) : 0,
+    cancelRate: s.orders ? Math.round((cancelledOrders / s.orders) * 100) : 0,
+  };
+  const topProducts = db.prepare(`SELECT oi.productId id, oi.name, COALESCE(SUM(oi.qty),0) units, COALESCE(SUM(oi.price*oi.qty),0) revenue
+    FROM order_items oi JOIN orders o ON o.id=oi.orderId WHERE oi.storeId=? AND o.status<>'cancelled'
+    GROUP BY oi.productId, oi.name ORDER BY revenue DESC LIMIT 8`).all(storeId);
+  const byStatus = db.prepare(`SELECT o.status, COUNT(DISTINCT o.id) orders, COALESCE(SUM(oi.price*oi.qty),0) amount
+    FROM order_items oi JOIN orders o ON o.id=oi.orderId WHERE oi.storeId=? GROUP BY o.status`).all(storeId);
+  const rowsByDay = db.prepare(`SELECT oi.qty, oi.price, o.createdAt FROM order_items oi JOIN orders o ON o.id=oi.orderId
+    WHERE oi.storeId=? AND o.status<>'cancelled' AND o.createdAt>=?`).all(storeId, sinceMs);
+  const dayMap = {};
+  for (const r of rowsByDay) { const d = new Date(r.createdAt).toISOString().slice(0, 10); dayMap[d] = (dayMap[d] || 0) + r.price * r.qty; }
+  const salesByDay = [];
+  for (let i = N - 1; i >= 0; i--) { const d = new Date(now() - i * 86400000).toISOString().slice(0, 10); salesByDay.push({ date: d, amount: dayMap[d] || 0 }); }
+  return { summary, topProducts, byStatus, salesByDay, days: N };
+}
 function vendorSales(storeId) {
   const s = db.prepare(`SELECT COUNT(DISTINCT oi.orderId) orders, COALESCE(SUM(oi.qty),0) units,
       COALESCE(SUM(oi.price*oi.qty),0) gross,
@@ -859,7 +896,7 @@ module.exports = {
   getCart, setCart,
   createOrder, getOrder, listOrders, setOrderStatus, refundOrder, stats,
   addReview, listReviews, ratingFor, setReviewStatus,
-  upsertStore, getStoreById, getStoreByOwner, listStores, setStoreStatus, vendorSales,
+  upsertStore, getStoreById, getStoreByOwner, listStores, setStoreStatus, vendorSales, vendorAnalytics,
   createPayment, getPayment, paymentsForOrder, listPayments, setPaymentStatus,
   vendorWallet, createPayout, listPayouts, setPayoutStatus, COMMISSION_RATE,
   transactions, reconciliation,

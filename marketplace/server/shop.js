@@ -412,6 +412,12 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
     const sales = shopdb.vendorSales(s.id);
     res.json({ ok: true, store: decorate(s), summary: sales.summary, lines: sales.lines });
   });
+  // Analytique vendeur : CA, meilleurs produits, ventilation par statut, série journalière.
+  router.get("/vendor/analytics", requireRole("vendor"), (req, res) => {
+    const s = shopdb.getStoreByOwner(req.userId);
+    if (!s) return res.json({ ok: true, store: null, analytics: null });
+    res.json({ ok: true, store: decorate(s), analytics: shopdb.vendorAnalytics(s.id, req.query.days) });
+  });
   // Portefeuille du vendeur (escrow / disponible / commission) + ses retraits.
   router.get("/vendor/wallet", auth, (req, res) => {
     const s = shopdb.getStoreByOwner(req.userId);

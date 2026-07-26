@@ -184,6 +184,15 @@ dans l'onglet **Retraits**. Endpoints : `GET /vendor/wallet`,
   jamais de pile, mais le support relie le ticket au log par l'identifiant.
   Variables : `LOG_LEVEL` (défaut `info`), `LOG_FORMAT` (`json`/`pretty`).
 
+### Analytique vendeur (domaine E)
+`GET /vendor/analytics?days=` (rôle vendor) calcule **depuis les commandes** :
+CA **brut**, brut **livré**, **commission** (`COMMISSION_RATE`) et **net
+encaissé** ; nombre de commandes, unités, **panier moyen**, **taux de livraison
+/ d'annulation** ; **meilleurs produits** (par CA), ventilation **par statut** et
+**série journalière** sur N jours. Affiché sur le tableau de bord vendeur
+(panneau « 📊 Analytique (30 j, depuis la base) » : KPIs + mini‑graphe + top
+produits). N'apparaît que si le vendeur a des ventes en base.
+
 ### Gestion des produits par le vendeur (domaine E)
 Chaque vendeur gère **ses** produits en base, avec **isolation par boutique** :
 - `GET /vendor/products` — mes produits (dont inactifs, paginé) ;

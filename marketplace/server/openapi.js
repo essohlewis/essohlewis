@@ -202,6 +202,11 @@ function build({ version = "1.0.0", baseUrl = "/api/v1" } = {}) {
       "/shop/vendor/store": { get: op("Vendeur", "Ma boutique", { security: bearer }) },
       "/shop/vendor/sales": { get: op("Vendeur", "Mes ventes", { security: bearer }) },
       "/shop/vendor/wallet": { get: op("Vendeur", "Portefeuille (escrow / disponible / retiré / commission)", { security: bearer }) },
+      "/shop/vendor/analytics": {
+        get: op("Vendeur", "Analytique : CA, meilleurs produits, statuts, série journalière", {
+          security: bearer, parameters: [{ name: "days", in: "query", schema: { type: "integer", minimum: 7, maximum: 365, default: 30 } }],
+        }),
+      },
       "/shop/vendor/payouts": { post: op("Vendeur", "Demander un retrait", { security: bearer }) },
       "/shop/vendor/products": {
         get: op("Vendeur", "Mes produits (dont inactifs, paginé)", { security: bearer, parameters: pageParams }),
