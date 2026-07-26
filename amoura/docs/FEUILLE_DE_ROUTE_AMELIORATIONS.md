@@ -10,7 +10,7 @@ Version : 1.0 · Date : 26 juillet 2026 · Portée : améliorations livrées + b
 ## 1. Améliorations livrées dans cette itération ✅
 
 Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont été
-**implémentées et testées** (suite passée à 74 tests / 165 assertions).
+**implémentées et testées** (suite passée à 83 tests / 194 assertions).
 
 | Amélioration | Axe | Détail | Vérification |
 |---|---|---|---|
@@ -31,6 +31,8 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 | **Cache Redis** | Performance / Scale | Abstraction `Core\Cache` (Redis + repli mémoire), réglages CMS mis en cache, **sessions partagées** (handler Redis), **rate-limiter distribué** (INCR atomique). | 5 unit + 3 intégration (Redis réel) |
 | **Clustering WebSocket** | Scale | Bus pub/sub (`websocket/Bus` : Redis via clue/redis-react + repli local mono-instance) ; le serveur relaie les messages entre instances. | Boot vérifié (local + Redis) |
 | **Modération IA v1** | Confiance | `Services\Moderation\ContentModerator` (interface `Moderator` échangeable) : coordonnées, arnaques, harcèlement, sollicitation, spam → score + action ; publications à risque bloquées ou mises en file de revue. | 8 unit + 2 intégration + E2E |
+| **2FA (TOTP)** | Sécurité | `Core\Security\Totp` conforme RFC 6238 (Google Authenticator/Authy) : configuration, activation, connexion en deux étapes, désactivation par mot de passe. | 7 unit + 1 intégration + E2E |
+| **Révocation de sessions** | Sécurité | « Déconnecter partout » via `sessions_valid_after` (comparaison stricte) ; la session courante est préservée. | 2 intégration + E2E (2 sessions) |
 
 ---
 
@@ -42,8 +44,8 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 |---|---|---|---|
 | ~~Nonces CSP + suppression des handlers inline~~ | 🔴 | L | ✅ **Livré** |
 | ~~Vérification de signature webhook PayPal~~ | 🔴 | M | ✅ **Livré** |
-| Authentification à deux facteurs (2FA) optionnelle | 🟡 | M | P1 |
-| Rotation & révocation de sessions (« déconnecter partout ») | 🟡 | S | P1 |
+| ~~Authentification à deux facteurs (2FA) optionnelle~~ | 🟡 | M | ✅ **Livré** |
+| ~~Rotation & révocation de sessions (« déconnecter partout »)~~ | 🟡 | S | ✅ **Livré** |
 | Chiffrement au repos des messages sensibles | 🟡 | L | P2 |
 | Détection d'appareils & alertes de connexion suspecte | 🟡 | M | P2 |
 
@@ -126,6 +128,7 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 | **Sprint +1** ✅ | Socle production | CI/CD · index & `EXPLAIN` · nonces CSP · signature webhook PayPal — *livré* |
 | **Sprint +2** ✅ | Engagement | Web Push · i18n FR/EN · onboarding · « qui a vu mon profil » — *livré* |
 | **Sprint +3** ✅ | Scale & confiance | Cache Redis · clustering WebSocket · modération IA (v1) — *livré* |
+| **Sprint +4** ✅ | Sécurité des comptes | 2FA (TOTP) · révocation de sessions — *livré* |
 
 ---
 

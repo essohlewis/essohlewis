@@ -47,6 +47,7 @@ final class Auth
     {
         Session::regenerate();
         Session::put(self::SESSION_KEY, $userId);
+        Session::put('_auth_time', time());   // horodatage pour la révocation de sessions
         self::$cache = null;
     }
 
@@ -85,6 +86,13 @@ final class Auth
         $stmt->execute([$id]);
         $user = $stmt->fetch();
         if (!$user) {
+            self::logout();
+            return null;
+        }
+        // Révocation de sessions (« déconnecter partout ») : rejette les sessions
+        // établies avant le seuil sessions_valid_after.
+        $authTime = (int) Session::get('_auth_time', 0);
+        if (!\Amoura\Models\User::isSessionValid($user['sessions_valid_after'] ?? null, $authTime)) {
             self::logout();
             return null;
         }

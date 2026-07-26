@@ -51,6 +51,9 @@ CREATE TABLE users (
     email_verified_at  TIMESTAMP       NULL,
     phone_verified_at  TIMESTAMP       NULL,
     is_verified        TINYINT(1)      NOT NULL DEFAULT 0,   -- badge "vérifié" (selfie)
+    totp_secret        VARCHAR(64)     NULL,                 -- secret Base32 (2FA TOTP)
+    totp_enabled       TINYINT(1)      NOT NULL DEFAULT 0,
+    sessions_valid_after TIMESTAMP     NULL,                 -- « déconnecter partout » : révoque les sessions antérieures
     last_active_at     TIMESTAMP       NULL,
     is_online          TINYINT(1)      NOT NULL DEFAULT 0,
     gdpr_consent_at    TIMESTAMP       NULL,

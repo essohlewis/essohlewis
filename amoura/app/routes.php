@@ -39,9 +39,11 @@ return function (Router $r): void {
         $r->get('/forgot', 'Amoura\Controllers\AuthController@showForgot');
         $r->get('/verify', 'Amoura\Controllers\AuthController@showVerify');
     });
+    $r->get('/2fa', 'Amoura\Controllers\AuthController@showTwoFactor');
     $r->group(['middleware' => [VerifyCsrf::class]], function (Router $r) {
         $r->post('/register', 'Amoura\Controllers\AuthController@register');
         $r->post('/login', 'Amoura\Controllers\AuthController@login');
+        $r->post('/2fa', 'Amoura\Controllers\AuthController@verifyTwoFactor');
         $r->post('/verify', 'Amoura\Controllers\AuthController@verifyOtp');
         $r->post('/verify/resend', 'Amoura\Controllers\AuthController@resendOtp');
         $r->post('/forgot', 'Amoura\Controllers\AuthController@sendReset');
@@ -124,6 +126,13 @@ return function (Router $r): void {
     $r->post('/premium/cancel', 'Amoura\Controllers\SubscriptionController@cancel', $authCsrf);
     // Webhooks (pas de CSRF : source externe ; vérifiés par signature/re-check serveur)
     $r->post('/webhooks/{gateway}', 'Amoura\Controllers\WebhookController@handle');
+
+    // Sécurité du compte (2FA + sessions)
+    $r->get('/settings/security', 'Amoura\Controllers\SecurityController@index', $auth);
+    $r->post('/settings/2fa/setup', 'Amoura\Controllers\SecurityController@setupTotp', $authCsrf);
+    $r->post('/settings/2fa/enable', 'Amoura\Controllers\SecurityController@enableTotp', $authCsrf);
+    $r->post('/settings/2fa/disable', 'Amoura\Controllers\SecurityController@disableTotp', $authCsrf);
+    $r->post('/settings/sessions/revoke', 'Amoura\Controllers\SecurityController@revokeSessions', $authCsrf);
 
     // RGPD
     $r->get('/settings/data/export', 'Amoura\Controllers\ProfileController@exportData', $auth);

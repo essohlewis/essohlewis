@@ -96,6 +96,7 @@ $languages = implode(', ', json_decode($raw['languages'] ?? '[]', true) ?: []);
     <h3>Vérification & données</h3>
     <label class="btn btn-ghost btn-block">📸 Demander le badge vérifié (selfie)
       <input type="file" id="selfieInput" accept="image/*" hidden></label>
+    <a href="/settings/security" class="btn btn-ghost btn-block">🔐 Sécurité du compte (2FA, sessions)</a>
     <a href="/settings/data/export" class="btn btn-ghost btn-block">⬇️ Exporter mes données (RGPD)</a>
     <form method="POST" action="/settings/data/delete" data-confirm="Supprimer définitivement votre compte ?">
       <?= csrf_field() ?>

@@ -19,6 +19,42 @@ final class User extends Model
         return $this->findBy('phone', $phone);
     }
 
+    // ── 2FA (TOTP) ─────────────────────────────────────────────────────
+    public function setTotpSecret(int $userId, string $secret): void
+    {
+        $this->run('UPDATE users SET totp_secret = ?, totp_enabled = 0 WHERE id = ?', [$secret, $userId]);
+    }
+
+    public function enableTotp(int $userId): void
+    {
+        $this->run('UPDATE users SET totp_enabled = 1 WHERE id = ?', [$userId]);
+    }
+
+    public function disableTotp(int $userId): void
+    {
+        $this->run('UPDATE users SET totp_enabled = 0, totp_secret = NULL WHERE id = ?', [$userId]);
+    }
+
+    // ── Révocation de sessions (« déconnecter partout ») ───────────────
+    public function revokeSessions(int $userId): void
+    {
+        $this->run('UPDATE users SET sessions_valid_after = NOW() WHERE id = ?', [$userId]);
+    }
+
+    /**
+     * Une session est valide si elle a été établie STRICTEMENT après le seuil de
+     * révocation. La comparaison stricte évite qu'une session créée dans la même
+     * seconde que la révocation survive (granularité seconde). La session courante
+     * conservée est ré-horodatée au-delà du seuil (voir SecurityController).
+     */
+    public static function isSessionValid(?string $sessionsValidAfter, int $authTime): bool
+    {
+        if ($sessionsValidAfter === null) {
+            return true;
+        }
+        return $authTime > strtotime($sessionsValidAfter);
+    }
+
     /** Marque la présence en ligne / hors-ligne (mis à jour par le WebSocket). */
     public function setOnline(int $userId, bool $online): void
     {

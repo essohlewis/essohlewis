@@ -176,9 +176,54 @@ final class AuthController extends Controller
             $userModel->update((int) $user['id'], ['password_hash' => Auth::hash($password)]);
         }
 
-        Auth::login((int) $user['id']);
         RateLimiter::clear('login:' . $email);
+
+        // Deuxième facteur (TOTP) activé : mot de passe validé, on exige le code.
+        if ((int) ($user['totp_enabled'] ?? 0) === 1) {
+            Session::put('pending_2fa_user', (int) $user['id']);
+            $this->redirect('/2fa');
+        }
+
+        Auth::login((int) $user['id']);
         (new ActivityLog())->record((int) $user['id'], 'user.login', 'user', (int) $user['id'], [], $request->ip());
+
+        $intended = Session::get('intended_url', '/app');
+        Session::forget('intended_url');
+        $this->redirect(is_string($intended) ? $intended : '/app');
+    }
+
+    // ── Deuxième facteur (2FA / TOTP) ──────────────────────────────────
+    public function showTwoFactor(Request $request): void
+    {
+        if (!Session::has('pending_2fa_user')) {
+            $this->redirect('/login');
+        }
+        $this->view('auth/twofactor', [], 'layouts/auth');
+    }
+
+    public function verifyTwoFactor(Request $request): void
+    {
+        $userId = (int) Session::get('pending_2fa_user', 0);
+        if ($userId === 0) {
+            $this->redirect('/login');
+        }
+        if (!RateLimiter::attempt('2fa:' . $userId, 6, 300)) {
+            Session::flash('error', 'Trop de tentatives. Réessayez plus tard.');
+            $this->redirect('/2fa');
+        }
+
+        $user = (new User())->find($userId);
+        $code = (string) $request->input('code');
+
+        if (!$user || (int) $user['totp_enabled'] !== 1
+            || !\Amoura\Core\Security\Totp::verify((string) $user['totp_secret'], $code)) {
+            Session::flash('error', 'Code de vérification invalide.');
+            $this->redirect('/2fa');
+        }
+
+        Session::forget('pending_2fa_user');
+        Auth::login($userId);
+        (new ActivityLog())->record($userId, 'user.login_2fa', 'user', $userId, [], $request->ip());
 
         $intended = Session::get('intended_url', '/app');
         Session::forget('intended_url');
