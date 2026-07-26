@@ -25,7 +25,8 @@ final class Matching extends Model
         $where = [
             'u.id <> ?',                                   // pas soi-même
             'u.status = "active"',
-            'pr.discoverable = 1',
+            // découvrable (privacy_settings) ; absence de ligne = découvrable par défaut
+            '(pv.discoverable = 1 OR pv.discoverable IS NULL)',
             // pas déjà swipé
             'NOT EXISTS (SELECT 1 FROM swipes s WHERE s.actor_id = ? AND s.target_id = u.id)',
             // pas de blocage dans un sens ou l'autre
@@ -74,8 +75,8 @@ final class Matching extends Model
                     ph.path AS avatar_path,
                     {$distanceSelect}
              FROM users u
-             JOIN profiles pr ON pr.user_id = u.id
-             LEFT JOIN profiles p ON p.user_id = u.id
+             JOIN profiles p ON p.user_id = u.id
+             LEFT JOIN privacy_settings pv ON pv.user_id = u.id
              LEFT JOIN photos ph ON ph.id = p.avatar_photo_id
              WHERE " . implode(' AND ', $where) . "
              {$having}

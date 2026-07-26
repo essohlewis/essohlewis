@@ -3,7 +3,7 @@
 /** @var array|null $auth */
 use Amoura\Core\Security\Auth;
 $path = $_SERVER['REQUEST_URI'] ?? '/admin';
-$item = function (string $href, string $label, string $icon, string $perm = null) use ($path) {
+$item = function (string $href, string $label, string $icon, ?string $perm = null) use ($path) {
     if ($perm !== null && !Auth::can($perm)) return '';
     $active = str_starts_with($path, $href) && ($href !== '/admin' || $path === '/admin' || $path === '/admin/') ? ' active' : '';
     return '<a href="' . $href . '" class="nav-link' . $active . '">' . $icon . ' ' . $label . '</a>';

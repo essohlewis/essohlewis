@@ -22,7 +22,7 @@ final class Validator
         return $this->data[$field] ?? null;
     }
 
-    public function require(string $field, string $message = null): self
+    public function require(string $field, ?string $message = null): self
     {
         $v = $this->value($field);
         if ($v === null || (is_string($v) && trim($v) === '')) {

@@ -1,0 +1,84 @@
+# =============================================================================
+#  Amoura — pile complète pour développement / démonstration.
+#    web     : application PHP (Apache) sur http://localhost:8080
+#    ws      : serveur WebSocket temps réel (chat, présence, signaling WebRTC)
+#    db      : MySQL 8 (schéma + données chargés automatiquement au 1er démarrage)
+#    coturn  : serveurs STUN/TURN pour les appels WebRTC derrière NAT
+#
+#  Démarrage :  docker compose up -d --build
+#  Puis      :  docker compose exec web php scripts/make_admin.php admin@amoura.example 'MotDePasse123'
+# =============================================================================
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpw
+      MYSQL_DATABASE: amoura
+      MYSQL_USER: amoura
+      MYSQL_PASSWORD: secret
+    volumes:
+      - db_data:/var/lib/mysql
+      # Chargés une seule fois, à l'initialisation de la base.
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-uroot", "-prootpw"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_NAME: amoura
+      DB_USER: amoura
+      DB_PASS: secret
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8080
+      WS_PUBLIC_URL: ws://localhost:8090
+      STUN_URLS: stun:localhost:3478
+      TURN_URL: turn:localhost:3478
+      TURN_USER: amoura
+      TURN_PASS: amoura_turn_secret
+    ports:
+      - "8080:80"
+    volumes:
+      - ./public/uploads:/var/www/html/public/uploads
+
+  ws:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_NAME: amoura
+      DB_USER: amoura
+      DB_PASS: secret
+      WS_HOST: 0.0.0.0
+      WS_PORT: "8090"
+    command: php websocket/server.php
+    ports:
+      - "8090:8090"
+
+  coturn:
+    image: coturn/coturn:latest
+    restart: unless-stopped
+    network_mode: host        # requis pour l'allocation des ports relais TURN
+    volumes:
+      - ./docker/coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro
+
+volumes:
+  db_data:

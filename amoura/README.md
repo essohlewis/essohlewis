@@ -86,6 +86,62 @@ Ouvrez <http://localhost:8080>. L'espace admin est sur `/admin`.
 > Sans `composer install`, l'application web fonctionne (autoloader maison) ;
 > seul le serveur WebSocket requiert Ratchet.
 
+### 🪟 Démarrage avec XAMPP / WAMP (Windows)
+
+Placez le dossier dans `C:\xampp\htdocs\amoura`, démarrez **Apache** et **MySQL**, puis :
+
+1. Ouvrez <http://localhost/phpmyadmin> → onglet **Importer** → sélectionnez
+   **`database/install.sql`**. Ce fichier crée en une fois : la base `amoura`,
+   l'utilisateur applicatif (`amoura` / `secret`), le schéma et les données.
+2. Copiez `.env.example` en `.env`. Les valeurs par défaut conviennent à XAMPP,
+   mais si vous préférez l'utilisateur `root` (sans mot de passe sous XAMPP) :
+   ```
+   DB_HOST=127.0.0.1
+   DB_NAME=amoura
+   DB_USER=root
+   DB_PASS=
+   ```
+3. Créez un admin : `php scripts/make_admin.php admin@amoura.example "Admin@1234"`
+4. Ouvrez <http://localhost/amoura/public> (ou configurez un VirtualHost sur `public/`).
+
+> ⚠️ L'erreur `SQLSTATE[HY000] [1045] Access denied for user 'amoura'@'localhost'`
+> signifie simplement que la base/l'utilisateur n'ont pas encore été créés :
+> importez `database/install.sql` (étape 1). L'application affiche désormais un
+> guide d'installation clair à la place d'une erreur brute.
+
+### 🐳 Démarrage avec Docker (pile complète)
+
+```bash
+docker compose up -d --build     # web + MySQL + WebSocket + coturn
+docker compose exec web php scripts/make_admin.php admin@amoura.example 'MotDePasse123'
+```
+
+- Web : <http://localhost:8080> · WebSocket : `ws://localhost:8090`
+- Le schéma et les données de démarrage sont chargés automatiquement au premier
+  lancement de MySQL (`database/*.sql` montés dans `docker-entrypoint-initdb.d`).
+- `coturn` (STUN/TURN) tourne en `network_mode: host` pour l'allocation des ports relais.
+
+---
+
+## ✅ Tests
+
+Suite **PHPUnit** : tests unitaires (sans base) + tests d'intégration (MySQL réel).
+
+```bash
+composer test                 # toute la suite
+vendor/bin/phpunit --testsuite Unit          # logique pure (routeur, sécurité, validation, paiements)
+vendor/bin/phpunit --testsuite Integration   # matching, messagerie, facturation sur MySQL
+
+# Base de test dédiée (les tests d'intégration sont ignorés si MySQL est absent) :
+DB_HOST=127.0.0.1 DB_PORT=3306 DB_USER=root DB_PASS=secret DB_NAME=amoura_test \
+  vendor/bin/phpunit
+```
+
+Couverture cœur : hachage Argon2id, CSRF, échappement/anti-XSS, tickets WebSocket,
+validation, routeur (paramètres/groupes/middlewares), détection opérateur Mobile Money,
+**like → match mutuel → conversation → message**, exclusion découverte (swipés/bloqués),
+et **activation d'abonnement idempotente** (webhook + retour navigateur).
+
 ---
 
 ## 🗺️ Livraison modulaire

@@ -11,7 +11,11 @@ final class Setting extends Model
     protected string $table = 'settings';
     private static array $cache = [];
 
-    public function all(): array
+    /**
+     * Tous les paramètres sous forme clé => valeur typée (avec cache par requête).
+     * Nommé `values()` pour ne pas entrer en conflit avec Model::all(int,int).
+     */
+    public function values(): array
     {
         if (self::$cache) {
             return self::$cache;
@@ -25,7 +29,7 @@ final class Setting extends Model
 
     public function get(string $key, mixed $default = null): mixed
     {
-        $all = $this->all();
+        $all = $this->values();
         return $all[$key] ?? $default;
     }
 

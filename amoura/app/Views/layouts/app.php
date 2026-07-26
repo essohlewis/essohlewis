@@ -10,7 +10,7 @@ if ($uid) {
     $p = (new \Amoura\Models\User())->fullProfile((int) $uid);
     $avatarPath = $p['avatar_path'] ?? null;
 }
-$nav = function (string $href, string $label, string $icon, string $key = null) use ($path) {
+$nav = function (string $href, string $label, string $icon, ?string $key = null) use ($path) {
     $active = ($path === $href) || ($key && str_starts_with($path, $key)) ? ' active' : '';
     return '<a href="' . $href . '" class="nav-link' . $active . '"><span>' . $icon . '</span><span class="label">' . $label . '</span></a>';
 };

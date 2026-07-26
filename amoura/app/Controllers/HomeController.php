@@ -19,7 +19,7 @@ final class HomeController extends Controller
         }
         $this->view('home', [
             'plans' => (new Plan())->active(),
-            'settings' => (new Setting())->all(),
+            'settings' => (new Setting())->values(),
         ], 'layouts/public');
     }
 
