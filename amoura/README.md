@@ -75,7 +75,7 @@ php scripts/migrate.php --fresh  # crée le schéma + les données de démarrage
 php scripts/make_admin.php admin@amoura.example 'MotDePasse123'
 
 # Serveur web (dev)
-php -S localhost:8080 -t public public/index.php
+php -S localhost:8080 -t public server.php
 
 # Serveur temps réel (dans un autre terminal)
 php websocket/server.php

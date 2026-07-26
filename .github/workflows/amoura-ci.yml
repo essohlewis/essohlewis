@@ -1,0 +1,69 @@
+# =============================================================================
+#  CI Amoura — lint PHP + suite de tests PHPUnit (unitaires + intégration MySQL)
+#  Feuille de route des améliorations — DevEx / P0.
+# =============================================================================
+name: Amoura CI
+
+on:
+  push:
+    branches: ["**"]
+    paths: ["amoura/**", ".github/workflows/amoura-ci.yml"]
+  pull_request:
+    paths: ["amoura/**", ".github/workflows/amoura-ci.yml"]
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: amoura
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: rootpw
+          MYSQL_DATABASE: amoura_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -uroot -prootpw"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurer PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: pdo_mysql, gd, mbstring, curl
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: amoura/vendor
+          key: composer-${{ hashFiles('amoura/composer.lock') }}
+
+      - name: Installer les dépendances
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Lint PHP (aucune erreur de syntaxe)
+        run: find app websocket scripts public server.php -name '*.php' -print0 | xargs -0 -n1 php -l >/dev/null
+
+      - name: Tests unitaires
+        run: vendor/bin/phpunit --testsuite Unit
+
+      - name: Tests d'intégration (MySQL)
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_USER: root
+          DB_PASS: rootpw
+          DB_NAME: amoura_test
+          APP_KEY: ci-app-key-amoura
+        run: vendor/bin/phpunit --testsuite Integration

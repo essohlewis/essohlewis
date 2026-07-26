@@ -56,8 +56,8 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 - [ ] Durcissement CSP (nonces + handlers externalisés à la place de `unsafe-inline`).
 - [ ] File d'attente e-mail/SMS asynchrone (OTP, notifications) + fournisseur SMS réel.
 - [ ] Déploiement TURN (coturn) supervisé + `wss://` derrière Nginx.
-- [ ] Purge planifiée (statuts expirés, tokens, sessions) via tâches cron.
-- [ ] Journalisation centralisée + supervision (uptime, erreurs, métriques WebSocket).
+- [x] **Purge planifiée** (statuts expirés, tokens, sessions, rate-limits) via cron (`scripts/cron.php`). ✅
+- [x] **Journalisation structurée** JSON (`Services\Logger`) branchée sur le gestionnaire d'erreurs. ✅ *(supervision à compléter)*
 - [ ] Tests de charge (chat & signaling) et budget de performance.
 - [ ] Politique de sauvegarde/restauration MySQL et plan de reprise.
 - [ ] Recette de sécurité (pentest léger, revue OWASP Top 10).
@@ -66,8 +66,8 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 
 *Objectif : augmenter le temps passé et la fréquence de retour.*
 
-- [ ] Push mobile web (Web Push / PWA installable) pour messages, matchs, appels.
-- [ ] Recommandations améliorées (score d'affinité : intérêts + activité + proximité).
+- [x] **PWA installable** (manifest, service worker, coquille hors-ligne). ✅ *(Web Push à ajouter)*
+- [x] **Recommandations par affinité** (intérêts + proximité + âge + activité + vérifié) — `Services\Recommender`. ✅
 - [ ] « Qui a vu mon profil », derniers visiteurs.
 - [ ] Réactions et réponses citées dans le chat, messages éphémères.
 - [ ] Filtres de découverte enrichis (style de vie, valeurs, langues).

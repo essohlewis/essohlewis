@@ -37,9 +37,14 @@ final class DiscoverController extends Controller
             'lat' => $request->query('lat'),
             'lng' => $request->query('lng'),
         ];
-        $profiles = (new Matching())->discover((int) $user['id'], array_filter($filters, fn($v) => $v !== null && $v !== ''));
+        // On récupère un vivier élargi puis on le reclasse par affinité (Phase 2).
+        $profiles = (new Matching())->discover(
+            (int) $user['id'],
+            array_filter($filters, fn($v) => $v !== null && $v !== ''),
+            60
+        );
 
-        // Enrichissement d'affichage (âge, avatar).
+        // Enrichissement d'affichage (âge, avatar, intérêts décodés).
         $profiles = array_map(function ($p) {
             $p['age'] = age_from($p['birthdate'] ?? null);
             $p['avatar'] = avatar_url($p['avatar_path'] ?? null);
@@ -48,7 +53,17 @@ final class DiscoverController extends Controller
             return $p;
         }, $profiles);
 
-        $this->json(['ok' => true, 'profiles' => $profiles]);
+        // Profil de l'observateur pour le calcul d'affinité.
+        $me = (new \Amoura\Models\User())->fullProfile((int) $user['id']) ?? [];
+        $viewer = [
+            'interests' => json_decode($me['interests'] ?? '[]', true) ?: [],
+            'city' => $me['city'] ?? null,
+            'country' => $me['country'] ?? null,
+            'age' => age_from($me['birthdate'] ?? null),
+        ];
+
+        $ranked = \Amoura\Services\Recommender::rank($viewer, $profiles);
+        $this->json(['ok' => true, 'profiles' => array_slice($ranked, 0, 20)]);
     }
 
     /** Enregistre un like/pass et gère le quota + la détection de match. */

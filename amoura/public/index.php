@@ -58,6 +58,11 @@ try {
         echo "Erreur : {$e->getMessage()}\n\n{$e->getFile()}:{$e->getLine()}\n\n{$e->getTraceAsString()}";
     } else {
         error_log((string) $e);
+        \Amoura\Services\Logger::error('unhandled_exception', [
+            'message' => $e->getMessage(),
+            'file'    => $e->getFile() . ':' . $e->getLine(),
+            'path'    => $_SERVER['REQUEST_URI'] ?? null,
+        ]);
         http_response_code(500);
         \Amoura\Core\View::render('errors/error', ['code' => 500, 'message' => 'Une erreur est survenue.'], null);
     }

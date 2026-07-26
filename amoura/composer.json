@@ -29,7 +29,7 @@
     },
     "scripts": {
         "ws": "php websocket/server.php",
-        "serve": "php -S localhost:8080 -t public public/index.php",
+        "serve": "php -S localhost:8080 -t public server.php",
         "test": "phpunit"
     },
     "require-dev": {
