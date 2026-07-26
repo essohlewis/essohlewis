@@ -195,6 +195,38 @@ CREATE TABLE blocks (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------
+--  VISITES DE PROFIL (« qui a vu mon profil »)
+-- -----------------------------------------------------------------------------
+CREATE TABLE profile_views (
+    profile_id      BIGINT UNSIGNED NOT NULL,             -- profil consulté
+    viewer_id       BIGINT UNSIGNED NOT NULL,             -- qui l'a consulté
+    views           INT UNSIGNED    NOT NULL DEFAULT 1,
+    first_viewed_at TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_viewed_at  TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (profile_id, viewer_id),
+    KEY idx_pview_profile (profile_id, last_viewed_at),
+    CONSTRAINT fk_pview_profile FOREIGN KEY (profile_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_pview_viewer  FOREIGN KEY (viewer_id)  REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------------------------------
+--  ABONNEMENTS AUX NOTIFICATIONS PUSH (Web Push / PWA)
+-- -----------------------------------------------------------------------------
+CREATE TABLE push_subscriptions (
+    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id     BIGINT UNSIGNED NOT NULL,
+    endpoint    VARCHAR(512)    NOT NULL,
+    p256dh      VARCHAR(255)    NOT NULL,             -- clé publique du client
+    auth        VARCHAR(255)    NOT NULL,             -- secret d'authentification
+    user_agent  VARCHAR(255)    NULL,
+    created_at  TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_push_endpoint (endpoint(191)),
+    KEY idx_push_user (user_id),
+    CONSTRAINT fk_push_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------------------------------
 --  CONVERSATIONS & MESSAGES
 -- -----------------------------------------------------------------------------
 CREATE TABLE conversations (

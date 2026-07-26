@@ -107,6 +107,36 @@
     },
   };
 
+  /* ---- Notifications Web Push ---- */
+  function urlBase64ToUint8Array(base64) {
+    const padding = "=".repeat((4 - (base64.length % 4)) % 4);
+    const b64 = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const raw = atob(b64);
+    return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+  }
+
+  async function enablePush() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return false;
+    try {
+      const cfg = await Api.get("/api/push/key");
+      if (!cfg.enabled || !cfg.key) return false;
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") return false;
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(cfg.key),
+        });
+      }
+      const json = sub.toJSON();
+      await Api.post("/api/push/subscribe", { endpoint: sub.endpoint, keys: json.keys });
+      toast("Notifications activées 🔔");
+      return true;
+    } catch (e) { return false; }
+  }
+
   /* ---- Initialisation ---- */
   document.addEventListener("DOMContentLoaded", () => {
     initLightbox();
@@ -125,12 +155,19 @@
       })
     );
 
+    // Bouton « activer les notifications » (data-action="enablePush").
+    window.enablePush = enablePush;
+
     if (document.body.dataset.auth === "1") {
       Realtime.connect();
       refreshNotifications();
       setInterval(refreshNotifications, 60000);
+      // Ré-abonnement silencieux si l'autorisation est déjà accordée.
+      if (window.Notification && Notification.permission === "granted") {
+        enablePush();
+      }
     }
   });
 
-  global.Amoura = { Theme, toast, Realtime, refreshNotifications };
+  global.Amoura = { Theme, toast, Realtime, refreshNotifications, enablePush };
 })(window);

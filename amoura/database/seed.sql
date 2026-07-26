@@ -43,7 +43,11 @@ INSERT INTO settings (`key`, value, type, `group`) VALUES
   ('cinetpay_site_id','','secret','payments'),
   ('paydunya_master_key','','secret','payments'),
   ('mail_from','no-reply@amoura.example','string','mail'),
-  ('welcome_message','Bienvenue sur Amoura ! Complétez votre profil pour commencer.','string','content');
+  ('welcome_message','Bienvenue sur Amoura ! Complétez votre profil pour commencer.','string','content'),
+  ('vapid_public_key','','string','push'),
+  ('vapid_private_key','','secret','push'),
+  ('vapid_subject','mailto:no-reply@amoura.example','string','push'),
+  ('default_locale','fr','string','general');
 
 -- Pages statiques éditables -------------------------------------------------
 INSERT INTO pages (slug, title, content) VALUES

@@ -10,7 +10,7 @@ Version : 1.0 · Date : 26 juillet 2026 · Portée : améliorations livrées + b
 ## 1. Améliorations livrées dans cette itération ✅
 
 Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont été
-**implémentées et testées** (suite passée à 47 tests / 103 assertions).
+**implémentées et testées** (suite passée à 56 tests / 121 assertions).
 
 | Amélioration | Axe | Détail | Vérification |
 |---|---|---|---|
@@ -24,6 +24,10 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 | **Migrations versionnées** | DevEx | `database/migrations/` + runner (`migrate` / `--fresh` baseline / `status`) suivi dans `schema_migrations`. | Testé (fresh + BDD existante) |
 | **Signature webhook PayPal** | Sécurité | `verifyWebhookSignature` via l'API `/v1/notifications/verify-webhook-signature` (fail-closed). | 1 test unit + 2 intégration |
 | **CSP par nonce** | Sécurité | Suppression de `'unsafe-inline'` (scripts) : nonce par requête + délégation d'événements (`ui.js`, 17 handlers migrés). | Smoke test (nonce en-tête = balises) |
+| **« Qui a vu mon profil »** | UX / Monétisation | Table `profile_views`, suivi des visites, page `/visitors` (liste floutée hors Premium). | 3 tests d'intégration |
+| **i18n FR/EN** | UX | `Core\I18n` + fichiers de langue + helper `t()` + détection cookie/Accept-Language + sélecteur de langue ; nav/accueil/connexion traduits. | 5 tests unitaires |
+| **Onboarding guidé** | UX | Carte de complétion de profil (étapes cochables) sur la découverte tant que < 100 %. | Smoke test (rendu) |
+| **Notifications Web Push** | UX / Engagement | VAPID + abonnements (`push_subscriptions`), service worker (`push`/`notificationclick`), `PushService` (dégradation gracieuse), câblé aux messages. | 1 intégration + envoi vérifié |
 
 ---
 
@@ -55,10 +59,10 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 
 | Amélioration | Impact | Effort | Priorité |
 |---|---|---|---|
-| Notifications Web Push (messages, matchs, appels entrants) | 🔴 | M | **P0** |
-| Internationalisation (i18n) FR/EN + sélecteur de langue | 🟡 | M | P1 |
-| Onboarding guidé + complétion de profil gamifiée | 🟡 | M | P1 |
-| « Qui a vu mon profil » + derniers visiteurs | 🟡 | S | P2 |
+| ~~Notifications Web Push~~ | 🔴 | M | ✅ **Livré** |
+| ~~Internationalisation (i18n) FR/EN + sélecteur~~ | 🟡 | M | ✅ **Livré** |
+| ~~Onboarding guidé + complétion de profil~~ | 🟡 | M | ✅ **Livré** |
+| ~~« Qui a vu mon profil » + derniers visiteurs~~ | 🟡 | S | ✅ **Livré** |
 | Réponses citées & messages éphémères dans le chat | 🟢 | S | P2 |
 | Filtres de découverte enrichis (style de vie, valeurs) | 🟡 | S | P2 |
 | Skeletons/optimistic UI systématiques | 🟢 | S | P3 |
@@ -117,7 +121,7 @@ Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont é
 | Sprint | Thème | Contenu clé |
 |---|---|---|
 | **Sprint +1** ✅ | Socle production | CI/CD · index & `EXPLAIN` · nonces CSP · signature webhook PayPal — *livré* |
-| **Sprint +2** | Engagement | Web Push · i18n FR/EN · onboarding · « qui a vu mon profil » |
+| **Sprint +2** ✅ | Engagement | Web Push · i18n FR/EN · onboarding · « qui a vu mon profil » — *livré* |
 | **Sprint +3** | Scale & confiance | Cache Redis · clustering WebSocket · modération IA (v1) |
 
 ---

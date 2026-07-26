@@ -48,6 +48,21 @@ if (!function_exists('csp_nonce')) {
     }
 }
 
+if (!function_exists('t')) {
+    /** Traduit une clé i18n (avec substitution {var}). */
+    function t(string $key, array $replacements = []): string
+    {
+        return \Amoura\Core\I18n::t($key, $replacements);
+    }
+}
+
+if (!function_exists('locale')) {
+    function locale(): string
+    {
+        return \Amoura\Core\I18n::locale();
+    }
+}
+
 if (!function_exists('old')) {
     /** Récupère une ancienne valeur de formulaire (repopulation après erreur). */
     function old(string $key, mixed $default = ''): mixed

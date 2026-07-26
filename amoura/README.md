@@ -53,7 +53,7 @@ amoura/
 ├── database/
 │   ├── schema.sql              # Schéma complet (25+ tables)
 │   └── seed.sql                # Rôles, plans, paramètres, pages CMS
-├── scripts/                    # migrate.php, make_admin.php, gen_key.php
+├── scripts/                    # migrate.php, make_admin.php, gen_key.php, cron.php, gen_vapid.php
 ├── composer.json               # Autoload PSR‑4 + Ratchet
 └── .env.example
 ```

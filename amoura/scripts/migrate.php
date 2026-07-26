@@ -109,21 +109,18 @@ try {
         exit(0);
     }
 
+    // Note : le DDL MySQL provoque un COMMIT implicite ; on n'enveloppe donc pas
+    // les migrations dans une transaction (elle serait rompue par le 1er CREATE/ALTER).
+    // Chaque migration est enregistrée après application réussie.
     $insert = $db->prepare('INSERT INTO schema_migrations (filename) VALUES (?)');
     foreach ($pending as $file) {
         echo "→ Application de {$file}… ";
         $sql = file_get_contents($migrationsDir . '/' . $file);
-        $db->beginTransaction();
         try {
             $db->exec($sql);
             $insert->execute([$file]);
-            $db->commit();
             echo "ok\n";
         } catch (\Throwable $e) {
-            // Le DDL n'est pas transactionnel sous MySQL : on remonte l'erreur clairement.
-            if ($db->inTransaction()) {
-                $db->rollBack();
-            }
             throw new RuntimeException("Échec de {$file} : " . $e->getMessage(), 0, $e);
         }
     }

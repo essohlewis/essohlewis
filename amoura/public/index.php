@@ -45,6 +45,9 @@ if (Env::bool('APP_DEBUG')) {
 // 4) Session sécurisée.
 Session::start();
 
+// 4b) Locale (i18n) : cookie > Accept-Language > défaut.
+\Amoura\Core\I18n::boot();
+
 // 5) Chargement des routes et dispatch.
 $router = new Router();
 (require $root . '/app/routes.php')($router);

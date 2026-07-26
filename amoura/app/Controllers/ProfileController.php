@@ -39,10 +39,33 @@ final class ProfileController extends Controller
             $this->view('errors/error', ['code' => 404, 'message' => 'Profil introuvable'], null);
             return;
         }
+        // Enregistre la visite (« qui a vu mon profil »), hors auto-visite.
+        if ((int) $viewer['id'] !== $targetId) {
+            (new \Amoura\Models\ProfileView())->record($targetId, (int) $viewer['id']);
+        }
+
         $this->view('profile/show', [
             'profile' => $profile,
             'photos' => (new Photo())->forUser($targetId),
             'own' => (int) $viewer['id'] === $targetId,
+        ]);
+    }
+
+    /** Page « qui a vu mon profil ». */
+    public function visitors(Request $request): void
+    {
+        $user = $this->requireAuth($request);
+        $uid = (int) $user['id'];
+        $isPremium = (new \Amoura\Models\Subscription())->hasFeature($uid, 'see_who_liked');
+        $viewers = (new \Amoura\Models\ProfileView())->viewers($uid);
+        foreach ($viewers as &$v) {
+            $v['age'] = age_from($v['birthdate'] ?? null);
+            $v['avatar'] = avatar_url($v['avatar_path'] ?? null);
+        }
+        $this->view('profile/visitors', [
+            'viewers' => $viewers,
+            'total' => (new \Amoura\Models\ProfileView())->countFor($uid),
+            'is_premium' => $isPremium,
         ]);
     }
 

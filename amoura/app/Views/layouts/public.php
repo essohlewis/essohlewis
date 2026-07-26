@@ -7,10 +7,11 @@
     <div class="container row between" style="width:100%">
       <a href="/" class="brand"><img class="logo" src="/assets/img/logo.svg" alt=""><span class="gradient-text">Amoura</span></a>
       <nav class="row">
-        <a href="/p/about" class="nav-link hide-mobile">À propos</a>
-        <a href="/login" class="nav-link">Connexion</a>
-        <a href="/register" class="btn btn-primary btn-sm">S'inscrire</a>
-        <button class="btn btn-icon btn-ghost" data-theme-toggle title="Thème">◐</button>
+        <a href="/p/about" class="nav-link hide-mobile"><?= e(t('nav.about')) ?></a>
+        <a href="/login" class="nav-link"><?= e(t('nav.login')) ?></a>
+        <a href="/register" class="btn btn-primary btn-sm"><?= e(t('nav.register')) ?></a>
+        <a href="/lang/<?= locale() === 'fr' ? 'en' : 'fr' ?>" class="btn btn-icon btn-ghost" title="<?= e(t('common.language')) ?>"><?= locale() === 'fr' ? 'EN' : 'FR' ?></a>
+        <button class="btn btn-icon btn-ghost" data-theme-toggle title="<?= e(t('common.theme')) ?>">◐</button>
       </nav>
     </div>
   </header>

@@ -185,8 +185,18 @@ final class MessageController extends Controller
     private function notifyRecipient(Conversation $conv, int $conversationId, int $senderId): void
     {
         $otherId = $conv->otherMember($conversationId, $senderId);
-        if ($otherId) {
-            (new Notification())->push($otherId, 'message', $senderId, ['conversation_id' => $conversationId], 'conversation', $conversationId);
+        if (!$otherId) {
+            return;
         }
+        (new Notification())->push($otherId, 'message', $senderId, ['conversation_id' => $conversationId], 'conversation', $conversationId);
+
+        // Notification Web Push (no-op si VAPID non configuré ou destinataire non abonné).
+        $sender = (new \Amoura\Models\User())->find($senderId);
+        (new \Amoura\Services\PushService())->sendToUser($otherId, [
+            'title' => $sender['display_name'] ?? 'Nouveau message',
+            'body'  => 'vous a envoyé un message 💬',
+            'url'   => '/messages/' . $conversationId,
+            'tag'   => 'msg-' . $conversationId,
+        ]);
     }
 }

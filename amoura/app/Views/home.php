@@ -2,16 +2,13 @@
 <section style="padding:64px 0;background:var(--gradient-brand-soft)">
   <div class="container" style="text-align:center;max-width:760px">
     <span class="chip">💞 Plus de 2M de célibataires</span>
-    <h1 style="font-size:clamp(2.2rem,6vw,3.6rem);margin:16px 0">Trouvez l'amour, <span class="gradient-text">simplement.</span></h1>
-    <p class="muted" style="font-size:1.2rem;max-width:560px;margin:0 auto">
-      Amoura réunit chat en temps réel, appels vidéo, messages vocaux et statuts éphémères
-      dans une expérience de rencontre moderne et sécurisée.
-    </p>
+    <h1 style="font-size:clamp(2.2rem,6vw,3.6rem);margin:16px 0"><?= e(t('home.hero_title')) ?></h1>
+    <p class="muted" style="font-size:1.2rem;max-width:560px;margin:0 auto"><?= e(t('home.hero_sub')) ?></p>
     <div class="row" style="justify-content:center;margin-top:28px">
-      <a href="/register" class="btn btn-primary btn-lg">Créer mon profil gratuit</a>
-      <a href="/login" class="btn btn-ghost btn-lg">J'ai déjà un compte</a>
+      <a href="/register" class="btn btn-primary btn-lg"><?= e(t('home.cta_primary')) ?></a>
+      <a href="/login" class="btn btn-ghost btn-lg"><?= e(t('home.cta_secondary')) ?></a>
     </div>
-    <p class="subtle" style="margin-top:12px;font-size:.85rem">Réservé aux 18 ans et plus.</p>
+    <p class="subtle" style="margin-top:12px;font-size:.85rem"><?= e(t('home.age_notice')) ?></p>
   </div>
 </section>
 

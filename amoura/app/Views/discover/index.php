@@ -4,12 +4,31 @@
 $scripts = ['discover.js'];
 ?>
 <div class="row between" style="margin-bottom:16px">
-  <h1>Découvrir</h1>
+  <h1><?= e(t('nav.discover')) ?></h1>
   <div class="row">
-    <a href="/likes" class="btn btn-ghost btn-sm">❤️ <?= (int) $admirers_count ?> j'aime</a>
-    <button class="btn btn-ghost btn-sm" data-toggle="filterPanel">⚙️ Filtres</button>
+    <a href="/likes" class="btn btn-ghost btn-sm">❤️ <?= (int) $admirers_count ?></a>
+    <a href="/visitors" class="btn btn-ghost btn-sm" title="<?= e(t('visitors.title')) ?>">👀</a>
+    <button class="btn btn-ghost btn-sm" data-toggle="filterPanel">⚙️</button>
   </div>
 </div>
+
+<?php if (($onboarding['completion'] ?? 100) < 100): ?>
+  <div class="card" style="margin-bottom:16px;background:var(--gradient-brand-soft)">
+    <div class="row between">
+      <h3 style="margin:0"><?= e(t('onboard.title')) ?></h3>
+      <b><?= (int) $onboarding['completion'] ?>%</b>
+    </div>
+    <p class="muted" style="margin:4px 0 10px"><?= e(t('onboard.subtitle')) ?></p>
+    <div class="completion-bar" style="margin-bottom:12px"><i style="width:<?= (int) $onboarding['completion'] ?>%"></i></div>
+    <div class="row wrap">
+      <?php foreach ($onboarding['steps'] as $step): ?>
+        <a href="<?= e($step['url']) ?>" class="chip" style="<?= $step['done'] ? 'opacity:.55;text-decoration:line-through' : '' ?>">
+          <?= $step['done'] ? '✅' : '⬜' ?> <?= e($step['label']) ?>
+        </a>
+      <?php endforeach; ?>
+    </div>
+  </div>
+<?php endif; ?>
 
 <div id="filterPanel" class="card hidden" style="margin-bottom:16px">
   <form id="discoverFilters" class="row wrap" style="align-items:flex-end">

@@ -23,18 +23,19 @@ $nav = function (string $href, string $label, string $icon, ?string $key = null)
     <div class="container row between" style="width:100%">
       <a href="/app" class="brand"><img class="logo" src="/assets/img/logo.svg" alt=""><span class="gradient-text">Amoura</span></a>
       <nav class="nav-links">
-        <?= $nav('/discover', 'Découvrir', '🔥', '/discover') ?>
-        <?= $nav('/matches', 'Matchs', '💞', '/matches') ?>
-        <?= $nav('/messages', 'Messages', '💬', '/messages') ?>
-        <?= $nav('/feed', 'Fil', '📰', '/feed') ?>
+        <?= $nav('/discover', t('nav.discover'), '🔥', '/discover') ?>
+        <?= $nav('/matches', t('nav.matches'), '💞', '/matches') ?>
+        <?= $nav('/messages', t('nav.messages'), '💬', '/messages') ?>
+        <?= $nav('/feed', t('nav.feed'), '📰', '/feed') ?>
         <a href="/notifications" class="nav-link<?= str_starts_with($path, '/notifications') ? ' active' : '' ?>">
-          <span>🔔</span><span class="label">Alertes</span>
+          <span>🔔</span><span class="label"><?= e(t('nav.alerts')) ?></span>
           <span class="nav-badge" data-notif-badge style="<?= $unread ? '' : 'display:none' ?>"><?= $unread > 99 ? '99+' : $unread ?></span>
         </a>
       </nav>
       <div class="row">
-        <?php if (!empty($auth['is_staff'])): ?><a href="/admin" class="btn btn-ghost btn-sm">Admin</a><?php endif; ?>
-        <button class="btn btn-icon btn-ghost" data-theme-toggle title="Thème">◐</button>
+        <?php if (!empty($auth['is_staff'])): ?><a href="/admin" class="btn btn-ghost btn-sm"><?= e(t('nav.admin')) ?></a><?php endif; ?>
+        <a href="/lang/<?= locale() === 'fr' ? 'en' : 'fr' ?>" class="btn btn-icon btn-ghost" title="<?= e(t('common.language')) ?>"><?= locale() === 'fr' ? 'EN' : 'FR' ?></a>
+        <button class="btn btn-icon btn-ghost" data-theme-toggle title="<?= e(t('common.theme')) ?>">◐</button>
         <a href="/profile"><img class="avatar avatar-sm" src="<?= e(avatar_url($avatarPath)) ?>" alt="Profil"></a>
       </div>
     </div>
@@ -49,11 +50,11 @@ $nav = function (string $href, string $label, string $icon, ?string $key = null)
 
   <!-- Navigation mobile -->
   <nav class="mobile-nav">
-    <?= $nav('/discover', 'Découvrir', '🔥', '/discover') ?>
-    <?= $nav('/matches', 'Matchs', '💞', '/matches') ?>
-    <?= $nav('/messages', 'Chat', '💬', '/messages') ?>
-    <?= $nav('/feed', 'Fil', '📰', '/feed') ?>
-    <?= $nav('/profile', 'Profil', '👤', '/profile') ?>
+    <?= $nav('/discover', t('nav.discover'), '🔥', '/discover') ?>
+    <?= $nav('/matches', t('nav.matches'), '💞', '/matches') ?>
+    <?= $nav('/messages', t('nav.messages'), '💬', '/messages') ?>
+    <?= $nav('/feed', t('nav.feed'), '📰', '/feed') ?>
+    <?= $nav('/profile', t('nav.profile'), '👤', '/profile') ?>
   </nav>
 
   <?php include __DIR__ . '/../partials/call_overlay.php'; ?>

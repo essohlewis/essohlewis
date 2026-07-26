@@ -6,7 +6,10 @@ $icons = ['match'=>'✨','message'=>'💬','like'=>'❤️','superlike'=>'⭐','
 $labels = ['match'=>'Nouveau match','message'=>'vous a envoyé un message','like'=>'vous a liké',
   'superlike'=>'vous a super-liké','comment'=>'a commenté','post_like'=>'a aimé votre publication','call'=>'vous a appelé','payment'=>'Paiement confirmé','system'=>'Annonce'];
 ?>
-<h1 style="margin-bottom:16px">Notifications</h1>
+<div class="row between" style="margin-bottom:16px">
+  <h1><?= e(t('nav.alerts')) ?></h1>
+  <button class="btn btn-ghost btn-sm" data-action="enablePush">🔔 Activer les notifications</button>
+</div>
 <div class="card card-flush">
   <?php if (empty($notifications)): ?>
     <div style="padding:24px" class="muted text-center">Aucune notification.</div>

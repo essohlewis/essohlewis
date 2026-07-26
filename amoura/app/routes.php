@@ -19,6 +19,19 @@ return function (Router $r): void {
     $r->get('/p/{slug}', 'Amoura\Controllers\HomeController@page');
     $r->get('/health', fn() => \Amoura\Core\Response::ok(['service' => 'amoura']));
 
+    // Changement de langue (i18n) — cookie persistant, redirection sûre (chemin local).
+    $r->get('/lang/{locale}', function ($request, $params) {
+        $loc = (string) $params['locale'];
+        if (\Amoura\Core\I18n::isAvailable($loc)) {
+            setcookie('amoura_lang', $loc, [
+                'expires' => time() + 31536000, 'path' => '/', 'httponly' => false, 'samesite' => 'Lax',
+            ]);
+        }
+        $ref = $_SERVER['HTTP_REFERER'] ?? '/';
+        $path = parse_url($ref, PHP_URL_PATH) ?: '/';   // ignore l'hôte → pas d'open-redirect
+        \Amoura\Core\Response::redirect($path);
+    });
+
     // ── Authentification (invités uniquement) ───────────────────────────
     $r->group(['middleware' => [RedirectIfAuth::class]], function (Router $r) {
         $r->get('/register', 'Amoura\Controllers\AuthController@showRegister');
@@ -48,6 +61,12 @@ return function (Router $r): void {
     $r->get('/api/discover', 'Amoura\Controllers\DiscoverController@feed', $auth);
     $r->post('/api/swipe', 'Amoura\Controllers\DiscoverController@swipe', $authCsrf);
     $r->get('/likes', 'Amoura\Controllers\DiscoverController@admirers', $auth);
+    $r->get('/visitors', 'Amoura\Controllers\ProfileController@visitors', $auth);
+
+    // Notifications Web Push
+    $r->get('/api/push/key', 'Amoura\Controllers\Api\PushController@publicKey', $auth);
+    $r->post('/api/push/subscribe', 'Amoura\Controllers\Api\PushController@subscribe', $authCsrf);
+    $r->post('/api/push/unsubscribe', 'Amoura\Controllers\Api\PushController@unsubscribe', $authCsrf);
     $r->get('/matches', 'Amoura\Controllers\MatchController@index', $auth);
     $r->post('/matches/{id}/unmatch', 'Amoura\Controllers\MatchController@unmatch', $authCsrf);
 

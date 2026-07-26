@@ -8,7 +8,10 @@
         "ext-pdo": "*",
         "ext-json": "*",
         "ext-mbstring": "*",
-        "cboden/ratchet": "^0.4.4"
+        "cboden/ratchet": "^0.4.4",
+        "minishlink/web-push": "^11.0",
+        "symfony/http-client": "^8.1",
+        "nyholm/psr7": "^1.8"
     },
     "autoload": {
         "psr-4": {

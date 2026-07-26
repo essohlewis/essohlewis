@@ -17,9 +17,26 @@ final class DiscoverController extends Controller
     public function index(Request $request): void
     {
         $user = $this->requireAuth($request);
+        $uid = (int) $user['id'];
+
+        // Onboarding : étapes de complétion du profil (affichées tant que < 100 %).
+        $profileModel = new \Amoura\Models\Profile();
+        $profileModel->ensureExists($uid);
+        $raw = $profileModel->find($uid) ?? [];
+        $onboarding = [
+            'completion' => (int) ($raw['completion'] ?? 0),
+            'steps' => [
+                ['done' => (new \Amoura\Models\Photo())->countForUser($uid) > 0, 'label' => t('onboard.add_photo'), 'url' => '/profile/edit'],
+                ['done' => !empty($raw['bio']), 'label' => t('onboard.write_bio'), 'url' => '/profile/edit'],
+                ['done' => !empty($raw['country']) || !empty($raw['city']), 'label' => t('onboard.set_prefs'), 'url' => '/profile/edit'],
+                ['done' => (int) ($user['is_verified'] ?? 0) === 1, 'label' => t('onboard.verify'), 'url' => '/profile/edit'],
+            ],
+        ];
+
         $this->view('discover/index', [
-            'admirers_count' => (new Swipe())->likesReceivedCount((int) $user['id']),
-            'is_premium' => (new Subscription())->activeFor((int) $user['id']) !== null,
+            'admirers_count' => (new Swipe())->likesReceivedCount($uid),
+            'is_premium' => (new Subscription())->activeFor($uid) !== null,
+            'onboarding' => $onboarding,
         ]);
     }
 
