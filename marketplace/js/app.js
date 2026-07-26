@@ -4179,6 +4179,18 @@
     waShare(txt);
   }
 
+  /** Mappe un produit du front vers le format serveur et l'écrit en base (vendeur). */
+  function syncVendorProduct(product) {
+    if (!product || !(window.MP.Api && window.MP.Api.saveVendorProduct)) return;
+    const img = (product.images && product.images[0]) || "";
+    window.MP.Api.saveVendorProduct({
+      id: product.id, name: product.title, description: product.description || "",
+      price: Products.effectivePrice(product), category: product.category || "",
+      image: img, stock: product.stock == null ? 0 : product.stock,
+      active: product.status === "published",
+    });
+  }
+
   /** Duplique un article (en brouillon) pour créer une variante rapidement. */
   function duplicateProduct(id, after) {
     const p = Products.get(id);
@@ -4580,13 +4592,17 @@
     V().querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => Router.go("#/seller/product/" + b.getAttribute("data-edit") + "/edit")));
     V().querySelectorAll("[data-toggle]").forEach((b) => b.addEventListener("click", () => {
       const p = Products.get(b.getAttribute("data-toggle"));
-      Products.update(p.id, Object.assign({}, p, { status: p.status === "published" ? "unpublished" : "published" }));
+      const updated = Products.update(p.id, Object.assign({}, p, { status: p.status === "published" ? "unpublished" : "published" }));
+      if (updated && updated.product) syncVendorProduct(updated.product); // reflète l'état actif en base
       UI.toast(p.status === "published" ? "Article dépublié." : "Article publié ✓ Vos abonnés sont notifiés.", "success");
       viewSellerProducts(params);
     }));
     V().querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", async () => {
       if (await UI.confirm("Supprimer définitivement cet article ?", { danger: true, confirmLabel: "Supprimer" })) {
-        Products.remove(b.getAttribute("data-del")); UI.toast("Article supprimé.", "info"); viewSellerProducts(params);
+        const delId = b.getAttribute("data-del");
+        Products.remove(delId);
+        if (window.MP.Api && window.MP.Api.deleteVendorProduct) window.MP.Api.deleteVendorProduct(delId); // write-through
+        UI.toast("Article supprimé.", "info"); viewSellerProducts(params);
       }
     }));
     V().querySelectorAll("[data-share]").forEach((b) => b.addEventListener("click", () => shareProduct(Products.get(b.getAttribute("data-share")))));
@@ -5014,6 +5030,8 @@
       if (bad) { UI.toast(`Contenu interdit : le mot « ${bad} » n'est pas autorisé.`, "error"); return; }
       const res = editing ? Products.update(p.id, data) : Products.create(data);
       if (res.ok) {
+        // Write-through : persiste le produit du vendeur en base (source partagée).
+        syncVendorProduct(res.product);
         // Anti-fraude : analyse l'annonce et mémorise les signaux de risque.
         if (window.MP.Security && res.product) {
           const flags = Security.scanProduct(res.product);

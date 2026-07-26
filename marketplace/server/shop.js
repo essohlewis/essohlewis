@@ -376,6 +376,36 @@ module.exports = function createShopRouter(shopdb, adminToken, opts) {
 
   /* ---------------------------- Espace vendeur ------------------------- */
   router.get("/vendor/store", auth, (req, res) => res.json({ ok: true, store: decorate(shopdb.getStoreByOwner(req.userId)) }));
+
+  /* ------------------- Gestion produits par le vendeur ----------------- */
+  // Liste des produits de MA boutique (inclut les inactifs).
+  router.get("/vendor/products", requireRole("vendor"), (req, res) => {
+    const s = shopdb.getStoreByOwner(req.userId);
+    if (!s) return res.json({ ok: true, store: null, items: [] });
+    res.json({ ok: true, store: decorate(s), ...page(req, shopdb.listVendorProducts(s.id)) });
+  });
+  // Création / mise à jour d'un produit de MA boutique (storeId forcé côté serveur).
+  router.post("/vendor/products", requireRole("vendor"), (req, res) => {
+    const s = shopdb.getStoreByOwner(req.userId);
+    if (!s) return res.status(400).json({ ok: false, error: "Créez d'abord votre boutique." });
+    const b = req.body || {};
+    if (!String(b.name || "").trim()) return res.status(400).json({ ok: false, error: "Nom du produit requis." });
+    if (b.id) { const ex = shopdb.getProduct(b.id); if (ex && ex.storeId !== s.id) return res.status(403).json({ ok: false, error: "Ce produit appartient à une autre boutique." }); }
+    const product = shopdb.upsertProduct({
+      id: b.id, storeId: s.id, storeName: s.name, name: b.name, description: b.description,
+      price: b.price, category: b.category, image: b.image, stock: b.stock, active: b.active,
+    });
+    res.json({ ok: true, product });
+  });
+  // Suppression d'un produit de MA boutique.
+  router.post("/vendor/products/:id/delete", requireRole("vendor"), (req, res) => {
+    const s = shopdb.getStoreByOwner(req.userId);
+    const ex = shopdb.getProduct(req.params.id);
+    if (!s || !ex) return res.status(404).json({ ok: false, error: "Produit introuvable." });
+    if (ex.storeId !== s.id) return res.status(403).json({ ok: false, error: "Ce produit appartient à une autre boutique." });
+    shopdb.deleteProduct(req.params.id);
+    res.json({ ok: true });
+  });
   router.get("/vendor/sales", auth, (req, res) => {
     const s = shopdb.getStoreByOwner(req.userId);
     if (!s) return res.json({ ok: true, store: null, summary: null, lines: [] });

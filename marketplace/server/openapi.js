@@ -203,6 +203,13 @@ function build({ version = "1.0.0", baseUrl = "/api/v1" } = {}) {
       "/shop/vendor/sales": { get: op("Vendeur", "Mes ventes", { security: bearer }) },
       "/shop/vendor/wallet": { get: op("Vendeur", "Portefeuille (escrow / disponible / retiré / commission)", { security: bearer }) },
       "/shop/vendor/payouts": { post: op("Vendeur", "Demander un retrait", { security: bearer }) },
+      "/shop/vendor/products": {
+        get: op("Vendeur", "Mes produits (dont inactifs, paginé)", { security: bearer, parameters: pageParams }),
+        post: op("Vendeur", "Créer / mettre à jour un produit de ma boutique", { security: bearer }),
+      },
+      "/shop/vendor/products/{id}/delete": {
+        post: op("Vendeur", "Supprimer un de mes produits", { security: bearer, parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }] }),
+      },
 
       "/shop/admin/orders": { get: op("Administration", "Toutes les commandes (paginées)", { security: adminAuth, parameters: pageParams }) },
       "/shop/admin/orders/{id}/status": { post: op("Administration", "Changer le statut d'une commande", { security: adminAuth, parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }] }) },

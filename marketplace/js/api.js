@@ -287,6 +287,21 @@ window.MP = window.MP || {};
     return null;
   }
   function categories() { try { return JSON.parse(localStorage.getItem(CATS_CACHE) || "null"); } catch (e) { return null; } }
+
+  /* -------------------- Produits vendeur (write-through) --------------------- */
+  // Enregistre un produit de la boutique du vendeur connecté en base.
+  async function saveVendorProduct(product) {
+    if (!API.enabled) return null;
+    try { await authOp; if (!token()) return null; const r = await post("/vendor/products", product); return r && r.json; } catch (e) { return null; }
+  }
+  async function deleteVendorProduct(id) {
+    if (!API.enabled || !token()) return null;
+    try { const r = await post("/vendor/products/" + encodeURIComponent(id) + "/delete", {}); return r && r.json; } catch (e) { return null; }
+  }
+  async function vendorProducts() {
+    if (!API.enabled || !token()) return null;
+    try { const j = await get("/vendor/products"); return j && j.ok ? (j.items || []) : null; } catch (e) { return null; }
+  }
   async function myOrders() {
     if (!API.enabled || !token()) return [];
     const j = await get("/orders");
@@ -336,6 +351,9 @@ window.MP = window.MP || {};
   API.facets = facets;
   API.loadCategories = loadCategories;
   API.categories = categories;   // catégories serveur en cache (ou null)
+  API.saveVendorProduct = saveVendorProduct;
+  API.deleteVendorProduct = deleteVendorProduct;
+  API.vendorProducts = vendorProducts;
   API.myOrders = myOrders;
   API.loyalty = loyalty;
   API.questionsFor = questionsFor;

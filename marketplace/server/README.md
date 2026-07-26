@@ -184,6 +184,17 @@ dans l'onglet **Retraits**. Endpoints : `GET /vendor/wallet`,
   jamais de pile, mais le support relie le ticket au log par l'identifiant.
   Variables : `LOG_LEVEL` (défaut `info`), `LOG_FORMAT` (`json`/`pretty`).
 
+### Gestion des produits par le vendeur (domaine E)
+Chaque vendeur gère **ses** produits en base, avec **isolation par boutique** :
+- `GET /vendor/products` — mes produits (dont inactifs, paginé) ;
+  `POST /vendor/products` — créer/mettre à jour (le `storeId` est **forcé**
+  côté serveur à ma boutique) ; `POST /vendor/products/:id/delete` — supprimer.
+- Un vendeur ne peut **ni modifier ni supprimer** le produit d'une autre
+  boutique (**403**) ; réservé au rôle `vendor` (**403** sinon).
+- **Front** : l'éditeur de produit vendeur écrit en base (write‑through :
+  création, mise à jour, publication/dépublication, suppression), en mappant le
+  produit riche du front vers le format serveur (prix effectif, 1re image…).
+
 ### Catégories & arborescence en base (domaine D — CMS)
 Catégories gérées **en base** (table `categories`, semées au premier démarrage
 avec les 8 catégories par défaut), avec **arborescence** (`parentId`) :

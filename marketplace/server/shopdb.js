@@ -364,6 +364,9 @@ function searchProducts(q, { category, storeId, limit } = {}) {
   return scored.slice(0, Math.min(parseInt(limit, 10) || 50, 500)).map((s) => Object.assign({ _score: Math.round(s.score * 100) / 100 }, s.p));
 }
 function getProduct(id) { if (id == null || id === "") return null; return db.prepare("SELECT * FROM products WHERE id=?").get(String(id)) || null; }
+// Tous les produits d'une boutique (y compris inactifs) — pour l'espace vendeur.
+function listVendorProducts(storeId) { return storeId ? db.prepare("SELECT * FROM products WHERE storeId=? ORDER BY createdAt DESC").all(storeId) : []; }
+function deleteProduct(id) { if (!id) return { error: "id requis" }; db.prepare("DELETE FROM products WHERE id=?").run(String(id)); return { ok: true }; }
 function countProducts() { return db.prepare("SELECT COUNT(*) c FROM products").get().c; }
 
 /* --------------------------------- Carts --------------------------------- */
@@ -850,7 +853,7 @@ module.exports = {
   createUser, authUser, getUser, publicUser,
   createSession, userIdForToken, refreshSession, destroySession, destroyUserSessions, revokeSession, listSessions,
   createOtp, verifyOtp, setEmailVerified, setPhoneVerified, setUserPassword, getUserByEmail, getUserByPhone, getUserRaw, setTwofa, setRole,
-  upsertProduct, listProducts, searchProducts, getProduct, countProducts,
+  upsertProduct, listProducts, searchProducts, getProduct, countProducts, listVendorProducts, deleteProduct,
   popularProducts, boughtTogether, recommendFor, facets,
   seedCategories, countCategories, listCategories, categoryTree, upsertCategory, deleteCategory,
   getCart, setCart,
