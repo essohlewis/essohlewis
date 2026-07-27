@@ -1,7 +1,7 @@
 # 💞 Amoura — Feuille de route des améliorations
 
 **Plan d'amélioration continue de la plateforme**
-Version : 2.3 · Date : 27 juillet 2026 · Portée : améliorations livrées + backlog priorisé
+Version : 2.4 · Date : 27 juillet 2026 · Portée : améliorations livrées + backlog priorisé
 
 > Légende — **Impact** : 🟢 Faible · 🟡 Moyen · 🔴 Élevé | **Effort** : S (≤2 j) · M (≤1 sem) · L (2–3 sem) · XL (>1 mois) | **Priorité** : P0 (critique) → P3 (confort)
 
@@ -10,7 +10,7 @@ Version : 2.3 · Date : 27 juillet 2026 · Portée : améliorations livrées + b
 ## 1. Améliorations livrées dans cette itération ✅
 
 Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont été
-**implémentées et testées** (suite passée à **178 tests / 476 assertions**, analyse
+**implémentées et testées** (suite passée à **184 tests / 489 assertions**, analyse
 statique **PHPStan niveau 5 sans erreur**).
 
 | Amélioration | Axe | Détail | Vérification |
@@ -171,6 +171,7 @@ Dernière itération : **tout le reliquat du backlog** a été traité.
 | **Sprint +11** ✅ | Monétisation — finitions (Phase 3) | Mode incognito (navigation privée VIP, gated) · tableau de bord revenus admin (MRR, ARPU, LTV, churn, tendance 12 mois, répartition prestataire/offre, graphe SVG sans script) — *livré* |
 | **Sprint +12** ✅ | Croissance (Phase 5) | Programme de parrainage : code unique par membre, lien `/register?ref=`, récompense Super Likes à la qualification du filleul (transactionnel, idempotent), page « Inviter » avec stats + partage — *livré* |
 | **Sprint +13** ✅ | Observabilité (Phase 6) | Health checks liveness/readiness (`/healthz`, `/healthz/ready`), métriques Prometheus (`/metrics`, jauges applicatives, jeton), request-id de corrélation propagé dans tous les logs + journal d'accès — *livré* |
+| **Sprint +14** ✅ | Intelligence (Phase 6) | Brise-glaces assistés : `Services\Icebreaker` (interface pluggable LLM + heuristique v1 : intérêts communs, ville, métier, objectif, repli) · endpoint `/api/icebreakers/{id}` (réservé aux matchs) · suggestions intégrées au fil de discussion vide — *livré* |
 
 ---
 

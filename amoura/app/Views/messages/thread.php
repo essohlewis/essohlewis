@@ -50,6 +50,12 @@ $fmtTime = fn($dt) => date('H:i', strtotime($dt));
       <div class="typing-indicator" id="typingIndicator"><span></span><span></span><span></span></div>
     </div>
 
+    <!-- Brise-glaces IA : suggestions d'accroche quand la conversation est vide. -->
+    <div id="icebreakers" class="icebreakers"
+         data-empty="<?= empty($messages) ? '1' : '0' ?>"
+         data-other-id="<?= (int) ($other['id'] ?? 0) ?>"
+         style="display:none;gap:8px;padding:8px 12px;flex-wrap:wrap"></div>
+
     <form class="chat-input" id="chatForm">
       <label class="btn btn-icon btn-ghost" title="Image">🖼️<input type="file" id="chatImage" accept="image/*" hidden></label>
       <button type="button" class="btn btn-icon btn-ghost" id="recordBtn" title="Message vocal">🎤</button>
@@ -58,3 +64,39 @@ $fmtTime = fn($dt) => date('H:i', strtotime($dt));
     </form>
   </div>
 </div>
+
+<script <?= \Amoura\Core\Security\Nonce::attr() ?>>
+  (function () {
+    const box = document.getElementById('icebreakers');
+    const input = document.getElementById('chatInput');
+    if (!box || !input || box.dataset.empty !== '1') return;
+    const otherId = parseInt(box.dataset.otherId, 10);
+    if (!otherId) return;
+
+    fetch('/api/icebreakers/' + otherId, { headers: { 'Accept': 'application/json' } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data || !data.ok || !data.suggestions || !data.suggestions.length) return;
+        box.style.display = 'flex';
+        const hint = document.createElement('span');
+        hint.className = 'subtle';
+        hint.style.cssText = 'width:100%;font-size:.75rem';
+        hint.textContent = '💡 Suggestions pour briser la glace :';
+        box.appendChild(hint);
+        data.suggestions.forEach(text => {
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = 'btn btn-ghost btn-sm';
+          chip.style.cssText = 'text-align:left;white-space:normal';
+          chip.textContent = text;
+          chip.addEventListener('click', () => {
+            input.value = text;
+            input.focus();
+            box.style.display = 'none';
+          });
+          box.appendChild(chip);
+        });
+      })
+      .catch(() => {});
+  })();
+</script>

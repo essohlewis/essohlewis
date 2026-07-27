@@ -89,6 +89,7 @@ return function (Router $r): void {
     $r->get('/messages', 'Amoura\Controllers\MessageController@index', $auth);
     $r->get('/messages/{id}', 'Amoura\Controllers\MessageController@thread', $auth);
     $r->get('/api/conversations/{id}/messages', 'Amoura\Controllers\MessageController@history', $auth);
+    $r->get('/api/icebreakers/{id}', 'Amoura\Controllers\IcebreakerController@suggest', $auth);
     $r->post('/api/conversations/{id}/messages', 'Amoura\Controllers\MessageController@send', $authCsrf);
     $r->post('/api/conversations/{id}/read', 'Amoura\Controllers\MessageController@markRead', $authCsrf);
     $r->post('/api/conversations/{id}/voice', 'Amoura\Controllers\MessageController@sendVoice', $authCsrf);
