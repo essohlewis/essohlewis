@@ -52,8 +52,10 @@ final class ChatServer implements MessageComponentInterface
     public function onOpen(ConnectionInterface $conn): void
     {
         // Extrait et vérifie le ticket depuis la query string.
+        // getUri() renvoie un objet PSR-7 UriInterface : on lit sa query via
+        // getQuery() (passer l'objet à parse_url() lèverait une TypeError).
         $query = [];
-        parse_str((string) parse_url($conn->httpRequest->getUri(), PHP_URL_QUERY), $query);
+        parse_str($conn->httpRequest->getUri()->getQuery(), $query);
         $userId = WsTicket::verify($query['ticket'] ?? '');
 
         if ($userId === null) {

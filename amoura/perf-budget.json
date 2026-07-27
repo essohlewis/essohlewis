@@ -1,0 +1,25 @@
+{
+  "_comment": "Budget de performance Amoura (Phase 1). Seuils indicatifs à ajuster selon l'infrastructure cible. Consommé par scripts/loadtest.php et scripts/ws_loadtest.php.",
+  "http": {
+    "paths": ["/", "/login", "/register"],
+    "thresholds": {
+      "max_p95_ms": 400,
+      "max_p99_ms": 800,
+      "max_mean_ms": 200,
+      "max_error_rate": 0.01
+    }
+  },
+  "websocket": {
+    "thresholds": {
+      "connect": {
+        "max_p95_ms": 500,
+        "max_p99_ms": 1000
+      },
+      "delivery": {
+        "max_p95_ms": 250,
+        "max_p99_ms": 600,
+        "max_error_rate": 0.02
+      }
+    }
+  }
+}

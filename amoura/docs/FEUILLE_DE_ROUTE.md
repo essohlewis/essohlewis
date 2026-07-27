@@ -1,7 +1,7 @@
 # 💞 Amoura — Feuille de route produit
 
 **Plateforme SaaS de rencontres en ligne**
-Version du document : 2.1 · Date : 27 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +7 livrés)
+Version du document : 2.2 · Date : 27 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +8 livrés)
 
 ---
 
@@ -42,7 +42,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 | Abonnements & paiements | ✅ Livré | Stripe, PayPal, CinetPay, PayDunya + **vérification serveur idempotente** |
 | Espace admin / CMS | ✅ Livré | Tableau de bord, membres, modération, facturation, réglages, rôles, audit |
 | Design system | ✅ Livré | Tokens, thèmes clair/sombre, responsive mobile-first |
-| Qualité | ✅ Livré | **129 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5**, tous verts |
+| Qualité | ✅ Livré | **144 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5** + **tests de charge HTTP/WebSocket**, tous verts |
 | Déploiement | ✅ Livré | Docker Compose (web + MySQL + WebSocket + coturn), installeur XAMPP |
 
 ---
@@ -61,7 +61,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 - [~] **coturn** (STUN/TURN) fourni + **exemple Nginx TLS `wss://`** (`deploy/nginx.sample.conf`) — *Sprint +7* · *(déploiement supervisé à finaliser)*
 - [x] **Purge planifiée** (statuts expirés, tokens, sessions, rate-limits) via cron (`scripts/cron.php`). ✅
 - [x] **Journalisation structurée** JSON (`Services\Logger`) branchée sur le gestionnaire d'erreurs. ✅ *(supervision à compléter)*
-- [ ] Tests de charge (chat & signaling) et budget de performance. *(prochain lot Phase 1)*
+- [x] **Tests de charge HTTP & WebSocket/signaling** + **budget de performance** (`scripts/loadtest.php`, `scripts/ws_loadtest.php`, `perf-budget.json`, `docs/PERFORMANCE.md`) — *Sprint +8*. ✅ *(a révélé et corrigé un crash du serveur WS à la connexion)*
 - [~] **Sauvegarde/restauration MySQL** avec rotation (`scripts/backup.sh`) — *Sprint +7* · *(plan de reprise RTO/RPO à documenter)*
 - [~] **Checklist OWASP Top 10** mappée au code (`docs/SECURITE_OWASP.md`) — *Sprint +7* · *(pentest léger à mener)*
 

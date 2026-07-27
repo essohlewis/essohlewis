@@ -1,7 +1,7 @@
 # 💞 Amoura — Feuille de route des améliorations
 
 **Plan d'amélioration continue de la plateforme**
-Version : 1.7 · Date : 27 juillet 2026 · Portée : améliorations livrées + backlog priorisé
+Version : 1.8 · Date : 27 juillet 2026 · Portée : améliorations livrées + backlog priorisé
 
 > Légende — **Impact** : 🟢 Faible · 🟡 Moyen · 🔴 Élevé | **Effort** : S (≤2 j) · M (≤1 sem) · L (2–3 sem) · XL (>1 mois) | **Priorité** : P0 (critique) → P3 (confort)
 
@@ -10,7 +10,7 @@ Version : 1.7 · Date : 27 juillet 2026 · Portée : améliorations livrées + b
 ## 1. Améliorations livrées dans cette itération ✅
 
 Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont été
-**implémentées et testées** (suite passée à **129 tests / 325 assertions**, analyse
+**implémentées et testées** (suite passée à **144 tests / 363 assertions**, analyse
 statique **PHPStan niveau 5 sans erreur**).
 
 | Amélioration | Axe | Détail | Vérification |
@@ -165,6 +165,7 @@ Dernière itération : **tout le reliquat du backlog** a été traité.
 | **Sprint +5** ✅ | Monétisation | Achats à l'unité (Boost/Super Like/Reveal) · dunning — *livré* |
 | **Sprint +6** ✅ | Durcissement (reliquat backlog) | Chiffrement des messages · détection d'appareils · réplicas de lecture · stockage S3/CDN · pagination par curseur · réponses citées/éphémères · filtres style de vie · anti-fraude · file de modération priorisée · reçus · coupons · PHPStan · OpenAPI — *livré* |
 | **Sprint +7** ✅ | Mise en production (Phase 1, lot 1) | File d'envoi e-mail/SMS asynchrone (outbox + worker, relances backoff) · passerelle SMS réelle (driver HTTP) · exemple Nginx `wss://` · script de sauvegarde MySQL · checklist OWASP — *livré* |
+| **Sprint +8** ✅ | Mise en production (Phase 1, lot 2) | Tests de charge HTTP & WebSocket + budget de performance (CI) · briques `Benchmark`/`Realtime` testées · **correction d'un crash du serveur WS à la connexion** (parse_url sur objet PSR-7) — *livré* |
 
 ---
 
