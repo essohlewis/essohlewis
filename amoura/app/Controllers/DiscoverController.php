@@ -84,6 +84,8 @@ final class DiscoverController extends Controller
         ];
 
         $ranked = \Amoura\Services\Recommender::rank($viewer, $profiles);
+        // Reclassement personnalisé par apprentissage implicite (Phase 6).
+        $ranked = \Amoura\Services\Matching\PersonalizedRanker::rerank((int) $user['id'], $ranked);
         $this->json(['ok' => true, 'profiles' => array_slice($ranked, 0, 20)]);
     }
 

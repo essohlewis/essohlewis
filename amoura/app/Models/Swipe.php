@@ -113,4 +113,22 @@ final class Swipe extends Model
             [$userId, $userId, $limit]
         )->fetchAll();
     }
+
+    /**
+     * Décisions récentes d'un membre avec les caractéristiques des profils ciblés,
+     * pour l'apprentissage des préférences (matching ML v1, Sprint +15).
+     * @return array<int,array{action:string,birthdate:?string,is_verified:int,interests:?string,city:?string,country:?string}>
+     */
+    public function decisionsFor(int $userId, int $limit = 200): array
+    {
+        return $this->run(
+            'SELECT s.action, u.birthdate, u.is_verified, p.interests, p.city, p.country
+             FROM swipes s
+             JOIN users u ON u.id = s.target_id
+             LEFT JOIN profiles p ON p.user_id = s.target_id
+             WHERE s.actor_id = ? AND s.action IN ("like","superlike","pass")
+             ORDER BY s.id DESC LIMIT ?',
+            [$userId, $limit]
+        )->fetchAll();
+    }
 }
