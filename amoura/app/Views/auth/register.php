@@ -1,7 +1,13 @@
 <h2 style="margin-bottom:4px">Créer un compte</h2>
 <p class="muted" style="margin-bottom:24px">Gratuit et rapide.</p>
+<?php $ref = $ref ?? ''; ?>
+<?php if ($ref !== ''): ?>
+  <div class="alert alert-success">🎁 Vous avez été invité·e ! Créez votre compte et recevez
+    <strong><?= \Amoura\Models\Referral::REFEREE_BONUS ?> Super Likes</strong> offerts.</div>
+<?php endif; ?>
 <form method="POST" action="/register" class="stack">
   <?= csrf_field() ?>
+  <?php if ($ref !== ''): ?><input type="hidden" name="ref" value="<?= e($ref) ?>"><?php endif; ?>
   <div class="field"><label>Prénom / pseudo</label>
     <input class="input" name="display_name" required maxlength="100" value="<?= e(old('display_name')) ?>"></div>
   <div class="field"><label>Email</label>

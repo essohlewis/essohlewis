@@ -143,6 +143,9 @@ return function (Router $r): void {
     $r->post('/settings/sessions/revoke', 'Amoura\Controllers\SecurityController@revokeSessions', $authCsrf);
 
     // RGPD
+    // Parrainage (Phase 5).
+    $r->get('/invite', 'Amoura\Controllers\ReferralController@index', $auth);
+
     // Vérification de profil par selfie (Phase 4).
     $r->get('/verify-profile', 'Amoura\Controllers\VerificationController@index', $auth);
     $r->post('/verify-profile', 'Amoura\Controllers\VerificationController@submit', $authCsrf);

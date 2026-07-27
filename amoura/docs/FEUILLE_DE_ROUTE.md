@@ -1,7 +1,7 @@
 # 💞 Amoura — Feuille de route produit
 
 **Plateforme SaaS de rencontres en ligne**
-Version du document : 2.5 · Date : 27 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +11 livrés)
+Version du document : 2.6 · Date : 27 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +12 livrés)
 
 ---
 
@@ -42,7 +42,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 | Abonnements & paiements | ✅ Livré | Stripe, PayPal, CinetPay, PayDunya + **vérification serveur idempotente** |
 | Espace admin / CMS | ✅ Livré | Tableau de bord, membres, modération, facturation, réglages, rôles, audit |
 | Design system | ✅ Livré | Tokens, thèmes clair/sombre, responsive mobile-first |
-| Qualité | ✅ Livré | **164 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5** + tests de charge, tous verts |
+| Qualité | ✅ Livré | **169 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5** + tests de charge, tous verts |
 | Déploiement | ✅ Livré | Docker Compose (web + MySQL + WebSocket + coturn), installeur XAMPP |
 
 ---
@@ -50,7 +50,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 ## 3. Feuille de route par phases
 
 > Légende : **[x]** livré · **[~]** partiellement livré · **[ ]** à faire.
-> Phases 1, 2, 3 et 4 quasi bouclées côté code (Sprint +10). Restent surtout les Phases 5 (croissance) et 6 (IA/observabilité).
+> Phases 1–4 bouclées côté code ; Phase 5 entamée (parrainage, Sprint +12). Restent le gros de la Phase 5 (apps natives, passerelles, événements) et la Phase 6 (IA/observabilité).
 
 ### 🟢 Phase 1 — Stabilisation & mise en production *(T3 2026 · 4–6 semaines)*
 
@@ -105,7 +105,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 
 - [ ] Applications natives (React Native / Flutter) réutilisant l'API REST.
 - [ ] Multi-devises et passerelles supplémentaires (Wave, M-Pesa, Flutterwave).
-- [ ] Programme de parrainage et invitations.
+- [x] **Programme de parrainage** : code unique par membre, lien d'invitation, récompense en Super Likes à la qualification du filleul (idempotent) + page « Inviter » — *Sprint +12*. ✅
 - [ ] Événements & communautés (speed-dating vidéo, salons thématiques).
 - [ ] Marketing d'acquisition (SEO, liens profonds, partage social).
 

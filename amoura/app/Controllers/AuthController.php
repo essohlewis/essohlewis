@@ -20,7 +20,11 @@ use Amoura\Services\OtpService;
 
 final class AuthController extends Controller
 {
-    public function showRegister(Request $r): void { $this->view('auth/register', [], 'layouts/auth'); }
+    public function showRegister(Request $r): void
+    {
+        $ref = \Amoura\Core\Security\Sanitizer::text((string) $r->query('ref', ''), 16);
+        $this->view('auth/register', ['ref' => $ref], 'layouts/auth');
+    }
     public function showLogin(Request $r): void    { $this->view('auth/login', [], 'layouts/auth'); }
     public function showForgot(Request $r): void   { $this->view('auth/forgot', [], 'layouts/auth'); }
     public function showVerify(Request $r): void
@@ -84,6 +88,15 @@ final class AuthController extends Controller
         // Marketing : opt-in explicite et facultatif (case décochée par défaut).
         $consent->record($userId, 'marketing', !empty($data['accept_marketing']), $policyVersion, $request->ip());
 
+        // Parrainage : dote le nouveau membre d'un code et enregistre son parrain
+        // éventuel (récompense accordée après vérification du compte).
+        $referral = new \Amoura\Models\Referral();
+        $referral->codeFor($userId);
+        $refCode = trim((string) ($data['ref'] ?? ''));
+        if ($refCode !== '') {
+            $referral->record($refCode, $userId);
+        }
+
         // Émission de l'OTP de vérification email.
         $code = OtpService::issue($userId, 'email', 'verify', $email);
         Mailer::send($email, 'Vérifiez votre compte Amoura',
@@ -123,6 +136,14 @@ final class AuthController extends Controller
                 'email_verified_at' => date('Y-m-d H:i:s'),
                 'status' => 'active',
             ]);
+            // Parrainage : récompense le parrain (et le filleul) à la qualification.
+            $referrerId = (new \Amoura\Models\Referral())->qualify((int) $user['id']);
+            if ($referrerId !== null) {
+                (new \Amoura\Models\Notification())->push($referrerId, 'system', null, [
+                    'message' => 'Votre filleul a rejoint Amoura : ' . \Amoura\Models\Referral::REFERRER_REWARD
+                        . ' Super Likes vous ont été offerts 🎁',
+                ]);
+            }
             Auth::login((int) $user['id']);
         }
         Session::forget('pending_verification');

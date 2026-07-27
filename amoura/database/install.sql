@@ -45,6 +45,7 @@ CREATE TABLE users (
     phone              VARCHAR(30)     NULL,                 -- format E.164 ou local (07..., 05..., 01...)
     password_hash      VARCHAR(255)    NOT NULL,             -- Argon2id
     display_name       VARCHAR(100)    NOT NULL,
+    referral_code      VARCHAR(16)     NULL,                 -- code de parrainage unique
     birthdate          DATE            NULL,                 -- pour vérification 18+
     gender             ENUM('male','female','nonbinary','other') NULL,
     status             ENUM('pending','active','suspended','banned','deleted') NOT NULL DEFAULT 'pending',
@@ -67,6 +68,7 @@ CREATE TABLE users (
     PRIMARY KEY (id),
     UNIQUE KEY uq_users_email (email),
     UNIQUE KEY uq_users_phone (phone),
+    UNIQUE KEY uq_referral_code (referral_code),
     KEY idx_users_status (status),
     KEY idx_users_online (is_online, last_active_at),
     CONSTRAINT fk_users_role FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE RESTRICT
@@ -674,6 +676,25 @@ CREATE TABLE user_consents (
     PRIMARY KEY (id),
     KEY idx_consent_user (user_id, purpose, id),
     CONSTRAINT fk_consent_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------------------------------
+--  PARRAINAGE (Phase 5)
+-- -----------------------------------------------------------------------------
+CREATE TABLE referrals (
+    id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    referrer_id    BIGINT UNSIGNED NOT NULL,
+    referred_id    BIGINT UNSIGNED NOT NULL,
+    code           VARCHAR(16)    NOT NULL,
+    status         ENUM('pending','rewarded') NOT NULL DEFAULT 'pending',
+    reward_credits INT UNSIGNED   NOT NULL DEFAULT 0,
+    created_at     TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    rewarded_at    TIMESTAMP      NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_referred (referred_id),          -- un filleul n'est parrainé qu'une fois
+    KEY idx_referrer (referrer_id, status),
+    CONSTRAINT fk_ref_referrer FOREIGN KEY (referrer_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_ref_referred FOREIGN KEY (referred_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------
