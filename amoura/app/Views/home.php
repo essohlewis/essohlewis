@@ -34,7 +34,7 @@
         <?php if ($plan['slug'] === 'premium'): ?><span class="badge badge-premium">Populaire</span><?php endif; ?>
         <h3 style="margin:8px 0"><?= e($plan['name']) ?></h3>
         <div style="font-size:2rem;font-weight:800">
-          <?= $plan['price_cents'] > 0 ? number_format($plan['price_cents'] / 100, 0, ',', ' ') . ' ' . e($plan['currency']) : 'Gratuit' ?>
+          <?= $plan['price_cents'] > 0 ? e(money((int) $plan['price_cents'], (string) $plan['currency'])) : 'Gratuit' ?>
           <?php if ($plan['price_cents'] > 0): ?><span class="muted" style="font-size:1rem">/mois</span><?php endif; ?>
         </div>
         <p class="muted"><?= e($plan['description']) ?></p>

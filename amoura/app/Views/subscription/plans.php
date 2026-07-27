@@ -5,6 +5,21 @@ $gatewayLabels = ['stripe'=>'💳 Carte (Stripe)','paypal'=>'🅿️ PayPal','ci
 <div style="max-width:900px;margin:0 auto">
   <h1 class="text-center">Passez à la vitesse supérieure</h1>
   <p class="muted text-center" style="margin-bottom:8px">Plus de likes, filtres avancés, boost et badge premium.</p>
+
+  <?php $devises = \Amoura\Services\Money\CurrencyContext::available(); if (count($devises) > 1): ?>
+    <div class="text-center" style="margin-bottom:8px">
+      <label class="muted" style="font-size:.85rem">Afficher les prix en&nbsp;</label>
+      <select class="select" data-currency-select style="width:auto;display:inline-block">
+        <?php foreach ($devises as $d): ?>
+          <option value="<?= e($d['code']) ?>" <?= currency() === $d['code'] ? 'selected' : '' ?>>
+            <?= e($d['code']) ?> — <?= e($d['name']) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <?php if (currency() !== \Amoura\Models\Currency::BASE): ?>
+        <span class="muted" style="font-size:.8rem;display:block;margin-top:4px">Montants indicatifs ; le paiement est effectué en FCFA (XOF).</span>
+      <?php endif; ?>
+    </div>
+  <?php endif; ?>
   <?php if ($current): ?>
     <div class="alert alert-success">Abonnement actif : <b><?= e($current['plan_name']) ?></b>
       <?= $current['current_period_end'] ? ' jusqu\'au ' . date('d/m/Y', strtotime($current['current_period_end'])) : '' ?>.
@@ -18,7 +33,7 @@ $gatewayLabels = ['stripe'=>'💳 Carte (Stripe)','paypal'=>'🅿️ PayPal','ci
       <div class="card" style="<?= $plan['slug']==='vip' ? 'border:2px solid var(--accent-500)' : ($plan['slug']==='premium'?'border:2px solid var(--brand-500)':'') ?>">
         <h3><?= e($plan['name']) ?></h3>
         <div style="font-size:1.8rem;font-weight:800;margin:8px 0">
-          <?= $plan['price_cents']>0 ? number_format($plan['price_cents']/100,0,',',' ').' '.e($plan['currency']) : 'Gratuit' ?>
+          <?= $plan['price_cents']>0 ? e(money((int) $plan['price_cents'], (string) $plan['currency'])) : 'Gratuit' ?>
           <?php if ($plan['price_cents']>0): ?><span class="muted" style="font-size:.9rem">/mois</span><?php endif; ?>
         </div>
         <ul style="list-style:none;font-size:.9rem;line-height:2">
@@ -67,4 +82,7 @@ function openCheckout(slug){ document.getElementById('checkoutPlan').value=slug;
   document.getElementById('checkoutDialog').showModal(); }
 function togglePhone(){ const g=document.getElementById('gatewaySelect').value;
   document.getElementById('phoneField').style.display=(g==='cinetpay'||g==='paydunya')?'block':'none'; }
+document.querySelector('[data-currency-select]')?.addEventListener('change', function(){
+  window.location.href = '/currency/' + encodeURIComponent(this.value);
+});
 </script>

@@ -73,3 +73,12 @@ VALUES (1, 'admin@amoura.example',
 -- IMPORTANT : le hash ci-dessus est un espace réservé invalide. Générez un vrai
 -- mot de passe Argon2id puis mettez-le à jour, par exemple :
 --   php scripts/make_admin.php admin@amoura.example 'Admin@1234'
+
+-- Devises de conversion (base XOF) — taux indicatifs, à réviser en production.
+INSERT INTO currency_rates (code, name, symbol, rate_to_base, decimals, symbol_before, position) VALUES
+  ('XOF', 'Franc CFA (UEMOA)', 'FCFA', 1.00000000, 0, 0, 0),
+  ('XAF', 'Franc CFA (CEMAC)', 'FCFA', 1.00000000, 0, 0, 1),
+  ('EUR', 'Euro',             '€',    0.00152450, 2, 1, 2),
+  ('USD', 'Dollar américain', '$',    0.00165000, 2, 1, 3),
+  ('GHS', 'Cedi ghanéen',     'GH₵',  0.02500000, 2, 1, 4),
+  ('NGN', 'Naira nigérian',   '₦',    2.63000000, 0, 1, 5);

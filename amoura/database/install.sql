@@ -679,6 +679,22 @@ CREATE TABLE user_consents (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------
+--  MULTI-DEVISES (Phase 5) — table de conversion, base XOF
+-- -----------------------------------------------------------------------------
+CREATE TABLE currency_rates (
+    code          CHAR(3)        NOT NULL,               -- ISO 4217
+    name          VARCHAR(50)    NOT NULL,
+    symbol        VARCHAR(8)     NOT NULL,
+    rate_to_base  DECIMAL(18,8)  NOT NULL,               -- unités de `code` pour 1 XOF
+    decimals      TINYINT UNSIGNED NOT NULL DEFAULT 2,
+    symbol_before TINYINT(1)     NOT NULL DEFAULT 0,
+    is_active     TINYINT(1)     NOT NULL DEFAULT 1,
+    position      INT            NOT NULL DEFAULT 0,
+    updated_at    TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------------------------------
 --  PARRAINAGE (Phase 5)
 -- -----------------------------------------------------------------------------
 CREATE TABLE referrals (
@@ -781,3 +797,12 @@ VALUES (1, 'admin@amoura.example',
 -- IMPORTANT : le hash ci-dessus est un espace réservé invalide. Générez un vrai
 -- mot de passe Argon2id puis mettez-le à jour, par exemple :
 --   php scripts/make_admin.php admin@amoura.example 'Admin@1234'
+
+-- Devises de conversion (base XOF) — taux indicatifs, à réviser en production.
+INSERT INTO currency_rates (code, name, symbol, rate_to_base, decimals, symbol_before, position) VALUES
+  ('XOF', 'Franc CFA (UEMOA)', 'FCFA', 1.00000000, 0, 0, 0),
+  ('XAF', 'Franc CFA (CEMAC)', 'FCFA', 1.00000000, 0, 0, 1),
+  ('EUR', 'Euro',             '€',    0.00152450, 2, 1, 2),
+  ('USD', 'Dollar américain', '$',    0.00165000, 2, 1, 3),
+  ('GHS', 'Cedi ghanéen',     'GH₵',  0.02500000, 2, 1, 4),
+  ('NGN', 'Naira nigérian',   '₦',    2.63000000, 0, 1, 5);

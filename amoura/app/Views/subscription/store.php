@@ -26,7 +26,7 @@ $icons = ['boost'=>'🚀','superlike'=>'⭐','reveal'=>'👀'];
         <h3 style="margin:6px 0"><?= e($p['name']) ?></h3>
         <p class="muted" style="font-size:.85rem;min-height:34px"><?= e($p['description']) ?></p>
         <div style="font-size:1.4rem;font-weight:800;margin:8px 0">
-          <?= number_format($p['price_cents']/100, 0, ',', ' ') ?> <?= e($p['currency']) ?>
+          <?= e(money((int) $p['price_cents'], (string) $p['currency'])) ?>
         </div>
         <button class="btn btn-primary btn-block" data-action="openBuy" data-arg="<?= e($p['slug']) ?>">Acheter</button>
       </div>

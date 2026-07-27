@@ -63,6 +63,22 @@ if (!function_exists('locale')) {
     }
 }
 
+if (!function_exists('money')) {
+    /** Formate un prix (centimes, base XOF) dans la devise d'affichage courante. */
+    function money(int $cents, string $base = 'XOF'): string
+    {
+        return \Amoura\Services\Money\CurrencyContext::display($cents, $base);
+    }
+}
+
+if (!function_exists('currency')) {
+    /** Code de la devise d'affichage courante. */
+    function currency(): string
+    {
+        return \Amoura\Services\Money\CurrencyContext::current();
+    }
+}
+
 if (!function_exists('old')) {
     /** Récupère une ancienne valeur de formulaire (repopulation après erreur). */
     function old(string $key, mixed $default = ''): mixed

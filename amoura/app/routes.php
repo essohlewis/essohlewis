@@ -20,6 +20,19 @@ return function (Router $r): void {
     $r->get('/health', fn() => \Amoura\Core\Response::ok(['service' => 'amoura']));
 
     // Changement de langue (i18n) — cookie persistant, redirection sûre (chemin local).
+    // Sélecteur de devise d'affichage (Phase 5) — mémorisé par cookie.
+    $r->get('/currency/{code}', function ($request, $params) {
+        $code = strtoupper((string) $params['code']);
+        if (\Amoura\Services\Money\CurrencyContext::isValid($code)) {
+            setcookie('amoura_currency', $code, [
+                'expires' => time() + 31536000, 'path' => '/', 'httponly' => false, 'samesite' => 'Lax',
+            ]);
+        }
+        $ref = $_SERVER['HTTP_REFERER'] ?? '/';
+        $path = parse_url($ref, PHP_URL_PATH) ?: '/';   // ignore l'hôte → pas d'open-redirect
+        \Amoura\Core\Response::redirect($path);
+    });
+
     $r->get('/lang/{locale}', function ($request, $params) {
         $loc = (string) $params['locale'];
         if (\Amoura\Core\I18n::isAvailable($loc)) {

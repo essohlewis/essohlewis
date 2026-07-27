@@ -667,6 +667,22 @@ CREATE TABLE user_consents (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------
+--  MULTI-DEVISES (Phase 5) — table de conversion, base XOF
+-- -----------------------------------------------------------------------------
+CREATE TABLE currency_rates (
+    code          CHAR(3)        NOT NULL,               -- ISO 4217
+    name          VARCHAR(50)    NOT NULL,
+    symbol        VARCHAR(8)     NOT NULL,
+    rate_to_base  DECIMAL(18,8)  NOT NULL,               -- unités de `code` pour 1 XOF
+    decimals      TINYINT UNSIGNED NOT NULL DEFAULT 2,
+    symbol_before TINYINT(1)     NOT NULL DEFAULT 0,
+    is_active     TINYINT(1)     NOT NULL DEFAULT 1,
+    position      INT            NOT NULL DEFAULT 0,
+    updated_at    TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------------------------------
 --  PARRAINAGE (Phase 5)
 -- -----------------------------------------------------------------------------
 CREATE TABLE referrals (
