@@ -76,6 +76,14 @@ final class AuthController extends Controller
         ]);
         (new Profile())->ensureExists($userId);
 
+        // Journalise les consentements RGPD (preuve : finalité + version + IP).
+        $consent = new \Amoura\Models\Consent();
+        $policyVersion = (string) $settings->get('policy_version', '1.0');
+        $consent->record($userId, 'privacy_policy', true, $policyVersion, $request->ip());
+        $consent->record($userId, 'terms', true, $policyVersion, $request->ip());
+        // Marketing : opt-in explicite et facultatif (case décochée par défaut).
+        $consent->record($userId, 'marketing', !empty($data['accept_marketing']), $policyVersion, $request->ip());
+
         // Émission de l'OTP de vérification email.
         $code = OtpService::issue($userId, 'email', 'verify', $email);
         Mailer::send($email, 'Vérifiez votre compte Amoura',

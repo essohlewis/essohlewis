@@ -60,5 +60,49 @@
     </form>
   </div>
 
+  <!-- Appareils connus -->
+  <div class="card stack">
+    <h3 style="margin:0">📱 Appareils connus</h3>
+    <p class="muted">Dernières connexions détectées. Une connexion inconnue déclenche une alerte.</p>
+    <?php if (empty($devices)): ?>
+      <p class="muted">Aucun appareil enregistré pour l'instant.</p>
+    <?php else: ?>
+      <ul style="list-style:none;padding:0;margin:0">
+        <?php foreach ($devices as $d): ?>
+          <li style="padding:8px 0;border-top:1px solid var(--border,#efecf4);font-size:.9rem">
+            <span><?= e(mb_strimwidth((string) ($d['user_agent'] ?? 'Appareil inconnu'), 0, 60, '…')) ?></span>
+            <span class="muted"> · <?= e((string) ($d['last_ip'] ?? '')) ?> · <?= e(date('d/m/Y H:i', strtotime((string) $d['last_seen_at']))) ?></span>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+    <?php endif; ?>
+  </div>
+
+  <!-- Confidentialité & consentements (RGPD) -->
+  <div class="card stack">
+    <h3 style="margin:0">🔏 Confidentialité & consentements</h3>
+    <p class="muted">Gérez vos préférences. Les traitements essentiels (compte, sécurité) ne sont pas optionnels.</p>
+    <form method="POST" action="/settings/consents" class="stack">
+      <?= csrf_field() ?>
+      <label class="row" style="gap:10px;align-items:center">
+        <input type="checkbox" name="marketing" value="1" <?= !empty($consents['marketing']) ? 'checked' : '' ?>>
+        <span>E-mails marketing (nouveautés, conseils, offres)</span>
+      </label>
+      <label class="row" style="gap:10px;align-items:center">
+        <input type="checkbox" name="analytics" value="1" <?= !empty($consents['analytics']) ? 'checked' : '' ?>>
+        <span>Mesure d'audience anonymisée (amélioration du service)</span>
+      </label>
+      <button class="btn btn-primary" style="align-self:flex-start">Enregistrer mes préférences</button>
+    </form>
+    <div class="row" style="gap:12px;flex-wrap:wrap;margin-top:8px">
+      <a class="btn btn-ghost" href="/settings/data/export">⬇️ Exporter mes données (RGPD)</a>
+      <form method="POST" action="/settings/data/delete"
+            data-confirm="Supprimer définitivement votre compte et vos données ? Cette action est irréversible.">
+        <?= csrf_field() ?>
+        <button class="btn btn-ghost" style="color:#b91c1c">🗑️ Supprimer mon compte</button>
+      </form>
+    </div>
+  </div>
+
   <p class="muted" style="margin-top:16px"><a href="/profile/edit" class="gradient-text">← Modifier mon profil</a></p>
 </div>

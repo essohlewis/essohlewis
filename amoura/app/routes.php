@@ -145,6 +145,7 @@ return function (Router $r): void {
     // RGPD
     $r->get('/settings/data/export', 'Amoura\Controllers\ProfileController@exportData', $auth);
     $r->post('/settings/data/delete', 'Amoura\Controllers\ProfileController@deleteAccount', $authCsrf);
+    $r->post('/settings/consents', 'Amoura\Controllers\ProfileController@updateConsents', $authCsrf);
 
     // ── Espace administrateur / CMS (staff) ─────────────────────────────
     $staff = [RequireStaff::class];

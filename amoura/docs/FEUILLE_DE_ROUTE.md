@@ -1,7 +1,7 @@
 # 💞 Amoura — Feuille de route produit
 
 **Plateforme SaaS de rencontres en ligne**
-Version du document : 2.2 · Date : 27 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +8 livrés)
+Version du document : 2.3 · Date : 27 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +9 livrés)
 
 ---
 
@@ -42,7 +42,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 | Abonnements & paiements | ✅ Livré | Stripe, PayPal, CinetPay, PayDunya + **vérification serveur idempotente** |
 | Espace admin / CMS | ✅ Livré | Tableau de bord, membres, modération, facturation, réglages, rôles, audit |
 | Design system | ✅ Livré | Tokens, thèmes clair/sombre, responsive mobile-first |
-| Qualité | ✅ Livré | **144 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5** + **tests de charge HTTP/WebSocket**, tous verts |
+| Qualité | ✅ Livré | **147 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5** + tests de charge, tous verts |
 | Déploiement | ✅ Livré | Docker Compose (web + MySQL + WebSocket + coturn), installeur XAMPP |
 
 ---
@@ -50,7 +50,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 ## 3. Feuille de route par phases
 
 > Légende : **[x]** livré · **[~]** partiellement livré · **[ ]** à faire.
-> Les Phases 2 et 3 sont quasi bouclées ; **la Phase 1 (mise en production) est l'itération en cours (Sprint +7).**
+> Phases 1, 2 et 3 quasi bouclées côté code ; **la Phase 4 (confiance & conformité) est l'itération en cours (Sprint +9)**. Restent surtout les Phases 5 (croissance) et 6 (IA/observabilité).
 
 ### 🟢 Phase 1 — Stabilisation & mise en production *(T3 2026 · 4–6 semaines)*
 
@@ -96,8 +96,8 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 - [x] **Modération assistée (v1 heuristique)** + **file prioritaire & actions groupées** — *Sprints +3/+6*. ✅
 - [x] **Anti-fraude** : score de risque + **détection d'appareils** — *Sprint +6*. ✅
 - [~] **Chiffrement des messages au repos** (libsodium) — *Sprint +6* · *(bout-en-bout à venir)*
-- [ ] Centre de sécurité utilisateur (conseils, blocage, signalement en 1 clic).
-- [ ] Conformité RGPD renforcée + registre de traitement + DPA prestataires.
+- [~] **Centre de sécurité** enrichi (2FA, sessions, appareils connus, consentements, export/suppression en 1 clic) — *Sprint +9* · *(blocage 1-clic déjà dispo ; conseils à étoffer)*
+- [~] **RGPD renforcé** : consentements granulaires (`user_consents`), export complet & effacement (`Services\Gdpr`), **registre de traitement** (`docs/RGPD.md`) — *Sprint +9* · *(DPA prestataires à signer)*
 
 ### 🔴 Phase 5 — Croissance & international *(T2–T3 2027)*
 
@@ -128,7 +128,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 | ✅ Livré | ~~Nonces CSP + suppression des scripts inline~~ | Sécurité renforcée |
 | ✅ Livré | ~~Couche cache (Redis) sessions & rate-limit~~ | Performance & scalabilité |
 | ✅ Livré | ~~Migrations versionnées~~ | Évolution BDD maîtrisée |
-| 🟡 En cours | Couverture de tests > 70 % (121 tests ; contrôleurs/WebSocket à renforcer) | Fiabilité |
+| 🟡 En cours | Couverture de tests > 70 % (147 tests ; contrôleurs/WebSocket à renforcer) | Fiabilité |
 | ✅ Livré | ~~CI/CD (lint + tests) GitHub Actions~~ + **PHPStan** | Livraison continue |
 | ✅ Livré | ~~Documentation API OpenAPI~~ (`docs/openapi.yaml`) | Intégrations tierces |
 

@@ -28,10 +28,18 @@ final class SecurityController extends Controller
             $setupUri = Totp::provisioningUri((string) $fresh['totp_secret'], $account, $issuer);
         }
 
+        $uid = (int) $user['id'];
+        $devices = (new \Amoura\Models\Consent())->db()
+            ->prepare('SELECT user_agent, INET6_NTOA(last_ip) AS last_ip, last_seen_at
+                       FROM login_devices WHERE user_id = ? ORDER BY last_seen_at DESC LIMIT 20');
+        $devices->execute([$uid]);
+
         $this->view('profile/security', [
             'totp_enabled' => (int) $fresh['totp_enabled'] === 1,
             'setup_secret' => !empty($fresh['totp_secret']) && (int) $fresh['totp_enabled'] === 0 ? $fresh['totp_secret'] : null,
             'setup_uri' => $setupUri,
+            'consents' => (new \Amoura\Models\Consent())->current($uid),
+            'devices' => $devices->fetchAll(),
         ]);
     }
 

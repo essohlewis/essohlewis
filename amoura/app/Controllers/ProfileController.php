@@ -232,36 +232,40 @@ final class ProfileController extends Controller
     public function exportData(Request $request): void
     {
         $user = $this->requireAuth($request);
-        $db = Database::connection();
         $uid = (int) $user['id'];
-        $export = [
-            'user' => (new User())->find($uid),
-            'profile' => (new Profile())->find($uid),
-            'photos' => (new Photo())->forUser($uid),
-            'exported_at' => date('c'),
-        ];
-        unset($export['user']['password_hash']);
+        // Export RGPD complet (accès & portabilité) — cf. Services\Gdpr\DataExport.
         header('Content-Type: application/json; charset=utf-8');
         header('Content-Disposition: attachment; filename="amoura-data-' . $uid . '.json"');
-        echo json_encode($export, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        echo \Amoura\Services\Gdpr\DataExport::toJson($uid);
         exit;
     }
 
     public function deleteAccount(Request $request): void
     {
         $user = $this->requireAuth($request);
-        // Anonymisation + suppression logique (conforme RGPD, préserve l'intégrité référentielle).
-        (new User())->update((int) $user['id'], [
-            'status' => 'deleted',
-            'email' => null,
-            'phone' => null,
-            'display_name' => 'Compte supprimé',
-            'deleted_at' => date('Y-m-d H:i:s'),
-        ]);
-        (new ActivityLog())->record((int) $user['id'], 'user.deleted', 'user', (int) $user['id'], [], $request->ip());
+        // Effacement RGPD (art. 17) : anonymisation + purge atomique des données
+        // personnelles, registres financiers préservés — cf. Services\Gdpr\DataErasure.
+        \Amoura\Services\Gdpr\DataErasure::erase((int) $user['id']);
         Auth::logout();
         Session::flush();
-        Session::flash('success', 'Votre compte a été supprimé.');
+        Session::flash('success', 'Votre compte et vos données personnelles ont été supprimés.');
         $this->redirect('/');
+    }
+
+    /** Met à jour les consentements optionnels (marketing, analytics). */
+    public function updateConsents(Request $request): void
+    {
+        $user = $this->requireAuth($request);
+        $uid = (int) $user['id'];
+        $consent = new \Amoura\Models\Consent();
+        foreach (['marketing', 'analytics'] as $purpose) {
+            $granted = (bool) $request->input($purpose, false);
+            // N'enregistre une nouvelle décision que si l'état change (journal propre).
+            if ($consent->has($uid, $purpose) !== $granted) {
+                $consent->record($uid, $purpose, $granted, null, $request->ip());
+            }
+        }
+        Session::flash('success', 'Vos préférences de confidentialité ont été enregistrées.');
+        $this->redirect('/settings/security');
     }
 }

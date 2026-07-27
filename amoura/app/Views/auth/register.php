@@ -22,6 +22,8 @@
     <input class="input" type="password" name="password_confirm" required></div>
   <label class="checkbox"><input type="checkbox" name="accept_terms" value="1" required>
     <span class="hint">J'ai 18 ans ou plus et j'accepte les <a href="/p/terms" class="gradient-text">CGU</a> et la <a href="/p/privacy" class="gradient-text">confidentialité</a>.</span></label>
+  <label class="checkbox"><input type="checkbox" name="accept_marketing" value="1">
+    <span class="hint">J'accepte de recevoir des e-mails avec des conseils et des offres (facultatif, révocable à tout moment).</span></label>
   <button class="btn btn-primary btn-block btn-lg">Créer mon compte</button>
 </form>
 <p class="muted text-center" style="margin-top:20px">Déjà inscrit ? <a href="/login" class="gradient-text">Se connecter</a></p>
