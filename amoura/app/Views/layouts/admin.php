@@ -20,6 +20,7 @@ $item = function (string $href, string $label, string $icon, ?string $perm = nul
         <?= $item('/admin', 'Tableau de bord', '📊', 'dashboard.view') ?>
         <?= $item('/admin/members', 'Membres', '👥', 'members.view') ?>
         <?= $item('/admin/moderation', 'Modération', '🛡️', 'moderation.review') ?>
+        <?= $item('/admin/verification', 'Vérifications', '✅', 'members.verify') ?>
         <?= $item('/admin/billing', 'Abonnements', '💳', 'subscriptions.manage') ?>
         <?= $item('/admin/settings', 'Paramètres', '⚙️', 'settings.view') ?>
         <?= $item('/admin/pages', 'Pages CMS', '📄', 'cms.manage') ?>

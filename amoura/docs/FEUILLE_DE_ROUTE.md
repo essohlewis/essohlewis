@@ -1,7 +1,7 @@
 # 💞 Amoura — Feuille de route produit
 
 **Plateforme SaaS de rencontres en ligne**
-Version du document : 2.3 · Date : 27 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +9 livrés)
+Version du document : 2.4 · Date : 27 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +10 livrés)
 
 ---
 
@@ -42,7 +42,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 | Abonnements & paiements | ✅ Livré | Stripe, PayPal, CinetPay, PayDunya + **vérification serveur idempotente** |
 | Espace admin / CMS | ✅ Livré | Tableau de bord, membres, modération, facturation, réglages, rôles, audit |
 | Design system | ✅ Livré | Tokens, thèmes clair/sombre, responsive mobile-first |
-| Qualité | ✅ Livré | **147 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5** + tests de charge, tous verts |
+| Qualité | ✅ Livré | **156 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5** + tests de charge, tous verts |
 | Déploiement | ✅ Livré | Docker Compose (web + MySQL + WebSocket + coturn), installeur XAMPP |
 
 ---
@@ -50,7 +50,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 ## 3. Feuille de route par phases
 
 > Légende : **[x]** livré · **[~]** partiellement livré · **[ ]** à faire.
-> Phases 1, 2 et 3 quasi bouclées côté code ; **la Phase 4 (confiance & conformité) est l'itération en cours (Sprint +9)**. Restent surtout les Phases 5 (croissance) et 6 (IA/observabilité).
+> Phases 1, 2, 3 et 4 quasi bouclées côté code (Sprint +10). Restent surtout les Phases 5 (croissance) et 6 (IA/observabilité).
 
 ### 🟢 Phase 1 — Stabilisation & mise en production *(T3 2026 · 4–6 semaines)*
 
@@ -92,7 +92,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 
 *Objectif : plateforme sûre pour un contenu sensible.*
 
-- [~] Vérification de profil : **file de demandes livrée** (`verification_requests`) — *Sprint +6* · *(liveness ML à venir)*
+- [x] **Vérification de profil par selfie** : soumission membre + pré-analyse heuristique (`Services\Verification`, interface liveness pluggable) + file de revue admin → badge vérifié — *Sprint +10*. ✅ *(prestataire liveness ML à brancher)*
 - [x] **Modération assistée (v1 heuristique)** + **file prioritaire & actions groupées** — *Sprints +3/+6*. ✅
 - [x] **Anti-fraude** : score de risque + **détection d'appareils** — *Sprint +6*. ✅
 - [~] **Chiffrement des messages au repos** (libsodium) — *Sprint +6* · *(bout-en-bout à venir)*

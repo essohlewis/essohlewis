@@ -143,6 +143,10 @@ return function (Router $r): void {
     $r->post('/settings/sessions/revoke', 'Amoura\Controllers\SecurityController@revokeSessions', $authCsrf);
 
     // RGPD
+    // Vérification de profil par selfie (Phase 4).
+    $r->get('/verify-profile', 'Amoura\Controllers\VerificationController@index', $auth);
+    $r->post('/verify-profile', 'Amoura\Controllers\VerificationController@submit', $authCsrf);
+
     $r->get('/settings/data/export', 'Amoura\Controllers\ProfileController@exportData', $auth);
     $r->post('/settings/data/delete', 'Amoura\Controllers\ProfileController@deleteAccount', $authCsrf);
     $r->post('/settings/consents', 'Amoura\Controllers\ProfileController@updateConsents', $authCsrf);
@@ -158,6 +162,10 @@ return function (Router $r): void {
         $r->get('/members/{id}', 'Amoura\Controllers\Admin\MemberController@show', $staff);
         $r->post('/members/{id}/status', 'Amoura\Controllers\Admin\MemberController@setStatus', $staffCsrf);
         $r->post('/members/{id}/verify', 'Amoura\Controllers\Admin\MemberController@verify', $staffCsrf);
+
+        $r->get('/verification', 'Amoura\Controllers\Admin\VerificationController@index', $staff);
+        $r->post('/verification/{id}/approve', 'Amoura\Controllers\Admin\VerificationController@approve', $staffCsrf);
+        $r->post('/verification/{id}/reject', 'Amoura\Controllers\Admin\VerificationController@reject', $staffCsrf);
 
         $r->get('/moderation', 'Amoura\Controllers\Admin\ModerationController@index', $staff);
         $r->post('/moderation/reports/{id}', 'Amoura\Controllers\Admin\ModerationController@resolve', $staffCsrf);

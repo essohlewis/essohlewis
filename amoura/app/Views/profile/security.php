@@ -2,6 +2,15 @@
 <div style="max-width:640px;margin:0 auto">
   <h1 style="margin-bottom:16px">Sécurité du compte</h1>
 
+  <!-- Vérification de profil (badge) -->
+  <div class="card row between" style="align-items:center;margin-bottom:20px">
+    <div>
+      <h3 style="margin:0">✅ Vérification de profil</h3>
+      <p class="muted" style="margin:4px 0 0">Obtenez le badge vérifié pour inspirer confiance.</p>
+    </div>
+    <a class="btn btn-ghost" href="/verify-profile">Vérifier</a>
+  </div>
+
   <!-- Authentification à deux facteurs -->
   <div class="card stack" style="margin-bottom:20px">
     <div class="row between">
