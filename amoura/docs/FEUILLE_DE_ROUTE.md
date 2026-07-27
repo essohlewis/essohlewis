@@ -1,7 +1,7 @@
 # 💞 Amoura — Feuille de route produit
 
 **Plateforme SaaS de rencontres en ligne**
-Version du document : 1.0 · Date : 26 juillet 2026 · Statut : MVP livré, en cours d'industrialisation
+Version du document : 2.1 · Date : 27 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +7 livrés)
 
 ---
 
@@ -42,46 +42,49 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 | Abonnements & paiements | ✅ Livré | Stripe, PayPal, CinetPay, PayDunya + **vérification serveur idempotente** |
 | Espace admin / CMS | ✅ Livré | Tableau de bord, membres, modération, facturation, réglages, rôles, audit |
 | Design system | ✅ Livré | Tokens, thèmes clair/sombre, responsive mobile-first |
-| Qualité | ✅ Livré | **32 tests PHPUnit** (unitaires + intégration MySQL), tous verts |
+| Qualité | ✅ Livré | **129 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5**, tous verts |
 | Déploiement | ✅ Livré | Docker Compose (web + MySQL + WebSocket + coturn), installeur XAMPP |
 
 ---
 
 ## 3. Feuille de route par phases
 
+> Légende : **[x]** livré · **[~]** partiellement livré · **[ ]** à faire.
+> Les Phases 2 et 3 sont quasi bouclées ; **la Phase 1 (mise en production) est l'itération en cours (Sprint +7).**
+
 ### 🟢 Phase 1 — Stabilisation & mise en production *(T3 2026 · 4–6 semaines)*
 
 *Objectif : passer du MVP à un service exploitable en production.*
 
-- [ ] Durcissement CSP (nonces + handlers externalisés à la place de `unsafe-inline`).
-- [ ] File d'attente e-mail/SMS asynchrone (OTP, notifications) + fournisseur SMS réel.
-- [ ] Déploiement TURN (coturn) supervisé + `wss://` derrière Nginx.
+- [x] **Durcissement CSP** (nonces + handlers externalisés) — *Sprint +1*. ✅
+- [x] **File d'attente e-mail/SMS asynchrone** (`message_outbox` + worker, relances backoff) + **passerelle SMS réelle** (`Services\Sms`, driver HTTP) — *Sprint +7*. ✅
+- [~] **coturn** (STUN/TURN) fourni + **exemple Nginx TLS `wss://`** (`deploy/nginx.sample.conf`) — *Sprint +7* · *(déploiement supervisé à finaliser)*
 - [x] **Purge planifiée** (statuts expirés, tokens, sessions, rate-limits) via cron (`scripts/cron.php`). ✅
 - [x] **Journalisation structurée** JSON (`Services\Logger`) branchée sur le gestionnaire d'erreurs. ✅ *(supervision à compléter)*
-- [ ] Tests de charge (chat & signaling) et budget de performance.
-- [ ] Politique de sauvegarde/restauration MySQL et plan de reprise.
-- [ ] Recette de sécurité (pentest léger, revue OWASP Top 10).
+- [ ] Tests de charge (chat & signaling) et budget de performance. *(prochain lot Phase 1)*
+- [~] **Sauvegarde/restauration MySQL** avec rotation (`scripts/backup.sh`) — *Sprint +7* · *(plan de reprise RTO/RPO à documenter)*
+- [~] **Checklist OWASP Top 10** mappée au code (`docs/SECURITE_OWASP.md`) — *Sprint +7* · *(pentest léger à mener)*
 
 ### 🔵 Phase 2 — Engagement & rétention *(T4 2026 · 6–8 semaines)*
 
 *Objectif : augmenter le temps passé et la fréquence de retour.*
 
-- [x] **PWA installable** (manifest, service worker, coquille hors-ligne). ✅ *(Web Push à ajouter)*
+- [x] **PWA installable** (manifest, service worker, coquille hors-ligne) + **Web Push** (VAPID) — *Sprints +2*. ✅
 - [x] **Recommandations par affinité** (intérêts + proximité + âge + activité + vérifié) — `Services\Recommender`. ✅
-- [ ] « Qui a vu mon profil », derniers visiteurs.
-- [ ] Réactions et réponses citées dans le chat, messages éphémères.
-- [ ] Filtres de découverte enrichis (style de vie, valeurs, langues).
-- [ ] Onboarding guidé + complétion de profil gamifiée.
-- [ ] Traduction i18n (français, anglais) et sélecteur de langue.
+- [x] **« Qui a vu mon profil »**, derniers visiteurs — *Sprint +2*. ✅
+- [x] **Réactions, réponses citées et messages éphémères** dans le chat — *Sprints +3/+6*. ✅
+- [x] **Filtres de découverte enrichis** (style de vie, langues) — *Sprint +6*. ✅
+- [x] **Onboarding guidé** + complétion de profil — *Sprint +2*. ✅
+- [x] **i18n FR/EN** + sélecteur de langue — *Sprint +2*. ✅
 
 ### 🟣 Phase 3 — Monétisation avancée *(T1 2027 · 6 semaines)*
 
 *Objectif : diversifier et augmenter le revenu par utilisateur.*
 
-- [ ] Achats à l'unité : Boosts, Super Likes, révélation d'admirateurs.
-- [ ] Paliers Premium/VIP annuels + essais gratuits et coupons.
-- [ ] Portefeuille interne (crédits) et reçus/facturation PDF.
-- [ ] Renouvellement automatique + relances d'échec de paiement (dunning).
+- [x] **Achats à l'unité** : Boosts, Super Likes, révélation d'admirateurs — *Sprint +5*. ✅
+- [x] **Coupons de réduction** — *Sprint +6* ✅ · *(paliers annuels & essais gratuits à venir)*
+- [x] **Portefeuille de crédits** + **reçus imprimables/PDF** — *Sprints +5/+6*. ✅
+- [x] **Relances d'échec (dunning)** — *Sprint +5* ✅ · *(renouvellement auto prestataire à venir)*
 - [ ] Mode incognito et navigation privée (VIP).
 - [ ] Tableau de bord revenus avancé (cohortes, LTV, churn) côté admin.
 
@@ -89,10 +92,10 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 
 *Objectif : plateforme sûre pour un contenu sensible.*
 
-- [ ] Vérification de profil semi-automatique (selfie + détection de vivacité).
-- [ ] Modération assistée par IA (nudité, arnaques, mineurs) + file prioritaire.
-- [ ] Anti-fraude : détection de faux profils, appareils, schémas d'arnaque.
-- [ ] Chiffrement de bout en bout optionnel des messages sensibles.
+- [~] Vérification de profil : **file de demandes livrée** (`verification_requests`) — *Sprint +6* · *(liveness ML à venir)*
+- [x] **Modération assistée (v1 heuristique)** + **file prioritaire & actions groupées** — *Sprints +3/+6*. ✅
+- [x] **Anti-fraude** : score de risque + **détection d'appareils** — *Sprint +6*. ✅
+- [~] **Chiffrement des messages au repos** (libsodium) — *Sprint +6* · *(bout-en-bout à venir)*
 - [ ] Centre de sécurité utilisateur (conseils, blocage, signalement en 1 clic).
 - [ ] Conformité RGPD renforcée + registre de traitement + DPA prestataires.
 
@@ -112,8 +115,8 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 
 - [ ] Matching par apprentissage (embeddings d'affinité, feedback implicite).
 - [ ] Brise-glaces et suggestions de conversation assistés par IA.
-- [ ] Passage à l'échelle : cache Redis, réplicas de lecture, clustering WebSocket.
-- [ ] Média : transcodage vocal serveur, stockage objet (S3), CDN images.
+- [x] **Cache Redis, réplicas de lecture, clustering WebSocket** — *Sprints +3/+6*. ✅
+- [x] **Stockage objet (S3) + CDN images** — *Sprint +6* ✅ · *(transcodage vocal serveur à venir)*
 - [ ] Observabilité complète (traçage distribué, SLO/SLA).
 
 ---
@@ -122,12 +125,12 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 
 | Priorité | Élément | Bénéfice |
 |---|---|---|
-| Haute | Nonces CSP + suppression des scripts inline | Sécurité renforcée |
-| Haute | Couche cache (Redis) sessions & rate-limit | Performance & scalabilité |
-| Moyenne | Migrations versionnées (au lieu du schéma monolithique) | Évolution BDD maîtrisée |
-| Moyenne | Couverture de tests > 70 % (contrôleurs, WebSocket) | Fiabilité |
-| Moyenne | CI/CD (lint + tests + build Docker automatisés) | Livraison continue |
-| Basse | Documentation API OpenAPI | Intégrations tierces |
+| ✅ Livré | ~~Nonces CSP + suppression des scripts inline~~ | Sécurité renforcée |
+| ✅ Livré | ~~Couche cache (Redis) sessions & rate-limit~~ | Performance & scalabilité |
+| ✅ Livré | ~~Migrations versionnées~~ | Évolution BDD maîtrisée |
+| 🟡 En cours | Couverture de tests > 70 % (121 tests ; contrôleurs/WebSocket à renforcer) | Fiabilité |
+| ✅ Livré | ~~CI/CD (lint + tests) GitHub Actions~~ + **PHPStan** | Livraison continue |
+| ✅ Livré | ~~Documentation API OpenAPI~~ (`docs/openapi.yaml`) | Intégrations tierces |
 
 ---
 

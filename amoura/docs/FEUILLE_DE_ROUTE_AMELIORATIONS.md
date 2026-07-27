@@ -1,7 +1,7 @@
 # 💞 Amoura — Feuille de route des améliorations
 
 **Plan d'amélioration continue de la plateforme**
-Version : 1.6 · Date : 26 juillet 2026 · Portée : améliorations livrées + backlog priorisé
+Version : 1.7 · Date : 27 juillet 2026 · Portée : améliorations livrées + backlog priorisé
 
 > Légende — **Impact** : 🟢 Faible · 🟡 Moyen · 🔴 Élevé | **Effort** : S (≤2 j) · M (≤1 sem) · L (2–3 sem) · XL (>1 mois) | **Priorité** : P0 (critique) → P3 (confort)
 
@@ -10,7 +10,7 @@ Version : 1.6 · Date : 26 juillet 2026 · Portée : améliorations livrées + b
 ## 1. Améliorations livrées dans cette itération ✅
 
 Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont été
-**implémentées et testées** (suite passée à **121 tests / 296 assertions**, analyse
+**implémentées et testées** (suite passée à **129 tests / 325 assertions**, analyse
 statique **PHPStan niveau 5 sans erreur**).
 
 | Amélioration | Axe | Détail | Vérification |
@@ -56,6 +56,16 @@ Dernière itération : **tout le reliquat du backlog** a été traité.
 | **Coupons & offres** | Monétisation | `Models\Coupon` (% ou montant, plafond de rachats, expiration, rachat atomique) intégré au tunnel d'abonnement. | 1 unit + 2 intégration |
 | **Analyse statique (PHPStan)** | DevEx | `phpstan.neon` niveau 5 (app/scripts/websocket), script `composer stan`, **0 erreur** (corrections de types réelles au passage). | CI-ready |
 | **Documentation API (OpenAPI)** | DevEx | `docs/openapi.yaml` (OpenAPI 3.0.3) : découverte, swipe, messagerie chiffrée, notifications, push, webhooks. | Spéc validée |
+
+### 1.2 Mise en production — Phase 1, lot 1 (Sprint +7) ✅
+
+| Amélioration | Axe | Détail | Vérification |
+|---|---|---|---|
+| **File d'envoi e-mail/SMS asynchrone** | Fiabilité / Scale | Table `message_outbox` + `Models\Outbox` (réclamation par lot `FOR UPDATE SKIP LOCKED`, relances à **backoff exponentiel**, lettre morte) ; `Messaging\Dispatcher` (modes `sync`/`async`) ; `scripts/worker.php` (démon + `--once`) ; drain intégré au cron. Découple la latence prestataire du temps de réponse HTTP. | 6 tests d'intégration (file, drain, backoff, lettre morte) |
+| **Passerelle SMS réelle** | Infrastructure | `Services\Sms` : interface `SmsGateway`, `LogSmsGateway` (dev), `HttpSmsGateway` (REST générique, bearer, réf. prestataire), `SmsManager` piloté par `SMS_DRIVER`. `Mailer::send` route désormais via la file. | 3 tests unitaires |
+| **Exemple Nginx `wss://` + TLS** | Déploiement | `deploy/nginx.sample.conf` : terminaison TLS, HSTS, cache assets, proxy WebSocket sécurisé ; service **worker** ajouté au `docker-compose`. | Config fournie |
+| **Sauvegarde MySQL** | Fiabilité | `scripts/backup.sh` : `mysqldump --single-transaction`, compression, **rotation** configurable. | Syntaxe validée |
+| **Checklist OWASP Top 10** | Sécurité | `docs/SECURITE_OWASP.md` : revue A01–A10 mappée au code + contrôles de lancement. | Document de revue |
 
 ---
 
@@ -154,6 +164,7 @@ Dernière itération : **tout le reliquat du backlog** a été traité.
 | **Sprint +4** ✅ | Sécurité des comptes | 2FA (TOTP) · révocation de sessions — *livré* |
 | **Sprint +5** ✅ | Monétisation | Achats à l'unité (Boost/Super Like/Reveal) · dunning — *livré* |
 | **Sprint +6** ✅ | Durcissement (reliquat backlog) | Chiffrement des messages · détection d'appareils · réplicas de lecture · stockage S3/CDN · pagination par curseur · réponses citées/éphémères · filtres style de vie · anti-fraude · file de modération priorisée · reçus · coupons · PHPStan · OpenAPI — *livré* |
+| **Sprint +7** ✅ | Mise en production (Phase 1, lot 1) | File d'envoi e-mail/SMS asynchrone (outbox + worker, relances backoff) · passerelle SMS réelle (driver HTTP) · exemple Nginx `wss://` · script de sauvegarde MySQL · checklist OWASP — *livré* |
 
 ---
 

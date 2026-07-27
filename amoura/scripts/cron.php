@@ -26,14 +26,18 @@ date_default_timezone_set((string) Env::get('APP_TIMEZONE', 'UTC'));
 
 $start = microtime(true);
 try {
+    // Draine la file e-mail/SMS (envoi asynchrone) — Sprint +7.
+    // Filet de sécurité si aucun worker dédié ne tourne ; sans effet en mode sync.
+    $outbox = \Amoura\Services\Messaging\Dispatcher::drain((int) Env::get('QUEUE_BATCH', 50));
     $deleted = Maintenance::run();
     // Relances d'abonnement (dunning) — Sprint +5.
     $dunning = \Amoura\Services\Billing\Dunning::run();
     $ms = (int) round((microtime(true) - $start) * 1000);
     $summary = implode(', ', array_map(fn($k, $v) => "{$k}={$v}", array_keys($deleted), $deleted));
     $dunSummary = implode(', ', array_map(fn($k, $v) => "{$k}={$v}", array_keys($dunning), $dunning));
-    echo '[' . date('c') . "] maintenance ok ({$ms} ms) — {$summary} | dunning: {$dunSummary}\n";
-    Logger::info('cron.maintenance', $deleted + ['dunning' => $dunning, 'duration_ms' => $ms]);
+    echo '[' . date('c') . "] maintenance ok ({$ms} ms) — {$summary} | dunning: {$dunSummary}"
+        . " | outbox: {$outbox['sent']} envoyé(s)/{$outbox['failed']} échec(s)\n";
+    Logger::info('cron.maintenance', $deleted + ['dunning' => $dunning, 'outbox' => $outbox, 'duration_ms' => $ms]);
 } catch (\Throwable $e) {
     fwrite(STDERR, '[' . date('c') . '] maintenance ÉCHEC : ' . $e->getMessage() . "\n");
     Logger::error('cron.maintenance_failed', ['error' => $e->getMessage()]);

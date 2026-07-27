@@ -12,7 +12,21 @@ use Amoura\Core\Env;
  */
 final class Mailer
 {
+    /**
+     * Envoi « logique » : passe par la file d'attente (envoi asynchrone) ou en
+     * synchrone selon QUEUE_DRIVER (cf. Messaging\Dispatcher). Signature inchangée
+     * pour la compatibilité de tous les appels existants.
+     */
     public static function send(string $to, string $subject, string $htmlBody): bool
+    {
+        return \Amoura\Services\Messaging\Dispatcher::email($to, $subject, $htmlBody);
+    }
+
+    /**
+     * Envoi « physique » réel (log ou SMTP). Appelé par le worker qui draine la
+     * file, ou directement par le Dispatcher en mode synchrone.
+     */
+    public static function deliver(string $to, string $subject, string $htmlBody): bool
     {
         $driver = (string) Env::get('MAIL_DRIVER', 'log');
         $from = (string) Env::get('MAIL_FROM', 'no-reply@amoura.example');

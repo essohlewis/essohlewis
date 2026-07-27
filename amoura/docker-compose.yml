@@ -49,6 +49,9 @@ services:
       TURN_URL: turn:localhost:3478
       TURN_USER: amoura
       TURN_PASS: amoura_turn_secret
+      # File d'envoi asynchrone : l'app enfile, le service « worker » délivre.
+      QUEUE_DRIVER: async
+      SMS_DRIVER: log
     ports:
       - "8080:80"
     volumes:
@@ -72,6 +75,25 @@ services:
     command: php websocket/server.php
     ports:
       - "8090:8090"
+
+  # Worker de la file d'envoi e-mail/SMS (délivre les messages enfilés par l'app).
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_NAME: amoura
+      DB_USER: amoura
+      DB_PASS: secret
+      QUEUE_DRIVER: async
+      MAIL_DRIVER: log        # remplacez par « smtp » en production
+      SMS_DRIVER: log         # remplacez par « http » + SMS_HTTP_* en production
+    command: php scripts/worker.php
 
   coturn:
     image: coturn/coturn:latest

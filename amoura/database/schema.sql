@@ -625,6 +625,29 @@ CREATE TABLE rate_limits (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------
+--  FILE D'ATTENTE E-MAIL / SMS (envoi asynchrone — Phase 1)
+-- -----------------------------------------------------------------------------
+CREATE TABLE message_outbox (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    channel         ENUM('email','sms') NOT NULL,
+    recipient       VARCHAR(190)    NOT NULL,           -- e-mail ou numéro E.164
+    subject         VARCHAR(255)    NULL,               -- e-mail uniquement
+    body            TEXT            NOT NULL,
+    meta            JSON            NULL,                -- {from, template, user_id…}
+    status          ENUM('pending','sending','sent','failed') NOT NULL DEFAULT 'pending',
+    attempts        TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    max_attempts    TINYINT UNSIGNED NOT NULL DEFAULT 5,
+    next_attempt_at TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,  -- planif. backoff
+    last_error      VARCHAR(500)    NULL,
+    provider_ref    VARCHAR(190)    NULL,               -- id de message prestataire
+    created_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    sent_at         TIMESTAMP       NULL,
+    PRIMARY KEY (id),
+    KEY idx_outbox_due (status, next_attempt_at)         -- sélection des messages « dus »
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------------------------------
 --  Clés étrangères différées (photos <-> profiles)
 -- -----------------------------------------------------------------------------
 ALTER TABLE profiles

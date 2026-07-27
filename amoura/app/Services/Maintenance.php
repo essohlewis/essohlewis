@@ -53,6 +53,9 @@ final class Maintenance
             'DELETE FROM messages WHERE expires_at IS NOT NULL AND expires_at < NOW()'
         )->rowCount();
 
+        // 8) File d'envoi : messages déjà livrés depuis plus de 30 jours.
+        $deleted['outbox'] = (new \Amoura\Models\Outbox())->purgeSent(30);
+
         return $deleted;
     }
 }
