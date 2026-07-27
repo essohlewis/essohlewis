@@ -1,7 +1,7 @@
 # 💞 Amoura — Feuille de route des améliorations
 
 **Plan d'amélioration continue de la plateforme**
-Version : 2.6 · Date : 27 juillet 2026 · Portée : améliorations livrées + backlog priorisé
+Version : 2.7 · Date : 27 juillet 2026 · Portée : améliorations livrées + backlog priorisé
 
 > Légende — **Impact** : 🟢 Faible · 🟡 Moyen · 🔴 Élevé | **Effort** : S (≤2 j) · M (≤1 sem) · L (2–3 sem) · XL (>1 mois) | **Priorité** : P0 (critique) → P3 (confort)
 
@@ -10,7 +10,7 @@ Version : 2.6 · Date : 27 juillet 2026 · Portée : améliorations livrées + b
 ## 1. Améliorations livrées dans cette itération ✅
 
 Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont été
-**implémentées et testées** (suite passée à **200 tests / 529 assertions**, analyse
+**implémentées et testées** (suite passée à **206 tests / 548 assertions**, analyse
 statique **PHPStan niveau 5 sans erreur**).
 
 | Amélioration | Axe | Détail | Vérification |
@@ -174,6 +174,7 @@ Dernière itération : **tout le reliquat du backlog** a été traité.
 | **Sprint +14** ✅ | Intelligence (Phase 6) | Brise-glaces assistés : `Services\Icebreaker` (interface pluggable LLM + heuristique v1 : intérêts communs, ville, métier, objectif, repli) · endpoint `/api/icebreakers/{id}` (réservé aux matchs) · suggestions intégrées au fil de discussion vide — *livré* |
 | **Sprint +15** ✅ | Intelligence (Phase 6) | Matching par apprentissage v1 : `Services\Matching\TasteProfile` (apprend âge/vérifié/intérêts préférés du feedback implicite) + `PersonalizedRanker` (reclasse la découverte en mêlant affinité et goût appris ; sans signal, ordre conservé) — *livré* |
 | **Sprint +16** ✅ | Croissance / international (Phase 5) | Multi-devises : table `currency_rates` (base XOF, 6 devises seedées), `Services\Money` (conversion + formatage), sélecteur d'affichage par cookie, prix indicatifs (« ≈ ») sur accueil/offres/boutique — *livré* |
+| **Sprint +17** ✅ | Croissance (Phase 5) | Événements & communautés : `Models\Event` (agenda publié, inscription transactionnelle avec capacité + liste d'attente + promotion auto à la libération d'une place), pages membre (liste/détail/inscription) et gestion admin (création, publication, annulation) — *livré* |
 
 ---
 

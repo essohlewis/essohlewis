@@ -82,3 +82,12 @@ INSERT INTO currency_rates (code, name, symbol, rate_to_base, decimals, symbol_b
   ('USD', 'Dollar américain', '$',    0.00165000, 2, 1, 3),
   ('GHS', 'Cedi ghanéen',     'GH₵',  0.02500000, 2, 1, 4),
   ('NGN', 'Naira nigérian',   '₦',    2.63000000, 0, 1, 5);
+
+-- Événements de démonstration (publiés, à venir).
+INSERT INTO events (title, slug, description, type, is_online, location, capacity, starts_at, ends_at, status) VALUES
+  ('Speed-dating vidéo — Édition découverte', 'speed-dating-video-decouverte',
+   'Enchaînez des tête-à-tête vidéo de 5 minutes et laissez le courant passer.',
+   'speed_dating', 1, NULL, 20, DATE_ADD(NOW(), INTERVAL 7 DAY), DATE_ADD(NOW(), INTERVAL 7 DAY) + INTERVAL 90 MINUTE, 'published'),
+  ('Salon « Cuisine & rencontres » à Abidjan', 'salon-cuisine-abidjan',
+   'Un atelier culinaire convivial pour cuisiner… et faire des rencontres.',
+   'salon', 0, 'Abidjan, Cocody', 30, DATE_ADD(NOW(), INTERVAL 14 DAY), NULL, 'published');

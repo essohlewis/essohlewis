@@ -679,6 +679,43 @@ CREATE TABLE user_consents (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------
+--  ÉVÉNEMENTS & COMMUNAUTÉS (Phase 5) — inscription + liste d'attente
+-- -----------------------------------------------------------------------------
+CREATE TABLE events (
+    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    host_id     BIGINT UNSIGNED NULL,
+    title       VARCHAR(150)   NOT NULL,
+    slug        VARCHAR(160)   NOT NULL,
+    description TEXT           NULL,
+    type        ENUM('speed_dating','salon','meetup','online') NOT NULL DEFAULT 'meetup',
+    is_online   TINYINT(1)     NOT NULL DEFAULT 0,
+    location    VARCHAR(200)   NULL,
+    cover_path  VARCHAR(255)   NULL,
+    capacity    INT UNSIGNED   NULL,                   -- NULL = illimité
+    starts_at   DATETIME       NOT NULL,
+    ends_at     DATETIME       NULL,
+    status      ENUM('draft','published','canceled') NOT NULL DEFAULT 'draft',
+    created_at  TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_event_slug (slug),
+    KEY idx_event_agenda (status, starts_at),
+    CONSTRAINT fk_event_host FOREIGN KEY (host_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE event_attendees (
+    event_id   BIGINT UNSIGNED NOT NULL,
+    user_id    BIGINT UNSIGNED NOT NULL,
+    status     ENUM('going','waitlist','canceled') NOT NULL DEFAULT 'going',
+    joined_at  TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (event_id, user_id),
+    KEY idx_att_user (user_id),
+    KEY idx_att_event_status (event_id, status, joined_at),
+    CONSTRAINT fk_att_event FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+    CONSTRAINT fk_att_user  FOREIGN KEY (user_id)  REFERENCES users(id)  ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------------------------------
 --  MULTI-DEVISES (Phase 5) — table de conversion, base XOF
 -- -----------------------------------------------------------------------------
 CREATE TABLE currency_rates (
@@ -806,3 +843,12 @@ INSERT INTO currency_rates (code, name, symbol, rate_to_base, decimals, symbol_b
   ('USD', 'Dollar américain', '$',    0.00165000, 2, 1, 3),
   ('GHS', 'Cedi ghanéen',     'GH₵',  0.02500000, 2, 1, 4),
   ('NGN', 'Naira nigérian',   '₦',    2.63000000, 0, 1, 5);
+
+-- Événements de démonstration (publiés, à venir).
+INSERT INTO events (title, slug, description, type, is_online, location, capacity, starts_at, ends_at, status) VALUES
+  ('Speed-dating vidéo — Édition découverte', 'speed-dating-video-decouverte',
+   'Enchaînez des tête-à-tête vidéo de 5 minutes et laissez le courant passer.',
+   'speed_dating', 1, NULL, 20, DATE_ADD(NOW(), INTERVAL 7 DAY), DATE_ADD(NOW(), INTERVAL 7 DAY) + INTERVAL 90 MINUTE, 'published'),
+  ('Salon « Cuisine & rencontres » à Abidjan', 'salon-cuisine-abidjan',
+   'Un atelier culinaire convivial pour cuisiner… et faire des rencontres.',
+   'salon', 0, 'Abidjan, Cocody', 30, DATE_ADD(NOW(), INTERVAL 14 DAY), NULL, 'published');

@@ -165,6 +165,12 @@ return function (Router $r): void {
     // Parrainage (Phase 5).
     $r->get('/invite', 'Amoura\Controllers\ReferralController@index', $auth);
 
+    // Événements & communautés (Phase 5).
+    $r->get('/events', 'Amoura\Controllers\EventController@index', $auth);
+    $r->get('/events/{slug}', 'Amoura\Controllers\EventController@show', $auth);
+    $r->post('/events/{id}/join', 'Amoura\Controllers\EventController@join', $authCsrf);
+    $r->post('/events/{id}/leave', 'Amoura\Controllers\EventController@leave', $authCsrf);
+
     // Vérification de profil par selfie (Phase 4).
     $r->get('/verify-profile', 'Amoura\Controllers\VerificationController@index', $auth);
     $r->post('/verify-profile', 'Amoura\Controllers\VerificationController@submit', $authCsrf);
@@ -184,6 +190,10 @@ return function (Router $r): void {
         $r->get('/members/{id}', 'Amoura\Controllers\Admin\MemberController@show', $staff);
         $r->post('/members/{id}/status', 'Amoura\Controllers\Admin\MemberController@setStatus', $staffCsrf);
         $r->post('/members/{id}/verify', 'Amoura\Controllers\Admin\MemberController@verify', $staffCsrf);
+
+        $r->get('/events', 'Amoura\Controllers\Admin\EventController@index', $staff);
+        $r->post('/events', 'Amoura\Controllers\Admin\EventController@create', $staffCsrf);
+        $r->post('/events/{id}/status', 'Amoura\Controllers\Admin\EventController@setStatus', $staffCsrf);
 
         $r->get('/verification', 'Amoura\Controllers\Admin\VerificationController@index', $staff);
         $r->post('/verification/{id}/approve', 'Amoura\Controllers\Admin\VerificationController@approve', $staffCsrf);

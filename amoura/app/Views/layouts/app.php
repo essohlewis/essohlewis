@@ -27,6 +27,7 @@ $nav = function (string $href, string $label, string $icon, ?string $key = null)
         <?= $nav('/matches', t('nav.matches'), '💞', '/matches') ?>
         <?= $nav('/messages', t('nav.messages'), '💬', '/messages') ?>
         <?= $nav('/feed', t('nav.feed'), '📰', '/feed') ?>
+        <?= $nav('/events', 'Événements', '📅', '/events') ?>
         <?= $nav('/invite', 'Inviter', '🎁', '/invite') ?>
         <a href="/notifications" class="nav-link<?= str_starts_with($path, '/notifications') ? ' active' : '' ?>">
           <span>🔔</span><span class="label"><?= e(t('nav.alerts')) ?></span>

@@ -1,7 +1,7 @@
 # 💞 Amoura — Feuille de route produit
 
 **Plateforme SaaS de rencontres en ligne**
-Version du document : 3.0 · Date : 27 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +16 livrés)
+Version du document : 3.1 · Date : 27 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +17 livrés)
 
 ---
 
@@ -42,7 +42,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 | Abonnements & paiements | ✅ Livré | Stripe, PayPal, CinetPay, PayDunya + **vérification serveur idempotente** |
 | Espace admin / CMS | ✅ Livré | Tableau de bord, membres, modération, facturation, réglages, rôles, audit |
 | Design system | ✅ Livré | Tokens, thèmes clair/sombre, responsive mobile-first |
-| Qualité | ✅ Livré | **200 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5** + tests de charge, tous verts |
+| Qualité | ✅ Livré | **206 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5** + tests de charge, tous verts |
 | Déploiement | ✅ Livré | Docker Compose (web + MySQL + WebSocket + coturn), installeur XAMPP |
 
 ---
@@ -106,7 +106,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 - [ ] Applications natives (React Native / Flutter) réutilisant l'API REST.
 - [~] **Multi-devises** : table de conversion (base XOF), sélecteur d'affichage par cookie, prix indicatifs convertis (`Services\Money`, `Models\Currency`) — *Sprint +16*. ✅ *(passerelles Wave/M-Pesa/Flutterwave à ajouter)*
 - [x] **Programme de parrainage** : code unique par membre, lien d'invitation, récompense en Super Likes à la qualification du filleul (idempotent) + page « Inviter » — *Sprint +12*. ✅
-- [ ] Événements & communautés (speed-dating vidéo, salons thématiques).
+- [x] **Événements & communautés** : agenda public, inscription atomique avec **capacité & liste d'attente** (promotion auto), gestion admin (`Models\Event`) — *Sprint +17*. ✅
 - [ ] Marketing d'acquisition (SEO, liens profonds, partage social).
 
 ### ⚫ Phase 6 — Intelligence & passage à l'échelle *(T4 2027+)*
