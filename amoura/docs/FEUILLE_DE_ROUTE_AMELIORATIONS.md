@@ -1,7 +1,7 @@
 # 💞 Amoura — Feuille de route des améliorations
 
 **Plan d'amélioration continue de la plateforme**
-Version : 2.0 · Date : 27 juillet 2026 · Portée : améliorations livrées + backlog priorisé
+Version : 2.1 · Date : 27 juillet 2026 · Portée : améliorations livrées + backlog priorisé
 
 > Légende — **Impact** : 🟢 Faible · 🟡 Moyen · 🔴 Élevé | **Effort** : S (≤2 j) · M (≤1 sem) · L (2–3 sem) · XL (>1 mois) | **Priorité** : P0 (critique) → P3 (confort)
 
@@ -10,7 +10,7 @@ Version : 2.0 · Date : 27 juillet 2026 · Portée : améliorations livrées + b
 ## 1. Améliorations livrées dans cette itération ✅
 
 Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont été
-**implémentées et testées** (suite passée à **156 tests / 412 assertions**, analyse
+**implémentées et testées** (suite passée à **164 tests / 435 assertions**, analyse
 statique **PHPStan niveau 5 sans erreur**).
 
 | Amélioration | Axe | Détail | Vérification |
@@ -168,6 +168,7 @@ Dernière itération : **tout le reliquat du backlog** a été traité.
 | **Sprint +8** ✅ | Mise en production (Phase 1, lot 2) | Tests de charge HTTP & WebSocket + budget de performance (CI) · briques `Benchmark`/`Realtime` testées · **correction d'un crash du serveur WS à la connexion** (parse_url sur objet PSR-7) — *livré* |
 | **Sprint +9** ✅ | Confiance & conformité (Phase 4, lot 1) | RGPD : consentements granulaires (`user_consents`) · export complet (accès/portabilité) & effacement (droit à l'oubli) `Services\Gdpr` · centre de sécurité (appareils, consentements) · registre de traitement `docs/RGPD.md` — *livré* |
 | **Sprint +10** ✅ | Confiance & conformité (Phase 4, lot 2) | Vérification de profil par selfie : soumission membre + pré-analyse heuristique (`Services\Verification`, interface liveness pluggable) · file de revue admin (score auto, approbation → badge, rejet) · notifications — *livré* |
+| **Sprint +11** ✅ | Monétisation — finitions (Phase 3) | Mode incognito (navigation privée VIP, gated) · tableau de bord revenus admin (MRR, ARPU, LTV, churn, tendance 12 mois, répartition prestataire/offre, graphe SVG sans script) — *livré* |
 
 ---
 

@@ -100,6 +100,11 @@ $languages = implode(', ', json_decode($raw['languages'] ?? '[]', true) ?: []);
         'read_receipts'=>'Accusés de lecture'] as $k=>$label): ?>
       <label class="checkbox"><input type="checkbox" name="<?= $k ?>" value="1" <?= !empty($privacy[$k]) ? 'checked' : '' ?>> <?= $label ?></label>
     <?php endforeach; ?>
+    <?php if (!empty($can_incognito)): ?>
+      <label class="checkbox" style="border-top:1px solid var(--border,#efecf4);padding-top:10px">
+        <input type="checkbox" name="incognito" value="1" <?= !empty($privacy['incognito']) ? 'checked' : '' ?>>
+        🕶️ <strong>Mode incognito</strong> — consulter les profils sans laisser de trace <span class="badge">VIP</span></label>
+    <?php endif; ?>
     <div class="field"><label>Qui peut m'écrire</label>
       <select class="select" name="allow_messages_from">
         <option value="matches" <?= ($privacy['allow_messages_from'] ?? '')==='matches'?'selected':'' ?>>Mes matchs uniquement</option>

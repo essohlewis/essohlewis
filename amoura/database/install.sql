@@ -114,6 +114,7 @@ CREATE TABLE privacy_settings (
     show_age            TINYINT(1) NOT NULL DEFAULT 1,
     show_last_active    TINYINT(1) NOT NULL DEFAULT 1,
     discoverable        TINYINT(1) NOT NULL DEFAULT 1,
+    incognito           TINYINT(1) NOT NULL DEFAULT 0,   -- navigation privée (VIP)
     read_receipts       TINYINT(1) NOT NULL DEFAULT 1,
     allow_messages_from ENUM('matches','verified','everyone') NOT NULL DEFAULT 'matches',
     PRIMARY KEY (user_id),

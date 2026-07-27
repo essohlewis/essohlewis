@@ -21,6 +21,7 @@ $item = function (string $href, string $label, string $icon, ?string $perm = nul
         <?= $item('/admin/members', 'Membres', '👥', 'members.view') ?>
         <?= $item('/admin/moderation', 'Modération', '🛡️', 'moderation.review') ?>
         <?= $item('/admin/verification', 'Vérifications', '✅', 'members.verify') ?>
+        <?= $item('/admin/revenue', 'Revenus', '📈', 'subscriptions.manage') ?>
         <?= $item('/admin/billing', 'Abonnements', '💳', 'subscriptions.manage') ?>
         <?= $item('/admin/settings', 'Paramètres', '⚙️', 'settings.view') ?>
         <?= $item('/admin/pages', 'Pages CMS', '📄', 'cms.manage') ?>

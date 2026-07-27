@@ -50,10 +50,19 @@ final class Profile extends Model
         return $stmt->fetch() ?: [];
     }
 
+    /** Le membre a-t-il activé la navigation privée (incognito) ? */
+    public function isIncognito(int $userId): bool
+    {
+        return (bool) $this->run(
+            'SELECT incognito FROM privacy_settings WHERE user_id = ?',
+            [$userId]
+        )->fetchColumn();
+    }
+
     public function updatePrivacy(int $userId, array $data): void
     {
         $allowed = ['show_online', 'show_distance', 'show_age', 'show_last_active',
-                    'discoverable', 'read_receipts', 'allow_messages_from'];
+                    'discoverable', 'incognito', 'read_receipts', 'allow_messages_from'];
         $sets = [];
         $params = [];
         foreach ($allowed as $col) {

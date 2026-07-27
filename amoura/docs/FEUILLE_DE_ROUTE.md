@@ -1,7 +1,7 @@
 # 💞 Amoura — Feuille de route produit
 
 **Plateforme SaaS de rencontres en ligne**
-Version du document : 2.4 · Date : 27 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +10 livrés)
+Version du document : 2.5 · Date : 27 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +11 livrés)
 
 ---
 
@@ -42,7 +42,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 | Abonnements & paiements | ✅ Livré | Stripe, PayPal, CinetPay, PayDunya + **vérification serveur idempotente** |
 | Espace admin / CMS | ✅ Livré | Tableau de bord, membres, modération, facturation, réglages, rôles, audit |
 | Design system | ✅ Livré | Tokens, thèmes clair/sombre, responsive mobile-first |
-| Qualité | ✅ Livré | **156 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5** + tests de charge, tous verts |
+| Qualité | ✅ Livré | **164 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5** + tests de charge, tous verts |
 | Déploiement | ✅ Livré | Docker Compose (web + MySQL + WebSocket + coturn), installeur XAMPP |
 
 ---
@@ -85,8 +85,8 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 - [x] **Coupons de réduction** — *Sprint +6* ✅ · *(paliers annuels & essais gratuits à venir)*
 - [x] **Portefeuille de crédits** + **reçus imprimables/PDF** — *Sprints +5/+6*. ✅
 - [x] **Relances d'échec (dunning)** — *Sprint +5* ✅ · *(renouvellement auto prestataire à venir)*
-- [ ] Mode incognito et navigation privée (VIP).
-- [ ] Tableau de bord revenus avancé (cohortes, LTV, churn) côté admin.
+- [x] **Mode incognito** (navigation privée VIP : consulter sans laisser de trace, gated sur l'offre VIP) — *Sprint +11*. ✅
+- [x] **Tableau de bord revenus** (MRR, ARPU, LTV, churn, tendance 12 mois, répartition prestataire/offre) — *Sprint +11*. ✅
 
 ### 🟠 Phase 4 — Confiance, sécurité & conformité *(T1–T2 2027 · en continu)*
 

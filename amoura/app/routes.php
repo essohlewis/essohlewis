@@ -172,6 +172,7 @@ return function (Router $r): void {
         $r->post('/moderation/bulk', 'Amoura\Controllers\Admin\ModerationController@bulk', $staffCsrf);
         $r->post('/moderation/photos/{id}', 'Amoura\Controllers\Admin\ModerationController@photo', $staffCsrf);
 
+        $r->get('/revenue', 'Amoura\Controllers\Admin\RevenueController@index', $staff);
         $r->get('/billing', 'Amoura\Controllers\Admin\BillingController@index', $staff);
         $r->post('/billing/plans/{id}', 'Amoura\Controllers\Admin\BillingController@savePlan', $staffCsrf);
         $r->post('/billing/transactions/{id}/refund', 'Amoura\Controllers\Admin\BillingController@refund', $staffCsrf);

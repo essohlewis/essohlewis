@@ -40,8 +40,10 @@ final class ProfileController extends Controller
             return;
         }
         // Enregistre la visite (« qui a vu mon profil »), hors auto-visite.
-        if ((int) $viewer['id'] !== $targetId) {
-            (new \Amoura\Models\ProfileView())->record($targetId, (int) $viewer['id']);
+        // Le mode incognito (VIP entitlé) permet de consulter sans laisser de trace.
+        $viewerId = (int) $viewer['id'];
+        if ($viewerId !== $targetId && !$this->isBrowsingIncognito($viewerId)) {
+            (new \Amoura\Models\ProfileView())->record($targetId, $viewerId);
         }
 
         $this->view('profile/show', [
@@ -79,6 +81,7 @@ final class ProfileController extends Controller
             'raw' => $profileModel->find((int) $user['id']),
             'photos' => (new Photo())->forUser((int) $user['id']),
             'privacy' => $profileModel->privacy((int) $user['id']),
+            'can_incognito' => (new \Amoura\Models\Subscription())->hasFeature((int) $user['id'], 'incognito'),
         ]);
     }
 
@@ -170,7 +173,8 @@ final class ProfileController extends Controller
     {
         $user = $this->requireAuth($request);
         $data = $request->all();
-        (new Profile())->updatePrivacy((int) $user['id'], [
+        $uid = (int) $user['id'];
+        $privacy = [
             'show_online' => isset($data['show_online']) ? 1 : 0,
             'show_distance' => isset($data['show_distance']) ? 1 : 0,
             'show_age' => isset($data['show_age']) ? 1 : 0,
@@ -178,9 +182,21 @@ final class ProfileController extends Controller
             'discoverable' => isset($data['discoverable']) ? 1 : 0,
             'read_receipts' => isset($data['read_receipts']) ? 1 : 0,
             'allow_messages_from' => in_array($data['allow_messages_from'] ?? '', ['matches','verified','everyone'], true) ? $data['allow_messages_from'] : 'matches',
-        ]);
+        ];
+        // Le mode incognito est réservé aux membres VIP entitlés.
+        if ((new \Amoura\Models\Subscription())->hasFeature($uid, 'incognito')) {
+            $privacy['incognito'] = isset($data['incognito']) ? 1 : 0;
+        }
+        (new Profile())->updatePrivacy($uid, $privacy);
         Session::flash('success', 'Confidentialité enregistrée.');
         $this->redirect('/profile/edit');
+    }
+
+    /** Vrai si le membre navigue en incognito (flag activé ET droit VIP en cours). */
+    private function isBrowsingIncognito(int $userId): bool
+    {
+        return (new Profile())->isIncognito($userId)
+            && (new \Amoura\Models\Subscription())->hasFeature($userId, 'incognito');
     }
 
     public function requestVerification(Request $request): void
