@@ -1,7 +1,7 @@
 # 💞 Amoura — Feuille de route produit
 
 **Plateforme SaaS de rencontres en ligne**
-Version du document : 2.6 · Date : 27 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +12 livrés)
+Version du document : 2.7 · Date : 27 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +13 livrés)
 
 ---
 
@@ -42,7 +42,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 | Abonnements & paiements | ✅ Livré | Stripe, PayPal, CinetPay, PayDunya + **vérification serveur idempotente** |
 | Espace admin / CMS | ✅ Livré | Tableau de bord, membres, modération, facturation, réglages, rôles, audit |
 | Design system | ✅ Livré | Tokens, thèmes clair/sombre, responsive mobile-first |
-| Qualité | ✅ Livré | **169 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5** + tests de charge, tous verts |
+| Qualité | ✅ Livré | **178 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5** + tests de charge, tous verts |
 | Déploiement | ✅ Livré | Docker Compose (web + MySQL + WebSocket + coturn), installeur XAMPP |
 
 ---
@@ -50,7 +50,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 ## 3. Feuille de route par phases
 
 > Légende : **[x]** livré · **[~]** partiellement livré · **[ ]** à faire.
-> Phases 1–4 bouclées côté code ; Phase 5 entamée (parrainage, Sprint +12). Restent le gros de la Phase 5 (apps natives, passerelles, événements) et la Phase 6 (IA/observabilité).
+> Phases 1–4 bouclées côté code ; Phases 5 et 6 entamées (parrainage, observabilité). Restent le gros de la Phase 5 (apps natives, passerelles, événements) et l'IA de la Phase 6 (matching ML, brise-glaces).
 
 ### 🟢 Phase 1 — Stabilisation & mise en production *(T3 2026 · 4–6 semaines)*
 
@@ -117,7 +117,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 - [ ] Brise-glaces et suggestions de conversation assistés par IA.
 - [x] **Cache Redis, réplicas de lecture, clustering WebSocket** — *Sprints +3/+6*. ✅
 - [x] **Stockage objet (S3) + CDN images** — *Sprint +6* ✅ · *(transcodage vocal serveur à venir)*
-- [ ] Observabilité complète (traçage distribué, SLO/SLA).
+- [x] **Observabilité** : health checks (`/healthz`, `/healthz/ready`), métriques Prometheus (`/metrics`), request-id de corrélation dans les logs (`Core\Observability`, `docs/OBSERVABILITE.md`) — *Sprint +13*. ✅ *(traçage distribué/SLO à étendre)*
 
 ---
 

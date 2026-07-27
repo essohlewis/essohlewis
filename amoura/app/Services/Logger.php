@@ -28,6 +28,10 @@ final class Logger
             'context' => $context,
             'env'     => (string) Env::get('APP_ENV', 'local'),
         ];
+        // Corrélation : rattache l'identifiant de requête si un contexte est actif.
+        if (\Amoura\Core\Observability\RequestContext::started()) {
+            $entry['request_id'] = \Amoura\Core\Observability\RequestContext::id();
+        }
         $line = json_encode($entry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
 
         $file = self::path();

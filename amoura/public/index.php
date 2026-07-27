@@ -31,6 +31,18 @@ if (is_file($root . '/vendor/autoload.php')) {
 Env::load($root . '/.env');
 date_default_timezone_set((string) Env::get('APP_TIMEZONE', 'UTC'));
 
+// 2b) Observabilité : identifiant de corrélation + liveness ultra-léger.
+if (PHP_SAPI !== 'cli') {
+    \Amoura\Core\Observability\RequestContext::begin($_SERVER['HTTP_X_REQUEST_ID'] ?? null);
+    header('X-Request-Id: ' . \Amoura\Core\Observability\RequestContext::id());
+
+    $reqPath = rtrim((string) (parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/'), '/') ?: '/';
+    if ($reqPath === '/healthz' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+        (new \Amoura\Controllers\HealthController())->live();   // ni session ni dépendances
+        exit;
+    }
+}
+
 // 3) Gestion des erreurs selon l'environnement.
 if (Env::bool('APP_DEBUG')) {
     error_reporting(E_ALL);
@@ -52,8 +64,9 @@ Session::start();
 $router = new Router();
 (require $root . '/app/routes.php')($router);
 
+$request = new Request();
 try {
-    $router->dispatch(new Request());
+    $router->dispatch($request);
 } catch (\Throwable $e) {
     if (Env::bool('APP_DEBUG')) {
         http_response_code(500);
@@ -69,4 +82,12 @@ try {
         http_response_code(500);
         \Amoura\Core\View::render('errors/error', ['code' => 500, 'message' => 'Une erreur est survenue.'], null);
     }
+} finally {
+    // Journal d'accès structuré (méthode, chemin, statut, durée, request_id).
+    \Amoura\Services\Logger::info('http_request', [
+        'method' => $request->method(),
+        'path' => $request->path(),
+        'status' => http_response_code() ?: 200,
+        'duration_ms' => round(\Amoura\Core\Observability\RequestContext::durationMs(), 2),
+    ]);
 }

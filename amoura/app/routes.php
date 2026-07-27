@@ -143,6 +143,11 @@ return function (Router $r): void {
     $r->post('/settings/sessions/revoke', 'Amoura\Controllers\SecurityController@revokeSessions', $authCsrf);
 
     // RGPD
+    // Observabilité (Phase 6) — endpoints publics/infra, sans authentification.
+    $r->get('/healthz', 'Amoura\Controllers\HealthController@live');
+    $r->get('/healthz/ready', 'Amoura\Controllers\HealthController@ready');
+    $r->get('/metrics', 'Amoura\Controllers\HealthController@metrics');
+
     // Parrainage (Phase 5).
     $r->get('/invite', 'Amoura\Controllers\ReferralController@index', $auth);
 
