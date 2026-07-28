@@ -7,7 +7,7 @@ info:
     `X-CSRF-Token` sur les requêtes mutatives ; (2) **jeton porteur** (`Bearer`)
     pour les clients mobiles/tiers, sous le préfixe versionné `/api/v1` (stateless,
     sans CSRF). Les jetons sont opaques, révocables et à portée (abilities).
-  version: "1.9.0"
+  version: "1.10.0"
 servers:
   - url: /
     description: Même origine que l'application
@@ -83,6 +83,37 @@ components:
         last_used_at: { type: string, nullable: true }
         expires_at: { type: string, nullable: true }
         created_at: { type: string }
+    ProfileFull:
+      type: object
+      description: Profil complet (lat/long & completion présents seulement pour le propriétaire).
+      properties:
+        id: { type: integer }
+        display_name: { type: string, nullable: true }
+        age: { type: integer, nullable: true }
+        gender: { type: string, nullable: true }
+        is_verified: { type: boolean }
+        is_online: { type: boolean }
+        bio: { type: string, nullable: true }
+        orientation: { type: string, nullable: true }
+        looking_for: { type: string, enum: [male, female, everyone], nullable: true }
+        country: { type: string, nullable: true }
+        city: { type: string, nullable: true }
+        job_title: { type: string, nullable: true }
+        education: { type: string, nullable: true }
+        interests: { type: array, items: { type: string } }
+        languages: { type: array, items: { type: string } }
+        avatar: { type: string }
+        completion: { type: integer, description: "Propriétaire uniquement" }
+        latitude: { type: number, nullable: true, description: "Propriétaire uniquement" }
+        longitude: { type: number, nullable: true, description: "Propriétaire uniquement" }
+    Photo:
+      type: object
+      properties:
+        id: { type: integer }
+        path: { type: string }
+        thumb: { type: string, nullable: true }
+        is_primary: { type: boolean }
+        moderation: { type: string, nullable: true }
     Message:
       type: object
       properties:
@@ -401,6 +432,84 @@ paths:
       responses:
         "200": { description: Lu, content: { application/json: { schema: { $ref: "#/components/schemas/Ok" } } } }
         "403": { description: Conversation inaccessible }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/profile:
+    get:
+      tags: [Mobile v1]
+      summary: Profil de l'utilisateur courant (avec photos)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Profil et photos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  profile: { $ref: "#/components/schemas/ProfileFull" }
+                  photos: { type: array, items: { $ref: "#/components/schemas/Photo" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      tags: [Mobile v1]
+      summary: Mise à jour du profil courant
+      description: "Accepte aussi POST (clients sans PATCH). Les valeurs d'énumération invalides sont ignorées."
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bio: { type: string, maxLength: 1000 }
+                orientation: { type: string, enum: [straight, gay, lesbian, bisexual, pansexual, asexual, other] }
+                looking_for: { type: string, enum: [male, female, everyone] }
+                country: { type: string }
+                city: { type: string }
+                job_title: { type: string }
+                education: { type: string }
+                interests: { type: string, description: "Liste séparée par des virgules (max 15)" }
+                languages: { type: string, description: "Liste séparée par des virgules (max 10)" }
+                smoking: { type: string, enum: [no, sometimes, yes] }
+                drinking: { type: string, enum: [no, sometimes, yes] }
+                children: { type: string, enum: [no, someday, have, have_more] }
+                religion: { type: string }
+                relationship_goal: { type: string, enum: [casual, serious, friends, unsure] }
+                latitude: { type: number }
+                longitude: { type: number }
+      responses:
+        "200":
+          description: Profil mis à jour
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  profile: { $ref: "#/components/schemas/ProfileFull" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/users/{id}:
+    get:
+      tags: [Mobile v1]
+      summary: Consultation d'un autre profil (enregistre la visite hors incognito)
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Profil public et photos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  profile: { $ref: "#/components/schemas/ProfileFull" }
+                  photos: { type: array, items: { $ref: "#/components/schemas/Photo" } }
+        "404": { description: Profil introuvable }
         "401": { $ref: "#/components/responses/Unauthorized" }
   /api/discover:
     get:

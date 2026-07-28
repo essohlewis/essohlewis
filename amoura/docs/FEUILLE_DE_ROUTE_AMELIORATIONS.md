@@ -1,7 +1,7 @@
 # 💞 Amoura — Feuille de route des améliorations
 
 **Plan d'amélioration continue de la plateforme**
-Version : 3.5 · Date : 28 juillet 2026 · Portée : améliorations livrées + backlog priorisé
+Version : 3.6 · Date : 28 juillet 2026 · Portée : améliorations livrées + backlog priorisé
 
 > Légende — **Impact** : 🟢 Faible · 🟡 Moyen · 🔴 Élevé | **Effort** : S (≤2 j) · M (≤1 sem) · L (2–3 sem) · XL (>1 mois) | **Priorité** : P0 (critique) → P3 (confort)
 
@@ -10,7 +10,7 @@ Version : 3.5 · Date : 28 juillet 2026 · Portée : améliorations livrées + b
 ## 1. Améliorations livrées dans cette itération ✅
 
 Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont été
-**implémentées et testées** (suite passée à **257 tests / 698 assertions**, analyse
+**implémentées et testées** (suite passée à **261 tests / 712 assertions**, analyse
 statique **PHPStan niveau 5 sans erreur**).
 
 | Amélioration | Axe | Détail | Vérification |
@@ -183,6 +183,7 @@ Dernière itération : **tout le reliquat du backlog** a été traité.
 | **Sprint +23** ✅ | API / Mobile (Phase 5) | **API mobile stateless** : jetons porteurs opaques **stockés hachés** (SHA-256), révocables, à portée (`abilities` : `*`, exact, `ns:*`) et expiration ; middleware `Authorization: Bearer` (`ApiAuthenticate` → `Auth::actingAs`, sans session/CSRF) ; routes versionnées `/api/v1` (login avec anti-énumération + limitation IP/email + rejet suspendu/non vérifié/2FA, logout, `me`, gestion des jetons/appareils) ; purge cron des jetons expirés ; **OpenAPI 1.7.0** (`bearerAuth`) — *livré* |
 | **Sprint +24** ✅ | API / Mobile (Phase 5) | **Découverte & matching mobiles** sous `/api/v1` : `GET /discover` (vivier reclassé par affinité + filtres), `POST /swipe`, `GET /matches` (aperçu du dernier message **déchiffré**), `POST /matches/{id}/unmatch`, avec portées. Logique métier factorisée dans **`DiscoveryService`** (quota de likes, Super Like, détection de match, notifications) réutilisé par le web et l'API ; **OpenAPI 1.8.0** — *livré* |
 | **Sprint +25** ✅ | API / Mobile (Phase 5) | **Messagerie mobile** sous `/api/v1` : `GET /conversations` (aperçu déchiffré), `GET /conversations/{id}/messages` (historique déchiffré, pagination `before`/`limit`), `POST /conversations/{id}/messages` (**chiffré au repos**, éphémères/réponses), `POST /conversations/{id}/read` ; portées + contrôle d'appartenance. Logique factorisée dans **`MessagingService`** (réutilisé par le web) ; flux vérifié en bout-en-bout (corps chiffré `enc:…` en base) ; **OpenAPI 1.9.0** — *livré* |
+| **Sprint +26** ✅ | API / Mobile (Phase 5) | **Profil mobile** sous `/api/v1` : `GET /profile` (soi + photos), `PATCH` / `POST /profile` (mise à jour validée, énumérations invalides ignorées), `GET /users/{id}` (autre profil, **visite enregistrée hors incognito**) ; les champs sensibles (lat/long, complétion) ne sont exposés qu'au propriétaire. Logique factorisée dans **`ProfileService`** (réutilisé par le web) ; flux vérifié en bout-en-bout ; **OpenAPI 1.10.0** — *livré* |
 
 ---
 
