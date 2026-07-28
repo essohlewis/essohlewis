@@ -2,9 +2,12 @@ openapi: 3.0.3
 info:
   title: Amoura — API interne
   description: >
-    API REST interne d'Amoura (plateforme SaaS de rencontres). Authentification
-    par session (cookie). Les requêtes mutatives exigent l'en-tête `X-CSRF-Token`.
-  version: "1.6.0"
+    API REST d'Amoura (plateforme SaaS de rencontres). Deux modes
+    d'authentification : (1) **session cookie** pour l'application web, avec
+    `X-CSRF-Token` sur les requêtes mutatives ; (2) **jeton porteur** (`Bearer`)
+    pour les clients mobiles/tiers, sous le préfixe versionné `/api/v1` (stateless,
+    sans CSRF). Les jetons sont opaques, révocables et à portée (abilities).
+  version: "1.7.0"
 servers:
   - url: /
     description: Même origine que l'application
@@ -16,6 +19,8 @@ tags:
   - name: Notifications
   - name: Paiements
   - name: Push
+  - name: Mobile v1
+    description: API mobile stateless (jeton porteur, préfixe /api/v1)
 
 components:
   securitySchemes:
@@ -23,6 +28,12 @@ components:
       type: apiKey
       in: cookie
       name: amoura_sess
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: >
+        Jeton d'accès obtenu via `POST /api/v1/auth/login`, transmis en en-tête
+        `Authorization: Bearer <jeton>`. Opaque, révocable, expiration ~30 jours.
   parameters:
     Csrf:
       name: X-CSRF-Token
@@ -53,11 +64,126 @@ components:
         interests: { type: array, items: { type: string } }
         affinity: { type: number, description: Score d'affinité (recommandation) }
         distance_km: { type: number, nullable: true }
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        display_name: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        status: { type: string, enum: [pending, active, suspended, banned, deleted] }
+        is_verified: { type: boolean }
+        role: { type: string, nullable: true }
+        created_at: { type: string, nullable: true }
+    ApiTokenInfo:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string, description: Libellé de l'appareil/client }
+        abilities: { type: array, items: { type: string } }
+        last_used_at: { type: string, nullable: true }
+        expires_at: { type: string, nullable: true }
+        created_at: { type: string }
 
 security:
   - sessionCookie: []
 
 paths:
+  /api/v1/auth/login:
+    post:
+      tags: [Mobile v1]
+      summary: Échange identifiants → jeton porteur
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+                device_name: { type: string, description: Libellé de l'appareil (facultatif) }
+      responses:
+        "201":
+          description: Jeton émis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  token: { type: string, example: "amoura_…" }
+                  token_type: { type: string, example: Bearer }
+                  expires_at: { type: string, nullable: true }
+                  user: { $ref: "#/components/schemas/User" }
+        "401": { description: Identifiants incorrects, $ref: "#/components/responses/Unauthorized" }
+        "403": { description: "Compte suspendu, email non vérifié ou 2FA requis" }
+        "429": { description: Trop de tentatives (limitation de débit) }
+  /api/v1/auth/logout:
+    post:
+      tags: [Mobile v1]
+      summary: Révoque le jeton courant (déconnexion de l'appareil)
+      security:
+        - bearerAuth: []
+      responses:
+        "200": { description: Jeton révoqué, content: { application/json: { schema: { $ref: "#/components/schemas/Ok" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/me:
+    get:
+      tags: [Mobile v1]
+      summary: Profil de l'utilisateur authentifié
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Utilisateur courant
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  user: { $ref: "#/components/schemas/User" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Portée insuffisante, $ref: "#/components/responses/Forbidden" }
+  /api/v1/tokens:
+    get:
+      tags: [Mobile v1]
+      summary: Liste des jetons/appareils actifs
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Jetons actifs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  tokens: { type: array, items: { $ref: "#/components/schemas/ApiTokenInfo" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    delete:
+      tags: [Mobile v1]
+      summary: Révoque tous les jetons (déconnecte tous les appareils)
+      security:
+        - bearerAuth: []
+      responses:
+        "200": { description: Jetons révoqués, content: { application/json: { schema: { $ref: "#/components/schemas/Ok" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/tokens/{id}:
+    delete:
+      tags: [Mobile v1]
+      summary: Révoque un jeton précis
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200": { description: Jeton révoqué, content: { application/json: { schema: { $ref: "#/components/schemas/Ok" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { description: Jeton introuvable }
   /api/discover:
     get:
       tags: [Découverte]

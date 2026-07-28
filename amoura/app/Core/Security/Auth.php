@@ -16,6 +16,8 @@ final class Auth
 {
     private const SESSION_KEY = 'user_id';
     private static ?array $cache = null;
+    /** Jeton API courant lorsqu'on est authentifié sans session (clients mobiles). */
+    private static ?array $apiToken = null;
 
     /** Options Argon2id — coût mémoire/temps raisonnable pour un serveur web. */
     private static function hashOptions(): array
@@ -59,8 +61,45 @@ final class Auth
 
     public static function id(): ?int
     {
+        // Authentification stateless (jeton API) : l'utilisateur est déjà en cache,
+        // sans session — on retourne son identifiant directement.
+        if (self::$cache !== null && isset(self::$cache['id'])) {
+            return (int) self::$cache['id'];
+        }
         $id = Session::get(self::SESSION_KEY);
         return is_int($id) ? $id : (is_numeric($id) ? (int) $id : null);
+    }
+
+    /**
+     * Authentifie la requête courante à partir d'un utilisateur déjà résolu
+     * (via un jeton API), sans toucher à la session. Le reste de la requête voit
+     * cet utilisateur via Auth::user() / Auth::id() / Auth::can().
+     *
+     * @param array<string,mixed> $user
+     * @param array<string,mixed>|null $token ligne api_tokens associée (pour les portées).
+     */
+    public static function actingAs(array $user, ?array $token = null): void
+    {
+        self::$cache = $user;
+        self::$apiToken = $token;
+    }
+
+    /** Jeton API de la requête courante (null en contexte web/session). @return array<string,mixed>|null */
+    public static function apiToken(): ?array
+    {
+        return self::$apiToken;
+    }
+
+    /** Le jeton API courant accorde-t-il la portée demandée ? (true si contexte web/session). */
+    public static function tokenAllows(string $ability): bool
+    {
+        if (self::$apiToken === null) {
+            return true; // hors contexte jeton : pas de restriction de portée
+        }
+        return \Amoura\Models\ApiToken::allows(
+            \Amoura\Models\ApiToken::abilitiesOf(self::$apiToken),
+            $ability
+        );
     }
 
     public static function check(): bool

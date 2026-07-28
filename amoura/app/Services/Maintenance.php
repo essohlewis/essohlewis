@@ -27,6 +27,11 @@ final class Maintenance
              OR (consumed_at IS NOT NULL AND consumed_at < DATE_SUB(NOW(), INTERVAL 1 DAY))'
         )->rowCount();
 
+        // 2b) Jetons d'accès API expirés (clients mobiles).
+        $deleted['api_tokens'] = $db->query(
+            'DELETE FROM api_tokens WHERE expires_at IS NOT NULL AND expires_at < NOW()'
+        )->rowCount();
+
         // 3) Sessions inactives depuis plus de 30 jours.
         $cutoff = time() - 30 * 86400;
         $stmt = $db->prepare('DELETE FROM sessions WHERE last_activity < ?');

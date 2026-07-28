@@ -603,6 +603,22 @@ CREATE TABLE login_devices (
     CONSTRAINT fk_device_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Jetons d'accès API (clients mobiles / tiers) — porteurs opaques hachés.
+CREATE TABLE api_tokens (
+    id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id      BIGINT UNSIGNED NOT NULL,
+    name         VARCHAR(100)   NOT NULL DEFAULT 'mobile',
+    token_hash   CHAR(64)       NOT NULL,                    -- SHA-256 hex du jeton en clair
+    abilities    JSON           NULL,                        -- portées, ex. ["*"]
+    last_used_at DATETIME       NULL,
+    expires_at   DATETIME       NULL,                        -- NULL = sans expiration
+    created_at   DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_api_tokens_hash (token_hash),
+    KEY idx_api_tokens_user (user_id),
+    CONSTRAINT fk_api_tokens_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE verification_requests (
     id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     user_id      BIGINT UNSIGNED NOT NULL,

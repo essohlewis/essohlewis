@@ -14,6 +14,25 @@ final class User extends Model
         return $this->findBy('email', $email);
     }
 
+    /**
+     * Charge un utilisateur avec son rôle et ses permissions (mêmes champs que
+     * Auth::user()), pour l'authentification par jeton API. Retourne null si le
+     * compte n'est pas exploitable (statut non actif/en attente).
+     *
+     * @return array<string,mixed>|null
+     */
+    public function withRole(int $id): ?array
+    {
+        $stmt = $this->run(
+            'SELECT u.*, r.slug AS role_slug, r.permissions AS role_permissions, r.is_staff
+             FROM users u JOIN roles r ON r.id = u.role_id
+             WHERE u.id = ? AND u.status IN ("active","pending") LIMIT 1',
+            [$id]
+        );
+        $row = $stmt->fetch();
+        return $row ?: null;
+    }
+
     public function byPhone(string $phone): ?array
     {
         return $this->findBy('phone', $phone);

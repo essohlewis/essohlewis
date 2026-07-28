@@ -69,6 +69,18 @@ return function (Router $r): void {
         $r->post('/logout', 'Amoura\Controllers\AuthController@logout');
     });
 
+    // ── API mobile v1 (stateless, jetons porteurs) ──────────────────────
+    // Authentification par en-tête « Authorization: Bearer <jeton> », versionnée
+    // sous /api/v1 pour ne pas casser les clients lors d'évolutions. Pas de CSRF
+    // (protège l'auth par cookie, sans objet ici) ni de session.
+    $apiAuth = [\Amoura\Middleware\ApiAuthenticate::class];
+    $r->post('/api/v1/auth/login', 'Amoura\Controllers\Api\AuthController@login');
+    $r->post('/api/v1/auth/logout', 'Amoura\Controllers\Api\AuthController@logout', $apiAuth);
+    $r->get('/api/v1/me', 'Amoura\Controllers\Api\AccountController@me', $apiAuth);
+    $r->get('/api/v1/tokens', 'Amoura\Controllers\Api\AccountController@tokens', $apiAuth);
+    $r->delete('/api/v1/tokens/{id}', 'Amoura\Controllers\Api\AccountController@revokeToken', $apiAuth);
+    $r->delete('/api/v1/tokens', 'Amoura\Controllers\Api\AccountController@revokeAll', $apiAuth);
+
     // ── Espace membre (authentifié) ─────────────────────────────────────
     $auth = [Authenticate::class];
     $authCsrf = [Authenticate::class, VerifyCsrf::class];
