@@ -5,15 +5,11 @@ namespace Amoura\Controllers;
 
 use Amoura\Core\Controller;
 use Amoura\Core\Request;
-use Amoura\Models\Matching;
-use Amoura\Models\Notification;
 use Amoura\Models\Subscription;
 use Amoura\Models\Swipe;
 
 final class DiscoverController extends Controller
 {
-    private const FREE_DAILY_LIKES = 20;
-
     public function index(Request $request): void
     {
         $user = $this->requireAuth($request);
@@ -44,98 +40,31 @@ final class DiscoverController extends Controller
     public function feed(Request $request): void
     {
         $user = $this->requireAuth($request);
-        $filters = [
-            'gender' => $request->query('gender'),
-            'country' => $request->query('country'),
-            'city' => $request->query('city'),
-            'min_age' => $request->query('min_age'),
-            'max_age' => $request->query('max_age'),
-            'distance_km' => $request->query('distance_km'),
-            'lat' => $request->query('lat'),
-            'lng' => $request->query('lng'),
-            'smoking' => $request->query('smoking'),
-            'drinking' => $request->query('drinking'),
-            'children' => $request->query('children'),
-            'relationship_goal' => $request->query('relationship_goal'),
-        ];
-        // On récupère un vivier élargi puis on le reclasse par affinité (Phase 2).
-        $profiles = (new Matching())->discover(
-            (int) $user['id'],
-            array_filter($filters, fn($v) => $v !== null && $v !== ''),
-            60
-        );
-
-        // Enrichissement d'affichage (âge, avatar, intérêts décodés).
-        $profiles = array_map(function ($p) {
-            $p['age'] = age_from($p['birthdate'] ?? null);
-            $p['avatar'] = avatar_url($p['avatar_path'] ?? null);
-            $p['interests'] = json_decode($p['interests'] ?? '[]', true) ?: [];
-            unset($p['birthdate']);
-            return $p;
-        }, $profiles);
-
-        // Profil de l'observateur pour le calcul d'affinité.
-        $me = (new \Amoura\Models\User())->fullProfile((int) $user['id']) ?? [];
-        $viewer = [
-            'interests' => json_decode($me['interests'] ?? '[]', true) ?: [],
-            'city' => $me['city'] ?? null,
-            'country' => $me['country'] ?? null,
-            'age' => age_from($me['birthdate'] ?? null),
-        ];
-
-        $ranked = \Amoura\Services\Recommender::rank($viewer, $profiles);
-        // Reclassement personnalisé par apprentissage implicite (Phase 6).
-        $ranked = \Amoura\Services\Matching\PersonalizedRanker::rerank((int) $user['id'], $ranked);
-        $this->json(['ok' => true, 'profiles' => array_slice($ranked, 0, 20)]);
+        $profiles = (new \Amoura\Services\Discovery\DiscoveryService())
+            ->feed((int) $user['id'], $request->all(), 20);
+        $this->json(['ok' => true, 'profiles' => $profiles]);
     }
 
     /** Enregistre un like/pass et gère le quota + la détection de match. */
     public function swipe(Request $request): void
     {
         $user = $this->requireAuth($request);
-        $uid = (int) $user['id'];
-        $targetId = (int) $request->input('target_id');
-        $action = (string) $request->input('action');
+        $result = (new \Amoura\Services\Discovery\DiscoveryService())->swipe(
+            (int) $user['id'],
+            (int) $request->input('target_id'),
+            (string) $request->input('action')
+        );
 
-        if (!in_array($action, ['like', 'pass', 'superlike'], true) || $targetId <= 0) {
-            $this->json(['ok' => false, 'error' => 'Action invalide.'], 422);
-        }
-
-        // Super Like : consomme un crédit (achat à l'unité) de façon atomique.
-        if ($action === 'superlike') {
-            if (!(new \Amoura\Models\Credit())->consume($uid, 'superlike')) {
-                $this->json([
-                    'ok' => false,
-                    'error' => 'Aucun Super Like disponible.',
-                    'store' => true,
-                ], 402);
+        if (!$result['ok']) {
+            // On préserve les indices client existants (store / upgrade).
+            $extra = [];
+            if (!empty($result['flags']['store'])) {
+                $extra['store'] = true;
             }
-        }
-
-        // Quota de likes pour les comptes gratuits.
-        $subs = new Subscription();
-        $unlimited = $subs->hasFeature($uid, 'unlimited_likes');
-        if (!$unlimited && $action === 'like') {
-            $today = (new Swipe())->likesTodayCount($uid);
-            if ($today >= self::FREE_DAILY_LIKES) {
-                $this->json([
-                    'ok' => false,
-                    'error' => 'Limite quotidienne de likes atteinte.',
-                    'upgrade' => true,
-                ], 402);
+            if (!empty($result['flags']['upgrade'])) {
+                $extra['upgrade'] = true;
             }
-        }
-
-        $result = (new Swipe())->act($uid, $targetId, $action);
-
-        // Notifications temps réel : like reçu + match mutuel.
-        $notif = new Notification();
-        if ($action !== 'pass') {
-            $notif->push($targetId, $action === 'superlike' ? 'superlike' : 'like', $uid);
-        }
-        if ($result['matched']) {
-            $notif->push($targetId, 'match', $uid, ['conversation_id' => $result['conversation_id']]);
-            $notif->push($uid, 'match', $targetId, ['conversation_id' => $result['conversation_id']]);
+            $this->json(['ok' => false, 'error' => $result['error']] + $extra, $result['status']);
         }
 
         $this->json([

@@ -80,6 +80,11 @@ return function (Router $r): void {
     $r->get('/api/v1/tokens', 'Amoura\Controllers\Api\AccountController@tokens', $apiAuth);
     $r->delete('/api/v1/tokens/{id}', 'Amoura\Controllers\Api\AccountController@revokeToken', $apiAuth);
     $r->delete('/api/v1/tokens', 'Amoura\Controllers\Api\AccountController@revokeAll', $apiAuth);
+    // Découverte & matching
+    $r->get('/api/v1/discover', 'Amoura\Controllers\Api\DiscoverController@feed', $apiAuth);
+    $r->post('/api/v1/swipe', 'Amoura\Controllers\Api\DiscoverController@swipe', $apiAuth);
+    $r->get('/api/v1/matches', 'Amoura\Controllers\Api\DiscoverController@matches', $apiAuth);
+    $r->post('/api/v1/matches/{id}/unmatch', 'Amoura\Controllers\Api\DiscoverController@unmatch', $apiAuth);
 
     // ── Espace membre (authentifié) ─────────────────────────────────────
     $auth = [Authenticate::class];
