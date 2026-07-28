@@ -7,7 +7,7 @@ info:
     `X-CSRF-Token` sur les requêtes mutatives ; (2) **jeton porteur** (`Bearer`)
     pour les clients mobiles/tiers, sous le préfixe versionné `/api/v1` (stateless,
     sans CSRF). Les jetons sont opaques, révocables et à portée (abilities).
-  version: "1.8.0"
+  version: "1.9.0"
 servers:
   - url: /
     description: Même origine que l'application
@@ -83,6 +83,23 @@ components:
         last_used_at: { type: string, nullable: true }
         expires_at: { type: string, nullable: true }
         created_at: { type: string }
+    Message:
+      type: object
+      properties:
+        id: { type: integer }
+        conversation_id: { type: integer }
+        sender_id: { type: integer }
+        type: { type: string, enum: [text, voice, image] }
+        body: { type: string, nullable: true, description: Texte déchiffré (null pour les médias) }
+        media_path: { type: string, nullable: true }
+        media_meta: { type: object, nullable: true }
+        reply_to_id: { type: integer, nullable: true }
+        reply_body: { type: string, nullable: true }
+        reactions: { type: integer }
+        delivered_at: { type: string, nullable: true }
+        read_at: { type: string, nullable: true }
+        expires_at: { type: string, nullable: true }
+        created_at: { type: string, nullable: true }
 
 security:
   - sessionCookie: []
@@ -282,6 +299,108 @@ paths:
         - { name: id, in: path, required: true, schema: { type: integer } }
       responses:
         "200": { description: Match retiré, content: { application/json: { schema: { $ref: "#/components/schemas/Ok" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/conversations:
+    get:
+      tags: [Mobile v1]
+      summary: Liste des conversations (mobile)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Conversations avec aperçu du dernier message déchiffré
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  conversations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        conversation_id: { type: integer }
+                        user_id: { type: integer }
+                        display_name: { type: string }
+                        avatar: { type: string }
+                        is_online: { type: boolean }
+                        is_verified: { type: boolean }
+                        unread: { type: integer }
+                        last_message: { type: string, nullable: true }
+                        last_message_at: { type: string, nullable: true }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/conversations/{id}/messages:
+    get:
+      tags: [Mobile v1]
+      summary: Historique déchiffré d'une conversation (mobile)
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+        - { name: before, in: query, description: id de message pour la pagination (scroll infini), schema: { type: integer } }
+        - { name: limit, in: query, schema: { type: integer, default: 40, maximum: 100 } }
+      responses:
+        "200":
+          description: Messages en ordre chronologique
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  messages: { type: array, items: { $ref: "#/components/schemas/Message" } }
+        "403": { description: Conversation inaccessible, $ref: "#/components/responses/Forbidden" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Mobile v1]
+      summary: Envoi d'un message texte (mobile, chiffré au repos)
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, maxLength: 4000 }
+                reply_to_id: { type: integer, nullable: true }
+                ttl: { type: integer, description: "Durée de vie en secondes (message éphémère, max 86400)" }
+      responses:
+        "201":
+          description: Message créé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  message: { $ref: "#/components/schemas/Message" }
+        "403": { description: Conversation inaccessible }
+        "422": { description: Message vide }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/conversations/{id}/read:
+    post:
+      tags: [Mobile v1]
+      summary: Accusé de lecture (mobile)
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                last_message_id: { type: integer }
+      responses:
+        "200": { description: Lu, content: { application/json: { schema: { $ref: "#/components/schemas/Ok" } } } }
+        "403": { description: Conversation inaccessible }
         "401": { $ref: "#/components/responses/Unauthorized" }
   /api/discover:
     get:
