@@ -44,6 +44,8 @@ INSERT INTO settings (`key`, value, type, `group`) VALUES
   ('paydunya_master_key','','secret','payments'),
   ('flutterwave_secret_key','','secret','payments'),
   ('flutterwave_secret_hash','','secret','payments'),
+  ('wave_api_key','','secret','payments'),
+  ('wave_webhook_secret','','secret','payments'),
   ('mail_from','no-reply@amoura.example','string','mail'),
   ('welcome_message','Bienvenue sur Amoura ! Complétez votre profil pour commencer.','string','content'),
   ('vapid_public_key','','string','push'),

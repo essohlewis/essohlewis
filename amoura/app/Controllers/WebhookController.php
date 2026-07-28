@@ -69,6 +69,7 @@ final class WebhookController extends Controller
             'stripe'   => $body['data']['object']['id'] ?? null,
             'paypal'   => $body['resource']['id'] ?? null,
             'flutterwave' => $body['data']['tx_ref'] ?? $body['txRef'] ?? null,
+            'wave'     => $body['data']['id'] ?? $body['id'] ?? null,
             default    => null,
         };
     }
