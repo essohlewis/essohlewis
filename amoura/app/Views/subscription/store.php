@@ -1,6 +1,6 @@
 <?php
 /** @var array $products */ /** @var array $credits */ /** @var array $gateways */
-$gatewayLabels = ['stripe'=>'💳 Carte (Stripe)','paypal'=>'🅿️ PayPal','cinetpay'=>'📱 Mobile Money (CinetPay)','paydunya'=>'📱 Mobile Money (PayDunya)'];
+$gatewayLabels = ['stripe'=>'💳 Carte (Stripe)','paypal'=>'🅿️ PayPal','cinetpay'=>'📱 Mobile Money (CinetPay)','paydunya'=>'📱 Mobile Money (PayDunya)','flutterwave'=>'🌍 Carte & Mobile Money (Flutterwave)','wave'=>'🌊 Wave','mpesa'=>'📲 M-Pesa'];
 $icons = ['boost'=>'🚀','superlike'=>'⭐','reveal'=>'👀'];
 ?>
 <div style="max-width:900px;margin:0 auto">
@@ -57,5 +57,5 @@ $icons = ['boost'=>'🚀','superlike'=>'⭐','reveal'=>'👀'];
 function openBuy(slug){ document.getElementById('buyProduct').value = slug; toggleBuyPhone();
   document.getElementById('buyDialog').showModal(); }
 function toggleBuyPhone(){ const g=document.getElementById('buyGateway').value;
-  document.getElementById('buyPhoneField').style.display=(g==='cinetpay'||g==='paydunya')?'block':'none'; }
+  document.getElementById('buyPhoneField').style.display=(g==='cinetpay'||g==='paydunya'||g==='mpesa')?'block':'none'; }
 </script>

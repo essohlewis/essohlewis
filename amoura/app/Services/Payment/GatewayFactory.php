@@ -15,6 +15,7 @@ final class GatewayFactory
             'paydunya'    => new PayDunyaGateway(),
             'flutterwave' => new FlutterwaveGateway(),
             'wave'        => new WaveGateway(),
+            'mpesa'       => new MpesaGateway(),
             default       => throw new \InvalidArgumentException("Passerelle inconnue : {$gateway}"),
         };
     }
@@ -22,6 +23,6 @@ final class GatewayFactory
     /** @return string[] passerelles disponibles (configurées). */
     public static function available(): array
     {
-        return ['stripe', 'paypal', 'cinetpay', 'paydunya', 'flutterwave', 'wave'];
+        return ['stripe', 'paypal', 'cinetpay', 'paydunya', 'flutterwave', 'wave', 'mpesa'];
     }
 }

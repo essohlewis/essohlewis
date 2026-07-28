@@ -5,6 +5,7 @@ namespace Amoura\Tests\Unit;
 
 use Amoura\Services\Payment\CinetPayGateway;
 use Amoura\Services\Payment\GatewayFactory;
+use Amoura\Services\Payment\MpesaGateway;
 use Amoura\Services\Payment\PaypalGateway;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -32,7 +33,7 @@ final class PaymentTest extends TestCase
     public function testFactoryExposesExpectedGateways(): void
     {
         // On vérifie le catalogue sans instancier (les passerelles se connectent à la BDD).
-        $this->assertSame(['stripe', 'paypal', 'cinetpay', 'paydunya', 'flutterwave', 'wave'], GatewayFactory::available());
+        $this->assertSame(['stripe', 'paypal', 'cinetpay', 'paydunya', 'flutterwave', 'wave', 'mpesa'], GatewayFactory::available());
     }
 
     public function testFactoryRejectsUnknownGateway(): void
@@ -40,6 +41,32 @@ final class PaymentTest extends TestCase
         // match() lève l'exception avant toute instanciation de passerelle.
         $this->expectException(\InvalidArgumentException::class);
         GatewayFactory::make('bitcoin-magique');
+    }
+
+    /** Horodatage Daraja au format AAAAMMJJHHmmss (14 chiffres). */
+    public function testMpesaTimestampFormat(): void
+    {
+        // 2024-01-15 08:30:45 UTC — figé pour un rendu déterministe.
+        $prev = date_default_timezone_get();
+        date_default_timezone_set('UTC');
+        $ts = MpesaGateway::timestamp(1705307445);
+        date_default_timezone_set($prev);
+        $this->assertSame('20240115083045', $ts);
+        $this->assertMatchesRegularExpression('/^\d{14}$/', MpesaGateway::timestamp());
+    }
+
+    /** Mot de passe Daraja : base64(shortcode + passkey + timestamp). */
+    public function testMpesaPassword(): void
+    {
+        $expected = base64_encode('174379' . 'passkey123' . '20240115083045');
+        $this->assertSame($expected, MpesaGateway::password('174379', 'passkey123', '20240115083045'));
+    }
+
+    /** Normalisation du numéro : conserve uniquement les chiffres. */
+    public function testMpesaNormalizePhone(): void
+    {
+        $this->assertSame('254712345678', MpesaGateway::normalizePhone('+254 712 345 678'));
+        $this->assertSame('254712345678', MpesaGateway::normalizePhone('254-712-345-678'));
     }
 
     public function testPaypalHeaderNormalizationIsCaseInsensitive(): void

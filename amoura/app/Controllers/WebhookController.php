@@ -70,6 +70,7 @@ final class WebhookController extends Controller
             'paypal'   => $body['resource']['id'] ?? null,
             'flutterwave' => $body['data']['tx_ref'] ?? $body['txRef'] ?? null,
             'wave'     => $body['data']['id'] ?? $body['id'] ?? null,
+            'mpesa'    => $body['Body']['stkCallback']['CheckoutRequestID'] ?? $body['CheckoutRequestID'] ?? null,
             default    => null,
         };
     }

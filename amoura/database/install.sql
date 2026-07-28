@@ -807,6 +807,11 @@ INSERT INTO settings (`key`, value, type, `group`) VALUES
   ('flutterwave_secret_hash','','secret','payments'),
   ('wave_api_key','','secret','payments'),
   ('wave_webhook_secret','','secret','payments'),
+  ('mpesa_consumer_key','','secret','payments'),
+  ('mpesa_consumer_secret','','secret','payments'),
+  ('mpesa_shortcode','','string','payments'),
+  ('mpesa_passkey','','secret','payments'),
+  ('mpesa_env','sandbox','string','payments'),
   ('mail_from','no-reply@amoura.example','string','mail'),
   ('welcome_message','Bienvenue sur Amoura ! Complétez votre profil pour commencer.','string','content'),
   ('vapid_public_key','','string','push'),
@@ -846,7 +851,8 @@ INSERT INTO currency_rates (code, name, symbol, rate_to_base, decimals, symbol_b
   ('EUR', 'Euro',             '€',    0.00152450, 2, 1, 2),
   ('USD', 'Dollar américain', '$',    0.00165000, 2, 1, 3),
   ('GHS', 'Cedi ghanéen',     'GH₵',  0.02500000, 2, 1, 4),
-  ('NGN', 'Naira nigérian',   '₦',    2.63000000, 0, 1, 5);
+  ('NGN', 'Naira nigérian',   '₦',    2.63000000, 0, 1, 5),
+  ('KES', 'Shilling kényan',  'KSh',  0.22000000, 2, 1, 6);
 
 -- Événements de démonstration (publiés, à venir).
 INSERT INTO events (title, slug, description, type, is_online, location, capacity, starts_at, ends_at, status) VALUES

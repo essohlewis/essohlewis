@@ -1,6 +1,6 @@
 <?php
 /** @var array $plans */ /** @var array|null $current */ /** @var array $gateways */
-$gatewayLabels = ['stripe'=>'💳 Carte (Stripe)','paypal'=>'🅿️ PayPal','cinetpay'=>'📱 Mobile Money (CinetPay)','paydunya'=>'📱 Mobile Money (PayDunya)','flutterwave'=>'🌍 Carte & Mobile Money (Flutterwave)','wave'=>'🌊 Wave'];
+$gatewayLabels = ['stripe'=>'💳 Carte (Stripe)','paypal'=>'🅿️ PayPal','cinetpay'=>'📱 Mobile Money (CinetPay)','paydunya'=>'📱 Mobile Money (PayDunya)','flutterwave'=>'🌍 Carte & Mobile Money (Flutterwave)','wave'=>'🌊 Wave','mpesa'=>'📲 M-Pesa'];
 ?>
 <div style="max-width:900px;margin:0 auto">
   <h1 class="text-center">Passez à la vitesse supérieure</h1>
@@ -81,7 +81,7 @@ $gatewayLabels = ['stripe'=>'💳 Carte (Stripe)','paypal'=>'🅿️ PayPal','ci
 function openCheckout(slug){ document.getElementById('checkoutPlan').value=slug; togglePhone();
   document.getElementById('checkoutDialog').showModal(); }
 function togglePhone(){ const g=document.getElementById('gatewaySelect').value;
-  document.getElementById('phoneField').style.display=(g==='cinetpay'||g==='paydunya')?'block':'none'; }
+  document.getElementById('phoneField').style.display=(g==='cinetpay'||g==='paydunya'||g==='mpesa')?'block':'none'; }
 document.querySelector('[data-currency-select]')?.addEventListener('change', function(){
   window.location.href = '/currency/' + encodeURIComponent(this.value);
 });
