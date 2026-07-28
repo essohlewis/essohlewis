@@ -68,37 +68,17 @@ final class MessageController extends Controller
     public function send(Request $request, array $params): void
     {
         $user = $this->requireAuth($request);
-        $conversationId = (int) $params['id'];
-        $conv = new Conversation();
-        if (!$conv->isMember($conversationId, (int) $user['id'])) {
-            $this->json(['ok' => false, 'error' => 'Interdit'], 403);
+        $res = (new \Amoura\Services\Messaging\MessagingService())->sendText(
+            (int) $user['id'],
+            (int) $params['id'],
+            (string) $request->input('body'),
+            (int) $request->input('reply_to_id', 0),
+            (int) $request->input('ttl', 0)
+        );
+        if (!$res['ok']) {
+            $this->json(['ok' => false, 'error' => $res['error']], $res['status']);
         }
-        $body = Sanitizer::text((string) $request->input('body'), 4000);
-        if ($body === '') {
-            $this->json(['ok' => false, 'error' => 'Message vide.'], 422);
-        }
-        $replyTo = (int) $request->input('reply_to_id', 0);
-        $ttl = (int) $request->input('ttl', 0); // secondes (message éphémère)
-
-        $messageId = (new Message())->send($conversationId, (int) $user['id'], [
-            'type' => 'text', 'body' => $body,
-            'reply_to_id' => $replyTo ?: null,
-            'ttl' => $ttl > 0 ? min($ttl, 86400) : 0,
-        ]);
-        $this->notifyRecipient($conv, $conversationId, (int) $user['id']);
-
-        $this->json([
-            'ok' => true,
-            'message' => [
-                'id' => $messageId,
-                'sender_id' => (int) $user['id'],
-                'type' => 'text',
-                'body' => $body,
-                'reply_to_id' => $replyTo ?: null,
-                'expires_at' => $ttl > 0 ? date('Y-m-d H:i:s', time() + min($ttl, 86400)) : null,
-                'created_at' => date('Y-m-d H:i:s'),
-            ],
-        ]);
+        $this->json(['ok' => true, 'message' => $res['message']]);
     }
 
     public function sendVoice(Request $request, array $params): void
@@ -163,15 +143,12 @@ final class MessageController extends Controller
     public function markRead(Request $request, array $params): void
     {
         $user = $this->requireAuth($request);
-        $conversationId = (int) $params['id'];
-        $lastId = (int) $request->input('last_message_id', 0);
-        $conv = new Conversation();
-        if (!$conv->isMember($conversationId, (int) $user['id'])) {
-            $this->json(['ok' => false], 403);
-        }
-        $conv->markRead($conversationId, (int) $user['id'], $lastId);
-        (new Message())->markReadUpTo($conversationId, (int) $user['id'], $lastId);
-        $this->json(['ok' => true]);
+        $res = (new \Amoura\Services\Messaging\MessagingService())->markRead(
+            (int) $user['id'],
+            (int) $params['id'],
+            (int) $request->input('last_message_id', 0)
+        );
+        $this->json(['ok' => $res['ok']], $res['status']);
     }
 
     public function react(Request $request, array $params): void

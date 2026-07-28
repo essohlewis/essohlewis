@@ -85,6 +85,11 @@ return function (Router $r): void {
     $r->post('/api/v1/swipe', 'Amoura\Controllers\Api\DiscoverController@swipe', $apiAuth);
     $r->get('/api/v1/matches', 'Amoura\Controllers\Api\DiscoverController@matches', $apiAuth);
     $r->post('/api/v1/matches/{id}/unmatch', 'Amoura\Controllers\Api\DiscoverController@unmatch', $apiAuth);
+    // Messagerie
+    $r->get('/api/v1/conversations', 'Amoura\Controllers\Api\MessageController@conversations', $apiAuth);
+    $r->get('/api/v1/conversations/{id}/messages', 'Amoura\Controllers\Api\MessageController@history', $apiAuth);
+    $r->post('/api/v1/conversations/{id}/messages', 'Amoura\Controllers\Api\MessageController@send', $apiAuth);
+    $r->post('/api/v1/conversations/{id}/read', 'Amoura\Controllers\Api\MessageController@read', $apiAuth);
 
     // ── Espace membre (authentifié) ─────────────────────────────────────
     $auth = [Authenticate::class];
