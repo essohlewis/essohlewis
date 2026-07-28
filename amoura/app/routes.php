@@ -17,6 +17,10 @@ return function (Router $r): void {
     // ── Public / vitrine ────────────────────────────────────────────────
     $r->get('/', 'Amoura\Controllers\HomeController@landing');
     $r->get('/p/{slug}', 'Amoura\Controllers\HomeController@page');
+    // SEO & partage social (Phase 5) — pages publiques et indexables.
+    $r->get('/e/{slug}', 'Amoura\Controllers\HomeController@event');
+    $r->get('/sitemap.xml', 'Amoura\Controllers\HomeController@sitemap');
+    $r->get('/robots.txt', 'Amoura\Controllers\HomeController@robots');
     $r->get('/health', fn() => \Amoura\Core\Response::ok(['service' => 'amoura']));
 
     // Changement de langue (i18n) — cookie persistant, redirection sûre (chemin local).
