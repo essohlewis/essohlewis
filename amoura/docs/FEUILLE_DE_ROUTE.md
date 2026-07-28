@@ -1,7 +1,7 @@
 # 💞 Amoura — Feuille de route produit
 
 **Plateforme SaaS de rencontres en ligne**
-Version du document : 4.0 · Date : 28 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +26 livrés)
+Version du document : 4.1 · Date : 28 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +27 livrés)
 
 ---
 
@@ -42,7 +42,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 | Abonnements & paiements | ✅ Livré | Stripe, PayPal, CinetPay, PayDunya, Flutterwave, Wave, M-Pesa + **vérification serveur idempotente** |
 | Espace admin / CMS | ✅ Livré | Tableau de bord, membres, modération, facturation, réglages, rôles, audit |
 | Design system | ✅ Livré | Tokens, thèmes clair/sombre, responsive mobile-first |
-| Qualité | ✅ Livré | **261 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5** + tests de charge, tous verts |
+| Qualité | ✅ Livré | **264 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5** + tests de charge, tous verts |
 | Déploiement | ✅ Livré | Docker Compose (web + MySQL + WebSocket + coturn), installeur XAMPP |
 
 ---
@@ -103,7 +103,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 
 *Objectif : élargir la base et les marchés.*
 
-- [~] Applications natives (React Native / Flutter) réutilisant l'API REST — **socle API prêt** : authentification par **jeton porteur** stateless, révocable et à portée, versionnée `/api/v1` (`ApiToken`, `ApiAuthenticate`, endpoints auth/me/tokens) + **découverte, swipe & matches** + **messagerie** (conversations, historique déchiffré, envoi chiffré au repos, accusés de lecture) + **profil** (consultation/édition, autre profil) via services partagés web/API + OpenAPI `bearerAuth` — *Sprints +23→+26*. ✅ *(apps natives elles-mêmes à développer)*
+- [~] Applications natives (React Native / Flutter) réutilisant l'API REST — **socle API prêt** : authentification par **jeton porteur** stateless, révocable et à portée, versionnée `/api/v1` (`ApiToken`, `ApiAuthenticate`, endpoints auth/me/tokens) + **découverte, swipe & matches** + **messagerie** (conversations, historique déchiffré, envoi chiffré au repos, accusés de lecture) + **profil** (consultation/édition, autre profil) + **notifications & ticket WebSocket** (temps réel mobile) via services partagés web/API + OpenAPI `bearerAuth` — *Sprints +23→+27*. ✅ *(apps natives elles-mêmes à développer)*
 - [x] **Multi-devises** : table de conversion (base XOF, dont KES), sélecteur d'affichage par cookie, prix indicatifs convertis (`Services\Money`, `Models\Currency`) — *Sprint +16*. ✅
 - [x] **Programme de parrainage** : code unique par membre, lien d'invitation, récompense en Super Likes à la qualification du filleul (idempotent) + page « Inviter » — *Sprint +12*. ✅
 - [x] **Passerelles supplémentaires** : **Flutterwave** (panafricain, webhook `verif-hash`) + **Wave** (mobile money Sénégal/CI, webhook HMAC `Wave-Signature`) + **M-Pesa** (Safaricom Daraja, Kenya, STK Push, re-vérification `stkpushquery`) — *Sprints +19/+20/+21*. ✅

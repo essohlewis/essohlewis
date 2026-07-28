@@ -7,7 +7,7 @@ info:
     `X-CSRF-Token` sur les requêtes mutatives ; (2) **jeton porteur** (`Bearer`)
     pour les clients mobiles/tiers, sous le préfixe versionné `/api/v1` (stateless,
     sans CSRF). Les jetons sont opaques, révocables et à portée (abilities).
-  version: "1.10.0"
+  version: "1.11.0"
 servers:
   - url: /
     description: Même origine que l'application
@@ -510,6 +510,69 @@ paths:
                   profile: { $ref: "#/components/schemas/ProfileFull" }
                   photos: { type: array, items: { $ref: "#/components/schemas/Photo" } }
         "404": { description: Profil introuvable }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/notifications:
+    get:
+      tags: [Mobile v1]
+      summary: Notifications paginées (mobile)
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: cursor, in: query, description: Curseur opaque de page suivante, schema: { type: string } }
+      responses:
+        "200":
+          description: Notifications, compteur non-lus et curseur suivant
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  unread: { type: integer }
+                  next_cursor: { type: string, nullable: true }
+                  notifications:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        type: { type: string }
+                        actor_id: { type: integer, nullable: true }
+                        actor_name: { type: string, nullable: true }
+                        avatar: { type: string }
+                        data: { type: object }
+                        entity_type: { type: string, nullable: true }
+                        entity_id: { type: integer, nullable: true }
+                        is_read: { type: boolean }
+                        created_at: { type: string, nullable: true }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/notifications/read:
+    post:
+      tags: [Mobile v1]
+      summary: Marque toutes les notifications comme lues (mobile)
+      security:
+        - bearerAuth: []
+      responses:
+        "200": { description: Marqué lu, content: { application/json: { schema: { $ref: "#/components/schemas/Ok" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/ws-ticket:
+    get:
+      tags: [Mobile v1]
+      summary: Ticket d'authentification WebSocket (mobile)
+      description: "Ticket signé à usage unique pour ouvrir la connexion temps réel (messages/frappe/présence)."
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Ticket et URL du serveur WebSocket
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  ticket: { type: string }
+                  ws_url: { type: string, example: "wss://…" }
         "401": { $ref: "#/components/responses/Unauthorized" }
   /api/discover:
     get:
