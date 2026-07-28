@@ -1,7 +1,7 @@
 # 💞 Amoura — Feuille de route produit
 
 **Plateforme SaaS de rencontres en ligne**
-Version du document : 3.2 · Date : 28 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +18 livrés)
+Version du document : 3.3 · Date : 28 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +19 livrés)
 
 ---
 
@@ -42,7 +42,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 | Abonnements & paiements | ✅ Livré | Stripe, PayPal, CinetPay, PayDunya + **vérification serveur idempotente** |
 | Espace admin / CMS | ✅ Livré | Tableau de bord, membres, modération, facturation, réglages, rôles, audit |
 | Design system | ✅ Livré | Tokens, thèmes clair/sombre, responsive mobile-first |
-| Qualité | ✅ Livré | **212 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5** + tests de charge, tous verts |
+| Qualité | ✅ Livré | **216 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5** + tests de charge, tous verts |
 | Déploiement | ✅ Livré | Docker Compose (web + MySQL + WebSocket + coturn), installeur XAMPP |
 
 ---
@@ -106,6 +106,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 - [ ] Applications natives (React Native / Flutter) réutilisant l'API REST.
 - [~] **Multi-devises** : table de conversion (base XOF), sélecteur d'affichage par cookie, prix indicatifs convertis (`Services\Money`, `Models\Currency`) — *Sprint +16*. ✅ *(passerelles Wave/M-Pesa/Flutterwave à ajouter)*
 - [x] **Programme de parrainage** : code unique par membre, lien d'invitation, récompense en Super Likes à la qualification du filleul (idempotent) + page « Inviter » — *Sprint +12*. ✅
+- [~] **Passerelles supplémentaires** : **Flutterwave** (cartes + mobile money panafricain, multi-devises, webhook signé `verif-hash`) ajoutée aux 4 existantes — *Sprint +19*. ✅ *(Wave/M-Pesa dédiées à ajouter au besoin)*
 - [x] **Événements & communautés** : agenda public, inscription atomique avec **capacité & liste d'attente** (promotion auto), gestion admin (`Models\Event`) — *Sprint +17*. ✅
 - [x] **SEO & partage social** : balises Open Graph/Twitter + URL canonique (`Services\Seo\MetaTags`), pages d'événements publiques indexables (JSON-LD schema.org), `sitemap.xml` & `robots.txt` dynamiques — *Sprint +18*. ✅ *(campagnes marketing = hors code)*
 

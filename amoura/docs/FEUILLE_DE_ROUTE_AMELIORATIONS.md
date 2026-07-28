@@ -1,7 +1,7 @@
 # 💞 Amoura — Feuille de route des améliorations
 
 **Plan d'amélioration continue de la plateforme**
-Version : 2.8 · Date : 28 juillet 2026 · Portée : améliorations livrées + backlog priorisé
+Version : 2.9 · Date : 28 juillet 2026 · Portée : améliorations livrées + backlog priorisé
 
 > Légende — **Impact** : 🟢 Faible · 🟡 Moyen · 🔴 Élevé | **Effort** : S (≤2 j) · M (≤1 sem) · L (2–3 sem) · XL (>1 mois) | **Priorité** : P0 (critique) → P3 (confort)
 
@@ -10,7 +10,7 @@ Version : 2.8 · Date : 28 juillet 2026 · Portée : améliorations livrées + b
 ## 1. Améliorations livrées dans cette itération ✅
 
 Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont été
-**implémentées et testées** (suite passée à **212 tests / 565 assertions**, analyse
+**implémentées et testées** (suite passée à **216 tests / 572 assertions**, analyse
 statique **PHPStan niveau 5 sans erreur**).
 
 | Amélioration | Axe | Détail | Vérification |
@@ -176,6 +176,7 @@ Dernière itération : **tout le reliquat du backlog** a été traité.
 | **Sprint +16** ✅ | Croissance / international (Phase 5) | Multi-devises : table `currency_rates` (base XOF, 6 devises seedées), `Services\Money` (conversion + formatage), sélecteur d'affichage par cookie, prix indicatifs (« ≈ ») sur accueil/offres/boutique — *livré* |
 | **Sprint +17** ✅ | Croissance (Phase 5) | Événements & communautés : `Models\Event` (agenda publié, inscription transactionnelle avec capacité + liste d'attente + promotion auto à la libération d'une place), pages membre (liste/détail/inscription) et gestion admin (création, publication, annulation) — *livré* |
 | **Sprint +18** ✅ | Acquisition / SEO (Phase 5) | `Services\Seo\MetaTags` (Open Graph + Twitter Card + canonique + JSON-LD, échappé), pages d'événements publiques et indexables (schema.org Event), `sitemap.xml` & `robots.txt` dynamiques — *livré* |
+| **Sprint +19** ✅ | Paiements / international (Phase 5) | Passerelle **Flutterwave** (cartes + mobile money panafricain, multi-devises) sur le contrat `PaymentGateway` : checkout, re-vérification serveur (montant/devise), webhook signé `verif-hash` insensible à la casse ; réglages CMS + `.env` — *livré* |
 
 ---
 

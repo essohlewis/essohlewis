@@ -32,7 +32,7 @@ final class PaymentTest extends TestCase
     public function testFactoryExposesExpectedGateways(): void
     {
         // On vérifie le catalogue sans instancier (les passerelles se connectent à la BDD).
-        $this->assertSame(['stripe', 'paypal', 'cinetpay', 'paydunya'], GatewayFactory::available());
+        $this->assertSame(['stripe', 'paypal', 'cinetpay', 'paydunya', 'flutterwave'], GatewayFactory::available());
     }
 
     public function testFactoryRejectsUnknownGateway(): void

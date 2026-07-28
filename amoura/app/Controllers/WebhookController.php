@@ -68,6 +68,7 @@ final class WebhookController extends Controller
             'paydunya' => $body['data']['invoice']['token'] ?? $body['token'] ?? null,
             'stripe'   => $body['data']['object']['id'] ?? null,
             'paypal'   => $body['resource']['id'] ?? null,
+            'flutterwave' => $body['data']['tx_ref'] ?? $body['txRef'] ?? null,
             default    => null,
         };
     }

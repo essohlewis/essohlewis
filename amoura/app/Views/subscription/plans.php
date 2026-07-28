@@ -1,6 +1,6 @@
 <?php
 /** @var array $plans */ /** @var array|null $current */ /** @var array $gateways */
-$gatewayLabels = ['stripe'=>'💳 Carte (Stripe)','paypal'=>'🅿️ PayPal','cinetpay'=>'📱 Mobile Money (CinetPay)','paydunya'=>'📱 Mobile Money (PayDunya)'];
+$gatewayLabels = ['stripe'=>'💳 Carte (Stripe)','paypal'=>'🅿️ PayPal','cinetpay'=>'📱 Mobile Money (CinetPay)','paydunya'=>'📱 Mobile Money (PayDunya)','flutterwave'=>'🌍 Carte & Mobile Money (Flutterwave)'];
 ?>
 <div style="max-width:900px;margin:0 auto">
   <h1 class="text-center">Passez à la vitesse supérieure</h1>
