@@ -95,6 +95,10 @@ return function (Router $r): void {
     $r->patch('/api/v1/profile', 'Amoura\Controllers\Api\ProfileController@update', $apiAuth);
     $r->post('/api/v1/profile', 'Amoura\Controllers\Api\ProfileController@update', $apiAuth);
     $r->get('/api/v1/users/{id}', 'Amoura\Controllers\Api\ProfileController@show', $apiAuth);
+    // Notifications & temps réel
+    $r->get('/api/v1/notifications', 'Amoura\Controllers\Api\NotificationController@list', $apiAuth);
+    $r->post('/api/v1/notifications/read', 'Amoura\Controllers\Api\NotificationController@read', $apiAuth);
+    $r->get('/api/v1/ws-ticket', 'Amoura\Controllers\Api\RealtimeController@ticket', $apiAuth);
 
     // ── Espace membre (authentifié) ─────────────────────────────────────
     $auth = [Authenticate::class];
