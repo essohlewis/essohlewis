@@ -88,29 +88,7 @@ final class ProfileController extends Controller
     public function update(Request $request): void
     {
         $user = $this->requireAuth($request);
-        $data = $request->all();
-
-        $interests = array_filter(array_map('trim', explode(',', (string) ($data['interests'] ?? ''))));
-        $languages = array_filter(array_map('trim', explode(',', (string) ($data['languages'] ?? ''))));
-
-        (new Profile())->upsert((int) $user['id'], [
-            'bio' => Sanitizer::text($data['bio'] ?? '', 1000),
-            'orientation' => in_array($data['orientation'] ?? '', ['straight','gay','lesbian','bisexual','pansexual','asexual','other'], true) ? $data['orientation'] : null,
-            'looking_for' => in_array($data['looking_for'] ?? '', ['male','female','everyone'], true) ? $data['looking_for'] : 'everyone',
-            'country' => Sanitizer::text($data['country'] ?? '', 2),
-            'city' => Sanitizer::text($data['city'] ?? '', 120),
-            'job_title' => Sanitizer::text($data['job_title'] ?? '', 120),
-            'education' => Sanitizer::text($data['education'] ?? '', 120),
-            'interests' => json_encode(array_slice($interests, 0, 15)),
-            'languages' => json_encode(array_slice($languages, 0, 10)),
-            'smoking' => in_array($data['smoking'] ?? '', ['no','sometimes','yes'], true) ? $data['smoking'] : null,
-            'drinking' => in_array($data['drinking'] ?? '', ['no','sometimes','yes'], true) ? $data['drinking'] : null,
-            'children' => in_array($data['children'] ?? '', ['no','someday','have','have_more'], true) ? $data['children'] : null,
-            'religion' => Sanitizer::text($data['religion'] ?? '', 40),
-            'relationship_goal' => in_array($data['relationship_goal'] ?? '', ['casual','serious','friends','unsure'], true) ? $data['relationship_goal'] : null,
-            'latitude' => is_numeric($data['latitude'] ?? null) ? (float) $data['latitude'] : null,
-            'longitude' => is_numeric($data['longitude'] ?? null) ? (float) $data['longitude'] : null,
-        ]);
+        (new \Amoura\Services\Profile\ProfileService())->update((int) $user['id'], $request->all());
 
         if ($request->wantsJson()) {
             $this->json(['ok' => true]);

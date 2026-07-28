@@ -90,6 +90,11 @@ return function (Router $r): void {
     $r->get('/api/v1/conversations/{id}/messages', 'Amoura\Controllers\Api\MessageController@history', $apiAuth);
     $r->post('/api/v1/conversations/{id}/messages', 'Amoura\Controllers\Api\MessageController@send', $apiAuth);
     $r->post('/api/v1/conversations/{id}/read', 'Amoura\Controllers\Api\MessageController@read', $apiAuth);
+    // Profil
+    $r->get('/api/v1/profile', 'Amoura\Controllers\Api\ProfileController@me', $apiAuth);
+    $r->patch('/api/v1/profile', 'Amoura\Controllers\Api\ProfileController@update', $apiAuth);
+    $r->post('/api/v1/profile', 'Amoura\Controllers\Api\ProfileController@update', $apiAuth);
+    $r->get('/api/v1/users/{id}', 'Amoura\Controllers\Api\ProfileController@show', $apiAuth);
 
     // ── Espace membre (authentifié) ─────────────────────────────────────
     $auth = [Authenticate::class];
