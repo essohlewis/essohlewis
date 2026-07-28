@@ -1,7 +1,7 @@
 # 💞 Amoura — Feuille de route des améliorations
 
 **Plan d'amélioration continue de la plateforme**
-Version : 3.2 · Date : 28 juillet 2026 · Portée : améliorations livrées + backlog priorisé
+Version : 3.3 · Date : 28 juillet 2026 · Portée : améliorations livrées + backlog priorisé
 
 > Légende — **Impact** : 🟢 Faible · 🟡 Moyen · 🔴 Élevé | **Effort** : S (≤2 j) · M (≤1 sem) · L (2–3 sem) · XL (>1 mois) | **Priorité** : P0 (critique) → P3 (confort)
 
@@ -10,7 +10,7 @@ Version : 3.2 · Date : 28 juillet 2026 · Portée : améliorations livrées + b
 ## 1. Améliorations livrées dans cette itération ✅
 
 Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont été
-**implémentées et testées** (suite passée à **233 tests / 602 assertions**, analyse
+**implémentées et testées** (suite passée à **245 tests / 639 assertions**, analyse
 statique **PHPStan niveau 5 sans erreur**).
 
 | Amélioration | Axe | Détail | Vérification |
@@ -180,6 +180,7 @@ Dernière itération : **tout le reliquat du backlog** a été traité.
 | **Sprint +20** ✅ | Paiements (Phase 5) | Passerelle **Wave** (mobile money Sénégal/Côte d'Ivoire, XOF) : checkout (session), re-vérification serveur (statut + montant), **webhook signé HMAC-SHA256** (`Wave-Signature: t=…, v1=…`, fail-closed) ; réglages CMS + `.env` — *livré* |
 | **Sprint +21** ✅ | Paiements (Phase 5) | Passerelle **M-Pesa** (Safaricom Daraja, Kenya, KES) : **STK Push** « Lipa Na M-Pesa Online » (paiement poussé sur le téléphone), OAuth `client_credentials`, re-vérification serveur via `stkpushquery` (callback Daraja non signé → jamais de confiance au corps), conversion XOF → KES ; réglages CMS + `.env` + migration `014` — *livré* |
 | **Sprint +22** ✅ | PWA / Mobile (Phase 5) | **Expérience d'installation** : manifeste `/manifest.webmanifest` **généré dynamiquement depuis le CMS** (`PwaController` : nom, couleur de marque, **raccourcis** Découverte/Messages/Boutique) ; **invite d'installation maison** (`pwa.js` : `beforeinstallprompt`, bannière rejetable mémorisée, `appinstalled`, **repli iOS** « Sur l'écran d'accueil ») ; `apple-touch-icon` PNG, service worker v2 — *livré* |
+| **Sprint +23** ✅ | API / Mobile (Phase 5) | **API mobile stateless** : jetons porteurs opaques **stockés hachés** (SHA-256), révocables, à portée (`abilities` : `*`, exact, `ns:*`) et expiration ; middleware `Authorization: Bearer` (`ApiAuthenticate` → `Auth::actingAs`, sans session/CSRF) ; routes versionnées `/api/v1` (login avec anti-énumération + limitation IP/email + rejet suspendu/non vérifié/2FA, logout, `me`, gestion des jetons/appareils) ; purge cron des jetons expirés ; **OpenAPI 1.7.0** (`bearerAuth`) — *livré* |
 
 ---
 
