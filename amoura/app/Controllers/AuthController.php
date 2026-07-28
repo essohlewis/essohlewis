@@ -69,7 +69,10 @@ final class AuthController extends Controller
         }
 
         // Création du compte (statut « pending » jusqu'à vérification email).
+        // Le rôle est résolu dynamiquement (jamais un id codé en dur) : l'inscription
+        // fonctionne même si la table `roles` a été partiellement initialisée.
         $userId = $userModel->create([
+            'role_id' => (new \Amoura\Models\Role())->memberRoleId(),
             'email' => $email,
             'password_hash' => Auth::hash((string) $data['password']),
             'display_name' => Sanitizer::text($data['display_name'], 100),
