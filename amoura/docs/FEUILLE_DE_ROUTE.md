@@ -1,7 +1,7 @@
 # 💞 Amoura — Feuille de route produit
 
 **Plateforme SaaS de rencontres en ligne**
-Version du document : 3.4 · Date : 28 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +20 livrés)
+Version du document : 3.5 · Date : 28 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +21 livrés)
 
 ---
 
@@ -39,10 +39,10 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 | Messagerie temps réel | ✅ Livré | Chat WebSocket, frappe, accusés lu/reçu, présence, **vocal + waveform**, images |
 | Appels audio/vidéo | ✅ Livré | WebRTC P2P + signaling WebSocket + config STUN/TURN |
 | Social | ✅ Livré | Statuts éphémères 24 h, mur (posts/likes/commentaires), notifications |
-| Abonnements & paiements | ✅ Livré | Stripe, PayPal, CinetPay, PayDunya + **vérification serveur idempotente** |
+| Abonnements & paiements | ✅ Livré | Stripe, PayPal, CinetPay, PayDunya, Flutterwave, Wave, M-Pesa + **vérification serveur idempotente** |
 | Espace admin / CMS | ✅ Livré | Tableau de bord, membres, modération, facturation, réglages, rôles, audit |
 | Design system | ✅ Livré | Tokens, thèmes clair/sombre, responsive mobile-first |
-| Qualité | ✅ Livré | **220 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5** + tests de charge, tous verts |
+| Qualité | ✅ Livré | **225 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5** + tests de charge, tous verts |
 | Déploiement | ✅ Livré | Docker Compose (web + MySQL + WebSocket + coturn), installeur XAMPP |
 
 ---
@@ -104,9 +104,9 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 *Objectif : élargir la base et les marchés.*
 
 - [ ] Applications natives (React Native / Flutter) réutilisant l'API REST.
-- [~] **Multi-devises** : table de conversion (base XOF), sélecteur d'affichage par cookie, prix indicatifs convertis (`Services\Money`, `Models\Currency`) — *Sprint +16*. ✅ *(passerelles Wave/M-Pesa/Flutterwave à ajouter)*
+- [x] **Multi-devises** : table de conversion (base XOF, dont KES), sélecteur d'affichage par cookie, prix indicatifs convertis (`Services\Money`, `Models\Currency`) — *Sprint +16*. ✅
 - [x] **Programme de parrainage** : code unique par membre, lien d'invitation, récompense en Super Likes à la qualification du filleul (idempotent) + page « Inviter » — *Sprint +12*. ✅
-- [x] **Passerelles supplémentaires** : **Flutterwave** (panafricain, webhook `verif-hash`) + **Wave** (mobile money Sénégal/CI, webhook HMAC `Wave-Signature`) — *Sprints +19/+20*. ✅ *(M-Pesa à ajouter au besoin)*
+- [x] **Passerelles supplémentaires** : **Flutterwave** (panafricain, webhook `verif-hash`) + **Wave** (mobile money Sénégal/CI, webhook HMAC `Wave-Signature`) + **M-Pesa** (Safaricom Daraja, Kenya, STK Push, re-vérification `stkpushquery`) — *Sprints +19/+20/+21*. ✅
 - [x] **Événements & communautés** : agenda public, inscription atomique avec **capacité & liste d'attente** (promotion auto), gestion admin (`Models\Event`) — *Sprint +17*. ✅
 - [x] **SEO & partage social** : balises Open Graph/Twitter + URL canonique (`Services\Seo\MetaTags`), pages d'événements publiques indexables (JSON-LD schema.org), `sitemap.xml` & `robots.txt` dynamiques — *Sprint +18*. ✅ *(campagnes marketing = hors code)*
 
