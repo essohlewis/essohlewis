@@ -21,6 +21,7 @@ return function (Router $r): void {
     $r->get('/e/{slug}', 'Amoura\Controllers\HomeController@event');
     $r->get('/sitemap.xml', 'Amoura\Controllers\HomeController@sitemap');
     $r->get('/robots.txt', 'Amoura\Controllers\HomeController@robots');
+    $r->get('/manifest.webmanifest', 'Amoura\Controllers\PwaController@manifest');
     $r->get('/health', fn() => \Amoura\Core\Response::ok(['service' => 'amoura']));
 
     // Changement de langue (i18n) — cookie persistant, redirection sûre (chemin local).

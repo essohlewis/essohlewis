@@ -5,14 +5,16 @@
      - Requêtes API / navigation : network-first avec repli hors-ligne.
    Ne met JAMAIS en cache les requêtes non-GET ni les WebSockets.
    ========================================================================== */
-const VERSION = "amoura-v1";
+const VERSION = "amoura-v2";
 const STATIC_CACHE = `${VERSION}-static`;
 const PRECACHE = [
   "/assets/css/app.css",
   "/assets/css/tokens.css",
   "/assets/js/api.js",
   "/assets/js/app.js",
+  "/assets/js/pwa.js",
   "/assets/img/logo.svg",
+  "/assets/img/icon-192.png",
   "/assets/img/avatar-placeholder.svg",
   "/offline.html",
 ];

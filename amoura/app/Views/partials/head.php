@@ -22,7 +22,7 @@ $reqPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?:
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Amoura">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="apple-touch-icon" href="/assets/img/logo.svg">
+<link rel="apple-touch-icon" href="/assets/img/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="/assets/css/app.css">
 <script <?= \Amoura\Core\Security\Nonce::attr() ?>>

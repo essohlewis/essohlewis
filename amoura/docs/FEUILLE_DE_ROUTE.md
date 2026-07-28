@@ -1,7 +1,7 @@
 # 💞 Amoura — Feuille de route produit
 
 **Plateforme SaaS de rencontres en ligne**
-Version du document : 3.5 · Date : 28 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +21 livrés)
+Version du document : 3.6 · Date : 28 juillet 2026 · Statut : socle industrialisé (Sprints +1 → +22 livrés)
 
 ---
 
@@ -42,7 +42,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 | Abonnements & paiements | ✅ Livré | Stripe, PayPal, CinetPay, PayDunya, Flutterwave, Wave, M-Pesa + **vérification serveur idempotente** |
 | Espace admin / CMS | ✅ Livré | Tableau de bord, membres, modération, facturation, réglages, rôles, audit |
 | Design system | ✅ Livré | Tokens, thèmes clair/sombre, responsive mobile-first |
-| Qualité | ✅ Livré | **225 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5** + tests de charge, tous verts |
+| Qualité | ✅ Livré | **233 tests PHPUnit** (unit + intégration MySQL/Redis) + **PHPStan niveau 5** + tests de charge, tous verts |
 | Déploiement | ✅ Livré | Docker Compose (web + MySQL + WebSocket + coturn), installeur XAMPP |
 
 ---
@@ -69,7 +69,7 @@ Le socle applicatif est **fonctionnel, testé et déployable**. Architecture MVC
 
 *Objectif : augmenter le temps passé et la fréquence de retour.*
 
-- [x] **PWA installable** (manifest, service worker, coquille hors-ligne) + **Web Push** (VAPID) — *Sprints +2*. ✅
+- [x] **PWA installable** (manifest **piloté par le CMS** + raccourcis, service worker, coquille hors-ligne, **invite d'installation maison** A2HS avec repli iOS) + **Web Push** (VAPID) — *Sprints +2 / +22*. ✅
 - [x] **Recommandations par affinité** (intérêts + proximité + âge + activité + vérifié) — `Services\Recommender`. ✅
 - [x] **« Qui a vu mon profil »**, derniers visiteurs — *Sprint +2*. ✅
 - [x] **Réactions, réponses citées et messages éphémères** dans le chat — *Sprints +3/+6*. ✅

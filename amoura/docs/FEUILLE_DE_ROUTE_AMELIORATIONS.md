@@ -1,7 +1,7 @@
 # 💞 Amoura — Feuille de route des améliorations
 
 **Plan d'amélioration continue de la plateforme**
-Version : 3.1 · Date : 28 juillet 2026 · Portée : améliorations livrées + backlog priorisé
+Version : 3.2 · Date : 28 juillet 2026 · Portée : améliorations livrées + backlog priorisé
 
 > Légende — **Impact** : 🟢 Faible · 🟡 Moyen · 🔴 Élevé | **Effort** : S (≤2 j) · M (≤1 sem) · L (2–3 sem) · XL (>1 mois) | **Priorité** : P0 (critique) → P3 (confort)
 
@@ -10,7 +10,7 @@ Version : 3.1 · Date : 28 juillet 2026 · Portée : améliorations livrées + b
 ## 1. Améliorations livrées dans cette itération ✅
 
 Ces améliorations issues des Phases 1 & 2 de la feuille de route produit ont été
-**implémentées et testées** (suite passée à **225 tests / 582 assertions**, analyse
+**implémentées et testées** (suite passée à **233 tests / 602 assertions**, analyse
 statique **PHPStan niveau 5 sans erreur**).
 
 | Amélioration | Axe | Détail | Vérification |
@@ -18,7 +18,7 @@ statique **PHPStan niveau 5 sans erreur**).
 | **Recommandations par affinité** | Produit / UX | `Services\Recommender` classe la découverte : intérêts partagés, proximité (distance ou ville/pays), proximité d'âge, présence en ligne, activité récente, badge vérifié. | 7 tests unitaires + 1 test d'intégration |
 | **Purge planifiée (cron)** | Fiabilité | `Services\Maintenance` + `scripts/cron.php` : suppression des statuts expirés, jetons OTP, sessions, rate-limits, notifications & messages anciens. | 1 test d'intégration (purge sélective) |
 | **Journalisation structurée** | Observabilité | `Services\Logger` écrit des lignes JSON exploitables (ELK/Loki) ; branché sur le gestionnaire d'erreurs global et le cron. | 2 tests unitaires |
-| **PWA installable + hors-ligne** | UX / Mobile | `manifest.webmanifest`, `service-worker.js` (cache-first assets, network-first API, repli `offline.html`), icônes 192/512, enregistrement auto. | Smoke test HTTP (200 sur tous les fichiers) |
+| **PWA installable + hors-ligne** | UX / Mobile | Manifeste **dynamique piloté par le CMS** (`PwaController`, raccourcis), `service-worker.js` v2 (cache-first assets, network-first API, repli `offline.html`), icônes 192/512, **invite d'installation maison** (`pwa.js`, repli iOS), enregistrement auto. | 6 unit + 2 intégration + smoke HTTP (manifeste 200, JSON valide) |
 | **Serveur de dev correct** | DevEx | `server.php` sert les fichiers statiques + PWA en développement (les assets ne partaient plus en 404 hors Apache). | Smoke test (assets 200) |
 | **CI/CD (GitHub Actions)** | DevEx | `.github/workflows/amoura-ci.yml` : lint PHP + tests unitaires & d'intégration (service MySQL) à chaque push/PR. | Workflow validé (yaml + étapes) |
 | **Index & requêtes optimisés** | Performance | Nouveaux index composites (matchs, swipes, stories, posts) + réécriture `forUser` en UNION (2 lookups indexés au lieu d'un scan). Vérifié via `EXPLAIN`. | EXPLAIN + tests d'intégration |
@@ -179,6 +179,7 @@ Dernière itération : **tout le reliquat du backlog** a été traité.
 | **Sprint +19** ✅ | Paiements / international (Phase 5) | Passerelle **Flutterwave** (cartes + mobile money panafricain, multi-devises) sur le contrat `PaymentGateway` : checkout, re-vérification serveur (montant/devise), webhook signé `verif-hash` insensible à la casse ; réglages CMS + `.env` — *livré* |
 | **Sprint +20** ✅ | Paiements (Phase 5) | Passerelle **Wave** (mobile money Sénégal/Côte d'Ivoire, XOF) : checkout (session), re-vérification serveur (statut + montant), **webhook signé HMAC-SHA256** (`Wave-Signature: t=…, v1=…`, fail-closed) ; réglages CMS + `.env` — *livré* |
 | **Sprint +21** ✅ | Paiements (Phase 5) | Passerelle **M-Pesa** (Safaricom Daraja, Kenya, KES) : **STK Push** « Lipa Na M-Pesa Online » (paiement poussé sur le téléphone), OAuth `client_credentials`, re-vérification serveur via `stkpushquery` (callback Daraja non signé → jamais de confiance au corps), conversion XOF → KES ; réglages CMS + `.env` + migration `014` — *livré* |
+| **Sprint +22** ✅ | PWA / Mobile (Phase 5) | **Expérience d'installation** : manifeste `/manifest.webmanifest` **généré dynamiquement depuis le CMS** (`PwaController` : nom, couleur de marque, **raccourcis** Découverte/Messages/Boutique) ; **invite d'installation maison** (`pwa.js` : `beforeinstallprompt`, bannière rejetable mémorisée, `appinstalled`, **repli iOS** « Sur l'écran d'accueil ») ; `apple-touch-icon` PNG, service worker v2 — *livré* |
 
 ---
 

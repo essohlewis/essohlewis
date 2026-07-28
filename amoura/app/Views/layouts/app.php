@@ -66,6 +66,7 @@ $nav = function (string $href, string $label, string $icon, ?string $key = null)
   <script src="/assets/js/app.js"></script>
   <script src="/assets/js/ui.js"></script>
   <script src="/assets/js/webrtc.js"></script>
+  <script src="/assets/js/pwa.js"></script>
   <?php foreach (($scripts ?? []) as $s): ?><script src="/assets/js/<?= e($s) ?>"></script><?php endforeach; ?>
 </body>
 </html>
