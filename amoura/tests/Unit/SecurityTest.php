@@ -12,10 +12,13 @@ use PHPUnit\Framework\TestCase;
 
 final class SecurityTest extends TestCase
 {
-    public function testPasswordHashUsesArgon2id(): void
+    public function testPasswordHashIsSecureAndReversibleByVerify(): void
     {
         $hash = Auth::hash('S3cret!pass');
-        $this->assertStringStartsWith('$argon2id$', $hash);
+        // Argon2id si le build PHP le supporte, sinon bcrypt — dans les deux cas
+        // le hachage doit être vérifiable et rejeter un mauvais mot de passe.
+        $expectedPrefix = defined('PASSWORD_ARGON2ID') ? '$argon2id$' : '$2y$';
+        $this->assertStringStartsWith($expectedPrefix, $hash);
         $this->assertTrue(Auth::verify('S3cret!pass', $hash));
         $this->assertFalse(Auth::verify('mauvais', $hash));
     }

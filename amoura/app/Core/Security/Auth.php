@@ -19,19 +19,33 @@ final class Auth
     /** Jeton API courant lorsqu'on est authentifié sans session (clients mobiles). */
     private static ?array $apiToken = null;
 
-    /** Options Argon2id — coût mémoire/temps raisonnable pour un serveur web. */
+    /**
+     * Algorithme de hachage préféré : Argon2id s'il est disponible sur ce build
+     * PHP, sinon bcrypt (PASSWORD_DEFAULT). Certaines distributions (notamment
+     * XAMPP/Windows) ne compilent pas Argon2 : la constante PASSWORD_ARGON2ID
+     * n'existe alors pas et son usage direct provoquait une erreur fatale.
+     */
+    private static function algo(): string
+    {
+        return defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_DEFAULT;
+    }
+
+    /** Options adaptées à l'algorithme retenu (coût mémoire/temps ou coût bcrypt). */
     private static function hashOptions(): array
     {
-        return [
-            'memory_cost' => 1 << 16, // 64 Mo
-            'time_cost'   => 4,
-            'threads'     => 1,
-        ];
+        if (defined('PASSWORD_ARGON2ID')) {
+            return [
+                'memory_cost' => 1 << 16, // 64 Mo
+                'time_cost'   => 4,
+                'threads'     => 1,
+            ];
+        }
+        return ['cost' => 12]; // bcrypt : coût raisonnable pour un serveur web
     }
 
     public static function hash(string $password): string
     {
-        return password_hash($password, PASSWORD_ARGON2ID, self::hashOptions());
+        return password_hash($password, self::algo(), self::hashOptions());
     }
 
     public static function verify(string $password, string $hash): bool
@@ -41,7 +55,7 @@ final class Auth
 
     public static function needsRehash(string $hash): bool
     {
-        return password_needs_rehash($hash, PASSWORD_ARGON2ID, self::hashOptions());
+        return password_needs_rehash($hash, self::algo(), self::hashOptions());
     }
 
     /** Établit la session pour l'utilisateur donné (après vérification du mot de passe). */
