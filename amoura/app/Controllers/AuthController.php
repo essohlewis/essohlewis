@@ -300,17 +300,30 @@ final class AuthController extends Controller
     public function sendReset(Request $request): void
     {
         $email = Sanitizer::email((string) $request->input('email'));
+        $devCode = null;
         if ($email && RateLimiter::attempt('reset:' . $email, 3, 600)) {
             $user = (new User())->byEmail($email);
             if ($user) {
-                $code = OtpService::issue((int) $user['id'], 'email', 'reset', $email);
-                Mailer::send($email, 'Réinitialisation de mot de passe',
-                    Mailer::template('Code de réinitialisation', "<p>Code : <strong>{$code}</strong></p><p>Valable 10 minutes.</p>"));
+                $code = OtpService::issue((int) $user['id'], 'phone', 'reset', $email);
+                $phone = (string) ($user['phone'] ?? '');
+                if ($phone !== '') {
+                    // Canal principal : WhatsApp (comme à l'inscription).
+                    WhatsAppService::sendOtp($phone, $code);
+                } else {
+                    // Repli email pour les comptes sans numéro enregistré.
+                    Mailer::send($email, 'Réinitialisation de mot de passe',
+                        Mailer::template('Code de réinitialisation', "<p>Code : <strong>{$code}</strong></p><p>Valable 10 minutes.</p>"));
+                }
+                if ($this->otpShownInDev()) {
+                    $devCode = $code;
+                }
             }
         }
-        // Message générique : ne révèle pas si l'email existe.
+        // Message générique : ne révèle pas si l'email existe (sauf code dev).
         Session::put('pending_verification', $email);
-        Session::flash('success', 'Si un compte existe, un code a été envoyé.');
+        Session::flash('success', $devCode !== null
+            ? "Mode développement : votre code de réinitialisation est {$devCode} (aucun message réel envoyé)."
+            : 'Si un compte existe, un code a été envoyé sur WhatsApp.');
         $this->redirect('/forgot?step=reset');
     }
 

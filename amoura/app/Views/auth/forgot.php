@@ -1,7 +1,7 @@
 <?php $step = ($_GET['step'] ?? '') === 'reset'; ?>
 <?php if (!$step): ?>
   <h2 style="margin-bottom:4px">Mot de passe oublié</h2>
-  <p class="muted" style="margin-bottom:24px">Saisissez votre email pour recevoir un code.</p>
+  <p class="muted" style="margin-bottom:24px">Saisissez votre email : un code vous sera envoyé sur WhatsApp.</p>
   <form method="POST" action="/forgot" class="stack">
     <?= csrf_field() ?>
     <div class="field"><label>Email</label><input class="input" type="email" name="email" required autofocus></div>
