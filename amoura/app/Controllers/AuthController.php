@@ -17,6 +17,7 @@ use Amoura\Models\Setting;
 use Amoura\Models\User;
 use Amoura\Services\Mailer;
 use Amoura\Services\OtpService;
+use Amoura\Services\WhatsApp\WhatsAppService;
 
 final class AuthController extends Controller
 {
@@ -47,6 +48,7 @@ final class AuthController extends Controller
         $v = (new Validator($data))
             ->require('display_name')->min('display_name', 2)->max('display_name', 100)
             ->require('email')->email('email')
+            ->require('phone')->phone('phone')
             ->require('password')->strongPassword('password')
             ->matches('password', 'password_confirm')
             ->require('birthdate')->minAge('birthdate', $minAge)
@@ -62,18 +64,24 @@ final class AuthController extends Controller
         }
 
         $email = Sanitizer::email($data['email']);
+        $phone = Sanitizer::text((string) ($data['phone'] ?? ''), 30);
         $userModel = new User();
         if ($email === null || $userModel->byEmail($email)) {
             Session::flash('error', 'Cet email est invalide ou déjà utilisé.');
             $this->redirect('/register');
         }
+        if ($userModel->byPhone($phone)) {
+            Session::flash('error', 'Ce numéro WhatsApp est déjà utilisé.');
+            $this->redirect('/register');
+        }
 
-        // Création du compte (statut « pending » jusqu'à vérification email).
+        // Création du compte (statut « pending » jusqu'à vérification).
         // Le rôle est résolu dynamiquement (jamais un id codé en dur) : l'inscription
         // fonctionne même si la table `roles` a été partiellement initialisée.
         $userId = $userModel->create([
             'role_id' => (new \Amoura\Models\Role())->memberRoleId(),
             'email' => $email,
+            'phone' => $phone,
             'password_hash' => Auth::hash((string) $data['password']),
             'display_name' => Sanitizer::text($data['display_name'], 100),
             'birthdate' => $data['birthdate'],
@@ -100,32 +108,31 @@ final class AuthController extends Controller
             $referral->record($refCode, $userId);
         }
 
-        // Émission de l'OTP de vérification email.
-        $code = OtpService::issue($userId, 'email', 'verify', $email);
-        Mailer::send($email, 'Vérifiez votre compte Amoura',
-            Mailer::template('Votre code de vérification', "<p>Votre code : <strong style=\"font-size:22px\">{$code}</strong></p><p>Il expire dans 10 minutes.</p>"));
+        // Émission de l'OTP puis envoi du code par WhatsApp (l'OTP reste indexé
+        // sur l'email pour la vérification ; seul le canal de remise change).
+        $code = OtpService::issue($userId, 'whatsapp', 'verify', $email);
+        WhatsAppService::sendOtp($phone, $code);
 
         (new ActivityLog())->record($userId, 'user.register', 'user', $userId, [], $request->ip());
 
         Session::put('pending_verification', $email);
         Session::put('pending_user', $userId);
-        // En développement, aucun email réel n'est envoyé (pilote « log ») : on
-        // affiche le code pour permettre la vérification sans boîte mail.
-        Session::flash('success', $this->mailIsLoggedOnly()
-            ? "Compte créé ! Mode développement : votre code de vérification est {$code} (aucun email réel envoyé ; voir aussi storage/logs/mail.log)."
-            : 'Compte créé ! Saisissez le code envoyé par email.');
+        // En développement, aucun message réel n'est envoyé (pilote « log ») : on
+        // affiche le code pour permettre la vérification sans WhatsApp configuré.
+        Session::flash('success', $this->otpShownInDev()
+            ? "Compte créé ! Mode développement : votre code de vérification est {$code} (aucun message réel envoyé ; voir aussi storage/logs/whatsapp.log)."
+            : 'Compte créé ! Saisissez le code reçu sur WhatsApp.');
         $this->redirect('/verify');
     }
 
     /**
-     * Vrai lorsqu'aucun email réel ne quitte le serveur (mode dev : APP_DEBUG +
-     * pilote mail « log »). Dans ce cas on peut afficher le code OTP en clair
+     * Vrai lorsqu'aucun message réel ne quitte le serveur (mode dev : APP_DEBUG +
+     * pilote WhatsApp « log »). Dans ce cas on peut afficher le code OTP en clair
      * pour débloquer la vérification locale, sans jamais le faire en production.
      */
-    private function mailIsLoggedOnly(): bool
+    private function otpShownInDev(): bool
     {
-        return Env::bool('APP_DEBUG')
-            && strtolower((string) Env::get('MAIL_DRIVER', 'log')) === 'log';
+        return Env::bool('APP_DEBUG') && WhatsAppService::isLoggedOnly();
     }
 
     // ── Vérification OTP ───────────────────────────────────────────────
@@ -177,11 +184,13 @@ final class AuthController extends Controller
             $this->json(['ok' => false, 'error' => 'Patientez avant de redemander un code.'], 429);
         }
         $user = (new User())->byEmail($email);
-        $code = OtpService::issue($user['id'] ?? null, 'email', 'verify', $email);
-        Mailer::send($email, 'Votre nouveau code Amoura',
-            Mailer::template('Nouveau code', "<p>Code : <strong>{$code}</strong></p>"));
-        // En mode dev (email non réellement envoyé), on renvoie le code pour l'afficher.
-        $this->json(['ok' => true] + ($this->mailIsLoggedOnly() ? ['dev_code' => $code] : []));
+        $code = OtpService::issue($user['id'] ?? null, 'whatsapp', 'verify', $email);
+        $phone = (string) ($user['phone'] ?? '');
+        if ($phone !== '') {
+            WhatsAppService::sendOtp($phone, $code);
+        }
+        // En mode dev (message non réellement envoyé), on renvoie le code pour l'afficher.
+        $this->json(['ok' => true] + ($this->otpShownInDev() ? ['dev_code' => $code] : []));
     }
 
     // ── Connexion ──────────────────────────────────────────────────────

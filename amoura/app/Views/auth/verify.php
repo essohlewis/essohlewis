@@ -1,6 +1,6 @@
 <?php /** @var string|null $destination */ ?>
-<h2 style="margin-bottom:4px">Vérifiez votre email</h2>
-<p class="muted" style="margin-bottom:24px">Un code à 6 chiffres a été envoyé à <b><?= e($destination ?? 'votre adresse') ?></b>.</p>
+<h2 style="margin-bottom:4px">Vérifiez votre compte</h2>
+<p class="muted" style="margin-bottom:24px">Un code à 6 chiffres vous a été envoyé sur <b>WhatsApp</b>. Saisissez-le ci-dessous.</p>
 <form method="POST" action="/verify" class="stack">
   <?= csrf_field() ?>
   <div class="field"><label>Code de vérification</label>

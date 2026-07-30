@@ -833,6 +833,12 @@ INSERT INTO settings (`key`, value, type, `group`) VALUES
   ('vapid_public_key','','string','push'),
   ('vapid_private_key','','secret','push'),
   ('vapid_subject','mailto:no-reply@amoura.example','string','push'),
+  ('whatsapp_driver','log','string','messaging'),
+  ('whatsapp_token','','secret','messaging'),
+  ('whatsapp_phone_id','','string','messaging'),
+  ('whatsapp_template','','string','messaging'),
+  ('whatsapp_lang','fr','string','messaging'),
+  ('whatsapp_default_cc','','string','messaging'),
   ('default_locale','fr','string','general');
 
 -- Catalogue de consommables (achats à l'unité) ------------------------------

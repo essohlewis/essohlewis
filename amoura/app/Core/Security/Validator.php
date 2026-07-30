@@ -40,6 +40,19 @@ final class Validator
         return $this;
     }
 
+    /** Numéro de téléphone : 8 à 15 chiffres après retrait des séparateurs (E.164). */
+    public function phone(string $field): self
+    {
+        $v = $this->value($field);
+        if ($v !== null && $v !== '') {
+            $digits = preg_replace('/\D/', '', (string) $v) ?? '';
+            if (strlen($digits) < 8 || strlen($digits) > 15) {
+                $this->errors[$field][] = 'Numéro de téléphone invalide.';
+            }
+        }
+        return $this;
+    }
+
     public function min(string $field, int $length): self
     {
         $v = (string) $this->value($field);

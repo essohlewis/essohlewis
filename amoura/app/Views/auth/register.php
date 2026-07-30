@@ -12,6 +12,9 @@
     <input class="input" name="display_name" required maxlength="100" value="<?= e(old('display_name')) ?>"></div>
   <div class="field"><label>Email</label>
     <input class="input" type="email" name="email" required value="<?= e(old('email')) ?>"></div>
+  <div class="field"><label>Numéro WhatsApp</label>
+    <input class="input" type="tel" name="phone" required placeholder="+225 07 00 00 00 00" value="<?= e(old('phone')) ?>">
+    <div class="hint">Votre code de vérification vous sera envoyé sur WhatsApp.</div></div>
   <div class="row">
     <div class="field grow"><label>Date de naissance</label>
       <input class="input" type="date" name="birthdate" required></div>
