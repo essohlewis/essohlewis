@@ -14,7 +14,9 @@
 <script <?= \Amoura\Core\Security\Nonce::attr() ?>>
 document.getElementById('resendBtn')?.addEventListener('click', async (e) => {
   e.preventDefault();
-  try { await Api.post('/verify/resend'); Amoura.toast('Nouveau code envoyé.'); }
-  catch (err) { Amoura.toast(err.message); }
+  try {
+    const r = await Api.post('/verify/resend');
+    Amoura.toast(r && r.dev_code ? ('Mode dev — votre code : ' + r.dev_code) : 'Nouveau code envoyé.');
+  } catch (err) { Amoura.toast(err.message); }
 });
 </script>

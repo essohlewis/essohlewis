@@ -109,8 +109,23 @@ final class AuthController extends Controller
 
         Session::put('pending_verification', $email);
         Session::put('pending_user', $userId);
-        Session::flash('success', 'Compte créé ! Saisissez le code envoyé par email.');
+        // En développement, aucun email réel n'est envoyé (pilote « log ») : on
+        // affiche le code pour permettre la vérification sans boîte mail.
+        Session::flash('success', $this->mailIsLoggedOnly()
+            ? "Compte créé ! Mode développement : votre code de vérification est {$code} (aucun email réel envoyé ; voir aussi storage/logs/mail.log)."
+            : 'Compte créé ! Saisissez le code envoyé par email.');
         $this->redirect('/verify');
+    }
+
+    /**
+     * Vrai lorsqu'aucun email réel ne quitte le serveur (mode dev : APP_DEBUG +
+     * pilote mail « log »). Dans ce cas on peut afficher le code OTP en clair
+     * pour débloquer la vérification locale, sans jamais le faire en production.
+     */
+    private function mailIsLoggedOnly(): bool
+    {
+        return Env::bool('APP_DEBUG')
+            && strtolower((string) Env::get('MAIL_DRIVER', 'log')) === 'log';
     }
 
     // ── Vérification OTP ───────────────────────────────────────────────
@@ -165,7 +180,8 @@ final class AuthController extends Controller
         $code = OtpService::issue($user['id'] ?? null, 'email', 'verify', $email);
         Mailer::send($email, 'Votre nouveau code Amoura',
             Mailer::template('Nouveau code', "<p>Code : <strong>{$code}</strong></p>"));
-        $this->json(['ok' => true]);
+        // En mode dev (email non réellement envoyé), on renvoie le code pour l'afficher.
+        $this->json(['ok' => true] + ($this->mailIsLoggedOnly() ? ['dev_code' => $code] : []));
     }
 
     // ── Connexion ──────────────────────────────────────────────────────
