@@ -110,7 +110,7 @@ final class AuthController extends Controller
 
         // Émission de l'OTP puis envoi du code par WhatsApp (l'OTP reste indexé
         // sur l'email pour la vérification ; seul le canal de remise change).
-        $code = OtpService::issue($userId, 'whatsapp', 'verify', $email);
+        $code = OtpService::issue($userId, 'phone', 'verify', $email);
         WhatsAppService::sendOtp($phone, $code);
 
         (new ActivityLog())->record($userId, 'user.register', 'user', $userId, [], $request->ip());
@@ -184,7 +184,7 @@ final class AuthController extends Controller
             $this->json(['ok' => false, 'error' => 'Patientez avant de redemander un code.'], 429);
         }
         $user = (new User())->byEmail($email);
-        $code = OtpService::issue($user['id'] ?? null, 'whatsapp', 'verify', $email);
+        $code = OtpService::issue($user['id'] ?? null, 'phone', 'verify', $email);
         $phone = (string) ($user['phone'] ?? '');
         if ($phone !== '') {
             WhatsAppService::sendOtp($phone, $code);
