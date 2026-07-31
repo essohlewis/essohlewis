@@ -1,0 +1,49 @@
+# GuideRecharge CI — Réécriture d'URL vers le front controller.
+# Toutes les requêtes qui ne correspondent pas à un fichier ou dossier
+# existant sont dirigées vers index.php (routage applicatif).
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Base de réécriture (adapter si installé dans un sous-dossier sous XAMPP,
+    # ex : RewriteBase /guiderecharge-ci/public).
+    # RewriteBase /
+
+    # Ne pas réécrire les fichiers/dossiers réels (assets, images, etc.).
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Tout le reste passe par index.php.
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# En-têtes de sécurité de base (complètent ceux envoyés par PHP).
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "DENY"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Empêche l'accès aux fichiers sensibles.
+<FilesMatch "\.(env|sql|md|json|lock)$">
+    Require all denied
+</FilesMatch>
+
+# Autorise malgré tout le manifest PWA.
+<Files "manifest.json">
+    Require all granted
+</Files>
+
+# Compression et cache des assets statiques.
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml
+</IfModule>
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 7 days"
+    ExpiresByType application/javascript "access plus 7 days"
+    ExpiresByType image/svg+xml "access plus 30 days"
+    ExpiresByType image/png "access plus 30 days"
+</IfModule>

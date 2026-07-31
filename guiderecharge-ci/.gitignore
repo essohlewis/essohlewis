@@ -1,0 +1,16 @@
+# Configuration locale sensible (dé-commentez si vous créez une surcharge locale)
+# config/config.local.php
+
+# Dépendances (si Composer est utilisé un jour pour l'autoload optionnel)
+/vendor/
+
+# Logs & caches
+*.log
+/storage/
+.DS_Store
+Thumbs.db
+
+# Éditeurs
+.idea/
+.vscode/
+*.swp
